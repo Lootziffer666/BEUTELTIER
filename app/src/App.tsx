@@ -10,6 +10,15 @@ import { RegistryPanel } from './ui/RegistryPanel';
 import { SiteScene, type CameraPreset } from './scene/SiteScene';
 import { findRoute, planTour, type Route } from './routing/route';
 import type { EdgeState } from './routing/graph';
+import {
+  downloadAnnotations,
+  exportAnnotations,
+  loadAnnotations,
+  saveAnnotations,
+  type Annotation,
+  type CameraSnapshot,
+} from './scene/survey';
+import { Vermessung } from './ui/Vermessung';
 
 type Tab = 'karte' | 'epix' | 'funkwache' | 'register';
 
@@ -42,6 +51,15 @@ export default function App() {
   const [overrides, setOverrides] = useState<Map<string, EdgeState>>(new Map());
   const [avoidUnconfirmed, setAvoidUnconfirmed] = useState(false);
   const [stepFree, setStepFree] = useState(false);
+
+  // Vermessungsmodus: Kamerazustand statt Beschreibung, siehe scene/survey.ts.
+  const [noClip, setNoClip] = useState(false);
+  const [frozen, setFrozen] = useState(false);
+  const [viewfinderOpen, setViewfinderOpen] = useState(false);
+  const [overlayImage, setOverlayImage] = useState<string | null>(null);
+  const [overlayOpacity, setOverlayOpacity] = useState(0.5);
+  const [pendingMark, setPendingMark] = useState<CameraSnapshot | null>(null);
+  const [annotations, setAnnotations] = useState<Annotation[]>(() => loadAnnotations());
 
   useEffect(() => {
     loadDataset()
@@ -95,6 +113,62 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    saveAnnotations(annotations);
+  }, [annotations]);
+
+  // Der Vermessungsmodus gehört zur Ego-Perspektive -- verlässt man sie,
+  // sollen No-Clip und ein offener Viewfinder nicht in der Übersicht hängen
+  // bleiben.
+  useEffect(() => {
+    if (preset === 'ego') return;
+    setNoClip(false);
+    setFrozen(false);
+    setViewfinderOpen(false);
+    setPendingMark(null);
+  }, [preset]);
+
+  const handleMark = useCallback((snapshot: CameraSnapshot) => {
+    setFrozen(true);
+    setPendingMark(snapshot);
+  }, []);
+
+  const commitNote = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      if (pendingMark && trimmed) {
+        setAnnotations((prev) => [
+          ...prev,
+          {
+            id: `note-${Date.now().toString(36)}`,
+            createdAt: new Date().toISOString(),
+            note: trimmed,
+            camera: pendingMark,
+          },
+        ]);
+      }
+      setPendingMark(null);
+      setFrozen(false);
+    },
+    [pendingMark],
+  );
+
+  const cancelNote = useCallback(() => {
+    setPendingMark(null);
+    setFrozen(false);
+  }, []);
+
+  const deleteAnnotation = useCallback((id: string) => {
+    setAnnotations((prev) => prev.filter((entry) => entry.id !== id));
+  }, []);
+
+  const setOverlayImageUrl = useCallback((url: string | null) => {
+    setOverlayImage((prev) => {
+      if (prev && prev !== url) URL.revokeObjectURL(prev);
+      return url;
+    });
+  }, []);
+
   if (error) {
     return (
       <div className="boot boot--error">
@@ -137,13 +211,53 @@ export default function App() {
           focusHallKey={focusHallKey}
           onSelectStand={setSelectedStandId}
           onLeaveEgo={() => setPreset('uebersicht')}
+          noClip={noClip}
+          frozen={frozen}
+          viewfinderOpen={viewfinderOpen}
+          onToggleNoClip={() => setNoClip((v) => !v)}
+          onToggleFreeze={() => setFrozen((v) => !v)}
+          onToggleViewfinder={() => setViewfinderOpen((v) => !v)}
+          onMark={handleMark}
         />
 
-        {preset === 'ego' && (
+        {preset === 'ego' && !pendingMark && (
           <p className="stage__hint">
             Klicken zum Umsehen · <strong>W A S D</strong> laufen ·{' '}
-            <strong>Shift</strong> schneller · <strong>Esc</strong> zurück
+            <strong>Shift</strong> schneller ·{' '}
+            {viewfinderOpen ? (
+              <>
+                <strong>V</strong> Referenzfoto zu
+              </>
+            ) : (
+              <>
+                <strong>N</strong> No-Clip · <strong>F</strong> einfrieren ·{' '}
+                <strong>V</strong> Referenzfoto · <strong>M</strong> markieren
+              </>
+            )}{' '}
+            · <strong>Esc</strong> zurück
           </p>
+        )}
+
+        {preset === 'ego' && (
+          <Vermessung
+            noClip={noClip}
+            frozen={frozen}
+            viewfinderOpen={viewfinderOpen}
+            onToggleNoClip={() => setNoClip((v) => !v)}
+            onToggleFreeze={() => setFrozen((v) => !v)}
+            onToggleViewfinder={() => setViewfinderOpen((v) => !v)}
+            overlayImage={overlayImage}
+            onOverlayImage={setOverlayImageUrl}
+            overlayOpacity={overlayOpacity}
+            onOverlayOpacity={setOverlayOpacity}
+            pendingMark={pendingMark}
+            onCommitNote={commitNote}
+            onCancelNote={cancelNote}
+            annotations={annotations}
+            onExport={() => downloadAnnotations(annotations)}
+            onCopy={() => void navigator.clipboard.writeText(exportAnnotations(annotations))}
+            onDeleteAnnotation={deleteAnnotation}
+          />
         )}
 
         <div className="stage__controls">

@@ -25,13 +25,16 @@ const check = (name, ok, detail = '') => {
 };
 
 const canvas = page.locator('canvas');
-const overview = await canvas.screenshot();
+// Nicht locator.screenshot(): das wartet darauf, dass sich das Element nicht
+// mehr bewegt -- eine Szene mit Renderschleife wird nie "stabil".
+const shot = async () => page.screenshot({ clip: { x: 0, y: 0, width: 890, height: 800 } });
+const overview = await shot();
 
 await page.getByRole('button', { name: 'Begehen' }).click();
 await page.waitForTimeout(1500);
 check('Ego-Modus lässt sich schalten', await page.locator('.stage__hint').isVisible());
 
-const standing = await canvas.screenshot();
+const standing = await shot();
 const differs = (a, b) => {
   if (a.length !== b.length) return 1;
   let changed = 0;
@@ -46,7 +49,7 @@ await page.keyboard.down('w');
 await page.waitForTimeout(1600);
 await page.keyboard.up('w');
 await page.waitForTimeout(400);
-const walked = await canvas.screenshot();
+const walked = await shot();
 check('W verändert den Standpunkt', differs(standing, walked) > 0.01,
   `${(differs(standing, walked) * 100).toFixed(0)} % der Stichproben anders`);
 

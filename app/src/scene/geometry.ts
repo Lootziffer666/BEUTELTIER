@@ -65,12 +65,22 @@ export interface MergedPolygons {
   ranges: { id: string; start: number; count: number }[];
 }
 
+/**
+ * Kantenlänge einer Texturkachel auf zusammengeführten Körpern, in Metern.
+ *
+ * Feste Meter und nicht „einmal über die Fläche": eine Standwand von 3 m und
+ * eine von 30 m sollen dieselbe Körnung haben, sonst verrät der Maßstab, dass
+ * es dieselbe Textur ist.
+ */
+const TILE_M = 4;
+
 export function mergePolygons(
   items: { id: string; polygon: Placement2D[]; baseY: number; height: number }[],
   centre: [number, number],
 ): MergedPolygons {
   const positions: number[] = [];
   const normals: number[] = [];
+  const uvs: number[] = [];
   const ranges: MergedPolygons['ranges'] = [];
 
   for (const item of items) {
@@ -82,8 +92,22 @@ export function mergePolygons(
     const start = positions.length / 3;
 
     for (let i = 0; i < position.count; i += 1) {
-      positions.push(position.getX(i), position.getY(i), position.getZ(i));
+      const px = position.getX(i);
+      const py = position.getY(i);
+      const pz = position.getZ(i);
+      const nx = Math.abs(normal.getX(i));
+      const ny = Math.abs(normal.getY(i));
+      const nz = Math.abs(normal.getZ(i));
+
+      positions.push(px, py, pz);
       normals.push(normal.getX(i), normal.getY(i), normal.getZ(i));
+
+      // Würfelprojektion nach der dominanten Normalenrichtung. Ohne UVs tastet
+      // jeder Punkt denselben Texel ab -- dann ist auch die beste Textur nur
+      // eine Farbe. Genau daran krankten vorher schon die Hallenwände.
+      if (ny >= nx && ny >= nz) uvs.push(px / TILE_M, pz / TILE_M);
+      else if (nx >= nz) uvs.push(pz / TILE_M, py / TILE_M);
+      else uvs.push(px / TILE_M, py / TILE_M);
     }
     ranges.push({ id: item.id, start, count: position.count });
     geometry.dispose();
@@ -92,5 +116,6 @@ export function mergePolygons(
   const merged = new THREE.BufferGeometry();
   merged.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   merged.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  merged.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   return { geometry: merged, ranges };
 }

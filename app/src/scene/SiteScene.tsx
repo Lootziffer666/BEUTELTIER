@@ -21,7 +21,19 @@ import type { Ortho } from '../data/load';
 import type { Route } from '../routing/route';
 import { mergePolygons, polygonCentre, toScene } from './geometry';
 import { EYE_HEIGHT_M } from './walk';
-import { floorTexture, orthoTexture, wallTexture } from './materials';
+import {
+  ceilingSurface,
+  disposeSurface,
+  facadeSurface,
+  floorSurface,
+  orthoTexture,
+  standSurface,
+  type Surface,
+} from './materials';
+import { Beleuchtung } from './lighting';
+import { Deckenleuchten } from './interior';
+import { Vertikalverbindungen } from './vertical';
+import type { CameraSnapshot } from './survey';
 
 export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
@@ -37,6 +49,17 @@ export interface SceneProps {
   onSelectStand: (standId: string | null) => void;
   /** Verlässt die Ego-Perspektive, wenn der Nutzer Escape drückt. */
   onLeaveEgo?: () => void;
+  /** Vermessungsmodus: Kollision aus, um Referenzfoto-Perspektiven zu erreichen. */
+  noClip?: boolean;
+  /** Bewegung und Umsehen pausiert, während ein Referenzfoto ausgerichtet wird. */
+  frozen?: boolean;
+  /** Zeiger ist für das Referenzfoto-Overlay freigegeben, kein Pointer Lock. */
+  viewfinderOpen?: boolean;
+  onToggleNoClip?: () => void;
+  onToggleFreeze?: () => void;
+  onToggleViewfinder?: () => void;
+  /** Aktueller Kamerazustand wird an den Aufrufer gereicht, keine Beschreibung nötig. */
+  onMark?: (snapshot: CameraSnapshot) => void;
 }
 
 const COLOURS = {
@@ -108,7 +131,7 @@ function Ground({
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[midX, -0.4, midZ]} receiveShadow>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial map={ortho} roughness={0.95} />
+        <meshStandardMaterial map={ortho} roughness={0.88} envMapIntensity={0.6} />
       </mesh>
     </group>
   );
@@ -134,50 +157,81 @@ function Gelaende({
 }) {
   const { scene } = useGLTF(MODEL_URL);
   const ortho = useMemo(() => orthoTexture(ORTHO_URL), []);
-  const wall = useMemo(() => wallTexture(), []);
-  const floor = useMemo(() => floorTexture(), []);
+
+  // Drei Flächenarten, drei Materialsätze — jeder mit Farbe, Normale und
+  // Rauheit. Erzeugt wird einmal, nicht je Halle.
+  const surfaces = useMemo<Record<string, Surface>>(
+    () => ({
+      facade: facadeSurface(false),
+      interior: facadeSurface(true),
+      floor: floorSurface(),
+      ceiling: ceilingSurface(),
+    }),
+    [],
+  );
+  useEffect(
+    () => () => Object.values(surfaces).forEach(disposeSurface),
+    [surfaces],
+  );
 
   const model = useMemo(() => {
     const clone = scene.clone(true);
     clone.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       const source = node.material as THREE.MeshStandardMaterial;
-      const material = source.clone();
+      const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide });
 
-      // Welche Fläche welche Herkunft bekommt, steht im Modell selbst --
+      // Welche Fläche welche Herkunft bekommt, steht im Modell selbst —
       // build_buildings.py schreibt es beim Erzeugen hinein.
-      const kind = (source.name ?? '').toLowerCase();
       const roof = (source.userData?.texture ?? '') === 'ortho';
+      const kind = (source.name ?? '').toLowerCase();
+
       if (roof && !interior) {
         material.map = ortho;
-        material.color.setScalar(1);
-        material.roughness = 0.94;
+        material.roughness = 0.92;
+        material.envMapIntensity = 0.5;
       } else if (roof) {
-        // Von innen ist das Dach eine Decke, und ein Luftbild wäre dort
-        // das Foto der Oberseite -- also das falsche Bild.
-        material.map = null;
-        material.color.set('#3a3d45');
-        material.roughness = 0.85;
+        // Von innen ist das Dach eine Decke. Ein Luftbild wäre dort das Foto
+        // der Oberseite -- also das falsche Bild an der falschen Stelle.
+        const surface = surfaces.ceiling;
+        material.map = surface.map;
+        material.normalMap = surface.normalMap;
+        material.roughnessMap = surface.roughnessMap;
+        material.color.set('#8d919a');
+        material.metalness = 0.45;
+        material.envMapIntensity = 0.6;
       } else if (kind === 'ground') {
-        material.map = floor;
-        material.color.setScalar(1);
-        material.roughness = 0.35;
-        material.metalness = 0.04;
+        const surface = surfaces.floor;
+        material.map = surface.map;
+        material.normalMap = surface.normalMap;
+        material.roughnessMap = surface.roughnessMap;
+        material.roughness = 0.32;
+        material.metalness = 0.12;
+        // Der Boden ist das hellste Element auf den Referenzfotos, weil er
+        // die Leuchtbänder zurückwirft. Genau dafür die hohe Intensität.
+        material.envMapIntensity = 1.5;
       } else {
-        material.map = wall;
-        material.roughness = 0.82;
+        const surface = interior ? surfaces.interior : surfaces.facade;
+        material.map = surface.map;
+        material.normalMap = surface.normalMap;
+        material.roughnessMap = surface.roughnessMap;
+        material.emissiveMap = surface.emissiveMap ?? null;
+        material.emissive.set(interior ? '#7fa8cd' : '#101820');
+        material.emissiveIntensity = interior ? 1.1 : 0.35;
+        material.metalness = 0.18;
+        material.envMapIntensity = 1.1;
       }
 
+      material.normalScale = new THREE.Vector2(1.1, 1.1);
       material.transparent = opacity < 0.99;
       material.opacity = opacity;
       material.depthWrite = opacity > 0.9;
-      material.side = THREE.DoubleSide;
-      material.needsUpdate = true;
       node.material = material;
+      node.castShadow = !interior;
       node.receiveShadow = true;
     });
     return clone;
-  }, [scene, opacity, interior, ortho, wall, floor]);
+  }, [scene, opacity, interior, ortho, surfaces]);
 
   useEffect(
     () => () => {
@@ -257,6 +311,7 @@ function Stands({
   upperOpacity,
   selectedStandId,
   routeStandIds,
+  interior,
   onSelectStand,
 }: {
   data: Dataset;
@@ -264,12 +319,26 @@ function Stands({
   upperOpacity: number;
   selectedStandId: string | null;
   routeStandIds: string[];
+  /** Steht der Betrachter mitten drin? Dann gelten andere Regeln. */
+  interior: boolean;
   onSelectStand: (standId: string | null) => void;
 }) {
+  const surface = useMemo(() => standSurface(), []);
+  useEffect(() => () => disposeSurface(surface), [surface]);
+
   const merged = useMemo(() => {
+    // Aus der Vogelperspektive ist eine um ±25 m unsichere Freifläche eine
+    // nützliche Angabe. Auf Augenhöhe ist sie es nicht: dort steht sie mitten
+    // in einer anderen Halle und verdeckt den halben Blick. Was nicht genau
+    // genug verortet ist, um daneben zu stehen, wird hier nicht gezeichnet.
+    const shown = data.site.stands.filter((stand) => {
+      if (!interior) return true;
+      const hall = data.hallsByKey.get(stand.hallKey);
+      return !hall || hall.placement.source !== 'geschaetzt';
+    });
     const build = (level: 'lower' | 'upper') =>
       mergePolygons(
-        data.site.stands
+        shown
           .filter((stand) => (level === 'lower' ? stand.level <= 1 : stand.level > 1))
           .map((stand) => ({
             id: stand.id,
@@ -280,7 +349,7 @@ function Stands({
         centre,
       );
     return { lower: build('lower'), upper: build('upper') };
-  }, [data, centre]);
+  }, [data, centre, interior]);
 
   useEffect(
     () => () => {
@@ -342,7 +411,15 @@ function Stands({
           pick(merged.lower)(event.faceIndex);
         }}
       >
-        <meshStandardMaterial vertexColors roughness={0.55} metalness={0.05} />
+        <meshStandardMaterial
+          vertexColors
+          map={surface.map}
+          normalMap={surface.normalMap}
+          roughnessMap={surface.roughnessMap}
+          roughness={0.82}
+          metalness={0.04}
+          envMapIntensity={0.7}
+        />
       </mesh>
       {upperOpacity > 0.02 && (
         <mesh
@@ -354,8 +431,13 @@ function Stands({
         >
           <meshStandardMaterial
             vertexColors
-            roughness={0.55}
-            transparent
+            map={surface.map}
+            normalMap={surface.normalMap}
+            roughnessMap={surface.roughnessMap}
+            roughness={0.82}
+            metalness={0.04}
+            envMapIntensity={0.7}
+            transparent={upperOpacity < 0.99}
             opacity={upperOpacity}
           />
         </mesh>
@@ -459,24 +541,73 @@ function HallLabels({
  * Kollidiert wird gegen dasselbe Gitter, auf dem geroutet wird. Was die
  * Route nicht darf, darf hier auch niemand.
  */
+/** Steigen/Sinken im No-Clip-Flug -- kein Kollisionsgitter kennt „oben". */
+const FLY_SPEED_M_PER_S = 2.4;
+
 function WalkControls({
   data,
   centre,
   active,
   start,
   onExit,
+  noClip = false,
+  frozen = false,
+  viewfinderOpen = false,
+  onToggleNoClip,
+  onToggleFreeze,
+  onToggleViewfinder,
+  onMark,
 }: {
   data: Dataset;
   centre: [number, number];
   active: boolean;
   start: THREE.Vector3 | null;
   onExit: () => void;
+  noClip?: boolean;
+  frozen?: boolean;
+  viewfinderOpen?: boolean;
+  onToggleNoClip?: () => void;
+  onToggleFreeze?: () => void;
+  onToggleViewfinder?: () => void;
+  onMark?: (snapshot: CameraSnapshot) => void;
 }) {
   const { camera, gl } = useThree();
   const position = useRef({ x: 0, y: 0, z: 0 });
   const look = useRef({ yaw: 0, pitch: 0 });
   const keys = useRef(new Set<string>());
   const locked = useRef(false);
+
+  // Als Refs gespiegelt, damit der Ereignis-Effekt nicht bei jedem Tastendruck
+  // oder jedem Render der Elternkomponente neu gebunden werden muss -- die
+  // Callback-Props sind in App.tsx inline definiert und damit bei jedem
+  // Render neue Funktionsobjekte. Nur die aktuellen Werte zählen hier.
+  const noClipRef = useRef(noClip);
+  const frozenRef = useRef(frozen);
+  const viewfinderRef = useRef(viewfinderOpen);
+  const onExitRef = useRef(onExit);
+  const onToggleNoClipRef = useRef(onToggleNoClip);
+  const onToggleFreezeRef = useRef(onToggleFreeze);
+  const onToggleViewfinderRef = useRef(onToggleViewfinder);
+  const onMarkRef = useRef(onMark);
+  useEffect(() => {
+    noClipRef.current = noClip;
+  }, [noClip]);
+  useEffect(() => {
+    frozenRef.current = frozen;
+  }, [frozen]);
+  useEffect(() => {
+    viewfinderRef.current = viewfinderOpen;
+    // Das Overlay braucht den echten Zeiger zum Ausrichten des Fotos --
+    // Pointer Lock würde ihn einsperren.
+    if (viewfinderOpen && document.pointerLockElement) document.exitPointerLock?.();
+  }, [viewfinderOpen]);
+  useEffect(() => {
+    onExitRef.current = onExit;
+    onToggleNoClipRef.current = onToggleNoClip;
+    onToggleFreezeRef.current = onToggleFreeze;
+    onToggleViewfinderRef.current = onToggleViewfinder;
+    onMarkRef.current = onMark;
+  });
 
   // Startpunkt: die fokussierte Halle, sonst der erste begehbare Punkt.
   useEffect(() => {
@@ -494,16 +625,18 @@ function WalkControls({
   useEffect(() => {
     if (!active) return;
     const canvas = gl.domElement;
+    const isTyping = (target: EventTarget | null) =>
+      target instanceof HTMLElement && ['INPUT', 'TEXTAREA'].includes(target.tagName);
 
     const request = () => {
-      if (!locked.current) void canvas.requestPointerLock?.();
+      if (!locked.current && !viewfinderRef.current) void canvas.requestPointerLock?.();
     };
     const onLockChange = () => {
       locked.current = document.pointerLockElement === canvas;
       if (!locked.current) keys.current.clear();
     };
     const onMove = (event: MouseEvent) => {
-      if (!locked.current) return;
+      if (!locked.current || frozenRef.current) return;
       look.current.yaw -= event.movementX * 0.0022;
       look.current.pitch = Math.max(
         -1.2,
@@ -511,13 +644,42 @@ function WalkControls({
       );
     };
     const onDown = (event: KeyboardEvent) => {
+      if (isTyping(event.target)) return;
       if (event.key === 'Escape') {
-        onExit();
+        onExitRef.current();
         return;
       }
-      keys.current.add(event.key.toLowerCase());
+      const key = event.key.toLowerCase();
+      if (key === 'n') {
+        onToggleNoClipRef.current?.();
+        return;
+      }
+      if (key === 'f') {
+        onToggleFreezeRef.current?.();
+        return;
+      }
+      if (key === 'v') {
+        onToggleViewfinderRef.current?.();
+        return;
+      }
+      if (key === 'm') {
+        const { x, y, z } = position.current;
+        onMarkRef.current?.({
+          x,
+          y,
+          z,
+          yaw: look.current.yaw,
+          pitch: look.current.pitch,
+          hallKey: data.walk.footingAt(x, y, z).hallKey,
+        });
+        return;
+      }
+      keys.current.add(key);
     };
-    const onUp = (event: KeyboardEvent) => keys.current.delete(event.key.toLowerCase());
+    const onUp = (event: KeyboardEvent) => {
+      if (isTyping(event.target)) return;
+      keys.current.delete(event.key.toLowerCase());
+    };
 
     canvas.addEventListener('click', request);
     document.addEventListener('pointerlockchange', onLockChange);
@@ -533,26 +695,45 @@ function WalkControls({
       if (document.pointerLockElement === canvas) document.exitPointerLock?.();
       keys.current.clear();
     };
-  }, [active, gl, onExit]);
+    // Bewusst ohne die Callback-Props in den Abhängigkeiten -- sie sind in
+    // App.tsx inline definiert (neue Funktion bei jedem Render) und würden
+    // sonst Pointer-Lock- und Tastatur-Listener bei jedem Tastendruck neu
+    // binden. Aktuelle Werte kommen aus den Refs oben.
+  }, [active, gl, data]);
 
   useFrame((_, delta) => {
     if (!active) return;
-    const pressed = keys.current;
-    const forward =
-      (pressed.has('w') || pressed.has('arrowup') ? 1 : 0) -
-      (pressed.has('s') || pressed.has('arrowdown') ? 1 : 0);
-    const strafe =
-      (pressed.has('d') || pressed.has('arrowright') ? 1 : 0) -
-      (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0);
 
-    if (forward || strafe) {
-      const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
-      const { yaw } = look.current;
-      // Karten-Y zeigt nach Norden, die Szene nach -Z. Deshalb hier und nicht
-      // erst beim Zeichnen umrechnen -- sonst läuft man seitwärts.
-      const dx = (Math.sin(-yaw) * forward + Math.cos(-yaw) * strafe) * speed;
-      const dy = (Math.cos(-yaw) * forward - Math.sin(-yaw) * strafe) * speed;
-      position.current = data.walk.move(position.current, dx, dy);
+    if (!frozenRef.current) {
+      const pressed = keys.current;
+      const forward =
+        (pressed.has('w') || pressed.has('arrowup') ? 1 : 0) -
+        (pressed.has('s') || pressed.has('arrowdown') ? 1 : 0);
+      const strafe =
+        (pressed.has('d') || pressed.has('arrowright') ? 1 : 0) -
+        (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0);
+      const climb = (pressed.has(' ') ? 1 : 0) - (pressed.has('control') ? 1 : 0);
+
+      if (forward || strafe) {
+        const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
+        const { yaw } = look.current;
+        // Karten-Y zeigt nach Norden, die Szene nach -Z. Deshalb hier und nicht
+        // erst beim Zeichnen umrechnen -- sonst läuft man seitwärts.
+        const dx = (Math.sin(-yaw) * forward + Math.cos(-yaw) * strafe) * speed;
+        const dy = (Math.cos(-yaw) * forward - Math.sin(-yaw) * strafe) * speed;
+        position.current = noClipRef.current
+          ? { ...position.current, x: position.current.x + dx, y: position.current.y + dy }
+          : data.walk.move(position.current, dx, dy);
+      }
+
+      // Vertikal fliegen gibt es nur ohne Kollision -- das Gitter kennt keine
+      // Höhe über der eigenen Ebene, ein "oben" ergäbe dort keinen Sinn.
+      if (noClipRef.current && climb) {
+        position.current = {
+          ...position.current,
+          z: position.current.z + climb * FLY_SPEED_M_PER_S * delta,
+        };
+      }
     }
 
     const { x, y, z } = position.current;
@@ -636,13 +817,26 @@ export function SiteScene(props: SceneProps) {
     <Canvas
       camera={{ fov: preset === 'ego' ? 70 : 42, near: 0.15, far: extent * 6, position: [extent * 0.5, extent * 0.6, extent * 0.85] }}
       dpr={[1, 1.8]}
+      shadows="soft"
+      gl={{ antialias: true, alpha: false }}
+      onCreated={({ gl }) => {
+        // Ohne Tone Mapping kippt alles Helle nach Weiß, und genau das ließ
+        // die Szene wie ein eingefärbtes Drahtgitter aussehen.
+        gl.toneMapping = THREE.ACESFilmicToneMapping;
+        gl.toneMappingExposure = 1.05;
+      }}
       onPointerMissed={() => props.onSelectStand(null)}
     >
-      <color attach="background" args={['#0b0d12']} />
-      <fog attach="fog" args={['#0b0d12', extent * 0.9, extent * 3]} />
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[extent * 0.4, extent * 0.8, extent * 0.3]} intensity={1.1} />
-      <directionalLight position={[-extent * 0.5, extent * 0.4, -extent * 0.4]} intensity={0.35} />
+      <color attach="background" args={[preset === 'ego' ? '#1a1d24' : '#8fa8bf']} />
+      <fog
+        attach="fog"
+        args={[
+          preset === 'ego' ? '#20242c' : '#9fb4c8',
+          preset === 'ego' ? extent * 0.25 : extent * 1.1,
+          preset === 'ego' ? extent * 1.2 : extent * 3.2,
+        ]}
+      />
+      <Beleuchtung extent={extent} interior={preset === 'ego'} />
 
       <Ground extent={extent} centre={centre} ortho={data.ortho} />
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
@@ -654,17 +848,28 @@ export function SiteScene(props: SceneProps) {
           interior={preset === 'ego'}
         />
       </Suspense>
-      <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
+      {/* Hallenkörper und Schilder sind Hilfsmittel der Übersicht. Auf
+          Augenhöhe stehen sie als farbiger Schleier vor der Nase und legen
+          sich über genau das, was man sehen will -- dort sind die Wände des
+          Gebäudemodells die Halle, nicht ein eingefärbter Block darüber. */}
+      {preset !== 'ego' && (
+        <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
+      )}
       <Stands
         data={data}
         centre={centre}
         upperOpacity={upperOpacity}
         selectedStandId={props.selectedStandId}
         routeStandIds={props.routeStandIds}
+        interior={preset === 'ego'}
         onSelectStand={props.onSelectStand}
       />
+      <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
+      <Vertikalverbindungen data={data} centre={centre} />
       <RouteRibbon data={data} route={route} centre={centre} />
-      <HallLabels data={data} centre={centre} upperOpacity={upperOpacity} />
+      {preset !== 'ego' && (
+        <HallLabels data={data} centre={centre} upperOpacity={upperOpacity} />
+      )}
       {preset === 'ego' ? (
         <WalkControls
           data={data}
@@ -672,6 +877,13 @@ export function SiteScene(props: SceneProps) {
           active
           start={focus}
           onExit={() => props.onLeaveEgo?.()}
+          noClip={props.noClip}
+          frozen={props.frozen}
+          viewfinderOpen={props.viewfinderOpen}
+          onToggleNoClip={props.onToggleNoClip}
+          onToggleFreeze={props.onToggleFreeze}
+          onToggleViewfinder={props.onToggleViewfinder}
+          onMark={props.onMark}
         />
       ) : (
         <CameraRig preset={preset} focus={focus} extent={extent} />
