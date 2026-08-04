@@ -545,23 +545,35 @@ class TestOpeningDimensions:
         assert lift["meta"]["source"] == "placeholder"
         assert "positionAnchor" not in lift["meta"]
 
-    def test_offene_frage_haengt_an_der_verbindung(self, graph_data):
-        """Eine ungeklaerte Lage wird ausgewiesen, nicht geraten.
+    def test_beantwortete_frage_verschwindet_wieder(self, graph_data):
+        """Eine offene Frage haengt an der Verbindung -- eine beantwortete nicht.
 
-        Der Ebenenwechsel 10.1 auf 10.2 ist im Bild belegt, aber es ist
-        offen, ob die gezeigte Anlage die an der Nordwestecke ist oder eine
-        zweite am Suedende. Der Unterschied betraegt rund 175 m. Der Anker
-        bleibt stehen, die Frage haengt sichtbar daran.
+        Die Frage war, ob es an Halle 10 eine oder zwei Rolltreppenanlagen
+        gibt. Sie ist beantwortet: eine, dazu Rolltreppen an der Suedseite
+        hinueber nach Halle 11. Der Anker blieb dadurch unveraendert.
         """
-        asking = [c for c in graph_data["connectors"]
-                  if c["meta"].get("openQuestions")]
-        assert asking
-        for connector in asking:
-            assert connector["meta"]["connects"][0] == "10.1"
-            for question in connector["meta"]["openQuestions"]:
-                assert question["what"].endswith("?")
-                assert question["resolvesWith"]
-                assert question["observation"]
+        assert not [c for c in graph_data["connectors"]
+                    if c["meta"].get("openQuestions")]
+
+        notes = json.loads((ROOT / "data" / "curated" / "field-notes.json")
+                           .read_text(encoding="utf-8"))
+        questions = [o["openQuestion"] for o in notes["observations"]
+                     if "openQuestion" in o]
+        assert questions
+        for question in questions:
+            # Beantwortet oder offen -- aber nie stillschweigend verschwunden.
+            assert question.get("answered") or question.get("resolvesWith")
+
+    def test_merkt_sich_verbindungen_ohne_halle(self, site):
+        """Halle 11 ist 2026 nicht belegt -- die Verbindung dorthin bleibt trotzdem.
+
+        An der Suedseite von Halle 10 fuehren Rolltreppen nach Halle 11. Als
+        Kante geht das nicht, ohne die Halle zu erfinden. Als Vermerk schon.
+        """
+        gap = next(g for g in site["facilityGaps"] if "11" in g["hallKey"])
+        assert gap["kind"] == "escalator"
+        assert gap["missing"] == "Halle nicht im Gelaendemodell"
+        assert "11" not in {h["key"].split(".")[0] for h in site["halls"]}
 
     def test_fuehrt_bekannte_aber_unverortete_anlagen(self, site):
         """Beschilderung vor Ort kennt mehr Tore als die Richtlinien.

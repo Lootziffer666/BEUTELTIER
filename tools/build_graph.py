@@ -138,7 +138,7 @@ def main() -> int:
             # Eine offene Frage ist auch ein Ergebnis. Sie haengt an der
             # Verbindung, damit niemand die Lage fuer geklaert haelt.
             question = entry.get("openQuestion")
-            if question and question.get("appliesTo"):
+            if question and question.get("appliesTo") and not question.get("answered"):
                 open_questions.setdefault(question["appliesTo"], []).append(
                     {"observation": entry["id"], "what": question["what"],
                      "resolvesWith": question["resolvesWith"]})

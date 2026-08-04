@@ -221,7 +221,19 @@
           "bleibt, wo er ist, und die Frage steht hier."
         ],
         "resolvesWith": "Eine Angabe, ob es eine oder zwei Rolltreppenanlagen an Halle 10 gibt.",
-        "appliesTo": "10.1"
+        "appliesTo": "10.1",
+        "answered": {
+          "on": "2026-08-04",
+          "answer": [
+            "Es gibt an Halle 10 nur diese eine Anlage fuer den",
+            "Ebenenwechsel. Zusaetzlich liegen an der Suedseite von Halle",
+            "10 Rolltreppen hinueber zu Halle 11 -- sonst keine.",
+            "Der Anker an der Nordwestecke bleibt damit stehen; die",
+            "Markierungen im offiziellen Gelaendeplan zeigen genau dort",
+            "die Stelle, von der die vorigen Aufnahmen stammen."
+          ],
+          "consequence": "Anker unveraendert, Frage geschlossen."
+        }
       }
     },
     {
@@ -247,6 +259,50 @@
           "10"
         ]
       }
+    },
+    {
+      "id": "rolltreppen-suedseite-10-nach-11",
+      "kind": "observation",
+      "where": "Suedseite Halle 10, zum Uebergang nach Halle 11",
+      "what": [
+        "An der Suedseite von Halle 10 liegen Rolltreppen hinueber zu Halle",
+        "11. Weitere Rolltreppen gibt es an Halle 10 nicht."
+      ],
+      "usedFor": "Schliesst die offene Frage und benennt eine Verbindung, die im Modell fehlt.",
+      "unmodelledConnection": {
+        "connects": [
+          "10",
+          "11"
+        ],
+        "kind": "escalator",
+        "side": "sued",
+        "why": [
+          "Halle 11 ist 2026 nicht mit gamescom-Staenden belegt und fehlt",
+          "deshalb im Gelaendemodell. Die Verbindung laesst sich nicht als",
+          "Kante einziehen, ohne die Halle zu erfinden.",
+          "Sie wird vermerkt, damit sie nicht verlorengeht, wenn Halle 11",
+          "spaeter dazukommt."
+        ]
+      }
+    },
+    {
+      "id": "strasse-zwischen-10-und-9",
+      "kind": "official-plan",
+      "where": "Zwischen Halle 10 und Halle 9",
+      "what": [
+        "Der offizielle Gelaendeplan der Koelnmesse zeigt zwischen Halle 10",
+        "und Halle 9 eine geschwungene Strasse. Halle 9 liegt nicht buendig",
+        "vor Halle 10, sondern nach Norden und leicht nach Osten versetzt.",
+        "Halle 10.2 liegt als Deck auf Halle 10.1."
+      ],
+      "usedFor": "Kreuzprobe der Hallenlage und Erklaerung fuer die Anschlussweite des Durchgangs.",
+      "crossCheck": [
+        "BEUTELTIER misst 54 m Abstand zwischen der Nordkante von Halle 10.2",
+        "und der Suedkante von Halle 9, dazu 10 m Versatz nach Osten. Der Plan",
+        "zeigt denselben diagonalen Versatz. Das erklaert die grosse",
+        "Anschlussweite des Durchgangs 10.2 auf 9.1: dazwischen liegt eine",
+        "Strasse, kein Durchgang."
+      ]
     }
   ],
   "sourceKinds": {

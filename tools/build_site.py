@@ -444,6 +444,15 @@ def main() -> int:
                         "designator": designator, "known": "existiert",
                         "missing": "Lage und Mass",
                         "source": "observed", "observation": entry["id"]})
+            unmodelled = entry.get("unmodelledConnection")
+            if unmodelled:
+                facility_gaps.append({
+                    "kind": unmodelled["kind"],
+                    "hallKey": " ↔ ".join(unmodelled["connects"]),
+                    "designator": unmodelled.get("side", ""),
+                    "known": "Verbindung existiert",
+                    "missing": "Halle nicht im Gelaendemodell",
+                    "source": "observed", "observation": entry["id"]})
             side = entry.get("gateSide")
             if side:
                 facility_gaps.append({

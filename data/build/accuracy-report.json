@@ -825,13 +825,7 @@
    "snapM": null,
    "uncertaintyM": 20.6,
    "positionSource": "beobachtet am amtlichen Tor",
-   "openQuestions": [
-    {
-     "observation": "rolltreppe-verbindet-10.1-und-10.2",
-     "what": "Ist das dieselbe Anlage wie an der Nordwestecke bei Tor P?",
-     "resolvesWith": "Eine Angabe, ob es eine oder zwei Rolltreppenanlagen an Halle 10 gibt."
-    }
-   ]
+   "openQuestions": []
   },
   {
    "id": "v:10.1:stairs",
@@ -844,13 +838,7 @@
    "snapM": null,
    "uncertaintyM": 20.6,
    "positionSource": "beobachtet am amtlichen Tor",
-   "openQuestions": [
-    {
-     "observation": "rolltreppe-verbindet-10.1-und-10.2",
-     "what": "Ist das dieselbe Anlage wie an der Nordwestecke bei Tor P?",
-     "resolvesWith": "Eine Angabe, ob es eine oder zwei Rolltreppenanlagen an Halle 10 gibt."
-    }
-   ]
+   "openQuestions": []
   },
   {
    "id": "v:10.1:escalator:1",
@@ -863,13 +851,7 @@
    "snapM": null,
    "uncertaintyM": 20.6,
    "positionSource": "beobachtet am amtlichen Tor",
-   "openQuestions": [
-    {
-     "observation": "rolltreppe-verbindet-10.1-und-10.2",
-     "what": "Ist das dieselbe Anlage wie an der Nordwestecke bei Tor P?",
-     "resolvesWith": "Eine Angabe, ob es eine oder zwei Rolltreppenanlagen an Halle 10 gibt."
-    }
-   ]
+   "openQuestions": []
   }
  ]
 }

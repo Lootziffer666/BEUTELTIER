@@ -65,15 +65,6 @@ brauchen keine Neuvermessung, sondern eine Bestaetigung:
 - **Treppe 10.1 ↔ 10.2** (10.1 ↔ 10.2)
 - **Rolltreppe 10.1 ↔ 10.2 (Ost der Treppe)** (10.1 ↔ 10.2)
 
-## 3b. Offene Fragen, die eine Antwort sofort aufloest
-
-Diese Punkte haengen an einer einzigen Angabe. Solange sie offen sind,
-bleibt die betroffene Lage stehen, wie sie ist -- geraten wird nicht.
-
-- **Ist das dieselbe Anlage wie an der Nordwestecke bei Tor P?**
-  - loest sich mit: Eine Angabe, ob es eine oder zwei Rolltreppenanlagen an Halle 10 gibt.
-  - Beobachtung: `rolltreppe-verbindet-10.1-und-10.2`
-
 ## 3c. Anlagen, die es gibt, deren Lage aber fehlt
 
 Beschilderung vor Ort nennt mehr, als die Technischen Richtlinien
@@ -86,6 +77,7 @@ ein benennbarer Punkt gleichzeitig zu sehen sind.
 | 10.2 | gate S | existiert | Lage und Mass |
 | 10.2 | gate U | existiert | Lage und Mass |
 | 9 | gate A | Seite: sued | Lage |
+| 10 ↔ 11 | escalator sued | Verbindung existiert | Halle nicht im Gelaendemodell |
 
 ## 4. Betriebszustaende, die in keiner Quelle stehen
 
