@@ -70,6 +70,10 @@ COLOURS = {
 # Boeden und Waende bekommen prozedurale Texturen in der App.
 TEXTURED = {"roof": "ortho"}
 
+# Wie oft sich die Fassade waagerecht wiederholt. Eine Kachel traegt sechs
+# Stuetzenachsen; 30 m entspricht damit rund 5 m Achsmass, wie gebaut.
+FACADE_TILE_M = 30.0
+
 
 def centroid(ring) -> tuple[float, float]:
     return (sum(p[0] for p in ring) / len(ring), sum(p[1] for p in ring) / len(ring))
@@ -360,6 +364,30 @@ def main() -> int:
         planar_uv = None
         print("  ! ortho.json fehlt -- Modell bleibt ohne Textur", file=sys.stderr)
 
+    # Der Hallenboden ist waagerecht -- fuer ihn zaehlt die Flaeche, nicht die
+    # Hoehe. Acht Meter je Kachel entsprechen dem Plattenraster.
+    FLOOR_TILE_M = 8.0
+
+    def floor_uv(point):
+        return (point[0] / FLOOR_TILE_M, -point[2] / FLOOR_TILE_M)
+
+    def wall_uv(low: float, high: float):
+        """Waagerecht nach Richtung der Wand, senkrecht ueber ihre Hoehe.
+
+        Ohne das haben die Waende keine Texturkoordinaten, jede Ecke landet
+        auf demselben Bildpunkt, und die schoenste Fassadentextur bleibt eine
+        Farbflaeche. Genau so sah die erste Fassung aus.
+        """
+        span = max(high - low, 0.5)
+
+        def uv(point):
+            # Szenenpunkt (x, hoehe, -y): waagerecht zaehlt die Strecke in der
+            # Grundebene, senkrecht der Anteil an der Gebaeudehoehe.
+            horizontal = (point[0] + point[2]) / FACADE_TILE_M
+            return (horizontal, 1.0 - (point[1] - low) / span)
+
+        return uv
+
     parts = {kind: gltf.Part(name=kind, colour=colour,
                              texture=(TEXTURED.get(kind) if ortho else None))
              for kind, colour in COLOURS.items()}
@@ -378,7 +406,13 @@ def main() -> int:
                 continue
             scene = [(lambda p: (p[0], z - ground_level, -p[1]))(fit.inverse(x, y))
                      for x, y, z in points]
-            uv = planar_uv if part.texture else None
+            if part.texture:
+                uv = planar_uv
+            elif surface.kind == "ground":
+                uv = floor_uv
+            else:
+                low, high = building.height_range()
+                uv = wall_uv(low - ground_level, high - ground_level)
             for a, b, c in triangles:
                 part.add_triangle(scene[a], scene[b], scene[c], uv)
 

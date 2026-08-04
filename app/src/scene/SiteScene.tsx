@@ -21,7 +21,16 @@ import type { Ortho } from '../data/load';
 import type { Route } from '../routing/route';
 import { mergePolygons, polygonCentre, toScene } from './geometry';
 import { EYE_HEIGHT_M } from './walk';
-import { floorTexture, orthoTexture, wallTexture } from './materials';
+import {
+  ceilingSurface,
+  disposeSurface,
+  facadeSurface,
+  floorSurface,
+  orthoTexture,
+  type Surface,
+} from './materials';
+import { Beleuchtung } from './lighting';
+import { Deckenleuchten } from './interior';
 
 export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
@@ -108,7 +117,7 @@ function Ground({
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[midX, -0.4, midZ]} receiveShadow>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial map={ortho} roughness={0.95} />
+        <meshStandardMaterial map={ortho} roughness={0.88} envMapIntensity={0.6} />
       </mesh>
     </group>
   );
@@ -134,50 +143,81 @@ function Gelaende({
 }) {
   const { scene } = useGLTF(MODEL_URL);
   const ortho = useMemo(() => orthoTexture(ORTHO_URL), []);
-  const wall = useMemo(() => wallTexture(), []);
-  const floor = useMemo(() => floorTexture(), []);
+
+  // Drei Flächenarten, drei Materialsätze — jeder mit Farbe, Normale und
+  // Rauheit. Erzeugt wird einmal, nicht je Halle.
+  const surfaces = useMemo<Record<string, Surface>>(
+    () => ({
+      facade: facadeSurface(false),
+      interior: facadeSurface(true),
+      floor: floorSurface(),
+      ceiling: ceilingSurface(),
+    }),
+    [],
+  );
+  useEffect(
+    () => () => Object.values(surfaces).forEach(disposeSurface),
+    [surfaces],
+  );
 
   const model = useMemo(() => {
     const clone = scene.clone(true);
     clone.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       const source = node.material as THREE.MeshStandardMaterial;
-      const material = source.clone();
+      const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide });
 
-      // Welche Fläche welche Herkunft bekommt, steht im Modell selbst --
+      // Welche Fläche welche Herkunft bekommt, steht im Modell selbst —
       // build_buildings.py schreibt es beim Erzeugen hinein.
-      const kind = (source.name ?? '').toLowerCase();
       const roof = (source.userData?.texture ?? '') === 'ortho';
+      const kind = (source.name ?? '').toLowerCase();
+
       if (roof && !interior) {
         material.map = ortho;
-        material.color.setScalar(1);
-        material.roughness = 0.94;
+        material.roughness = 0.92;
+        material.envMapIntensity = 0.5;
       } else if (roof) {
-        // Von innen ist das Dach eine Decke, und ein Luftbild wäre dort
-        // das Foto der Oberseite -- also das falsche Bild.
-        material.map = null;
-        material.color.set('#3a3d45');
-        material.roughness = 0.85;
+        // Von innen ist das Dach eine Decke. Ein Luftbild wäre dort das Foto
+        // der Oberseite -- also das falsche Bild an der falschen Stelle.
+        const surface = surfaces.ceiling;
+        material.map = surface.map;
+        material.normalMap = surface.normalMap;
+        material.roughnessMap = surface.roughnessMap;
+        material.color.set('#8d919a');
+        material.metalness = 0.45;
+        material.envMapIntensity = 0.6;
       } else if (kind === 'ground') {
-        material.map = floor;
-        material.color.setScalar(1);
-        material.roughness = 0.35;
-        material.metalness = 0.04;
+        const surface = surfaces.floor;
+        material.map = surface.map;
+        material.normalMap = surface.normalMap;
+        material.roughnessMap = surface.roughnessMap;
+        material.roughness = 0.32;
+        material.metalness = 0.12;
+        // Der Boden ist das hellste Element auf den Referenzfotos, weil er
+        // die Leuchtbänder zurückwirft. Genau dafür die hohe Intensität.
+        material.envMapIntensity = 1.5;
       } else {
-        material.map = wall;
-        material.roughness = 0.82;
+        const surface = interior ? surfaces.interior : surfaces.facade;
+        material.map = surface.map;
+        material.normalMap = surface.normalMap;
+        material.roughnessMap = surface.roughnessMap;
+        material.emissiveMap = surface.emissiveMap ?? null;
+        material.emissive.set(interior ? '#7fa8cd' : '#101820');
+        material.emissiveIntensity = interior ? 1.1 : 0.35;
+        material.metalness = 0.18;
+        material.envMapIntensity = 1.1;
       }
 
+      material.normalScale = new THREE.Vector2(1.1, 1.1);
       material.transparent = opacity < 0.99;
       material.opacity = opacity;
       material.depthWrite = opacity > 0.9;
-      material.side = THREE.DoubleSide;
-      material.needsUpdate = true;
       node.material = material;
+      node.castShadow = !interior;
       node.receiveShadow = true;
     });
     return clone;
-  }, [scene, opacity, interior, ortho, wall, floor]);
+  }, [scene, opacity, interior, ortho, surfaces]);
 
   useEffect(
     () => () => {
@@ -636,13 +676,26 @@ export function SiteScene(props: SceneProps) {
     <Canvas
       camera={{ fov: preset === 'ego' ? 70 : 42, near: 0.15, far: extent * 6, position: [extent * 0.5, extent * 0.6, extent * 0.85] }}
       dpr={[1, 1.8]}
+      shadows="soft"
+      gl={{ antialias: true, alpha: false }}
+      onCreated={({ gl }) => {
+        // Ohne Tone Mapping kippt alles Helle nach Weiß, und genau das ließ
+        // die Szene wie ein eingefärbtes Drahtgitter aussehen.
+        gl.toneMapping = THREE.ACESFilmicToneMapping;
+        gl.toneMappingExposure = 1.05;
+      }}
       onPointerMissed={() => props.onSelectStand(null)}
     >
-      <color attach="background" args={['#0b0d12']} />
-      <fog attach="fog" args={['#0b0d12', extent * 0.9, extent * 3]} />
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[extent * 0.4, extent * 0.8, extent * 0.3]} intensity={1.1} />
-      <directionalLight position={[-extent * 0.5, extent * 0.4, -extent * 0.4]} intensity={0.35} />
+      <color attach="background" args={[preset === 'ego' ? '#1a1d24' : '#8fa8bf']} />
+      <fog
+        attach="fog"
+        args={[
+          preset === 'ego' ? '#20242c' : '#9fb4c8',
+          preset === 'ego' ? extent * 0.25 : extent * 1.1,
+          preset === 'ego' ? extent * 1.2 : extent * 3.2,
+        ]}
+      />
+      <Beleuchtung extent={extent} interior={preset === 'ego'} />
 
       <Ground extent={extent} centre={centre} ortho={data.ortho} />
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
@@ -663,6 +716,7 @@ export function SiteScene(props: SceneProps) {
         routeStandIds={props.routeStandIds}
         onSelectStand={props.onSelectStand}
       />
+      <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
       <RouteRibbon data={data} route={route} centre={centre} />
       <HallLabels data={data} centre={centre} upperOpacity={upperOpacity} />
       {preset === 'ego' ? (
