@@ -108,18 +108,24 @@ function speckle(context: CanvasRenderingContext2D, strength: number): void {
 }
 
 /**
- * Feine waagerechte Lamellen — das prägende Element der Hallenfassaden.
+ * Senkrechte Lamellen — das prägende Element der Hallenfassaden.
  *
- * Auf den Fotos ist das kein Muster, sondern die Wand selbst: Blechbänder im
- * Zentimeterabstand, die je nach Lichteinfall silbrig oder fast weiß wirken.
+ * Auf den Fotos laufen sie **stehend**, nicht liegend: schmale weiße Streben
+ * im Meterabstand, jede mit einer schmalen Schattenkante an einer Seite, wo
+ * das Profil vorspringt. Eine horizontale Bänderung war hier zuvor der
+ * Fehler -- an keinem Referenzfoto liegt eine Lamelle waagerecht.
  */
 function louvres(context: CanvasRenderingContext2D, top: number, bottom: number,
                  pitch: number, light: string, dark: string): void {
-  for (let y = top; y < bottom; y += pitch) {
-    context.fillStyle = light;
-    context.fillRect(0, y, SIZE, pitch * 0.55);
+  for (let x = 0; x < SIZE; x += pitch) {
+    // Schmale Strebe, breiterer Zwischenraum -- einzelne Lamellen, keine
+    // geschlossene Fläche mit aufgemalten Linien.
     context.fillStyle = dark;
-    context.fillRect(0, y + pitch * 0.55, SIZE, pitch * 0.45);
+    context.fillRect(x, top, pitch, bottom - top);
+    context.fillStyle = light;
+    context.fillRect(x, top, pitch * 0.4, bottom - top);
+    context.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    context.fillRect(x + pitch * 0.4, top, pitch * 0.08, bottom - top);
   }
 }
 
@@ -134,18 +140,22 @@ function louvres(context: CanvasRenderingContext2D, top: number, bottom: number,
  * innen sieht man das Band aus Fenstern unter der Decke, nicht die Brüstung.
  */
 export function facadeSurface(interior = false): Surface {
-  const [colour, ctx] = layer(interior ? '#e7e3da' : '#dedbd3');
+  // Weiß, nicht beige: die Fotos zeigen kühles #f0f0f2, kein Sandton.
+  const [colour, ctx] = layer(interior ? '#eceae3' : '#f0f0f2');
   const [height, hctx] = layer('#808080');
   const [rough, rctx] = layer('#b0b0b0');
   const [glow, gctx] = layer('#000000');
 
-  // --- Lamellenfeld ------------------------------------------------------
+  // --- Lamellenfeld: stehende Streben, rund ein Meter Rastermaß ----------
+  // Die Texturkachel deckt FACADE_TILE_M = 30 m ab (build_buildings.py),
+  // 1024 px darauf macht rund 34 px/m -- exakt der Rastermassstab hier.
   const bandTop = SIZE * 0.16;
   const bandBottom = SIZE * 0.78;
-  louvres(ctx, bandTop, bandBottom, 9, interior ? '#e9e6de' : '#d3d6db',
-          interior ? '#d8d4c9' : '#bcc1c8');
-  louvres(hctx, bandTop, bandBottom, 9, '#a8a8a8', '#585858');
-  rctx.fillStyle = '#9a9a9a';
+  const lamellePitch = 34;
+  louvres(ctx, bandTop, bandBottom, lamellePitch,
+          interior ? '#f2f0e9' : '#ffffff', interior ? '#ddd9cf' : '#c7cbd1');
+  louvres(hctx, bandTop, bandBottom, lamellePitch, '#c8c8c8', '#606060');
+  rctx.fillStyle = '#a8a8a8';
   rctx.fillRect(0, bandTop, SIZE, bandBottom - bandTop);
 
   // --- Sockel: glatter Beton, unten nachgedunkelt ------------------------
@@ -241,9 +251,21 @@ export function facadeSurface(interior = false): Surface {
  * Ecken matter.
  */
 export function floorSurface(): Surface {
-  const [colour, ctx] = layer('#b6b8bb');
+  const [colour, ctx] = layer('#c5c5c7');
   const [height, hctx] = layer('#808080');
-  const [rough, rctx] = layer('#5a5a5a');
+  // Poliert: niedrige Grundrauheit statt der vorherigen matten Fläche.
+  const [rough, rctx] = layer('#3c3c3c');
+
+  // Dunkle Einlagequadrate, wie auf den Referenzfotos: kein Schachbrett,
+  // sondern unregelmässig gesetzte Platten in einem groben Raster.
+  const tile = SIZE / 8;
+  for (let ty = 0; ty < 8; ty += 1) {
+    for (let tx = 0; tx < 8; tx += 1) {
+      if ((tx + ty) % 2 !== 0 || Math.random() < 0.3) continue;
+      ctx.fillStyle = 'rgba(60, 60, 65, 0.16)';
+      ctx.fillRect(tx * tile, ty * tile, tile, tile);
+    }
+  }
 
   for (let i = 0; i < 160; i += 1) {
     const x = Math.random() * SIZE;
@@ -298,13 +320,13 @@ export function floorSurface(): Surface {
  * sich im Boden spiegeln, und eine aufgemalte Lampe spiegelt nicht.
  */
 export function ceilingSurface(): Surface {
-  const [colour, ctx] = layer('#33363c');
+  const [colour, ctx] = layer('#2a2a2e');
   const [height, hctx] = layer('#808080');
   const [rough, rctx] = layer('#8c8c8c');
 
   // Trapezblech quer.
   for (let y = 0; y < SIZE; y += 12) {
-    ctx.fillStyle = '#3a3d44';
+    ctx.fillStyle = '#313136';
     ctx.fillRect(0, y, SIZE, 7);
     hctx.fillStyle = '#a0a0a0';
     hctx.fillRect(0, y, SIZE, 7);
@@ -312,7 +334,7 @@ export function ceilingSurface(): Surface {
 
   // Fachwerkträger im groben Raster.
   const truss = SIZE / 5;
-  ctx.strokeStyle = '#4c505a';
+  ctx.strokeStyle = '#4a4a52';
   hctx.strokeStyle = '#e0e0e0';
   rctx.strokeStyle = '#5a5a5a';
   for (const context of [ctx, hctx, rctx]) {
@@ -321,6 +343,19 @@ export function ceilingSurface(): Surface {
       context.beginPath();
       context.moveTo(step, 0);
       context.lineTo(step, SIZE);
+      context.moveTo(0, step);
+      context.lineTo(SIZE, step);
+      context.stroke();
+    }
+  }
+
+  // Lüftungsrohre: dickere Querleitungen, versetzt zum Trägerraster.
+  ctx.strokeStyle = '#55555e';
+  hctx.strokeStyle = '#8c8c8c';
+  for (const context of [ctx, hctx]) {
+    context.lineWidth = 22;
+    for (let step = truss / 2; step <= SIZE; step += truss) {
+      context.beginPath();
       context.moveTo(0, step);
       context.lineTo(SIZE, step);
       context.stroke();
