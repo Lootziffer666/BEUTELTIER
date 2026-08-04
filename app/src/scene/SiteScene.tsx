@@ -33,6 +33,7 @@ import {
 import { Beleuchtung } from './lighting';
 import { Deckenleuchten } from './interior';
 import { Vertikalverbindungen } from './vertical';
+import type { CameraSnapshot } from './survey';
 
 export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
@@ -48,6 +49,17 @@ export interface SceneProps {
   onSelectStand: (standId: string | null) => void;
   /** Verlässt die Ego-Perspektive, wenn der Nutzer Escape drückt. */
   onLeaveEgo?: () => void;
+  /** Vermessungsmodus: Kollision aus, um Referenzfoto-Perspektiven zu erreichen. */
+  noClip?: boolean;
+  /** Bewegung und Umsehen pausiert, während ein Referenzfoto ausgerichtet wird. */
+  frozen?: boolean;
+  /** Zeiger ist für das Referenzfoto-Overlay freigegeben, kein Pointer Lock. */
+  viewfinderOpen?: boolean;
+  onToggleNoClip?: () => void;
+  onToggleFreeze?: () => void;
+  onToggleViewfinder?: () => void;
+  /** Aktueller Kamerazustand wird an den Aufrufer gereicht, keine Beschreibung nötig. */
+  onMark?: (snapshot: CameraSnapshot) => void;
 }
 
 const COLOURS = {
@@ -529,24 +541,73 @@ function HallLabels({
  * Kollidiert wird gegen dasselbe Gitter, auf dem geroutet wird. Was die
  * Route nicht darf, darf hier auch niemand.
  */
+/** Steigen/Sinken im No-Clip-Flug -- kein Kollisionsgitter kennt „oben". */
+const FLY_SPEED_M_PER_S = 2.4;
+
 function WalkControls({
   data,
   centre,
   active,
   start,
   onExit,
+  noClip = false,
+  frozen = false,
+  viewfinderOpen = false,
+  onToggleNoClip,
+  onToggleFreeze,
+  onToggleViewfinder,
+  onMark,
 }: {
   data: Dataset;
   centre: [number, number];
   active: boolean;
   start: THREE.Vector3 | null;
   onExit: () => void;
+  noClip?: boolean;
+  frozen?: boolean;
+  viewfinderOpen?: boolean;
+  onToggleNoClip?: () => void;
+  onToggleFreeze?: () => void;
+  onToggleViewfinder?: () => void;
+  onMark?: (snapshot: CameraSnapshot) => void;
 }) {
   const { camera, gl } = useThree();
   const position = useRef({ x: 0, y: 0, z: 0 });
   const look = useRef({ yaw: 0, pitch: 0 });
   const keys = useRef(new Set<string>());
   const locked = useRef(false);
+
+  // Als Refs gespiegelt, damit der Ereignis-Effekt nicht bei jedem Tastendruck
+  // oder jedem Render der Elternkomponente neu gebunden werden muss -- die
+  // Callback-Props sind in App.tsx inline definiert und damit bei jedem
+  // Render neue Funktionsobjekte. Nur die aktuellen Werte zählen hier.
+  const noClipRef = useRef(noClip);
+  const frozenRef = useRef(frozen);
+  const viewfinderRef = useRef(viewfinderOpen);
+  const onExitRef = useRef(onExit);
+  const onToggleNoClipRef = useRef(onToggleNoClip);
+  const onToggleFreezeRef = useRef(onToggleFreeze);
+  const onToggleViewfinderRef = useRef(onToggleViewfinder);
+  const onMarkRef = useRef(onMark);
+  useEffect(() => {
+    noClipRef.current = noClip;
+  }, [noClip]);
+  useEffect(() => {
+    frozenRef.current = frozen;
+  }, [frozen]);
+  useEffect(() => {
+    viewfinderRef.current = viewfinderOpen;
+    // Das Overlay braucht den echten Zeiger zum Ausrichten des Fotos --
+    // Pointer Lock würde ihn einsperren.
+    if (viewfinderOpen && document.pointerLockElement) document.exitPointerLock?.();
+  }, [viewfinderOpen]);
+  useEffect(() => {
+    onExitRef.current = onExit;
+    onToggleNoClipRef.current = onToggleNoClip;
+    onToggleFreezeRef.current = onToggleFreeze;
+    onToggleViewfinderRef.current = onToggleViewfinder;
+    onMarkRef.current = onMark;
+  });
 
   // Startpunkt: die fokussierte Halle, sonst der erste begehbare Punkt.
   useEffect(() => {
@@ -564,16 +625,18 @@ function WalkControls({
   useEffect(() => {
     if (!active) return;
     const canvas = gl.domElement;
+    const isTyping = (target: EventTarget | null) =>
+      target instanceof HTMLElement && ['INPUT', 'TEXTAREA'].includes(target.tagName);
 
     const request = () => {
-      if (!locked.current) void canvas.requestPointerLock?.();
+      if (!locked.current && !viewfinderRef.current) void canvas.requestPointerLock?.();
     };
     const onLockChange = () => {
       locked.current = document.pointerLockElement === canvas;
       if (!locked.current) keys.current.clear();
     };
     const onMove = (event: MouseEvent) => {
-      if (!locked.current) return;
+      if (!locked.current || frozenRef.current) return;
       look.current.yaw -= event.movementX * 0.0022;
       look.current.pitch = Math.max(
         -1.2,
@@ -581,13 +644,42 @@ function WalkControls({
       );
     };
     const onDown = (event: KeyboardEvent) => {
+      if (isTyping(event.target)) return;
       if (event.key === 'Escape') {
-        onExit();
+        onExitRef.current();
         return;
       }
-      keys.current.add(event.key.toLowerCase());
+      const key = event.key.toLowerCase();
+      if (key === 'n') {
+        onToggleNoClipRef.current?.();
+        return;
+      }
+      if (key === 'f') {
+        onToggleFreezeRef.current?.();
+        return;
+      }
+      if (key === 'v') {
+        onToggleViewfinderRef.current?.();
+        return;
+      }
+      if (key === 'm') {
+        const { x, y, z } = position.current;
+        onMarkRef.current?.({
+          x,
+          y,
+          z,
+          yaw: look.current.yaw,
+          pitch: look.current.pitch,
+          hallKey: data.walk.footingAt(x, y, z).hallKey,
+        });
+        return;
+      }
+      keys.current.add(key);
     };
-    const onUp = (event: KeyboardEvent) => keys.current.delete(event.key.toLowerCase());
+    const onUp = (event: KeyboardEvent) => {
+      if (isTyping(event.target)) return;
+      keys.current.delete(event.key.toLowerCase());
+    };
 
     canvas.addEventListener('click', request);
     document.addEventListener('pointerlockchange', onLockChange);
@@ -603,26 +695,45 @@ function WalkControls({
       if (document.pointerLockElement === canvas) document.exitPointerLock?.();
       keys.current.clear();
     };
-  }, [active, gl, onExit]);
+    // Bewusst ohne die Callback-Props in den Abhängigkeiten -- sie sind in
+    // App.tsx inline definiert (neue Funktion bei jedem Render) und würden
+    // sonst Pointer-Lock- und Tastatur-Listener bei jedem Tastendruck neu
+    // binden. Aktuelle Werte kommen aus den Refs oben.
+  }, [active, gl, data]);
 
   useFrame((_, delta) => {
     if (!active) return;
-    const pressed = keys.current;
-    const forward =
-      (pressed.has('w') || pressed.has('arrowup') ? 1 : 0) -
-      (pressed.has('s') || pressed.has('arrowdown') ? 1 : 0);
-    const strafe =
-      (pressed.has('d') || pressed.has('arrowright') ? 1 : 0) -
-      (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0);
 
-    if (forward || strafe) {
-      const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
-      const { yaw } = look.current;
-      // Karten-Y zeigt nach Norden, die Szene nach -Z. Deshalb hier und nicht
-      // erst beim Zeichnen umrechnen -- sonst läuft man seitwärts.
-      const dx = (Math.sin(-yaw) * forward + Math.cos(-yaw) * strafe) * speed;
-      const dy = (Math.cos(-yaw) * forward - Math.sin(-yaw) * strafe) * speed;
-      position.current = data.walk.move(position.current, dx, dy);
+    if (!frozenRef.current) {
+      const pressed = keys.current;
+      const forward =
+        (pressed.has('w') || pressed.has('arrowup') ? 1 : 0) -
+        (pressed.has('s') || pressed.has('arrowdown') ? 1 : 0);
+      const strafe =
+        (pressed.has('d') || pressed.has('arrowright') ? 1 : 0) -
+        (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0);
+      const climb = (pressed.has(' ') ? 1 : 0) - (pressed.has('control') ? 1 : 0);
+
+      if (forward || strafe) {
+        const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
+        const { yaw } = look.current;
+        // Karten-Y zeigt nach Norden, die Szene nach -Z. Deshalb hier und nicht
+        // erst beim Zeichnen umrechnen -- sonst läuft man seitwärts.
+        const dx = (Math.sin(-yaw) * forward + Math.cos(-yaw) * strafe) * speed;
+        const dy = (Math.cos(-yaw) * forward - Math.sin(-yaw) * strafe) * speed;
+        position.current = noClipRef.current
+          ? { ...position.current, x: position.current.x + dx, y: position.current.y + dy }
+          : data.walk.move(position.current, dx, dy);
+      }
+
+      // Vertikal fliegen gibt es nur ohne Kollision -- das Gitter kennt keine
+      // Höhe über der eigenen Ebene, ein "oben" ergäbe dort keinen Sinn.
+      if (noClipRef.current && climb) {
+        position.current = {
+          ...position.current,
+          z: position.current.z + climb * FLY_SPEED_M_PER_S * delta,
+        };
+      }
     }
 
     const { x, y, z } = position.current;
@@ -766,6 +877,13 @@ export function SiteScene(props: SceneProps) {
           active
           start={focus}
           onExit={() => props.onLeaveEgo?.()}
+          noClip={props.noClip}
+          frozen={props.frozen}
+          viewfinderOpen={props.viewfinderOpen}
+          onToggleNoClip={props.onToggleNoClip}
+          onToggleFreeze={props.onToggleFreeze}
+          onToggleViewfinder={props.onToggleViewfinder}
+          onMark={props.onMark}
         />
       ) : (
         <CameraRig preset={preset} focus={focus} extent={extent} />

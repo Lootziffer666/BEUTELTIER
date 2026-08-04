@@ -497,3 +497,160 @@ textarea {
     border-top: 1px solid var(--line);
   }
 }
+
+/* Vermessungsmodus: siehe app/src/ui/Vermessung.tsx */
+
+.survey {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 6px;
+  background: rgba(12, 14, 20, 0.85);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px;
+  backdrop-filter: blur(6px);
+}
+
+kbd {
+  display: inline-block;
+  font-size: 0.75em;
+  padding: 0 4px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  margin-left: 2px;
+}
+
+.viewfinder {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.viewfinder__image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: none;
+  transform-origin: center;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+}
+.viewfinder__image:active {
+  cursor: grabbing;
+}
+.viewfinder__bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(12, 14, 20, 0.88);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  pointer-events: auto;
+}
+.viewfinder__drop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: rgba(12, 14, 20, 0.3);
+  pointer-events: auto;
+  text-align: center;
+  padding: 20px;
+}
+
+.note-composer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, 80vw);
+  background: rgba(12, 14, 20, 0.95);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 5;
+}
+.note-composer__snapshot {
+  margin: 0;
+  font-size: 12px;
+  color: var(--accent);
+  font-family: ui-monospace, monospace;
+}
+.note-composer textarea {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+  font: inherit;
+}
+.note-composer__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.note-list {
+  position: absolute;
+  right: 12px;
+  bottom: 60px;
+  width: min(320px, 70vw);
+  max-height: 50vh;
+  overflow-y: auto;
+  background: rgba(12, 14, 20, 0.92);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+.note-list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+.note-list__head > div {
+  display: flex;
+  gap: 6px;
+}
+.note-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.note-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+.note-list li p {
+  margin: 0;
+  font-size: 13px;
+}
+.note-list li button {
+  padding: 2px 8px;
+}
