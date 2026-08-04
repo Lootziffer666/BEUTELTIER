@@ -30,6 +30,7 @@ from beuteltier.graph import GRID_M, Edge, Graph, Node, attach_stands, build_hal
 
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "data" / "build" / "site.json"
+FIELD_NOTES = ROOT / "data" / "curated" / "field-notes.json"
 VERTICAL_ACCESS = ROOT / "data" / "curated" / "vertical-access.json"
 OUT = ROOT / "data" / "build" / "graph.json"
 
@@ -254,6 +255,21 @@ def main() -> int:
             }
         aufgaenge.update(measured)
 
+    # Eine Beobachtung vor Ort kann eine Ableitung schlagen: wo jemand
+    # gesehen hat, dass der Aufgang unmittelbar an einem verorteten Tor
+    # liegt, erbt der Aufgang dessen Lage -- statt in der Hallenmitte zu
+    # stehen, wo ihn niemand gesehen hat.
+    facilities_by_id = {f["id"]: f for f in site.get("facilities", [])}
+    anchors: dict[str, dict] = {}
+    if FIELD_NOTES.exists():
+        notes = json.loads(FIELD_NOTES.read_text(encoding="utf-8"))
+        for entry in notes.get("observations", []):
+            anchor = entry.get("anchor")
+            facility = facilities_by_id.get((anchor or {}).get("facilityId", ""))
+            if anchor and facility:
+                anchors[anchor["lowerKey"]] = {"facility": facility,
+                                               "observation": entry["id"]}
+
     official_lifts: dict[str, list[dict]] = defaultdict(list)
     for facility in site.get("facilities", []):
         if facility["kind"] == "elevator":
@@ -301,11 +317,21 @@ def main() -> int:
         else:
             plan = [("elevator", 0.0), ("escalator", 18.0)]
 
+        # Der Aufgang steht dort, wo ihn jemand gesehen hat -- nicht in der
+        # Hallenmitte. Der Aufzug bleibt davon unberuehrt, er hat seine
+        # eigene Quelle.
+        observed = anchors.get(lower_key)
+        if observed:
+            ax, ay = observed["facility"]["position"]
+        else:
+            ax, ay = cx, cy
+
         seen_kinds: dict[str, int] = {}
         for kind, offset in plan:
             confirmed = False
-            lower_hit = nearest_aisle(graph, cx + offset, cy, lower_key, PORTAL_SNAP_M)
-            upper_hit = nearest_aisle(graph, cx + offset, cy, upper_key, PORTAL_SNAP_M)
+            bx, by = (cx, cy) if kind == "elevator" else (ax, ay)
+            lower_hit = nearest_aisle(graph, bx + offset, by, lower_key, PORTAL_SNAP_M)
+            upper_hit = nearest_aisle(graph, bx + offset, by, upper_key, PORTAL_SNAP_M)
             if not (lower_hit and upper_hit):
                 continue
             lower_aisle, upper_aisle = lower_hit[0], upper_hit[0]
@@ -332,8 +358,17 @@ def main() -> int:
                 # belegt. Die Lage bleibt trotzdem ein Platzhalter -- der
                 # Katalog verkauft Flaechen, er zeichnet keine Karte.
                 meta["source"] = "official"
-                meta["positionSource"] = "placeholder"
                 meta["evidence"] = stair["id"]
+                if observed:
+                    # Lage amtlich (das Tor), Zuordnung beobachtet (die
+                    # Nachbarschaft). Beides steht dran, damit niemand das
+                    # eine fuer das andere haelt.
+                    meta["positionSource"] = "beobachtet am amtlichen Tor"
+                    meta["positionAnchor"] = observed["facility"]["id"]
+                    meta["observation"] = observed["observation"]
+                    meta["uncertaintyM"] = observed["facility"]["uncertaintyM"]
+                else:
+                    meta["positionSource"] = "placeholder"
                 if kind == "stairs" and not stair.get("steps"):
                     # Die Regel belegt die Treppe, nicht ihr Mass.
                     label = f"Treppe {lower_key} ↔ {upper_key}"

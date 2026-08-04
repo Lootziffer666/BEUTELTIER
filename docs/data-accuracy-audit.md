@@ -215,10 +215,19 @@ Weiter gerechnet: die Treppe Nordboulevard → Mittelboulevard fällt um 4,95 m.
 Der Nordboulevard läge damit bei rund 9,6 m — höher als die Decke von Halle
 10.1. In BEUTELTIER stehen die Hallen 6 bis 9 aber alle auf Höhe 0.
 
-Eine der beiden Annahmen ist falsch, und keine Quelle entscheidet es. Am
-wahrscheinlichsten steigt das Gelände nach Norden. Belegt ist das nicht, also
-bleibt das Höhenmodell unverändert und der Widerspruch steht in den Daten:
-jede vermaßte Treppe trägt `risesShortOfM` und eine Notiz dazu.
+Ich hatte daraus zunächst geschlossen, das Gelände steige nach Norden. **Eine
+Beobachtung vor Ort hat das widerlegt** (`data/curated/field-notes.json`):
+Halle 10.2 kragt als Betondeck auf Stützen über eine offene Fläche auf
+Bodenniveau aus; die Südseite von Halle 9 und der ebenerdige Zugang zu Halle
+10.1 liegen auf **derselben** Fläche. Vom Boulevard führt eine asphaltierte
+Auffahrt *hinunter* auf dieses Niveau.
+
+Damit ist die Lage anders herum, als ich vermutet hatte: die Hallen teilen ein
+gemeinsames Bodenniveau, und **der Boulevard ist das erhöhte Deck darüber** —
+passend zu den 20 Stufen, die vom Mittelboulevard nach Halle 10.2 hinaufführen.
+Ein Höhenmaß wurde nicht genommen, das Höhenmodell bleibt deshalb unverändert.
+Aber die falsche Vermutung ist raus, und der Widerspruch steht weiter in den
+Daten: jede vermaßte Treppe trägt `risesShortOfM` und eine Notiz dazu.
 
 #### Und eine Bestätigung
 

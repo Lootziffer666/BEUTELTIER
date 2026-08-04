@@ -1,0 +1,59 @@
+{
+  "schema": "beuteltier.field-notes.v1",
+  "note": [
+    "Beobachtungen vor Ort. Sie sind keine Messung und keine amtliche Angabe,",
+    "aber sie sind belastbarer als eine Ableitung aus zwei Annahmen -- und sie",
+    "koennen eine Ableitung widerlegen. Genau das ist hier passiert.",
+    "Herkunftsklasse: 'observed'. Keine Masse, keine Koordinaten, keine Fotos",
+    "im Repository. Was daraus in die Karte wandert, steht bei der jeweiligen",
+    "Beobachtung unter 'usedFor'."
+  ],
+  "observer": "Projektleitung BEUTELTIER, gamescom vor Ort",
+  "recorded": "2026-08-04",
+  "observations": [
+    {
+      "id": "halle10-untergeschoss-freiflaeche",
+      "where": "Ostseite Halle 10, zwischen Halle 10 und Boulevard",
+      "what": [
+        "Halle 10.2 kragt als Betondeck auf Stuetzen ueber eine offene",
+        "Flaeche auf Bodenniveau aus. Darunter laeuft der Besucherstrom.",
+        "Die Suedseite von Halle 9 und der ebenerdige Zugang zu Halle 10.1",
+        "liegen auf derselben Flaeche. Sie ist etwa so breit wie der",
+        "Boulevard selbst.",
+        "Vom Boulevard fuehrt eine asphaltierte Auffahrt hinunter auf diese",
+        "Flaeche und weiter zum suedlichen Eingang von Halle 9."
+      ],
+      "usedFor": "Korrigiert die Vermutung, das Gelaende steige nach Norden.",
+      "implication": [
+        "Halle 9 (Sued) und Halle 10.1 teilen ein gemeinsames Bodenniveau.",
+        "Der Boulevard liegt darueber, nicht daneben -- die Auffahrt geht",
+        "vom Boulevard *hinunter* auf Hallenniveau. Das deckt sich mit den",
+        "20 Stufen vom Mittelboulevard hinauf nach Halle 10.2 und",
+        "widerspricht der frueheren Vermutung eines nach Norden steigenden",
+        "Gelaendes.",
+        "Ein Hoehenmass wurde nicht genommen. Das Hoehenmodell bleibt."
+      ]
+    },
+    {
+      "id": "aufgang-10.2-am-osttor",
+      "where": "Halle 10.2, Ostseite",
+      "what": [
+        "Unmittelbar vor der grossen Rolltreppe, die von Sueden heraufkommt,",
+        "fuehrt nach Osten ein Tor ins Freie."
+      ],
+      "usedFor": "Verankert den Ebenenwechsel 10.1 auf 10.2 an einem amtlich verorteten Tor statt in der Hallenmitte.",
+      "anchor": {
+        "lowerKey": "10.1",
+        "facilityId": "gate:10.2T",
+        "why": [
+          "Halle 10.2 hat in den Technischen Richtlinien genau ein Tor an der",
+          "Ostseite: T. Die Beobachtung nennt ein Osttor unmittelbar am",
+          "Aufgang. Das Tor ist verortet, der Aufgang nicht -- also erbt der",
+          "Aufgang die Lage des Tors.",
+          "Die Herkunft bleibt sichtbar: Lage amtlich (Tor), Zuordnung",
+          "beobachtet (Nachbarschaft). Sie ist nicht gemessen."
+        ]
+      }
+    }
+  ]
+}
