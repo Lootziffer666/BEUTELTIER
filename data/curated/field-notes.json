@@ -123,6 +123,83 @@
           "Zuordnung beobachtet (die Nachbarschaft). Gemessen ist sie nicht."
         ]
       }
+    },
+    {
+      "id": "torgruppe-10.2-p-bis-u",
+      "kind": "video-screenshot",
+      "where": "Nordwestliche Durchfahrt unter dem Deck von Halle 10.2",
+      "what": [
+        "An der Durchfahrt haengt das Koelnmesse-Torgruppenschild '10.2 P - U',",
+        "daneben 'Ausfahrt / Exit' sowie Rollstuhl- und Parkplatz-Piktogramme.",
+        "Ueber der Durchfahrt ein gruenes 'Ausfahrt'-Schild."
+      ],
+      "usedFor": "Bestaetigt den Anker und weist drei bisher unbekannte Tore aus.",
+      "confirms": "aufgang-10.2-an-der-nordwestecke",
+      "gatesSignposted": {
+        "hallKey": "10.2",
+        "range": [
+          "P",
+          "U"
+        ],
+        "inGuidelines": [
+          "N",
+          "P",
+          "Q",
+          "T"
+        ],
+        "knownButUnplaced": [
+          "R",
+          "S",
+          "U"
+        ],
+        "note": [
+          "Die Technischen Richtlinien fuehren fuer Halle 10.2 nur N, P, Q und",
+          "T. Das Schild nennt die Gruppe P bis U -- R, S und U gibt es also",
+          "auch. Ohne Mass und ohne Lage: sie werden vermerkt, nicht verortet."
+        ]
+      }
+    },
+    {
+      "id": "halle9-tor-a-an-der-suedseite",
+      "kind": "video-screenshot",
+      "where": "Suedfassade Halle 9, an der Freiflaeche",
+      "what": [
+        "An der Suedfassade von Halle 9 haengt das gruene Torschild 'A',",
+        "westlich des grossen '9'-Logos. Die Fassade laeuft als langes",
+        "Fensterband nach Osten."
+      ],
+      "usedFor": "Erste Lageangabe ueberhaupt fuer ein Tor der Halle 9.",
+      "gateSide": {
+        "hallKey": "9",
+        "designator": "A",
+        "side": "sued",
+        "note": [
+          "Die Tortabelle kennt fuer Halle 9 die Tore A bis J (H mit 6,00 x",
+          "6,00 m, die uebrigen 6,00 x 4,50 m), aber der Torplan setzt die",
+          "Buchstaben der eingeschossigen Nordhallen zu weit von der",
+          "Hallennummer entfernt -- sie werden bewusst nicht zugeordnet.",
+          "Damit ist A die einzige Halle-9-Tuer, deren Seite bekannt ist.",
+          "Eine Koordinate ist das nicht."
+        ]
+      }
+    },
+    {
+      "id": "weg-boulevard-zu-halle-9-ist-begehbar",
+      "kind": "video-screenshot",
+      "where": "Vom Mittelboulevard hinunter auf die Freiflaeche und weiter zur Suedseite Halle 9",
+      "what": [
+        "Der Weg fuehrt vom Boulevard unter dem Deck von Halle 10.2 hindurch,",
+        "hinunter auf die asphaltierte Freiflaeche und an der Suedfassade von",
+        "Halle 9 entlang. Er ist durchgehend befestigt und wird vom",
+        "Besucherstrom benutzt; auf der Strecke faehrt ein Rollstuhl mit.",
+        "Ausser Absperrgittern, Bauzaeunen mit Werbung und der Beschilderung",
+        "steht dort nichts."
+      ],
+      "usedFor": "Bestaetigt den Durchgang 10.2 auf 9.1 als benutzten, befestigten Transitweg.",
+      "supports": "freiflaeche-zwischen-9-10-boulevard"
     }
-  ]
+  ],
+  "sourceKinds": {
+    "video-screenshot": "Standbilder aus einem oeffentlich abrufbaren Video (YouTube/GeekStreetTravels), vom Beobachter als zutreffend bestaetigt. Beweiskraft fuer Beschilderung und Wegefuehrung, nicht fuer Masse. Zeitstempel im Bild sind die Uhr des Aufnehmenden, keine Gehzeiten. Die Bilder liegen nicht im Repository."
+  }
 }

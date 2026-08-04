@@ -33,6 +33,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SITEMAP_PDF = ROOT / "data" / "raw" / "pdf" / "gamescom-2025-hallenplan.pdf"
 ACCESS_PDF = ROOT / "data" / "raw" / "pdf" / "koelnmesse-barrierefrei.pdf"
 TECHGUIDE_PDF = ROOT / "data" / "raw" / "pdf" / "technische-richtlinien-2022.pdf"
+FIELD_NOTES = ROOT / "data" / "curated" / "field-notes.json"
 
 # Wie weit eine Planbeschriftung hoechstens auf die Hallenkante gezogen wird.
 MAX_SNAP_M = 35.0
@@ -427,6 +428,32 @@ def main() -> int:
         print(f"  {kind}: {len(marks)} verortet, davon {measured} vermessen, "
               f"Plan auf ±{plan_cross:.1f} m ({plan_n} Stuetzen)")
 
+    # --- Was es gibt, aber nicht verortet ist --------------------------------
+    # Beschilderung vor Ort nennt Tore, die in den Technischen Richtlinien
+    # fehlen, und Seiten von Toren, die der Plan nicht zuordnet. Beides ist
+    # zu wenig fuer eine Koordinate und zu viel, um es wegzulassen.
+    facility_gaps = []
+    if FIELD_NOTES.exists():
+        notes = json.loads(FIELD_NOTES.read_text(encoding="utf-8"))
+        for entry in notes.get("observations", []):
+            signposted = entry.get("gatesSignposted")
+            if signposted:
+                for designator in signposted.get("knownButUnplaced", []):
+                    facility_gaps.append({
+                        "kind": "gate", "hallKey": signposted["hallKey"],
+                        "designator": designator, "known": "existiert",
+                        "missing": "Lage und Mass",
+                        "source": "observed", "observation": entry["id"]})
+            side = entry.get("gateSide")
+            if side:
+                facility_gaps.append({
+                    "kind": "gate", "hallKey": side["hallKey"],
+                    "designator": side["designator"],
+                    "known": f"Seite: {side['side']}", "missing": "Lage",
+                    "source": "observed", "observation": entry["id"]})
+    if facility_gaps:
+        print(f"  {len(facility_gaps)} Anlagen bekannt, aber nicht verortet")
+
     # --- Durchgaenge aus der Layout-Tabelle ----------------------------------
     # Die Tabelle lebt in ihrem eigenen Zeichenraum und braucht eine eigene
     # Transformation -- die des Uebersichtsplans passt hier nicht. Gestuetzt
@@ -478,6 +505,7 @@ def main() -> int:
         "stands": stands_out,
         "connectors": connectors,
         "facilities": facilities,
+        "facilityGaps": facility_gaps,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     print()

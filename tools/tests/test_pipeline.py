@@ -545,6 +545,34 @@ class TestOpeningDimensions:
         assert lift["meta"]["source"] == "placeholder"
         assert "positionAnchor" not in lift["meta"]
 
+    def test_fuehrt_bekannte_aber_unverortete_anlagen(self, site):
+        """Beschilderung vor Ort kennt mehr Tore als die Richtlinien.
+
+        Das Gruppenschild an der nordwestlichen Durchfahrt nennt "10.2 P - U".
+        Die Tortabelle fuehrt fuer Halle 10.2 nur N, P, Q und T. R, S und U
+        gibt es also auch -- ohne Mass und ohne Lage. Sie werden vermerkt,
+        nicht verortet.
+        """
+        gaps = site["facilityGaps"]
+        placed = {(f["hallKey"], f["designator"]) for f in site["facilities"]}
+        assert {g["designator"] for g in gaps if g["hallKey"] == "10.2"} == {"R", "S", "U"}
+        for gap in gaps:
+            assert gap["source"] == "observed"
+            assert gap["observation"]
+            assert gap["missing"]
+            # Was hier steht, darf nirgends als verortet auftauchen.
+            assert (gap["hallKey"], gap["designator"]) not in placed
+
+    def test_kennt_von_halle_9_nur_die_seite(self, site):
+        """Fuer Halle 9 gibt es erstmals eine Lageangabe -- und nur eine Seite."""
+        gap = next(g for g in site["facilityGaps"] if g["hallKey"] == "9")
+        assert gap["designator"] == "A"
+        assert gap["known"] == "Seite: sued"
+        assert gap["missing"] == "Lage"
+        # Und wirklich kein Halle-9-Tor im Modell: der Torplan setzt die
+        # Buchstaben der eingeschossigen Nordhallen zu weit weg.
+        assert not [f for f in site["facilities"] if f["hallKey"].startswith("9")]
+
     def test_erfindet_keine_stufenzahl(self):
         """Wo der Katalog keine Stufen nennt, steht auch keine da."""
         access = json.loads((ROOT / "data" / "curated" / "vertical-access.json")

@@ -228,6 +228,30 @@ Verbindung bleibt belegt (die Zwei-Rolltreppen-Regel gilt weiter), ihr Maß
 trägt `dimensionSource: "unbekannt"` und bei 4.1 und 10.1 eine Notiz, wohin
 die Katalogzahlen tatsächlich gehören.
 
+#### Beschilderung kennt mehr Tore als die Richtlinien
+
+An der nordwestlichen Durchfahrt unter dem Deck von Halle 10.2 hängt das
+Koelnmesse-Torgruppenschild **„10.2 P – U"**. Die Tortabelle der Technischen
+Richtlinien führt für Halle 10.2 aber nur **N, P, Q und T**. Es gibt also auch
+R, S und U — ohne Maß und ohne Lage.
+
+Ebenso an der Südfassade von Halle 9: dort hängt das Torschild **A**. Für die
+eingeschossigen Nordhallen ordnet mein Markenleser bewusst keine Buchstaben zu
+(sie stehen zu weit von der Hallennummer entfernt, siehe oben), deshalb hat
+Halle 9 im Modell **kein einziges verortetes Tor**. Jetzt ist wenigstens die
+Seite eines Tores bekannt.
+
+Beides landet in `site.json` unter `facilityGaps`: was existiert, was fehlt,
+und aus welcher Beobachtung es stammt. Es wird nicht verortet.
+
+| Halle | Tor | Bekannt | Fehlt |
+|---|---|---|---|
+| 10.2 | R, S, U | existiert | Lage und Maß |
+| 9 | A | Seite: Süd | Lage |
+
+Dasselbe Schild bestätigt nebenbei den Anker: Tor **P** hängt genau an der
+Durchfahrt, an der der Besucherstrom läuft.
+
 #### Und was daran richtig war
 
 Die begleitende Beobachtung steht: Halle 10.2 kragt als Betondeck auf Stützen
