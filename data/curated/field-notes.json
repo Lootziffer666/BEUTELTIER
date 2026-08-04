@@ -197,6 +197,56 @@
       ],
       "usedFor": "Bestaetigt den Durchgang 10.2 auf 9.1 als benutzten, befestigten Transitweg.",
       "supports": "freiflaeche-zwischen-9-10-boulevard"
+    },
+    {
+      "id": "rolltreppe-verbindet-10.1-und-10.2",
+      "kind": "video-screenshot",
+      "where": "Vom Piazza aus noerdlich, Erschliessungshalle an Halle 10",
+      "what": [
+        "Eine Rolltreppenanlage fuehrt nach oben zu Halle 10.2; Halle 10.1",
+        "liegt an derselben Stelle darunter beziehungsweise daneben.",
+        "Damit ist der Ebenenwechsel 10.1 auf 10.2 erstmals im Bild belegt --",
+        "bisher war er nur aus der Regel des Werbekatalogs erschlossen.",
+        "Durch die Fensterfront sieht man von dort bereits die Freiflaeche."
+      ],
+      "usedFor": "Belegt die Existenz des Wechsels 10.1 auf 10.2 als Rolltreppe.",
+      "openQuestion": {
+        "what": "Ist das dieselbe Anlage wie an der Nordwestecke bei Tor P?",
+        "why": [
+          "Der Anker des Ebenenwechsels haengt derzeit an Tor 10.2 P, also an",
+          "der Nordwestecke. Diese Aufnahme entsteht vom Piazza aus noerdlich",
+          "-- das koennte dieselbe Anlage von der anderen Seite sein oder eine",
+          "zweite am Suedende von Halle 10.",
+          "Der Unterschied betraegt rund 175 m. Geraten wird nicht: der Anker",
+          "bleibt, wo er ist, und die Frage steht hier."
+        ],
+        "resolvesWith": "Eine Angabe, ob es eine oder zwei Rolltreppenanlagen an Halle 10 gibt.",
+        "appliesTo": "10.1"
+      }
+    },
+    {
+      "id": "wegweisung-piazza-nord",
+      "kind": "video-screenshot",
+      "where": "Erschliessungshalle noerdlich des Piazza",
+      "what": [
+        "Deckenschild 'Hallen / Halls': 1, 5.1 und 5.2 geradeaus.",
+        "Nach links geht es zu den Hallen 4 und 3, nach rechts zu Halle 10."
+      ],
+      "usedFor": "Betriebswissen zur Wegweisung -- steht in keiner Datenquelle.",
+      "signage": {
+        "straight": [
+          "1",
+          "5.1",
+          "5.2"
+        ],
+        "left": [
+          "4",
+          "3"
+        ],
+        "right": [
+          "10"
+        ]
+      }
     }
   ],
   "sourceKinds": {

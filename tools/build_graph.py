@@ -126,6 +126,7 @@ def main() -> int:
     facilities_by_id = {f["id"]: f for f in site.get("facilities", [])}
     anchors: dict[str, dict] = {}
     portal_notes: dict[frozenset[str], dict] = {}
+    open_questions: dict[str, list[dict]] = {}
     if FIELD_NOTES.exists():
         notes = json.loads(FIELD_NOTES.read_text(encoding="utf-8"))
         for entry in notes.get("observations", []):
@@ -134,6 +135,13 @@ def main() -> int:
             if anchor and facility:
                 anchors[anchor["lowerKey"]] = {"facility": facility,
                                                "observation": entry["id"]}
+            # Eine offene Frage ist auch ein Ergebnis. Sie haengt an der
+            # Verbindung, damit niemand die Lage fuer geklaert haelt.
+            question = entry.get("openQuestion")
+            if question and question.get("appliesTo"):
+                open_questions.setdefault(question["appliesTo"], []).append(
+                    {"observation": entry["id"], "what": question["what"],
+                     "resolvesWith": question["resolvesWith"]})
             note = entry.get("portalNote")
             if note:
                 portal_notes[frozenset(note["connects"])] = dict(
@@ -380,6 +388,8 @@ def main() -> int:
                     meta["uncertaintyM"] = observed["facility"]["uncertaintyM"]
                 else:
                     meta["positionSource"] = "placeholder"
+                if open_questions.get(lower_key):
+                    meta["openQuestions"] = open_questions[lower_key]
                 if kind == "stairs":
                     # Die Stufenmasse des Katalogs gehoeren zu einer anderen
                     # Stelle: 20 Stufen sind 2,80 m, der Geschosswechsel misst

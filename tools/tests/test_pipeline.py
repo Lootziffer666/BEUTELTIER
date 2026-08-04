@@ -545,6 +545,24 @@ class TestOpeningDimensions:
         assert lift["meta"]["source"] == "placeholder"
         assert "positionAnchor" not in lift["meta"]
 
+    def test_offene_frage_haengt_an_der_verbindung(self, graph_data):
+        """Eine ungeklaerte Lage wird ausgewiesen, nicht geraten.
+
+        Der Ebenenwechsel 10.1 auf 10.2 ist im Bild belegt, aber es ist
+        offen, ob die gezeigte Anlage die an der Nordwestecke ist oder eine
+        zweite am Suedende. Der Unterschied betraegt rund 175 m. Der Anker
+        bleibt stehen, die Frage haengt sichtbar daran.
+        """
+        asking = [c for c in graph_data["connectors"]
+                  if c["meta"].get("openQuestions")]
+        assert asking
+        for connector in asking:
+            assert connector["meta"]["connects"][0] == "10.1"
+            for question in connector["meta"]["openQuestions"]:
+                assert question["what"].endswith("?")
+                assert question["resolvesWith"]
+                assert question["observation"]
+
     def test_fuehrt_bekannte_aber_unverortete_anlagen(self, site):
         """Beschilderung vor Ort kennt mehr Tore als die Richtlinien.
 
