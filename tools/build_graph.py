@@ -119,6 +119,27 @@ def main() -> int:
     site = json.loads(SITE.read_text(encoding="utf-8"))
     halls = {hall["key"]: hall for hall in site["halls"]}
 
+    # Eine Beobachtung vor Ort kann eine Ableitung schlagen: wo jemand
+    # gesehen hat, dass der Aufgang unmittelbar an einem verorteten Tor
+    # liegt, erbt der Aufgang dessen Lage -- statt in der Hallenmitte zu
+    # stehen, wo ihn niemand gesehen hat.
+    facilities_by_id = {f["id"]: f for f in site.get("facilities", [])}
+    anchors: dict[str, dict] = {}
+    portal_notes: dict[frozenset[str], dict] = {}
+    if FIELD_NOTES.exists():
+        notes = json.loads(FIELD_NOTES.read_text(encoding="utf-8"))
+        for entry in notes.get("observations", []):
+            anchor = entry.get("anchor")
+            facility = facilities_by_id.get((anchor or {}).get("facilityId", ""))
+            if anchor and facility:
+                anchors[anchor["lowerKey"]] = {"facility": facility,
+                                               "observation": entry["id"]}
+            note = entry.get("portalNote")
+            if note:
+                portal_notes[frozenset(note["connects"])] = dict(
+                    note, observation=entry["id"])
+
+
     stands_by_hall: dict[str, list[dict]] = defaultdict(list)
     for stand in site["stands"]:
         stands_by_hall[stand["hallKey"]].append(stand)
@@ -191,7 +212,12 @@ def main() -> int:
                 id=node_id, x=(first.x + second.x) / 2, y=(first.y + second.y) / 2,
                 z=halls[left]["baseY"], kind="portal", level=level, label=label,
                 meta={"connects": [left, right], "snapM": round(snap, 1),
-                      "uncertaintyM": connector.get("uncertaintyM")}))
+                      "uncertaintyM": connector.get("uncertaintyM"),
+                      # Wo jemand hingelaufen ist, weiss die Karte mehr als
+                      # die Durchgangstabelle: drinnen oder draussen, Weg
+                      # oder Aufenthaltsort.
+                      **({"observed": portal_notes[frozenset((left, right))]}
+                         if frozenset((left, right)) in portal_notes else {})}))
 
             for end, _ in ends:
                 graph.connect(node_id, end, "portal",
@@ -254,21 +280,6 @@ def main() -> int:
                 "escalatorsFlanking": rule["escalatorsPerAufgang"],
             }
         aufgaenge.update(measured)
-
-    # Eine Beobachtung vor Ort kann eine Ableitung schlagen: wo jemand
-    # gesehen hat, dass der Aufgang unmittelbar an einem verorteten Tor
-    # liegt, erbt der Aufgang dessen Lage -- statt in der Hallenmitte zu
-    # stehen, wo ihn niemand gesehen hat.
-    facilities_by_id = {f["id"]: f for f in site.get("facilities", [])}
-    anchors: dict[str, dict] = {}
-    if FIELD_NOTES.exists():
-        notes = json.loads(FIELD_NOTES.read_text(encoding="utf-8"))
-        for entry in notes.get("observations", []):
-            anchor = entry.get("anchor")
-            facility = facilities_by_id.get((anchor or {}).get("facilityId", ""))
-            if anchor and facility:
-                anchors[anchor["lowerKey"]] = {"facility": facility,
-                                               "observation": entry["id"]}
 
     official_lifts: dict[str, list[dict]] = defaultdict(list)
     for facility in site.get("facilities", []):

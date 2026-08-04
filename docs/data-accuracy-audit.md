@@ -224,10 +224,34 @@ Auffahrt *hinunter* auf dieses Niveau.
 
 Damit ist die Lage anders herum, als ich vermutet hatte: die Hallen teilen ein
 gemeinsames Bodenniveau, und **der Boulevard ist das erhöhte Deck darüber** —
-passend zu den 20 Stufen, die vom Mittelboulevard nach Halle 10.2 hinaufführen.
-Ein Höhenmaß wurde nicht genommen, das Höhenmodell bleibt deshalb unverändert.
-Aber die falsche Vermutung ist raus, und der Widerspruch steht weiter in den
-Daten: jede vermaßte Treppe trägt `risesShortOfM` und eine Notiz dazu.
+im Südteil auf derselben Ebene wie 10.2 und 5.2, und erst zwischen Halle 9 und
+Halle 10 fällt er nach Norden ab. Das passt zu den 20 Stufen, die vom
+Mittelboulevard nach Halle 10.2 hinaufführen. Ein Höhenmaß wurde nicht
+genommen, das Höhenmodell bleibt deshalb unverändert. Aber die falsche
+Vermutung ist raus, und der Widerspruch steht weiter in den Daten: jede
+vermaßte Treppe trägt `risesShortOfM` und eine Notiz dazu.
+
+#### Eine Handskizze bestätigt die Korridorbreite
+
+Eine Skizze mit Schrittmaß gibt den Boulevard mit 15 m an und die Freifläche
+zwischen Boulevard und Halle 10.2 mit weiteren 15 m — zusammen 30 m. BEUTELTIER
+misst zwischen Halle 5.2 (Ost) und Halle 10.2 (West) **26,6 m**, auf Höhe Halle
+4.2 sind es **23,4 m**. Drei bis sieben Meter Abweichung zwischen Schrittmaß und
+eingemessener Geometrie: das ist eine Bestätigung, keine Korrektur. Geändert
+wird nichts.
+
+#### Und eine Korrektur, die eine Beobachtung nötig machte
+
+„Nach Osten geht ein Tor raus" hatte ich als Tor in der **Ostwand** von Halle
+10.2 gelesen — dort gibt es genau eines, T. Die Skizze zeigt aber, dass der
+Boulevard **westlich** an Halle 10 vorbeiläuft und die Freifläche
+**nordwestlich von Halle 10, südlich von Halle 9** liegt. Der Aufgang sitzt
+also an der Nordwestecke, nicht an der Ostwand. Anker ist jetzt Tor **P**, das
+westlichste der Nordwand. Der Fehler betrug 175 m.
+
+Die Freifläche selbst trägt jetzt eine Beobachtung am Durchgang 10.2 ↔ 9.1:
+im Freien, abfallend nach Norden, **reiner Transitweg** — kein Stand, keine
+Gastronomie. Das weiß keine Datenquelle; das weiß nur, wer dort gelaufen ist.
 
 #### Und eine Bestätigung
 

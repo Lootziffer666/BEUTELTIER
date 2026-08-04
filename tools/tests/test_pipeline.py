@@ -503,22 +503,37 @@ class TestOpeningDimensions:
 
         Der Aufgang 10.2 stand rechnerisch in der Hallenmitte, weil Halle 10
         in den Technischen Richtlinien keinen Aufzug hat. Vor Ort liegt er an
-        einem Osttor, und Halle 10.2 hat dort genau eines: T. Der Aufgang
-        erbt dessen amtliche Lage; die Zuordnung bleibt als beobachtet
+        der Nordwestecke, wo Boulevard, Freiflaeche und Halle zusammenkommen.
+        Halle 10.2 hat dort genau ein verortetes Tor: P. Der Aufgang erbt
+        dessen amtliche Lage; die Zuordnung bleibt als beobachtet
         gekennzeichnet.
         """
-        gate = next(f for f in site["facilities"] if f["id"] == "gate:10.2T")
+        gate = next(f for f in site["facilities"] if f["id"] == "gate:10.2P")
         moved = [c for c in graph_data["connectors"]
                  if c["id"].startswith("v:10.1:") and c["meta"]["kind"] != "elevator"]
         assert len(moved) == 3
         for connector in moved:
-            assert connector["meta"]["positionAnchor"] == "gate:10.2T"
+            assert connector["meta"]["positionAnchor"] == "gate:10.2P"
             assert connector["meta"]["positionSource"] == "beobachtet am amtlichen Tor"
             assert connector["meta"]["observation"]
             assert connector["meta"]["uncertaintyM"] == gate["uncertaintyM"]
             # Und wirklich am Tor, nicht mehr in der Hallenmitte.
             assert math.dist((connector["x"], connector["y"]),
                              tuple(gate["position"])) < 40
+
+    def test_freiflaeche_ist_als_transitweg_gekennzeichnet(self, graph_data):
+        """Kein Stand, keine Gastronomie -- das gehoert an die Verbindung.
+
+        Die Durchgangstabelle weiss nur, dass Halle 10 und Halle 9 verbunden
+        sind. Dass der Weg im Freien ueber eine Rampe fuehrt und unterwegs
+        nichts liegt, weiss nur, wer dort gelaufen ist.
+        """
+        portal = next(c for c in graph_data["connectors"]
+                      if set(c["meta"]["connects"]) == {"10.2", "9.1"})
+        observed = portal["meta"]["observed"]
+        assert observed["outdoor"] is True
+        assert observed["transitOnly"] is True
+        assert observed["observation"]
 
     def test_aufzug_bleibt_von_der_beobachtung_unberuehrt(self, graph_data):
         """Der Aufzug hat seine eigene Quelle und wird nicht mitverschoben."""

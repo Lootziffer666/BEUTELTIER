@@ -13,7 +13,7 @@
   "observations": [
     {
       "id": "halle10-untergeschoss-freiflaeche",
-      "where": "Ostseite Halle 10, zwischen Halle 10 und Boulevard",
+      "where": "Nordwestlich von Halle 10, unter dem Deck von Halle 10.2",
       "what": [
         "Halle 10.2 kragt als Betondeck auf Stuetzen ueber eine offene",
         "Flaeche auf Bodenniveau aus. Darunter laeuft der Besucherstrom.",
@@ -35,23 +35,79 @@
       ]
     },
     {
-      "id": "aufgang-10.2-am-osttor",
-      "where": "Halle 10.2, Ostseite",
+      "id": "boulevard-liegt-auf-ebene-2",
+      "where": "Mittelboulevard, zwischen den Hallen 4/5 und 10",
       "what": [
-        "Unmittelbar vor der grossen Rolltreppe, die von Sueden heraufkommt,",
-        "fuehrt nach Osten ein Tor ins Freie."
+        "Der Boulevard laeuft im Suedteil auf derselben Ebene wie 10.2 und 5.2",
+        "-- er ist das Deck zwischen den oberen Hallen, nicht ein Weg neben",
+        "ihnen. Erst zwischen Halle 9 und Halle 10 faellt er nach Norden ab."
+      ],
+      "sketch": {
+        "boulevardWidthM": 15,
+        "apronWidthM": 15,
+        "note": "Handskizze mit Schrittmass, keine Vermessung."
+      },
+      "usedFor": "Bestaetigt die Korridorbreite des Modells und die Ebenenlage des Boulevards.",
+      "crossCheck": [
+        "BEUTELTIER misst zwischen Halle 5.2 (Ost) und Halle 10.2 (West) 26,6 m,",
+        "auf Hoehe Halle 4.2 sind es 23,4 m. Die Skizze kommt auf 15 + 15 = 30 m.",
+        "Drei bis sieben Meter Abweichung -- fuer ein Schrittmass gegen eine",
+        "eingemessene Geometrie ist das eine Bestaetigung, keine Korrektur.",
+        "Geaendert wird nichts."
+      ]
+    },
+    {
+      "id": "freiflaeche-zwischen-9-10-boulevard",
+      "where": "Nordwestlich von Halle 10, suedlich von Halle 9, oestlich des Boulevards",
+      "what": [
+        "Die Freiflaeche liegt nordwestlich von Halle 10, suedlich von",
+        "Halle 9 und oestlich des Boulevards. Von dort faellt eine",
+        "asphaltierte Auffahrt zum suedlichen Eingang von Halle 9 ab.",
+        "Auf der Flaeche gibt es keine Aussteller, keine Gastronomie, keine",
+        "Aufenthaltsfunktion. Man laeuft nur durch."
+      ],
+      "usedFor": "Kennzeichnet den Durchgang 10.2 auf 9.1 als reinen Transitweg im Freien.",
+      "portalNote": {
+        "connects": [
+          "10.2",
+          "9.1"
+        ],
+        "outdoor": true,
+        "transitOnly": true,
+        "gradient": "abfallend nach Norden",
+        "text": "Freiflaeche und Rampe im Freien. Kein Stand, keine Gastronomie -- reiner Durchgang."
+      },
+      "crossCheck": [
+        "BEUTELTIER misst zwischen der Nordkante von Halle 10.2 und der",
+        "Suedkante von Halle 9 rund 53,8 m. Die Beobachtung nennt keine Laenge;",
+        "die Groessenordnung passt zu 'so breit wie der Boulevard'."
+      ]
+    },
+    {
+      "id": "aufgang-10.2-an-der-nordwestecke",
+      "where": "Halle 10.2, Nordwestecke zum Boulevard",
+      "what": [
+        "Die grosse Rolltreppe kommt von Sueden aus dem Boulevard herauf.",
+        "Unmittelbar davor liegt eine Glastuer, oestlich davon eine zweite --",
+        "und die fuehrt auf die Freiflaeche zwischen 10, 9 und dem Boulevard."
       ],
       "usedFor": "Verankert den Ebenenwechsel 10.1 auf 10.2 an einem amtlich verorteten Tor statt in der Hallenmitte.",
+      "corrects": [
+        "Zuerst war 'nach Osten ein Tor raus' als Tor in der Ostwand gelesen",
+        "worden -- Halle 10.2 hat dort genau eines, T. Die Skizze zeigt die",
+        "Freiflaeche aber im Nordwesten: der Boulevard laeuft westlich an Halle",
+        "10 vorbei, die Freiflaeche liegt noerdlich davon. Das Osttor T lag",
+        "175 m daneben. Richtig ist die Nordwestecke."
+      ],
       "anchor": {
         "lowerKey": "10.1",
-        "facilityId": "gate:10.2T",
+        "facilityId": "gate:10.2P",
         "why": [
-          "Halle 10.2 hat in den Technischen Richtlinien genau ein Tor an der",
-          "Ostseite: T. Die Beobachtung nennt ein Osttor unmittelbar am",
-          "Aufgang. Das Tor ist verortet, der Aufgang nicht -- also erbt der",
-          "Aufgang die Lage des Tors.",
-          "Die Herkunft bleibt sichtbar: Lage amtlich (Tor), Zuordnung",
-          "beobachtet (Nachbarschaft). Sie ist nicht gemessen."
+          "P ist das westlichste Tor der Nordwand von Halle 10.2 und damit das",
+          "einzige amtlich verortete an der Nordwestecke -- dort, wo Boulevard,",
+          "Freiflaeche und Halle zusammenkommen.",
+          "Die Herkunft bleibt getrennt sichtbar: Lage amtlich (das Tor),",
+          "Zuordnung beobachtet (die Nachbarschaft). Gemessen ist sie nicht."
         ]
       }
     }

@@ -753,7 +753,7 @@
     "10.2"
    ],
    "snapM": null,
-   "uncertaintyM": 19.0
+   "uncertaintyM": 20.6
   },
   {
    "id": "v:10.1:stairs",
@@ -764,7 +764,7 @@
     "10.2"
    ],
    "snapM": null,
-   "uncertaintyM": 19.0
+   "uncertaintyM": 20.6
   },
   {
    "id": "v:10.1:escalator:1",
@@ -775,7 +775,7 @@
     "10.2"
    ],
    "snapM": null,
-   "uncertaintyM": 19.0
+   "uncertaintyM": 20.6
   }
  ]
 }
