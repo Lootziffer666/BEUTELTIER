@@ -60,6 +60,7 @@ export interface SceneProps {
   onToggleViewfinder?: () => void;
   /** Aktueller Kamerazustand wird an den Aufrufer gereicht, keine Beschreibung nötig. */
   onMark?: (snapshot: CameraSnapshot) => void;
+  onCameraSnapshot?: (snapshot: CameraSnapshot) => void;
 }
 
 const COLOURS = {
@@ -557,6 +558,7 @@ function WalkControls({
   onToggleFreeze,
   onToggleViewfinder,
   onMark,
+  onCameraSnapshot,
 }: {
   data: Dataset;
   centre: [number, number];
@@ -570,6 +572,7 @@ function WalkControls({
   onToggleFreeze?: () => void;
   onToggleViewfinder?: () => void;
   onMark?: (snapshot: CameraSnapshot) => void;
+  onCameraSnapshot?: (snapshot: CameraSnapshot) => void;
 }) {
   const { camera, gl } = useThree();
   const position = useRef({ x: 0, y: 0, z: 0 });
@@ -589,6 +592,8 @@ function WalkControls({
   const onToggleFreezeRef = useRef(onToggleFreeze);
   const onToggleViewfinderRef = useRef(onToggleViewfinder);
   const onMarkRef = useRef(onMark);
+  const onCameraSnapshotRef = useRef(onCameraSnapshot);
+  const lastSnapshotAt = useRef(0);
   useEffect(() => {
     noClipRef.current = noClip;
   }, [noClip]);
@@ -607,6 +612,7 @@ function WalkControls({
     onToggleFreezeRef.current = onToggleFreeze;
     onToggleViewfinderRef.current = onToggleViewfinder;
     onMarkRef.current = onMark;
+    onCameraSnapshotRef.current = onCameraSnapshot;
   });
 
   // Startpunkt: die fokussierte Halle, sonst der erste begehbare Punkt.
@@ -701,7 +707,7 @@ function WalkControls({
     // binden. Aktuelle Werte kommen aus den Refs oben.
   }, [active, gl, data]);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (!active) return;
 
     if (!frozenRef.current) {
@@ -737,6 +743,17 @@ function WalkControls({
     }
 
     const { x, y, z } = position.current;
+    if (state.clock.elapsedTime - lastSnapshotAt.current > 0.25) {
+      lastSnapshotAt.current = state.clock.elapsedTime;
+      onCameraSnapshotRef.current?.({
+        x,
+        y,
+        z,
+        yaw: look.current.yaw,
+        pitch: look.current.pitch,
+        hallKey: data.walk.footingAt(x, y, z).hallKey,
+      });
+    }
     camera.position.set(x - centre[0], z + EYE_HEIGHT_M, -(y - centre[1]));
     camera.rotation.set(0, 0, 0);
     camera.rotateY(look.current.yaw);
@@ -884,6 +901,7 @@ export function SiteScene(props: SceneProps) {
           onToggleFreeze={props.onToggleFreeze}
           onToggleViewfinder={props.onToggleViewfinder}
           onMark={props.onMark}
+          onCameraSnapshot={props.onCameraSnapshot}
         />
       ) : (
         <CameraRig preset={preset} focus={focus} extent={extent} />

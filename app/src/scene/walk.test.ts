@@ -63,6 +63,29 @@ describe('WalkGrid', () => {
     expect(walk.footingAt(5, 5).blocked).toBe(true);
   });
 
+
+
+  it('kann eine falsch erkannte Wand lokal oeffnen', () => {
+    const patch = walk.patchAt(5, 5, 0, 'open');
+    const corrected = walk.withLayoutPatches([patch!]);
+    expect(corrected.footingAt(5, 5).blocked).toBe(false);
+    expect(corrected.cellAt(5, 5)?.patched?.state).toBe('open');
+  });
+
+  it('kann eine fehlende Wand lokal sperren', () => {
+    const patch = walk.patchAt(1, 1, 0, 'blocked');
+    const corrected = walk.withLayoutPatches([patch!]);
+    expect(corrected.footingAt(1, 1).blocked).toBe(true);
+  });
+
+
+
+  it('zeichnet eine gemessene Strecke als begehbaren Korridor ein', () => {
+    const patch = walk.patchesAlong({ x: 1, y: 5, z: 0 }, { x: 9, y: 5, z: 0 }, 2.4, 'open', 'Messstrecke');
+    const corrected = walk.withLayoutPatches(patch);
+    expect(corrected.footingAt(5, 5).blocked).toBe(false);
+  });
+
   it('laesst draussen durch, statt festzuhalten', () => {
     // Ohne Gitter gibt es keine Wand -- der Boulevard ist begehbar, auch
     // wenn ihn niemand kartiert hat.

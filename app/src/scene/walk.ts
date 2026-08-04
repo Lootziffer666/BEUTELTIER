@@ -28,6 +28,29 @@ interface Layer {
   bits: Uint8Array;
 }
 
+export type LayoutPatchState = 'open' | 'blocked';
+
+export interface LayoutPatch {
+  id: string;
+  hallKey: string;
+  ix: number;
+  iy: number;
+  state: LayoutPatchState;
+  note?: string;
+  changedAt: number;
+}
+
+export interface WalkCell {
+  hallKey: string;
+  ix: number;
+  iy: number;
+  x: number;
+  y: number;
+  z: number;
+  blocked: boolean;
+  patched: LayoutPatch | null;
+}
+
 export interface Footing {
   /** Höhe des Bodens in Geländemetern. */
   z: number;
@@ -50,10 +73,12 @@ function decodeBits(base64: string): Uint8Array {
 export class WalkGrid {
   private readonly gridM: number;
   private readonly layers: Layer[];
+  private readonly patches: Map<string, LayoutPatch>;
 
-  constructor(gridM: number, layers: Layer[]) {
+  constructor(gridM: number, layers: Layer[], patches: LayoutPatch[] = []) {
     this.gridM = gridM;
     this.layers = layers;
+    this.patches = new Map(patches.map((patch) => [patch.id, patch]));
   }
 
   static fromCompact(compact: CompactGraph): WalkGrid {
@@ -70,12 +95,107 @@ export class WalkGrid {
     return new WalkGrid(compact.gridM, layers);
   }
 
+  withLayoutPatches(patches: LayoutPatch[]): WalkGrid {
+    return new WalkGrid(this.gridM, this.layers, patches);
+  }
+
+  layoutPatches(): LayoutPatch[] {
+    return Array.from(this.patches.values()).sort((a, b) => a.hallKey.localeCompare(b.hallKey) || a.iy - b.iy || a.ix - b.ix);
+  }
+
+  private patchId(hallKey: string, ix: number, iy: number): string {
+    return `${hallKey}:${ix}:${iy}`;
+  }
+
+  private patchedCell(layer: Layer, ix: number, iy: number, original: boolean): { walkable: boolean; patch: LayoutPatch | null } {
+    const patch = this.patches.get(this.patchId(layer.key, ix, iy)) ?? null;
+    if (!patch) return { walkable: original, patch: null };
+    return { walkable: patch.state === 'open', patch };
+  }
+
   private cell(layer: Layer, x: number, y: number): boolean | null {
     const ix = Math.floor((x - layer.originX) / this.gridM);
     const iy = Math.floor((y - layer.originY) / this.gridM);
     if (ix < 0 || iy < 0 || ix >= layer.cols || iy >= layer.rows) return null;
     const position = iy * layer.cols + ix;
-    return (layer.bits[position >> 3] & (1 << (position & 7))) !== 0;
+    const original = (layer.bits[position >> 3] & (1 << (position & 7))) !== 0;
+    return this.patchedCell(layer, ix, iy, original).walkable;
+  }
+
+  cellAt(x: number, y: number, preferZ = 0): WalkCell | null {
+    let best: WalkCell | null = null;
+    let bestGap = Infinity;
+    for (const layer of this.layers) {
+      const ix = Math.floor((x - layer.originX) / this.gridM);
+      const iy = Math.floor((y - layer.originY) / this.gridM);
+      if (ix < 0 || iy < 0 || ix >= layer.cols || iy >= layer.rows) continue;
+      const position = iy * layer.cols + ix;
+      const original = (layer.bits[position >> 3] & (1 << (position & 7))) !== 0;
+      const patched = this.patchedCell(layer, ix, iy, original);
+      const gap = Math.abs(layer.z - preferZ);
+      if (best === null || gap < bestGap) {
+        best = {
+          hallKey: layer.key,
+          ix,
+          iy,
+          x: layer.originX + (ix + 0.5) * this.gridM,
+          y: layer.originY + (iy + 0.5) * this.gridM,
+          z: layer.z,
+          blocked: !patched.walkable,
+          patched: patched.patch,
+        };
+        bestGap = gap;
+      }
+    }
+    return best;
+  }
+
+  patchAt(x: number, y: number, preferZ: number, state: LayoutPatchState, note?: string): LayoutPatch | null {
+    const cell = this.cellAt(x, y, preferZ);
+    if (!cell) return null;
+    return this.patchCell(cell, state, note);
+  }
+
+  patchCell(cell: WalkCell, state: LayoutPatchState, note?: string): LayoutPatch {
+    return {
+      id: this.patchId(cell.hallKey, cell.ix, cell.iy),
+      hallKey: cell.hallKey,
+      ix: cell.ix,
+      iy: cell.iy,
+      state,
+      note,
+      changedAt: Date.now(),
+    };
+  }
+
+  patchesAlong(
+    from: { x: number; y: number; z: number },
+    to: { x: number; y: number; z: number },
+    widthM: number,
+    state: LayoutPatchState,
+    note?: string,
+  ): LayoutPatch[] {
+    const distance = Math.hypot(to.x - from.x, to.y - from.y);
+    const steps = Math.max(1, Math.ceil(distance / (this.gridM * 0.5)));
+    const radius = Math.max(0, Math.ceil(widthM / this.gridM / 2));
+    const cells = new Map<string, WalkCell>();
+
+    for (let step = 0; step <= steps; step += 1) {
+      const t = step / steps;
+      const x = from.x + (to.x - from.x) * t;
+      const y = from.y + (to.y - from.y) * t;
+      const centre = this.cellAt(x, y, from.z);
+      if (!centre) continue;
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        for (let dx = -radius; dx <= radius; dx += 1) {
+          const cell = this.cellAt(centre.x + dx * this.gridM, centre.y + dy * this.gridM, from.z);
+          if (!cell || cell.hallKey !== centre.hallKey) continue;
+          cells.set(`${cell.hallKey}:${cell.ix}:${cell.iy}`, cell);
+        }
+      }
+    }
+
+    return Array.from(cells.values()).map((cell) => this.patchCell(cell, state, note));
   }
 
   /**

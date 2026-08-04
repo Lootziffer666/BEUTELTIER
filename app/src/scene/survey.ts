@@ -9,6 +9,8 @@
  * (Object-URL) und werden nie automatisch exportiert oder kopiert.
  */
 
+import type { LayoutPatch } from './walk';
+
 export interface CameraSnapshot {
   x: number;
   y: number;
@@ -71,4 +73,44 @@ export function describeSnapshot(camera: CameraSnapshot): string {
   const deg = Math.round(((camera.yaw * 180) / Math.PI + 360) % 360);
   const halle = camera.hallKey ?? 'im Freien';
   return `${halle} · x=${camera.x.toFixed(1)} y=${camera.y.toFixed(1)} z=${camera.z.toFixed(1)} · Blick ${deg}°`;
+}
+
+const LAYOUT_STORAGE_KEY = 'beuteltier.layout-patches.v1';
+
+export function loadLayoutPatches(): LayoutPatch[] {
+  try {
+    const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as LayoutPatch[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveLayoutPatches(patches: LayoutPatch[]): void {
+  try {
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(patches));
+  } catch {
+    // Wie bei Notizen: im privaten Modus bleibt der Patch wenigstens bis zum Reload
+    // im React-State erhalten.
+  }
+}
+
+export function exportLayoutPatches(patches: LayoutPatch[]): string {
+  return JSON.stringify(
+    { schema: 'beuteltier.layout-patches.v1', exportedAt: new Date().toISOString(), patches },
+    null,
+    2,
+  );
+}
+
+export function downloadLayoutPatches(patches: LayoutPatch[]): void {
+  const blob = new Blob([exportLayoutPatches(patches)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `beuteltier-layout-patches-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
