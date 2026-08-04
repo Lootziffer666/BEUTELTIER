@@ -31,13 +31,23 @@ Alles ist metrisch, nichts ist geraten, und wo es unsicher wird, steht es dran.
 |---|---|
 | Standflächen | **1.027**, als Polygone in echten Metern aus dem offiziellen Hallenplan |
 | Belegungen mit exakter Lage | **909 von 910** (99,9 %) |
-| Hallenebenen | **17**, davon 8 eingemessen (Restfehler **unter 1 m**) |
+| Hallenebenen | **17**, davon 8 eingemessen (Restfehler **0,27 m** im Mittel) |
 | Hallen mit geschätzter Lage | **5** (1.2, 3.2 und die Freiflächen), rund **±27 m** |
-| Wegenetz | 14.843 Knoten, 19 Durchgänge, 8 Ebenenwechsel |
+| Umrisse gegen offizielle Flächen | **9,1 %** mittlere Abweichung |
+| Wegenetz | 12.139 Knoten, 19 Durchgänge, 8 Ebenenwechsel |
 
 Die Genauigkeit ist gemessen, nicht behauptet: Hallen werden über Standcodes
 eingepasst, die in zwei unabhängigen Quellen vorkommen, und die geschätzten
 Lagen tragen ihren kreuzvalidierten Fehler bis in die Oberfläche.
+
+Höhen kommen aus den offiziellen lichten Höhen. Die Bodenhöhe der oberen
+Ebenen ist daraus **gerechnet** — lichte Höhe darunter plus Geschossdecke von
+1,5–2,0 m — und trägt Herkunft, Konfidenz und Unsicherheit mit. Die Umrisse
+sind der **belegte Bereich**, nicht der Gebäudeumriss: wo gamescom nur einen
+Teil einer Halle nutzt, endet der Umriss dort.
+
+Details in [`docs/accuracy-report.md`](docs/accuracy-report.md) (erzeugt) und
+[`docs/data-accuracy-audit.md`](docs/data-accuracy-audit.md).
 
 Was in **keiner** Quelle steht, startet als `unbestaetigt`: Rolltreppen­richtungen,
 ob ein Durchgang gerade Einbahn oder nur Ausgang ist, welche Zugangsgruppe
@@ -58,7 +68,7 @@ pip install -r requirements.txt
 
 python3 tools/fetch_hallplan.py       # Standflächen je Hallenebene
 python3 tools/fetch_hall_layout.py    # Hallenlagen und Durchgänge
-python3 tools/build_all.py            # Gelände, Wegenetz, Register
+python3 tools/build_all.py            # Gelände, Wegenetz, Register, Genauigkeitsbericht
 
 cd app && npm install && npm run dev
 ```

@@ -1,0 +1,83 @@
+{
+  "schema": "beuteltier.hall-metadata.v1",
+  "note": [
+    "Gebaeudedaten der Koelnmesse. Streng getrennt nach Herkunft:",
+    "",
+    "  official   -- veroeffentlichte Hallendaten (Flaeche, lichte Hoehe, Bodenlast).",
+    "  derived    -- rechnerisch aus offiziellen Werten und einer benannten Annahme.",
+    "  estimated  -- konstruktive Schaetzung, nicht vermessen.",
+    "",
+    "Die lichte Hoehe ist die Hoehe des Innenraums, nicht die des Gebaeudes. Wer",
+    "sie als Aussenhoehe verwendet, macht jede Halle um Meter zu niedrig; wer",
+    "lichte Hoehen zweier Ebenen addiert, vergisst die Zwischendecke.",
+    "",
+    "Die Bodenhoehe der zweiten Ebene wird deshalb nicht als Tabelle gepflegt,",
+    "sondern gerechnet: lichte Hoehe der unteren Ebene plus Deckenstaerke. Die",
+    "Deckenstaerke ist die einzige Annahme darin und steht in slabAssumption --",
+    "eine Zahl, die man aendern kann, statt neunzehn Zahlen, die man nachfuehren",
+    "muesste."
+  ],
+  "sources": {
+    "koelnmesse-hallendaten": {
+      "type": "official",
+      "label": "Koelnmesse -- Hallendaten (Flaeche, lichte Hoehe, Bodenbelastung)",
+      "confidence": "high"
+    },
+    "beuteltier-structural": {
+      "type": "estimated",
+      "label": "Konstruktive Schaetzung aus Bauart und lichter Hoehe",
+      "confidence": "low",
+      "warning": "Nicht vermessen. Nur fuer die Darstellung, nie fuer Aussagen ueber das Bauwerk."
+    }
+  },
+  "slabAssumption": {
+    "minM": 1.5,
+    "maxM": 2.0,
+    "source": "beuteltier-structural",
+    "note": "Geschossdecke einschliesslich Kabeltrassen und Aufbau in zweigeschossigen Messehallen."
+  },
+  "hallNumbering": {
+    "note": [
+      "Die Quelle fuehrt 'Halle 1' ohne Ebenenziffer, der Hallenplan kennt aber",
+      "einen Schluessel 1.2. Beide meinen dasselbe Bauwerk: Halle 1 ist",
+      "eingeschossig, und die '2' im Schluessel bezeichnet die Ebene, auf der sie",
+      "im Gelaende liegt -- Halle 1 liegt auf Ebene 2 des Gelaendes, nicht im",
+      "zweiten Geschoss eines Gebaeudes. Die offizielle Flaeche gilt daher fuer",
+      "1.2 als Ganzes und darf nicht auf zwei Geschosse aufgeteilt werden.",
+      "Dasselbe gilt fuer die eingeschossigen Hallen 6, 7, 8 und 9."
+    ],
+    "singleStorey": ["1", "6", "7", "8", "9", "Confex"]
+  },
+  "halls": {
+    "Confex": { "officialAreaSqm": 5103, "clearHeightM": 12.20, "maxFloorLoadKnSqm": 17.5, "roofStructureEstimateM": 2.80 },
+    "1":      { "officialAreaSqm": 10512, "clearHeightM": 11.10, "maxFloorLoadKnSqm": 20, "roofStructureEstimateM": 2.40 },
+    "2.1":    { "officialAreaSqm": 9580, "clearHeightM": 6.00, "maxFloorLoadKnSqm": 20 },
+    "2.2":    { "officialAreaSqm": 9736, "clearHeightM": 6.00, "maxFloorLoadKnSqm": 20, "roofStructureEstimateM": 2.00 },
+    "3.1":    { "officialAreaSqm": 8249, "clearHeightM": 4.75, "maxFloorLoadKnSqm": 20 },
+    "3.2":    { "officialAreaSqm": 8574, "clearHeightM": 6.45, "maxFloorLoadKnSqm": 10, "roofStructureEstimateM": 2.30 },
+    "4.1":    { "officialAreaSqm": 14123, "clearHeightM": 5.85, "maxFloorLoadKnSqm": 20 },
+    "4.2":    { "officialAreaSqm": 14390, "clearHeightM": 5.85, "maxFloorLoadKnSqm": 20, "roofStructureEstimateM": 2.30 },
+    "5.1":    { "officialAreaSqm": 12225, "clearHeightM": 5.85, "maxFloorLoadKnSqm": 20 },
+    "5.2":    { "officialAreaSqm": 11949, "clearHeightM": 5.85, "maxFloorLoadKnSqm": 20, "roofStructureEstimateM": 2.30 },
+    "6":      { "officialAreaSqm": 20846, "clearHeightM": 11.00, "maxFloorLoadKnSqm": 50, "roofStructureEstimateM": 3.00 },
+    "7":      { "officialAreaSqm": 16830, "clearHeightM": 11.00, "maxFloorLoadKnSqm": 50, "roofStructureEstimateM": 3.00 },
+    "8":      { "officialAreaSqm": 16830, "clearHeightM": 15.00, "maxFloorLoadKnSqm": 50, "roofStructureEstimateM": 3.00 },
+    "9":      { "officialAreaSqm": 13470, "clearHeightM": 11.00, "maxFloorLoadKnSqm": 50, "roofStructureEstimateM": 3.00 },
+    "10.1":   { "officialAreaSqm": 22332, "clearHeightM": 5.70, "maxFloorLoadKnSqm": 20 },
+    "10.2":   { "officialAreaSqm": 22415, "clearHeightM": 5.70, "maxFloorLoadKnSqm": 20, "roofStructureEstimateM": 2.50 },
+    "11.1":   { "officialAreaSqm": 14850, "clearHeightM": 5.00, "maxFloorLoadKnSqm": 20 },
+    "11.2":   { "officialAreaSqm": 16597, "clearHeightM": 5.00, "maxFloorLoadKnSqm": 15, "roofStructureEstimateM": 2.50 },
+    "11.3":   {
+      "officialAreaSqm": 16597,
+      "clearHeightM": 6.00,
+      "maxFloorLoadKnSqm": 7.5,
+      "routable": false,
+      "routableReason": [
+        "Erreichbarkeit, Nutzung und die vertikale Beziehung zu 11.1/11.2 sind",
+        "nicht belegt. Die Flaeche ist erfasst, damit sie nicht verloren geht,",
+        "bleibt aber aus dem Besucherrouting heraus, bis jemand nachgesehen hat.",
+        "Eine Hoehe wird hier ausdruecklich nicht geraten."
+      ]
+    }
+  }
+}

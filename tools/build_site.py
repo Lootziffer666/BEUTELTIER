@@ -26,23 +26,36 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from beuteltier import accessibility, georef, hallplan, pdf_vector  # noqa: E402
+from beuteltier import (accessibility, building, georef, hallplan,  # noqa: E402
+                        pdf_vector, techguide)
 
 ROOT = Path(__file__).resolve().parent.parent
 SITEMAP_PDF = ROOT / "data" / "raw" / "pdf" / "gamescom-2025-hallenplan.pdf"
 ACCESS_PDF = ROOT / "data" / "raw" / "pdf" / "koelnmesse-barrierefrei.pdf"
+TECHGUIDE_PDF = ROOT / "data" / "raw" / "pdf" / "technische-richtlinien-2022.pdf"
+FIELD_NOTES = ROOT / "data" / "curated" / "field-notes.json"
+
+# Wie weit eine Planbeschriftung hoechstens auf die Hallenkante gezogen wird.
+MAX_SNAP_M = 35.0
 LAYOUT = ROOT / "data" / "raw" / "hall-layout.json"
 OUT = ROOT / "data" / "build" / "site.json"
 
-# Hoehe je Ebene in Metern. Die Hallen der Koelnmesse sind zweigeschossig mit
-# rund zehn Metern lichter Hoehe je Ebene; fuer die Darstellung reicht das.
-LEVEL_HEIGHT_M = 11.0
-HALL_WALL_HEIGHT_M = 9.5
+# Die Hoehen kommen jetzt aus data/curated/hall-metadata.json. Diese Festwerte
+# bleiben nur als Rueckfallebene stehen, falls die Datei fehlt -- sie duerfen
+# die Geometrie nicht mehr bestimmen.
+LEGACY_LEVEL_HEIGHT_M = 11.0
+LEGACY_WALL_HEIGHT_M = 9.5
 
 # Welche Ebene ihre Lage von welcher erbt. Halle 10.2 liegt baulich unmittelbar
 # ueber 10.1 und teilt deren Grundriss.
 STACKED_ON = {"10.2": "10.1", "2.2": "2.1", "4.2": "4.1", "5.2": "5.1",
               "3.2": "3.1", "1.2": "1.1", "11.2": "11.1"}
+
+# Welche Ebene baulich unter welcher liegt -- fuer das Hoehenmodell. Halle 1.2
+# ist eingeschossig und steht trotz der Ziffer 2 im Schluessel auf dem Boden;
+# sie taucht hier deshalb nicht auf.
+STACKED_ON_LOWER = {"2.2": "2.1", "3.2": "3.1", "4.2": "4.1", "5.2": "5.1",
+                    "10.2": "10.1", "11.2": "11.1"}
 
 # "Freiflaeche Halle 5 Nord" -> Bezugshalle 5, Seite Nord.
 OUTDOOR_SIDE = re.compile(r"Halle\s+(\d+)\s+(Nord|Sued|Ost|West)", re.IGNORECASE)
@@ -60,6 +73,8 @@ def main() -> int:
         print("data/raw/hall-layout.json fehlt -- erst tools/fetch_hall_layout.py laufen lassen",
               file=sys.stderr)
         return 1
+
+    buildings = building.Buildings()
 
     levels = hallplan.load_levels()
     if not levels:
@@ -100,12 +115,36 @@ def main() -> int:
         for key, transform in transforms.items() if transform.source == "procrustes"
     }
 
-    reference_runs = pdf_vector.read_text_ops(ACCESS_PDF)
-    reference = accessibility.reference_points(reference_runs, level=1)
-    params, fit_error, cross_error, supports = georef.fit_reference_plan(
-        reference, site_centres)
-    print(f"  Uebersichtsplan auf Gelaende gepasst: {supports} Stuetzen, "
-          f"Restfehler {fit_error:.1f} m, kreuzvalidiert {cross_error:.1f} m")
+    # Zwei schematische Uebersichtsplaene kommen als Ersatzquelle in Frage. Statt
+    # einen davon zu waehlen, werden beide gegen die eingemessenen Hallen
+    # geprueft und der genauere genommen -- das ist eine Messung, keine
+    # Geschmacksfrage.
+    candidates: list[tuple[str, dict, tuple, float, float, int]] = []
+
+    access_points = accessibility.reference_points(
+        pdf_vector.read_text_ops(ACCESS_PDF), level=1)
+    candidates.append(("Barrierefrei-Plan", access_points,
+                       *georef.fit_reference_plan(access_points, site_centres)))
+
+    # Die Technischen Richtlinien fuehren einen Aufzugsplan, dessen
+    # Hallenmarken sich ebenfalls einpassen lassen -- und der Aufzuege verortet.
+    _, techguide_halls = techguide.read_marks(TECHGUIDE_PDF, techguide.ELEVATOR_PAGE)
+    if len(set(techguide_halls) & set(k.split(".")[0] for k in site_centres)) >= 4:
+        base_centres = {key.split(".")[0]: value for key, value in site_centres.items()
+                        if key.endswith(".1")}
+        try:
+            candidates.append(("Technische Richtlinien", techguide_halls,
+                               *georef.fit_reference_plan(techguide_halls, base_centres)))
+        except ValueError:
+            pass
+
+    for name, _points, _params, fit, cross, count in candidates:
+        print(f"  {name}: {count} Stuetzen, Restfehler {fit:.1f} m, "
+              f"kreuzvalidiert {cross:.1f} m")
+
+    chosen = min(candidates, key=lambda entry: entry[4])
+    reference_name, reference, params, fit_error, cross_error, supports = chosen
+    print(f"  -> genommen wird der genauere: {reference_name} (±{cross_error:.1f} m)")
 
     scale, rotation, tx, ty = params
     cos_r, sin_r = math.cos(rotation) * scale, math.sin(rotation) * scale
@@ -116,7 +155,8 @@ def main() -> int:
 
         # Die Uebersicht beschriftet Ebene 1; eine Halle, die es nur im
         # Obergeschoss gibt, sitzt ueber ihrem Erdgeschoss-Pendant.
-        point = reference.get(key) or reference.get(f"{level.hall}.1")
+        point = (reference.get(key) or reference.get(f"{level.hall}.1")
+                 or reference.get(level.hall.split(".")[0]))
         if point is None:
             print(f"  ! {key}: keine Lage im Uebersichtsplan", file=sys.stderr)
             continue
@@ -178,7 +218,15 @@ def main() -> int:
         if transform is None:
             continue
 
-        base_y = 0.0 if level.level <= 1 else LEVEL_HEIGHT_M * (level.level - 1)
+        outdoor = level.hall in hallplan.OUTDOOR_NAMES
+
+        # Hoehenmodell: der Boden einer oberen Ebene ergibt sich aus der lichten
+        # Hoehe darunter plus Geschossdecke, nicht aus einer Pauschale. Halle
+        # 3.2 stand mit dem alten Festwert von 11 m mehr als vier Meter zu hoch.
+        lower_key = STACKED_ON_LOWER.get(key)
+        height = buildings.height_model(key, level.level, lower_key)
+        base_y = height.floor_render_m
+
         corners = [
             (level.origin[0], level.origin[1]),
             (level.origin[0] + level.width_m, level.origin[1]),
@@ -186,17 +234,44 @@ def main() -> int:
             (level.origin[0], level.origin[1] + level.height_m),
         ]
 
+        # Die Umgrenzung ist der belegte Bereich, nicht der Gebaeudeumriss. Die
+        # Bounding-Box der Schnittstelle greift bei L-foermigen Hallen weit
+        # darueber hinaus; die Huelle der gezeichneten Flaechen trifft besser.
+        content = [point for stand in level.stands for point in stand.polygon]
+        content += [point for block in level.blocks for point in block]
+        outline, outline_source = building.hall_outline(content, corners)
+        footprint = [transform.apply(x, y) for x, y in outline]
+
+        extent_area = building.polygon_area(footprint)
+        official_area = buildings.official_area(key)
+        area_check = {
+            "extentAreaSqm": round(extent_area, 0),
+            "officialAreaSqm": official_area,
+            "deviationPct": (None if not official_area
+                             else round(100 * (extent_area - official_area) / official_area, 1)),
+            "outlineSource": outline_source,
+            "note": ("Belegter Bereich, nicht der Gebaeudeumriss -- wo gamescom nur "
+                     "einen Teil der Halle nutzt, faellt er kleiner aus."
+                     if official_area else "Keine offizielle Flaeche hinterlegt."),
+        }
+
         halls.append({
             "key": key,
             "hall": level.hall,
             "level": level.level,
-            "outdoor": level.hall in hallplan.OUTDOOR_NAMES,
+            "outdoor": outdoor,
             "name": hallplan.OUTDOOR_NAMES.get(level.hall, f"Halle {key}"),
             "widthM": round(level.width_m, 2),
             "depthM": round(level.height_m, 2),
-            "baseY": base_y,
-            "wallHeightM": 0.0 if level.hall in hallplan.OUTDOOR_NAMES else HALL_WALL_HEIGHT_M,
-            "footprint": _round_points(transform.apply(x, y) for x, y in corners),
+            "baseY": round(base_y, 2),
+            # Die sichtbare Wandhoehe ist die lichte Hoehe der Ebene, gedeckelt
+            # auf etwas Ansehnliches -- eine 15 m hohe Halle 8 wuerde die
+            # Uebersicht sonst erschlagen.
+            "wallHeightM": 0.0 if outdoor else round(min(height.clear_height_m, 12.0), 2),
+            "height": height.as_dict(),
+            "area": area_check,
+            "routable": buildings.is_routable(key),
+            "footprint": _round_points(footprint),
             "blocks": [_round_points(transform.apply(x, y) for x, y in block)
                        for block in level.blocks],
             "placement": {
@@ -221,6 +296,172 @@ def main() -> int:
                 "baseY": base_y,
                 "polygon": _round_points(transform.apply(x, y) for x, y in stand.polygon),
             })
+
+    # --- Aufzuege und Tore aus den Technischen Richtlinien --------------------
+    # Die Richtlinien fuehren beide mit Kennbuchstaben und zeichnen sie auf
+    # Uebersichtsplaenen ein. Damit stehen Aufzuege nicht mehr rechnerisch in
+    # der Hallenmitte, sondern dort, wo die Koelnmesse sie eintraegt.
+    facilities = []
+    hall_outlines = {hall["key"]: hall["footprint"] for hall in halls}
+    for page, kind in ((techguide.ELEVATOR_PAGE, "elevator"), (techguide.GATE_PAGE, "gate")):
+        marks, plan_halls = techguide.read_marks(TECHGUIDE_PDF, page)
+        if not marks:
+            continue
+        # Auf derselben Seite steht die Abmessungstabelle. Sie trennt Portal
+        # von Nebentuer -- ein 6,00-m-Tor ist ein Weg, ein 3,10-m-Durchlass
+        # eher nicht.
+        openings = techguide.read_openings(TECHGUIDE_PDF, page, kind)
+        dimensions = techguide.dimension_index(openings)
+        # Plan und Tabelle sind sich nicht ueberall einig: fuer Halle 1.2
+        # zeichnet der Plan die Tore A-F, die Tabelle fuehrt A-E und H. Wo
+        # eine Halle nur eine einzige Massangabe hat, gilt sie fuer alle ihre
+        # Durchlaesse -- das steht so in der Zeile. Der Umweg wird vermerkt.
+        uniform: dict[str, dict] = {}
+        for opening in openings:
+            spec = opening.spec()
+            previous = uniform.get(opening.hall_key)
+            if previous is None:
+                uniform[opening.hall_key] = spec
+            elif previous != spec:
+                uniform[opening.hall_key] = {}
+        base_centres = {key.split(".")[0]: value for key, value in site_centres.items()
+                        if key.endswith(".1")}
+        try:
+            plan_params, _plan_fit, plan_cross, plan_n = georef.fit_reference_plan(
+                plan_halls, base_centres)
+        except ValueError:
+            print(f"  ! {kind}: Plan laesst sich nicht einpassen", file=sys.stderr)
+            continue
+
+        p_scale, p_rot, p_tx, p_ty = plan_params
+        p_cos, p_sin = math.cos(p_rot) * p_scale, math.sin(p_rot) * p_scale
+        # Die Marke ist eine Beschriftung *neben* der Anlage -- im Plan steht
+        # "4.1 E" links ausserhalb der Halle, mit Bezug auf einen Punkt an
+        # ihrer Kante. Tore und Aufzugsschaechte sitzen in der Hallenhuelle.
+        # Also wird die Marke auf den Umriss gezogen; wie weit, steht dabei.
+        # Liegt die Marke bereits im belegten Bereich, wird sie in Ruhe
+        # gelassen: dann ist nicht zu entscheiden, welche Wand gemeint ist,
+        # und die naechste Kante waere geraten, nicht gemessen.
+        def inside(hall: list, point: tuple[float, float]) -> bool:
+            hit = False
+            for index in range(len(hall)):
+                ax, ay = hall[index]
+                bx, by = hall[index - 1]
+                if (ay > point[1]) != (by > point[1]):
+                    cross = ax + (point[1] - ay) * (bx - ax) / (by - ay)
+                    if point[0] < cross:
+                        hit = not hit
+            return hit
+
+        def snap_to_outline(hall_key: str, point: tuple[float, float]):
+            hall = hall_outlines.get(hall_key)
+            if not hall or inside(hall, point):
+                return None
+            best, best_d = None, float("inf")
+            for index in range(len(hall)):
+                ax, ay = hall[index]
+                bx, by = hall[(index + 1) % len(hall)]
+                dx, dy = bx - ax, by - ay
+                span = dx * dx + dy * dy
+                t = 0.0 if span == 0 else max(0.0, min(1.0, (
+                    (point[0] - ax) * dx + (point[1] - ay) * dy) / span))
+                cx, cy = ax + t * dx, ay + t * dy
+                distance = math.dist(point, (cx, cy))
+                if distance < best_d:
+                    best, best_d = (cx, cy), distance
+            # Weiter als eine halbe Hallenbreite weg heisst: die Beschriftung
+            # gehoert nicht mehr erkennbar zu einer Kante. Dann bleibt sie,
+            # wo sie steht, und die Karte sagt "ungefaehr hier".
+            return None if best_d > MAX_SNAP_M else (best, best_d)
+
+        measured = 0
+        for mark in marks:
+            label_at = (round(p_cos * mark.x - p_sin * mark.y + p_tx, 2),
+                        round(p_sin * mark.x + p_cos * mark.y + p_ty, 2))
+            entry = {
+                "id": f"{kind}:{mark.id}",
+                "kind": kind,
+                "hallKey": mark.hall_key,
+                "designator": mark.designator,
+                "position": list(label_at),
+                "labelPosition": list(label_at),
+                "positionSource": "plan-beschriftung",
+                "source": "official",
+                "uncertaintyM": round(plan_cross, 1),
+            }
+            snapped = snap_to_outline(mark.hall_key, label_at)
+            if snapped:
+                (sx, sy), distance = snapped
+                entry["position"] = [round(sx, 2), round(sy, 2)]
+                entry["positionSource"] = "auf Hallenkante gezogen"
+                entry["snapM"] = round(distance, 1)
+                entry["uncertaintyM"] = round(plan_cross + distance / 2, 1)
+            spec = dimensions.get((mark.hall_key, mark.designator))
+            if spec:
+                entry["dimensions"] = dict(spec, matchedBy="kennbuchstabe")
+                measured += 1
+            elif uniform.get(mark.hall_key):
+                entry["dimensions"] = dict(uniform[mark.hall_key],
+                                           matchedBy="hallenzeile")
+                entry["note"] = (f"Plan zeichnet {mark.id}, die Tabelle fuehrt "
+                                 f"diesen Kennbuchstaben nicht. Uebernommen "
+                                 f"wurde die einheitliche Zeile der Halle.")
+                measured += 1
+            facilities.append(entry)
+
+        # Welcher Durchlass einer Halle der groesste ist, steht nicht im
+        # Dokument -- es ergibt sich aus seinen eigenen Zahlen. Deshalb
+        # "derived": kein geratener Schwellwert, ein Vergleich.
+        by_hall: dict[str, list[dict]] = {}
+        for entry in facilities:
+            if entry["kind"] == kind and "dimensions" in entry:
+                by_hall.setdefault(entry["hallKey"], []).append(entry)
+        for group in by_hall.values():
+            def opening_area(item: dict) -> float:
+                dims = item["dimensions"]
+                return dims["widthM"] * dims["heightM"]
+            widest = max(opening_area(item) for item in group)
+            for item in group:
+                item["dimensions"]["largestInHall"] = (
+                    abs(opening_area(item) - widest) < 1e-9)
+                item["dimensions"]["rankSource"] = "derived"
+        print(f"  {kind}: {len(marks)} verortet, davon {measured} vermessen, "
+              f"Plan auf ±{plan_cross:.1f} m ({plan_n} Stuetzen)")
+
+    # --- Was es gibt, aber nicht verortet ist --------------------------------
+    # Beschilderung vor Ort nennt Tore, die in den Technischen Richtlinien
+    # fehlen, und Seiten von Toren, die der Plan nicht zuordnet. Beides ist
+    # zu wenig fuer eine Koordinate und zu viel, um es wegzulassen.
+    facility_gaps = []
+    if FIELD_NOTES.exists():
+        notes = json.loads(FIELD_NOTES.read_text(encoding="utf-8"))
+        for entry in notes.get("observations", []):
+            signposted = entry.get("gatesSignposted")
+            if signposted:
+                for designator in signposted.get("knownButUnplaced", []):
+                    facility_gaps.append({
+                        "kind": "gate", "hallKey": signposted["hallKey"],
+                        "designator": designator, "known": "existiert",
+                        "missing": "Lage und Mass",
+                        "source": "observed", "observation": entry["id"]})
+            unmodelled = entry.get("unmodelledConnection")
+            if unmodelled:
+                facility_gaps.append({
+                    "kind": unmodelled["kind"],
+                    "hallKey": " ↔ ".join(unmodelled["connects"]),
+                    "designator": unmodelled.get("side", ""),
+                    "known": "Verbindung existiert",
+                    "missing": "Halle nicht im Gelaendemodell",
+                    "source": "observed", "observation": entry["id"]})
+            side = entry.get("gateSide")
+            if side:
+                facility_gaps.append({
+                    "kind": "gate", "hallKey": side["hallKey"],
+                    "designator": side["designator"],
+                    "known": f"Seite: {side['side']}", "missing": "Lage",
+                    "source": "observed", "observation": entry["id"]})
+    if facility_gaps:
+        print(f"  {len(facility_gaps)} Anlagen bekannt, aber nicht verortet")
 
     # --- Durchgaenge aus der Layout-Tabelle ----------------------------------
     # Die Tabelle lebt in ihrem eigenen Zeichenraum und braucht eine eigene
@@ -264,14 +505,16 @@ def main() -> int:
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps({
-        "schema": "beuteltier.site.v1",
-        "levelHeightM": LEVEL_HEIGHT_M,
+        "schema": "beuteltier.site.v2",
+        "slabAssumptionM": [buildings.slab_min, buildings.slab_max],
         "referenceFit": {"supports": supports,
                          "residualM": round(fit_error, 1),
                          "crossValidatedM": round(cross_error, 1)},
         "halls": halls,
         "stands": stands_out,
         "connectors": connectors,
+        "facilities": facilities,
+        "facilityGaps": facility_gaps,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     print()

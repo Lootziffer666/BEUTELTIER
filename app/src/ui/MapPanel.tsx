@@ -275,6 +275,16 @@ export function MapPanel(props: Props) {
           gamescom-Plan 2025 eingemessen; {data.site.halls.filter((h) => h.placement.source === 'geschaetzt').length}{' '}
           Hallen stehen nur geschätzt (rund {Math.round(data.site.referenceFit.crossValidatedM)} m).
         </p>
+        <p className="muted">
+          Lichte Höhen sind offizielle Hallendaten. Die Bodenhöhe der oberen Ebenen ist daraus
+          gerechnet — lichte Höhe darunter plus Geschossdecke von{' '}
+          {data.site.slabAssumptionM[0]}–{data.site.slabAssumptionM[1]} m. Die Deckenstärke ist
+          die einzige Annahme darin und nicht vermessen.
+        </p>
+        <p className="muted">
+          Die gezeichneten Hallenumrisse sind der <em>belegte Bereich</em>, nicht der
+          Gebäudeumriss: wo gamescom nur einen Teil einer Halle nutzt, endet der Umriss dort.
+        </p>
       </section>
     </div>
   );

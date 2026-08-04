@@ -10,9 +10,9 @@
  * Kameraposition von oben, kein zweiter Renderer.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Html, OrbitControls, type OrbitControlsProps } from '@react-three/drei';
+import { Html, OrbitControls, useGLTF, type OrbitControlsProps } from '@react-three/drei';
 import * as THREE from 'three';
 
 import type { Dataset } from '../data/load';
@@ -50,6 +50,11 @@ const COLOURS = {
 
 const STAND_HEIGHT_M = 2.6;
 
+/** Das eingepasste LoD2-Modell der Koelnmesse, gebaut von tools/build_buildings.py. */
+const MODEL_URL = `${import.meta.env.BASE_URL}models/messe.glb`;
+/** Wie durchsichtig die Gebäudehülle in der Übersicht ist. */
+const SHELL_OPACITY = 0.16;
+
 function Ground({ extent }: { extent: number }) {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]} receiveShadow>
@@ -57,6 +62,51 @@ function Ground({ extent }: { extent: number }) {
       <meshStandardMaterial color={COLOURS.ground} roughness={1} />
     </mesh>
   );
+}
+
+/**
+ * Das amtliche Gebäudemodell als Gelände.
+ *
+ * Die Grundrisse kommen aus dem LoD2-Modell der Geobasis NRW und stehen in
+ * denselben Geländemetern wie alles andere — eingepasst mit 96 % Treffern.
+ * Die Wände bleiben durchscheinend: das Gebäude ist der Rahmen, die Stände
+ * sind der Inhalt. Erst im Laufmodus wird daraus eine Wand, an der man steht.
+ */
+function Gelaende({
+  centre,
+  opacity,
+}: {
+  centre: [number, number];
+  opacity: number;
+}) {
+  const { scene } = useGLTF(MODEL_URL);
+
+  const model = useMemo(() => {
+    const clone = scene.clone(true);
+    clone.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      const source = node.material as THREE.MeshStandardMaterial;
+      const material = source.clone();
+      material.transparent = opacity < 0.99;
+      material.opacity = opacity;
+      material.depthWrite = opacity > 0.9;
+      material.side = THREE.DoubleSide;
+      node.material = material;
+      node.receiveShadow = true;
+    });
+    return clone;
+  }, [scene, opacity]);
+
+  useEffect(
+    () => () => {
+      model.traverse((node) => {
+        if (node instanceof THREE.Mesh) (node.material as THREE.Material).dispose();
+      });
+    },
+    [model],
+  );
+
+  return <primitive object={model} position={[-centre[0], 0, centre[1]]} />;
 }
 
 function Halls({
@@ -396,6 +446,11 @@ export function SiteScene(props: SceneProps) {
       <directionalLight position={[-extent * 0.5, extent * 0.4, -extent * 0.4]} intensity={0.35} />
 
       <Ground extent={extent} />
+      {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
+          tragen sie weiterhin. Deshalb Suspense ohne Ersatzdarstellung. */}
+      <Suspense fallback={null}>
+        <Gelaende centre={centre} opacity={SHELL_OPACITY} />
+      </Suspense>
       <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
       <Stands
         data={data}

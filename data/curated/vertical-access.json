@@ -1,0 +1,200 @@
+{
+  "schema": "beuteltier.vertical-access.v1",
+  "note": [
+    "Treppen und Rolltreppen stehen in keinem der Kartenwerke, die BEUTELTIER",
+    "sonst nutzt -- weder in der Hallenplan-Schnittstelle noch im Barrierefrei-",
+    "Plan noch in den Technischen Richtlinien. Belegt sind sie an einer",
+    "unerwarteten Stelle: im Werbeflaechen-Katalog der Koelnmesse. Wer eine",
+    "Treppenstufe bekleben will, bekommt Stufenzahl, Breite und Steigung",
+    "genannt -- und damit ist die Treppe vermasst.",
+    "Uebernommen wird nur, was dort woertlich steht. Die Lage im Gelaende folgt",
+    "daraus nicht; sie bleibt an jeder Verbindung als solche ausgewiesen."
+  ],
+  "sources": [
+    {
+      "id": "fibo2024",
+      "title": "Koelnmesse / FIBO -- 360° Marketing- und Werbemoeglichkeiten 2024",
+      "url": "https://www.fibo.com/content/dam/sitebuilder/rxde/fibo/documents/FIBO2024_DE_Marketing-und-Werbemöglichkeiten.pdf.coredownload.969455355.pdf",
+      "retrieved": "2026-08-04",
+      "kind": "official",
+      "pages": [
+        28,
+        33,
+        39
+      ],
+      "why": "Beschreibt zu verkaufende Treppenflaechen und nennt dabei ihre Masse."
+    },
+    {
+      "id": "fibo2022",
+      "title": "Koelnmesse / FIBO -- Marketing- und Werbemoeglichkeiten 2022",
+      "url": "https://www.fibo.com/content/dam/sitebuilder/rxde/fibo/documents/FIBO2022_Marketing-und-Werbemöglichkeiten.pdf.coredownload.303983825.pdf",
+      "retrieved": "2026-08-04",
+      "kind": "official",
+      "pages": [
+        27,
+        32,
+        34,
+        39
+      ],
+      "why": "Nennt die Regel fuer alle Aufgaenge des Suedgelaendes und die Handlauflaenge."
+    },
+    {
+      "id": "werbeflaechen2013",
+      "title": "Koelnmesse GmbH -- Die Werbeflaechen der Koelnmesse",
+      "url": "http://www.koelnmesse.cz/system/files/praesentation_werbeflaechen_2013_dt.pdf",
+      "retrieved": "2026-08-04",
+      "kind": "official",
+      "pages": [
+        5,
+        7,
+        15
+      ],
+      "why": "Gelaendeweiter Katalog: Regeltreppe, Rolltreppen-Handlauf, Treppe Eingang Sued."
+    }
+  ],
+  "rule": {
+    "id": "suedgelaende-aufgaenge",
+    "source": "fibo2022",
+    "page": 34,
+    "quote": "Die Treppenaufgänge im Südgelände verbindet die oberen Messehallen mit den Passagen. Jeder Aufgang verfügt über zwei Rolltreppen, die einzeln zu belegen sind.",
+    "meaning": [
+      "Das ist die einzige Stelle in allen ausgewerteten Quellen, an der die",
+      "Koelnmesse eine *Regel* zu Rolltreppen ausspricht statt einen Einzelfall.",
+      "Sie gilt fuer die Aufgaenge des Suedgelaendes -- also fuer die oberen",
+      "Ebenen der Hallen 2, 3, 4, 5, 10 und 11 -- und lautet: Treppe zwischen",
+      "zwei Rolltreppen. Die Stufenzahl ist nur fuer 4.2 und 10.2 belegt.",
+      "Fuer den Nordboulevard gilt sie ausdruecklich nicht: dort nennt derselbe",
+      "Katalog *eine* Rolltreppe neben der 45-stufigen Treppe."
+    ],
+    "appliesTo": [
+      "2.2",
+      "3.2",
+      "4.2",
+      "5.2",
+      "10.2",
+      "11.2"
+    ],
+    "escalatorsPerAufgang": 2,
+    "handrailLengthM": 15.2
+  },
+  "corroboration": {
+    "what": "Die Regeltreppe des Gelaendekatalogs stuetzt das Hoehenmodell.",
+    "detail": [
+      "Der gelaendeweite Werbeflaechen-Katalog kalkuliert eine Treppe mit",
+      "56 Stufen a 0,14 m -- das sind 7,84 m Geschosshoehe. BEUTELTIER leitet",
+      "aus lichter Hoehe plus angenommener Deckenstaerke 7,45 m (Halle 10) und",
+      "7,60 m (Halle 4) ab, mit einer Spanne von 7,20 bis 7,85 m.",
+      "7,84 m liegt am oberen Rand dieser Spanne. Die Deckenstaerke duerfte",
+      "also eher bei 2,0 m liegen als bei 1,5 m. Geaendert wird nichts: ein",
+      "Kalkulationsbeispiel ist keine Bauangabe. Aber die Annahme haelt."
+    ],
+    "catalogueStairSteps": 56,
+    "catalogueStairRiseM": 7.84
+  },
+  "contradiction": {
+    "what": "Die 20 Stufen gehoeren nicht zum Ebenenwechsel.",
+    "detail": [
+      "Der Katalog nennt fuer 'Aufgang Halle 4.2' und 'Aufgang Halle 10.2'",
+      "je 20 Stufen a 0,14 m, also 2,80 m. Das ist zu wenig fuer einen",
+      "Geschosswechsel: Halle 10.1 hat 5,70 m lichte Hoehe, mit Decke liegt",
+      "der Boden von 10.2 bei mindestens 7,20 m.",
+      "Eine Beobachtung vor Ort schliesst auch die zweite Erklaerung aus: der",
+      "Boulevard liegt exakt auf Ebene 2, oben geht man keine Stufen.",
+      "Bleibt eine dritte Stelle. Der Katalog nennt sie selbst: 'Beklebung",
+      "Treppe Passage 10/4 -- Position: zum Mittelboulevard -- 20 Stufen'.",
+      "Die Passage liegt also rund 2,80 m unter dem Boulevard, bei etwa",
+      "4,65 m. Diese Zwischenebene modelliert BEUTELTIER nicht.",
+      "Deshalb tragen die Ebenenwechsel keine Stufenmasse mehr. Die",
+      "Verbindung bleibt belegt, ihr Mass gilt woanders."
+    ],
+    "passageLevelDerivedM": 4.65,
+    "resolvesWith": "Ein Gelaendeschnitt oder eine Hoehenangabe fuer die Passagen."
+  },
+  "stairs": [
+    {
+      "id": "boulevard-nord-mitte",
+      "label": "Treppe Nordboulevard zum Mittelboulevard",
+      "page": 28,
+      "quote": "Alle Besucher gelangen über die Treppe vom Nordboulevard zum Mittelboulevard um zu den Hallen 4, 5 und 10 zu gelangen. Dieses Nadelöhr ...",
+      "steps": 45,
+      "stepRiseM": 0.11,
+      "widthM": 3.0,
+      "escalatorsFlanking": 1,
+      "escalatorNote": "Der Katalog fuehrt hier ausdruecklich 'Anzahl: 1 Rolltreppe' -- die Zweier-Regel des Suedgelaendes gilt am Nordboulevard nicht.",
+      "connects": [
+        "boulevard-nord",
+        "boulevard-mitte"
+      ],
+      "serves": [
+        "4.2",
+        "5.2",
+        "10.2"
+      ],
+      "bottleneck": true
+    },
+    {
+      "id": "aufgang-4.2",
+      "label": "Aufgang Halle 4.2",
+      "page": 33,
+      "quote": "Position: Aufgang Halle 4.2 / Anzahl: 20 Stufen zw. Rolltreppen",
+      "steps": 20,
+      "stepRiseM": 0.14,
+      "widthM": 1.8,
+      "escalatorsFlanking": 2,
+      "connects": [
+        "boulevard-mitte",
+        "4.2"
+      ],
+      "hallKey": "4.2",
+      "lowerKey": "4.1",
+      "measuresTransition": "passage-zu-ebene-2",
+      "notTheLevelChange": true
+    },
+    {
+      "id": "aufgang-10.2",
+      "label": "Aufgang Halle 10.2",
+      "page": 33,
+      "quote": "Position: Aufgang Halle 10.2 / Anzahl: 20 Stufen zw. Rolltreppen",
+      "steps": 20,
+      "stepRiseM": 0.14,
+      "widthM": 1.8,
+      "escalatorsFlanking": 2,
+      "connects": [
+        "boulevard-mitte",
+        "10.2"
+      ],
+      "hallKey": "10.2",
+      "lowerKey": "10.1",
+      "measuresTransition": "passage-zu-ebene-2",
+      "notTheLevelChange": true
+    },
+    {
+      "id": "passage-10-4",
+      "label": "Treppe Passage 10/4 zum Mittelboulevard",
+      "page": 33,
+      "quote": "Beklebung Treppe Passage 10/4 / Position: zum Mittelboulevard / Anzahl: 20 Stufen",
+      "steps": 20,
+      "stepRiseM": 0.14,
+      "widthM": 7.0,
+      "escalatorsFlanking": null,
+      "connects": [
+        "passage-4-10",
+        "boulevard-mitte"
+      ]
+    },
+    {
+      "id": "eingang-west",
+      "label": "Treppe Eingang West, Erdgeschoss zum ersten Obergeschoss",
+      "page": 39,
+      "quote": "Beklebung Treppe EG - 1.OG / 32 Stufen",
+      "steps": 32,
+      "stepRiseM": 0.14,
+      "widthM": 2.3,
+      "escalatorsFlanking": null,
+      "connects": [
+        "eingang-west-eg",
+        "eingang-west-og"
+      ]
+    }
+  ]
+}

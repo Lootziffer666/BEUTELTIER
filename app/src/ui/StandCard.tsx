@@ -54,6 +54,17 @@ export function StandCard({ data, standId, startStandId, onSetStart, inTour, onT
             Hallenlage ±{Math.round(hall.placement.residualM ?? 0)} m
           </span>
         )}
+        {hall && hall.height.heightSource === 'derived' && (
+          <span
+            className="badge badge--warn"
+            title={
+              `Boden ${hall.height.floorElevationMinM}–${hall.height.floorElevationMaxM} m über Grund. ` +
+              `Gerechnet aus der lichten Höhe der Ebene darunter plus Geschossdecke — die Decke ist geschätzt.`
+            }
+          >
+            Bodenhöhe gerechnet ±{hall.height.heightUncertaintyM} m
+          </span>
+        )}
       </p>
 
       {occupants.length > 0 ? (
