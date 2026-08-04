@@ -36,6 +36,7 @@ LOD2_DIR = ROOT / "data" / "raw" / "lod2"
 SITE = ROOT / "data" / "build" / "site.json"
 OUT_JSON = ROOT / "data" / "build" / "buildings.json"
 OUT_GLB = ROOT / "app" / "public" / "models" / "messe.glb"
+ORTHO_META = ROOT / "data" / "build" / "ortho.json"
 
 # Ausschnitt des Messegelaendes in UTM32. Grosszuegig genug fuer die Umgebung,
 # eng genug, um nicht halb Deutz mitzunehmen.
@@ -54,12 +55,20 @@ MIN_BUILDING_SHARE = 0.10
 
 # Farben der Teilnetze. Zurueckhaltend -- die Karte lebt von den Staenden,
 # nicht vom Gebaeude.
+# Farbe *und* Textur je Flaechenart. Ein Senkrechtluftbild zeigt Boden und
+# Daecher -- fuer Waende gibt es keine Aufnahme, die bleiben prozedural.
+# Wo eine Textur liegt, ist die Grundfarbe weiss, damit das Bild nicht
+# eingefaerbt wird.
 COLOURS = {
     "wall": (0.62, 0.64, 0.68, 1.0),
-    "roof": (0.44, 0.47, 0.52, 1.0),
-    "ground": (0.30, 0.32, 0.36, 1.0),
+    "roof": (1.0, 1.0, 1.0, 1.0),
+    "ground": (0.72, 0.73, 0.75, 1.0),
     "closure": (0.62, 0.64, 0.68, 1.0),
 }
+# Nur das Dach. Das Senkrechtluftbild zeigt Daecher -- auf dem Hallenboden
+# waere es das Foto des Daches darueber, also schlicht das falsche Bild.
+# Boeden und Waende bekommen prozedurale Texturen in der App.
+TEXTURED = {"roof": "ortho"}
 
 
 def centroid(ring) -> tuple[float, float]:
@@ -335,7 +344,24 @@ def main() -> int:
     print(f"\n{len(records)} Gebaeude -> {OUT_JSON}")
 
     # --- Ausgabe: begehbares Netz -------------------------------------------
-    parts = {kind: gltf.Part(name=kind, colour=colour)
+    # Das Luftbild deckt einen bekannten Ausschnitt ab. Die UV-Koordinaten
+    # sind daraus reine Rechnung: keine Zuordnung von Hand, keine Naht.
+    ortho = (json.loads(ORTHO_META.read_text(encoding="utf-8"))
+             if ORTHO_META.exists() else None)
+    if ortho:
+        ox0, oy0, ox1, oy1 = ortho["extent"]
+        span_x = ox1 - ox0
+        span_y = oy1 - oy0
+
+        def planar_uv(point):
+            # Szenenpunkt ist (x, hoehe, -y); das Bild beginnt oben bei y1.
+            return ((point[0] - ox0) / span_x, (oy1 + point[2]) / span_y)
+    else:
+        planar_uv = None
+        print("  ! ortho.json fehlt -- Modell bleibt ohne Textur", file=sys.stderr)
+
+    parts = {kind: gltf.Part(name=kind, colour=colour,
+                             texture=(TEXTURED.get(kind) if ortho else None))
              for kind, colour in COLOURS.items()}
     skipped = 0
     for building in buildings:
@@ -352,8 +378,9 @@ def main() -> int:
                 continue
             scene = [(lambda p: (p[0], z - ground_level, -p[1]))(fit.inverse(x, y))
                      for x, y, z in points]
+            uv = planar_uv if part.texture else None
             for a, b, c in triangles:
-                part.add_triangle(scene[a], scene[b], scene[c])
+                part.add_triangle(scene[a], scene[b], scene[c], uv)
 
     OUT_GLB.parent.mkdir(parents=True, exist_ok=True)
     size = gltf.write_glb(
@@ -361,7 +388,9 @@ def main() -> int:
         generator="BEUTELTIER aus LoD2 (Geobasis NRW)",
         extras={"crsNote": "BEUTELTIER-Gelaendemeter, x rechts, y hoch, z sued",
                 "groundReferenceM": round(ground_level, 2),
-                "licence": "Datenlizenz Deutschland Zero 2.0"})
+                "licence": "Datenlizenz Deutschland Zero 2.0",
+                **({"ortho": ortho["image"], "orthoExtent": ortho["extent"]}
+                   if ortho else {})})
     triangles = sum(part.triangle_count for part in parts.values())
     print(f"{triangles} Dreiecke, {size / 1e6:.1f} MB -> {OUT_GLB}")
     if skipped:

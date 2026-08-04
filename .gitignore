@@ -11,3 +11,7 @@ app/dist/
 # app/public/models/messe.glb. Damit bleibt der Bau reproduzierbar, ohne das
 # Repository um ein Vielfaches seiner Groesse aufzublaehen.
 data/raw/lod2/*.gml
+
+# Ebenso die Orthophotos: 87 MB JPEG2000, aus denen eine 3,6-MB-Textur wird.
+# Die Textur liegt im Repository, das Rohmaterial nicht.
+data/raw/dop/*.jp2

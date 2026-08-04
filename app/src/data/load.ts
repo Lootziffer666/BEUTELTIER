@@ -12,12 +12,22 @@ import type { Registry, Site } from './types';
 
 const BASE = `${import.meta.env.BASE_URL}data`;
 
+/** Was das Luftbild abdeckt -- gebaut von tools/build_ortho.py. */
+export interface Ortho {
+  image: string;
+  /** [x0, y0, x1, y1] in Geländemetern. */
+  extent: [number, number, number, number];
+  metresPerPixel: number;
+}
+
 export interface Dataset {
   site: Site;
   registry: Registry;
   graph: RouteGraph;
   /** Dasselbe Gitter, aber als Boden zum Draufstehen. */
   walk: WalkGrid;
+  /** Ausdehnung des entzerrten Luftbilds, oder null ohne Luftbild. */
+  ortho: Ortho | null;
   standsById: Map<string, Site['stands'][number]>;
   hallsByKey: Map<string, Site['halls'][number]>;
   exhibitorsById: Map<string, Registry['exhibitors'][number]>;
@@ -36,11 +46,15 @@ export async function loadDataset(): Promise<Dataset> {
     fetchJson<CompactGraph>('graph.json'),
   ]);
 
+  // Ohne Luftbild bleibt die Karte benutzbar -- sie ist dann nur grau.
+  const ortho = await fetchJson<Ortho>('ortho.json').catch(() => null);
+
   return {
     site,
     registry,
     graph: RouteGraph.fromCompact(compact),
     walk: WalkGrid.fromCompact(compact),
+    ortho,
     standsById: new Map(site.stands.map((stand) => [stand.id, stand])),
     hallsByKey: new Map(site.halls.map((hall) => [hall.key, hall])),
     exhibitorsById: new Map(registry.exhibitors.map((one) => [one.id, one])),

@@ -17,6 +17,7 @@ andere zusammengetragen haben. Diese Seite hält fest, wem was gehört.
 | **Koelnmesse — Technische Richtlinien** | Verortete Aufzüge und Tore, lichte Höhen, örtliche Höhenbeschränkungen | Lage der Hallen ohne 2025er Belegung (±7 m, genauer als der Barrierefrei-Plan) und Standorte der Ebenenwechsel. |
 | **Koelnmesse — Werbeflächen-Kataloge**<br>gelände­weit sowie FIBO 2022/2024/2025 | Treppen und Rolltreppen: Stufenzahl, Breite, Steigung; die Regel „Jeder Aufgang verfügt über zwei Rolltreppen" | Die **einzige** Quelle im Projekt, die Rolltreppen belegt. Kein Kartenwerk führt sie. Gepflegt in `data/curated/vertical-access.json`, jede Angabe mit Wortlaut und Seitenzahl. |
 | **Geobasis NRW — 3D-Gebäudemodell LoD2**<br>`opengeodata.nrw.de`, Viewer: `dz.nrw.de` | Amtliche Gebäudegrundrisse mit gemessenen Höhen, in ETRS89/UTM32 | Das Gelände selbst: Wände, Dächer und Boden als Netz. Ersetzt die aus Standflächen abgeleiteten Umrisse und die aus Annahmen gerechneten Höhen. Lizenz: Datenlizenz Deutschland Zero 2.0 — frei nutzbar ohne Bedingungen; genannt wird sie trotzdem. |
+| **Geobasis NRW — Digitale Orthophotos** | Senkrechtluftbild, 10 cm, Stand 2025 | Die Textur des Geländes: Boden und Dächer. Entzerrt ins Geländesystem. Lizenz: Datenlizenz Deutschland Zero 2.0. |
 | **pc games / GamesWirtschaft — historische Hallenpläne** | Hallen-Innenleben früherer Jahre | Referenzmaterial für Eingänge, Rolltreppen und Treppen. Nicht in den Daten. |
 
 ## Aussteller
@@ -33,6 +34,15 @@ andere zusammengetragen haben. Diese Seite hält fest, wem was gehört.
 | **Goodie Guide / Farbklecks** | Goodie- und Aktionsmeldungen. Werden eingelesen, einem Stand zugeordnet und in eine Route überführt. Jede Meldung behält Quelle, Zeit und Status. |
 | **Indie Arena Booth** | Eigener Bereich mit eigener App. BEUTELTIER führt bis zum Block und übergibt dann. Die IAB-Karte wird ausdrücklich **nicht** ersetzt (PRD 5.7, 8). |
 | **OpenStreetMap-Mitwirkende** | Grundlage der Kartenansichten in den Referenz-Screenshots. |
+
+## Was erfunden ist
+
+Wände, Hallenböden und Decken zeigt kein Luftbild, und eine freie Aufnahme
+davon gibt es nicht. Sie werden im Browser aus Fugen, Abnutzung und Rauschen
+erzeugt — **plausibel, aber nicht gemessen**. Die App sagt das unter „Woher die
+Karte kommt". Das texturierte 3D-Mesh von Geobasis NRW gäbe echte Fassaden her,
+wird aber nur in Paketen von 26 bis 147 GB ausgeliefert; für eine App, die
+offline auf dem Messegelände laufen soll, ist das keine Option.
 
 ## Was BEUTELTIER nicht tut
 

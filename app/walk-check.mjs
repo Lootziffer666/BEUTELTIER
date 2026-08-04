@@ -15,7 +15,7 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-await page.goto('http://localhost:4173/', { waitUntil: 'networkidle' });
+await page.goto(process.env.BEUTELTIER_URL ?? 'http://localhost:4173/', { waitUntil: 'networkidle' });
 await page.waitForTimeout(3500);
 
 const results = [];

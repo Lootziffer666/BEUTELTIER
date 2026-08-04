@@ -1,0 +1,16 @@
+{
+  "title": "Digitale Orthophotos (JPEG2000, 10-fache Kompression)",
+  "provider": "Geobasis NRW",
+  "portal": "https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/",
+  "resolutionM": 0.1,
+  "crs": "ETRS89 / UTM32N (EPSG:25832)",
+  "vintage": "2025",
+  "licence": "Datenlizenz Deutschland Zero 2.0 (dl-de/zero-2-0)",
+  "tiles": [
+    "dop10rgbi_32_357_5645_1_nw_2025.jp2",
+    "dop10rgbi_32_357_5646_1_nw_2025.jp2",
+    "dop10rgbi_32_358_5645_1_nw_2025.jp2",
+    "dop10rgbi_32_358_5646_1_nw_2025.jp2"
+  ],
+  "note": "Senkrechtluftbild. Zeigt Boden und Daecher, keine Waende -- die bleiben prozedural und sind als solche gekennzeichnet."
+}

@@ -25,19 +25,22 @@ jobs:
       - name: Abhaengigkeiten
         run: pip install -r requirements.txt
 
-      - name: LoD2-Kacheln aus dem Cache
-        id: lod2cache
+      - name: Amtliche Rohdaten aus dem Cache
+        id: geocache
         uses: actions/cache@v4
         with:
-          path: data/raw/lod2
-          key: lod2-messe-v1
+          path: |
+            data/raw/lod2
+            data/raw/dop
+          key: geobasis-messe-v2
 
       - name: LoD2-Kacheln holen
-        if: steps.lod2cache.outputs.cache-hit != 'true'
+        if: steps.geocache.outputs.cache-hit != 'true'
         run: python3 tools/fetch_lod2.py
 
-      - name: Gebaeudemodell einpassen und ausgeben
-        run: python3 tools/build_buildings.py
+      - name: Orthophotos holen
+        if: steps.geocache.outputs.cache-hit != 'true'
+        run: python3 tools/fetch_orthophoto.py
 
       - name: Gesamtbau
         run: python3 tools/build_all.py
@@ -52,7 +55,9 @@ jobs:
           name: gelaendemodell
           path: |
             data/build/buildings.json
+            data/build/ortho.json
             app/public/models/messe.glb
+            app/public/models/gelaende.jpg
             docs/accuracy-report.md
             docs/field-survey.md
           if-no-files-found: warn

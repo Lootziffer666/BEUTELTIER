@@ -1,0 +1,19 @@
+{
+ "schema": "beuteltier.ortho.v1",
+ "source": {
+  "title": "Digitale Orthophotos, 10 cm",
+  "provider": "Geobasis NRW",
+  "licence": "Datenlizenz Deutschland Zero 2.0",
+  "vintage": "2025"
+ },
+ "image": "gelaende.jpg",
+ "extent": [
+  423.74,
+  137.77,
+  1556.54,
+  1270.57
+ ],
+ "sizePx": 4096,
+ "metresPerPixel": 0.277,
+ "note": "Senkrechtluftbild in Gelaendekoordinaten. Zeigt Boden und Daecher. Waende zeigt es nicht -- die sind prozedural."
+}

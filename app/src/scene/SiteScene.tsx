@@ -17,9 +17,11 @@ import * as THREE from 'three';
 
 import type { Dataset } from '../data/load';
 import { siteCentre } from '../data/load';
+import type { Ortho } from '../data/load';
 import type { Route } from '../routing/route';
 import { mergePolygons, polygonCentre, toScene } from './geometry';
 import { EYE_HEIGHT_M } from './walk';
+import { floorTexture, orthoTexture, wallTexture } from './materials';
 
 export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
@@ -55,6 +57,8 @@ const STAND_HEIGHT_M = 2.6;
 
 /** Das eingepasste LoD2-Modell der Koelnmesse, gebaut von tools/build_buildings.py. */
 const MODEL_URL = `${import.meta.env.BASE_URL}models/messe.glb`;
+/** Das entzerrte Senkrechtluftbild, gebaut von tools/build_ortho.py. */
+const ORTHO_URL = `${import.meta.env.BASE_URL}models/gelaende.jpg`;
 /** Wie durchsichtig die Gebäudehülle in der Übersicht ist. */
 const SHELL_OPACITY = 0.16;
 /** In der Ego-Perspektive ist die Wand eine Wand. */
@@ -64,12 +68,49 @@ const SHELL_OPACITY_EGO = 0.92;
 const WALK_SPEED_M_PER_S = 1.6;
 const RUN_SPEED_M_PER_S = 4.2;
 
-function Ground({ extent }: { extent: number }) {
+/**
+ * Der Boden ist das Luftbild, nicht eine graue Fläche.
+ *
+ * Der Ausschnitt steht in `data/build/ortho.json` und wird beim Bauen in
+ * dieselben Geländemeter entzerrt wie alles andere — deshalb genügt hier ein
+ * achsparalleles Rechteck ohne jede Drehung.
+ */
+function Ground({
+  extent,
+  centre,
+  ortho: meta,
+}: {
+  extent: number;
+  centre: [number, number];
+  ortho: Ortho | null;
+}) {
+  const ortho = useMemo(() => (meta ? orthoTexture(ORTHO_URL) : null), [meta]);
+  if (!meta || !ortho) {
+    return (
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]} receiveShadow>
+        <planeGeometry args={[extent * 2.2, extent * 2.2]} />
+        <meshStandardMaterial color={COLOURS.ground} roughness={1} />
+      </mesh>
+    );
+  }
+  const extentM = meta.extent;
+  const width = extentM[2] - extentM[0];
+  const height = extentM[3] - extentM[1];
+  const midX = (extentM[0] + extentM[2]) / 2 - centre[0];
+  const midZ = -((extentM[1] + extentM[3]) / 2 - centre[1]);
+
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]} receiveShadow>
-      <planeGeometry args={[extent * 2.2, extent * 2.2]} />
-      <meshStandardMaterial color={COLOURS.ground} roughness={1} />
-    </mesh>
+    <group>
+      {/* Dahinter, damit der Horizont nicht abreisst. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.6, 0]} receiveShadow>
+        <planeGeometry args={[extent * 3, extent * 3]} />
+        <meshStandardMaterial color={COLOURS.ground} roughness={1} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[midX, -0.4, midZ]} receiveShadow>
+        <planeGeometry args={[width, height]} />
+        <meshStandardMaterial map={ortho} roughness={0.95} />
+      </mesh>
+    </group>
   );
 }
 
@@ -84,11 +125,17 @@ function Ground({ extent }: { extent: number }) {
 function Gelaende({
   centre,
   opacity,
+  interior,
 }: {
   centre: [number, number];
   opacity: number;
+  /** Steht der Betrachter im Gebäude? Dann ist das Dach eine Decke. */
+  interior: boolean;
 }) {
   const { scene } = useGLTF(MODEL_URL);
+  const ortho = useMemo(() => orthoTexture(ORTHO_URL), []);
+  const wall = useMemo(() => wallTexture(), []);
+  const floor = useMemo(() => floorTexture(), []);
 
   const model = useMemo(() => {
     const clone = scene.clone(true);
@@ -96,15 +143,41 @@ function Gelaende({
       if (!(node instanceof THREE.Mesh)) return;
       const source = node.material as THREE.MeshStandardMaterial;
       const material = source.clone();
+
+      // Welche Fläche welche Herkunft bekommt, steht im Modell selbst --
+      // build_buildings.py schreibt es beim Erzeugen hinein.
+      const kind = (source.name ?? '').toLowerCase();
+      const roof = (source.userData?.texture ?? '') === 'ortho';
+      if (roof && !interior) {
+        material.map = ortho;
+        material.color.setScalar(1);
+        material.roughness = 0.94;
+      } else if (roof) {
+        // Von innen ist das Dach eine Decke, und ein Luftbild wäre dort
+        // das Foto der Oberseite -- also das falsche Bild.
+        material.map = null;
+        material.color.set('#3a3d45');
+        material.roughness = 0.85;
+      } else if (kind === 'ground') {
+        material.map = floor;
+        material.color.setScalar(1);
+        material.roughness = 0.35;
+        material.metalness = 0.04;
+      } else {
+        material.map = wall;
+        material.roughness = 0.82;
+      }
+
       material.transparent = opacity < 0.99;
       material.opacity = opacity;
       material.depthWrite = opacity > 0.9;
       material.side = THREE.DoubleSide;
+      material.needsUpdate = true;
       node.material = material;
       node.receiveShadow = true;
     });
     return clone;
-  }, [scene, opacity]);
+  }, [scene, opacity, interior, ortho, wall, floor]);
 
   useEffect(
     () => () => {
@@ -571,13 +644,14 @@ export function SiteScene(props: SceneProps) {
       <directionalLight position={[extent * 0.4, extent * 0.8, extent * 0.3]} intensity={1.1} />
       <directionalLight position={[-extent * 0.5, extent * 0.4, -extent * 0.4]} intensity={0.35} />
 
-      <Ground extent={extent} />
+      <Ground extent={extent} centre={centre} ortho={data.ortho} />
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
           tragen sie weiterhin. Deshalb Suspense ohne Ersatzdarstellung. */}
       <Suspense fallback={null}>
         <Gelaende
           centre={centre}
           opacity={preset === 'ego' ? SHELL_OPACITY_EGO : SHELL_OPACITY}
+          interior={preset === 'ego'}
         />
       </Suspense>
       <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
