@@ -275,6 +275,91 @@ def read_text_runs(pdf_path: str | Path, page_index: int = 0) -> list[TextRun]:
     return runs
 
 
+def read_text_ops(pdf_path: str | Path, page_index: int = 0) -> list[TextRun]:
+    """Liest Textstuecke einzeln, ohne sie zu Zeilen zusammenzufassen.
+
+    ``read_text_runs`` geht ueber pypdfs Textextraktion und bekommt damit
+    zusammengefasste Zeilen: die drei Hallenbeschriftungen "2.1", "3.1" und
+    "11.1" des Barrierefrei-Plans stehen zwar weit auseinander, landen aber als
+    ein Lauf "2.1 3.1 11.1" mit nur einer Position.
+
+    Diese Funktion liest den Inhaltsstrom direkt und gibt jedem
+    Textzeige-Operator seine eigene Position -- noetig ueberall dort, wo die
+    Lage einzelner Beschriftungen gebraucht wird.
+    """
+    reader = PdfReader(str(pdf_path))
+    page = reader.pages[page_index]
+    content = ContentStream(page.get_contents(), reader)
+
+    state = _State()
+    stack: list[_State] = []
+    text_matrix = list(IDENTITY)
+    line_matrix = list(IDENTITY)
+    font_size = 0.0
+    leading = 0.0
+    runs: list[TextRun] = []
+
+    def emit(raw: object) -> None:
+        text = raw.decode("latin-1", errors="replace") if isinstance(raw, bytes) else str(raw)
+        if not text.strip():
+            return
+        m = multiply(text_matrix, state.ctm)
+        runs.append(TextRun(text=text.strip(), x=m[4], y=m[5], size=font_size))
+
+    for operands, raw_op in content.operations:
+        op = raw_op.decode() if isinstance(raw_op, bytes) else str(raw_op)
+
+        if op == "q":
+            stack.append(state.copy())
+        elif op == "Q":
+            if stack:
+                state = stack.pop()
+        elif op == "cm":
+            state.ctm = multiply([_number(v) for v in operands], state.ctm)
+        elif op == "BT":
+            text_matrix = list(IDENTITY)
+            line_matrix = list(IDENTITY)
+        elif op == "Tf":
+            if len(operands) >= 2:
+                font_size = _number(operands[1])
+        elif op == "TL":
+            leading = _number(operands[0]) if operands else 0.0
+        elif op == "Tm":
+            if len(operands) >= 6:
+                text_matrix = [_number(v) for v in operands[:6]]
+                line_matrix = list(text_matrix)
+        elif op in ("Td", "TD"):
+            if len(operands) >= 2:
+                if op == "TD":
+                    leading = -_number(operands[1])
+                shift = [1.0, 0.0, 0.0, 1.0, _number(operands[0]), _number(operands[1])]
+                line_matrix = multiply(shift, line_matrix)
+                text_matrix = list(line_matrix)
+        elif op == "T*":
+            shift = [1.0, 0.0, 0.0, 1.0, 0.0, -leading]
+            line_matrix = multiply(shift, line_matrix)
+            text_matrix = list(line_matrix)
+        elif op == "Tj":
+            if operands:
+                emit(operands[0])
+        elif op == "'":
+            shift = [1.0, 0.0, 0.0, 1.0, 0.0, -leading]
+            line_matrix = multiply(shift, line_matrix)
+            text_matrix = list(line_matrix)
+            if operands:
+                emit(operands[0])
+        elif op == "TJ":
+            if operands and isinstance(operands[0], list):
+                joined = "".join(
+                    part.decode("latin-1", errors="replace") if isinstance(part, bytes)
+                    else (str(part) if not isinstance(part, (int, float)) else "")
+                    for part in operands[0]
+                )
+                emit(joined)
+
+    return runs
+
+
 def point_in_bbox(point: Point, box: tuple[float, float, float, float],
                   tolerance: float = 0.0) -> bool:
     x, y = point
