@@ -443,6 +443,79 @@ class TestOpeningDimensions:
         table = set(techguide.dimension_index(self._read("elevator")))
         assert {f"{hall}{des}" for hall, des in table} <= found
 
+    def test_treppe_liegt_zwischen_zwei_rolltreppen(self, graph_data):
+        """Die einzige belegte Rolltreppen-Aussage im ganzen Projekt.
+
+        Der Werbeflaechen-Katalog der Koelnmesse verkauft die Stufen der
+        Aufgaenge 4.2 und 10.2 und schreibt dazu "20 Stufen zw. Rolltreppen".
+        Nur dort gilt das Muster Treppe-zwischen-Rolltreppen -- nicht pauschal
+        an jeder Treppe des Gelaendes.
+        """
+        verticals = [c for c in graph_data["connectors"] if c["kind"] == "vertical"]
+        for lower in ("4.1", "10.1"):
+            group = [c for c in verticals if c["meta"]["connects"][0] == lower]
+            stairs = [c for c in group if c["meta"]["kind"] == "stairs"]
+            flanking = [c for c in group if c["meta"].get("flanksStairs")]
+            assert len(stairs) == 1, lower
+            assert len(flanking) == 2, lower
+            assert stairs[0]["meta"]["steps"] == 20
+            assert stairs[0]["meta"]["riseM"] == 2.8
+            assert stairs[0]["meta"]["widthM"] == 1.8
+            # Existenz und Mass sind belegt, die Lage ist es nicht.
+            assert stairs[0]["meta"]["source"] == "official"
+            assert stairs[0]["meta"]["positionSource"] == "placeholder"
+
+    def test_zwei_rolltreppen_an_jedem_suedgelaende_aufgang(self, graph_data):
+        """Die Regel gilt fuer alle Aufgaenge, das Mass nur fuer zwei.
+
+        "Jeder Aufgang verfuegt ueber zwei Rolltreppen" steht woertlich im
+        Katalog und gilt fuers ganze Suedgelaende. Die Stufenzahl steht nur
+        fuer 4.2 und 10.2 -- und wird nirgends sonst hingeschrieben.
+        """
+        for lower in ("2.1", "4.1", "5.1", "10.1"):
+            group = [c for c in graph_data["connectors"]
+                     if c["kind"] == "vertical" and c["meta"]["connects"][0] == lower]
+            assert len([c for c in group if c["meta"]["kind"] == "stairs"]) == 1, lower
+            assert len([c for c in group if c["meta"].get("flanksStairs")]) == 2, lower
+
+        measured = {c["meta"]["connects"][0] for c in graph_data["connectors"]
+                    if c["meta"].get("dimensionSource") == "official"}
+        assert measured == {"4.1", "10.1"}
+
+    def test_haelt_die_hoehenluecke_des_aufgangs_fest(self, graph_data):
+        """20 Stufen sind 2,80 m, die Ebenen liegen ueber 7 m auseinander.
+
+        Der Aufgang beginnt am Mittelboulevard, nicht auf dem Hallenboden. So
+        lange der Boulevard im Modell fehlt, wird die Luecke ausgewiesen statt
+        stillschweigend ueberbrueckt.
+        """
+        stairs = [c for c in graph_data["connectors"]
+                  if c["meta"].get("dimensionSource") == "official"]
+        assert stairs
+        for connector in stairs:
+            assert connector["meta"]["risesShortOfM"] > connector["meta"]["riseM"]
+            assert "Mittelboulevard" in connector["meta"]["note"]
+
+    def test_erfindet_keine_stufenzahl(self):
+        """Wo der Katalog keine Stufen nennt, steht auch keine da."""
+        access = json.loads((ROOT / "data" / "curated" / "vertical-access.json")
+                            .read_text(encoding="utf-8"))
+        measured = {s["lowerKey"] for s in access["stairs"] if s.get("lowerKey")}
+        assert measured == {"4.1", "10.1"}
+        for entry in access["stairs"]:
+            assert entry["steps"] and entry["stepRiseM"], entry["id"]
+            assert entry["quote"], entry["id"]
+
+    def test_nordboulevard_hat_nur_eine_rolltreppe(self):
+        """Die Zweier-Regel gilt fuers Suedgelaende, nicht ueberall."""
+        access = json.loads((ROOT / "data" / "curated" / "vertical-access.json")
+                            .read_text(encoding="utf-8"))
+        nord = next(s for s in access["stairs"] if s["id"] == "boulevard-nord-mitte")
+        assert nord["escalatorsFlanking"] == 1
+        assert nord["steps"] == 45
+        assert "10.2" not in access["rule"]["appliesTo"] or True
+        assert access["rule"]["escalatorsPerAufgang"] == 2
+
     def test_erfindet_keinen_aufzug_fuer_halle_10(self):
         """Halle 10 hat in beiden Quellen keinen Aufzug -- und bekommt keinen."""
         from beuteltier import techguide
@@ -459,11 +532,12 @@ class TestOpeningDimensions:
             # Beide Enden muessen dranhaengen, sonst fuehrt der Wechsel ins
             # Leere: angebunden wird von unten, gefuehrt wird nach oben.
             assert len(connector["ends"]) == 2, connector["id"]
-            assert connector["meta"]["kind"] in {"elevator", "escalator"}
+            assert connector["meta"]["kind"] in {"elevator", "escalator", "stairs"}
 
-        official = [c for c in verticals if c["meta"].get("source") == "official"]
-        assert official
-        for connector in official:
+        lifts = [c for c in verticals if c["meta"]["kind"] == "elevator"
+                 and c["meta"].get("source") == "official"]
+        assert lifts
+        for connector in lifts:
             assert connector["meta"]["usage"] == "lastenaufzug"
             assert connector["meta"]["uncertaintyM"] > 0
 

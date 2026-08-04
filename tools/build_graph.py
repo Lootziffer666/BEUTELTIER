@@ -30,6 +30,7 @@ from beuteltier.graph import GRID_M, Edge, Graph, Node, attach_stands, build_hal
 
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "data" / "build" / "site.json"
+VERTICAL_ACCESS = ROOT / "data" / "curated" / "vertical-access.json"
 OUT = ROOT / "data" / "build" / "graph.json"
 
 # "Durchgang Halle 3 zu 4", "Passage 10-11", "Durchgang H1 H4", "Passage 4-5",
@@ -73,6 +74,8 @@ PORTAL_SNAP_M = 90.0
 # Barrierefrei-Plan schematisch -- deshalb wird je Halle ein Wechsel in der
 # Hallenmitte angesetzt und als unbestaetigt gefuehrt.
 VERTICAL_PAIRS = [("2.1", "2.2"), ("4.1", "4.2"), ("5.1", "5.2"), ("10.1", "10.2")]
+
+VERTICAL_NAMES = {"elevator": "Aufzug", "escalator": "Rolltreppe", "stairs": "Treppe"}
 
 
 def resolve_level(hall: str, level: int, halls: dict) -> str | None:
@@ -231,6 +234,26 @@ def main() -> int:
     # Wo die Technischen Richtlinien einen Aufzug verorten, wird er dort
     # angesetzt. Nur wo keiner verzeichnet ist, bleibt die Hallenmitte -- und
     # das steht dann auch als Herkunft dran.
+    # Treppen und Rolltreppen sind nur im Werbeflaechen-Katalog vermasst.
+    # Vermasst sind nur die Aufgaenge 4.2 und 10.2. Die Regel dahinter gilt
+    # weiter: "Jeder Aufgang verfuegt ueber zwei Rolltreppen" -- fuer das
+    # ganze Suedgelaende. Wo die Stufenzahl fehlt, wird sie nicht erfunden;
+    # die Zweizahl der Rolltreppen gilt trotzdem.
+    aufgaenge: dict[str, dict] = {}
+    if VERTICAL_ACCESS.exists():
+        access = json.loads(VERTICAL_ACCESS.read_text(encoding="utf-8"))
+        measured = {entry["lowerKey"]: entry for entry in access["stairs"]
+                    if entry.get("lowerKey")}
+        rule = access.get("rule") or {}
+        for upper_key in rule.get("appliesTo", []):
+            lower_key = f"{upper_key.split('.')[0]}.1"
+            aufgaenge[lower_key] = measured.get(lower_key) or {
+                "id": rule["id"], "hallKey": upper_key, "lowerKey": lower_key,
+                "steps": None, "stepRiseM": None, "widthM": None,
+                "escalatorsFlanking": rule["escalatorsPerAufgang"],
+            }
+        aufgaenge.update(measured)
+
     official_lifts: dict[str, list[dict]] = defaultdict(list)
     for facility in site.get("facilities", []):
         if facility["kind"] == "elevator":
@@ -265,8 +288,22 @@ def main() -> int:
         # sind Lastenaufzuege fuer den Standbau. Ihre Lage ist amtlich, ihre
         # Benutzbarkeit fuer Besucher steht nirgends. Also: Ort offiziell,
         # Weg unbestaetigt. Das ist keine Vorsicht, das ist der Kenntnisstand.
-        for kind, offset, confirmed in (("elevator", 0.0, False),
-                                        ("escalator", 18.0, False)):
+        #
+        # Treppe und Rolltreppen kommen aus dem Werbeflaechen-Katalog: fuer die
+        # Aufgaenge 4.2 und 10.2 nennt er "20 Stufen zw. Rolltreppen" samt
+        # Breite und Steigung. Dort stehen also drei Verbindungen nebeneinander
+        # -- eine Treppe zwischen zwei Rolltreppen -- und nicht die eine
+        # geratene Rolltreppe, die hier vorher stand.
+        stair = aufgaenge.get(lower_key)
+        if stair:
+            plan = [("elevator", 0.0), ("escalator", 12.0), ("stairs", 18.0),
+                    ("escalator", 24.0)]
+        else:
+            plan = [("elevator", 0.0), ("escalator", 18.0)]
+
+        seen_kinds: dict[str, int] = {}
+        for kind, offset in plan:
+            confirmed = False
             lower_hit = nearest_aisle(graph, cx + offset, cy, lower_key, PORTAL_SNAP_M)
             upper_hit = nearest_aisle(graph, cx + offset, cy, upper_key, PORTAL_SNAP_M)
             if not (lower_hit and upper_hit):
@@ -275,19 +312,61 @@ def main() -> int:
 
             node_lower = graph.nodes[lower_aisle]
             node_upper = graph.nodes[upper_aisle]
-            node_id = f"v:{lower_key}:{kind}"
+            index = seen_kinds.get(kind, 0)
+            seen_kinds[kind] = index + 1
+            suffix = f":{index}" if index else ""
+            node_id = f"v:{lower_key}:{kind}{suffix}"
+
+            name = VERTICAL_NAMES[kind]
+            label = f"{name} {lower_key} ↔ {upper_key}"
+            meta = {"connects": [lower_key, upper_key], "kind": kind,
+                    "source": lift_source if kind == "elevator" else "placeholder"}
+            if kind == "elevator":
+                if lift_uncertainty:
+                    meta["uncertaintyM"] = lift_uncertainty
+                if lift_usage:
+                    meta["usage"] = lift_usage
+            elif stair:
+                # Was der Katalog hergibt, gilt fuer beide: die Treppe ist
+                # vermasst, die Rolltreppen sind durch "zw. Rolltreppen"
+                # belegt. Die Lage bleibt trotzdem ein Platzhalter -- der
+                # Katalog verkauft Flaechen, er zeichnet keine Karte.
+                meta["source"] = "official"
+                meta["positionSource"] = "placeholder"
+                meta["evidence"] = stair["id"]
+                if kind == "stairs" and not stair.get("steps"):
+                    # Die Regel belegt die Treppe, nicht ihr Mass.
+                    label = f"Treppe {lower_key} ↔ {upper_key}"
+                    meta["dimensionSource"] = "unbekannt"
+                elif kind == "stairs":
+                    label = (f"Treppe {lower_key} ↔ {upper_key} "
+                             f"({stair['steps']} Stufen)")
+                    meta["steps"] = stair["steps"]
+                    meta["stepRiseM"] = stair["stepRiseM"]
+                    meta["widthM"] = stair["widthM"]
+                    meta["riseM"] = round(stair["steps"] * stair["stepRiseM"], 2)
+                    meta["dimensionSource"] = "official"
+                    # Die 2,80 m reichen nicht von Ebene zu Ebene. Der Aufgang
+                    # beginnt am Mittelboulevard, nicht auf dem Hallenboden --
+                    # hier steht er trotzdem als Wechsel zwischen den Ebenen,
+                    # weil der Boulevard im Modell noch fehlt.
+                    gap = round(upper["baseY"] - lower["baseY"], 2)
+                    if gap > meta["riseM"] + 0.5:
+                        meta["risesShortOfM"] = gap
+                        meta["note"] = (
+                            f"{stair['steps']} Stufen sind {meta['riseM']} m, die "
+                            f"Ebenen liegen {gap} m auseinander. Der Aufgang "
+                            f"beginnt am Mittelboulevard; der fehlt im Modell "
+                            f"noch, deshalb haengt die Treppe hier zwischen den "
+                            f"Hallenebenen.")
+                else:
+                    label = (f"Rolltreppe {lower_key} ↔ {upper_key} "
+                             f"({'West' if index == 0 else 'Ost'} der Treppe)")
+                    meta["flanksStairs"] = stair["id"]
+
             graph.add_node(Node(id=node_id, x=node_lower.x, y=node_lower.y,
                                 z=node_lower.z, kind="vertical", hall_key=lower_key,
-                                level=lower["level"],
-                                label=(f"{'Aufzug' if kind == 'elevator' else 'Rolltreppe'} "
-                                       f"{lower_key} ↔ {upper_key}"),
-                                meta={"connects": [lower_key, upper_key],
-                                      "kind": kind,
-                                      "source": lift_source if kind == "elevator" else "placeholder",
-                                      **({"uncertaintyM": lift_uncertainty}
-                                         if kind == "elevator" and lift_uncertainty else {}),
-                                      **({"usage": lift_usage}
-                                         if kind == "elevator" and lift_usage else {})}))
+                                level=lower["level"], label=label, meta=meta))
             graph.connect(lower_aisle, node_id, kind, state="offen")
             # Die eigentliche vertikale Kante traegt die Hoehendifferenz.
             graph.add_edge(Edge(
@@ -298,14 +377,11 @@ def main() -> int:
                                            (node_upper.x, node_upper.y)), 2),
                 state="offen" if confirmed else "unbestaetigt",
                 confirmed=confirmed,
-                label=(f"{'Aufzug' if kind == 'elevator' else 'Rolltreppe'} "
-                       f"{lower_key} ↔ {upper_key}"),
+                label=label,
             ))
             verticals += 1
-            origin = (lift_source if kind == "elevator" else "placeholder")
-            print(f"  {lower_key} -> {upper_key} ueber "
-                  f"{'Aufzug' if kind == 'elevator' else 'Rolltreppe'} "
-                  f"[{origin}]{'' if confirmed else ' unbestaetigt'}")
+            print(f"  {lower_key} -> {upper_key} ueber {name} "
+                  f"[{meta['source']}]{'' if confirmed else ' unbestaetigt'}")
 
     # --- Kompakt schreiben ----------------------------------------------------
     # Das Gangnetz ist ein regelmaessiges Raster; als 15.000 Einzelobjekte

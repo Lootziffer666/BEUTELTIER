@@ -165,6 +165,70 @@ Widerspruch wird ausgewiesen und nicht aufgelöst — das Höhenmodell rechnet
 weiter mit der Flächentabelle, weil sie die neuere und einheitlichere Quelle
 ist, aber wer nachrechnet, findet die Abweichung dokumentiert.
 
+### 3b. Werbeflächen-Kataloge (die einzige Quelle für Rolltreppen)
+
+| | |
+|---|---|
+| Quellen | Koelnmesse geländeweit (2013), FIBO 2022, FIBO 2024, FIBO 2025 |
+| Art | Verkaufsunterlage, keine Karte |
+| Verwendung | Treppen, Rolltreppen, Stufenmaße |
+| Gepflegt in | `data/curated/vertical-access.json` |
+
+Kein Kartenwerk der Koelnmesse zeichnet Rolltreppen — weder die Hallenplan-
+Schnittstelle noch der Barrierefrei-Plan noch die Technischen Richtlinien.
+Belegt sind sie an einer unerwarteten Stelle: **wer eine Treppenstufe bekleben
+will, bekommt sie vermaßt.**
+
+Die Regel steht wörtlich in FIBO 2022, Seite 34:
+
+> Die Treppenaufgänge im Südgelände verbindet die oberen Messehallen mit den
+> Passagen. **Jeder Aufgang verfügt über zwei Rolltreppen**, die einzeln zu
+> belegen sind.
+
+Das ist die einzige Stelle in allen ausgewerteten Quellen, an der die
+Koelnmesse eine *Regel* zu Rolltreppen ausspricht statt einen Einzelfall. Sie
+gilt für 2.2, 3.2, 4.2, 5.2, 10.2 und 11.2 — und ausdrücklich **nicht** für den
+Nordboulevard, wo derselbe Katalog *eine* Rolltreppe neben der Treppe führt.
+
+Vermaßt sind nur zwei Aufgänge:
+
+| Aufgang | Stufen | Breite | Steigung | Ergibt |
+|---|---|---|---|---|
+| Halle 4.2 | 20 | 1,80 m | 0,14 m | 2,80 m |
+| Halle 10.2 | 20 | 1,80 m | 0,14 m | 2,80 m |
+| Passage 10/4 → Mittelboulevard | 20 | 7,00 m | 0,14 m | 2,80 m |
+| Nordboulevard → Mittelboulevard | 45 | 3,00 m | 0,11 m | 4,95 m |
+| Eingang West, EG → 1. OG | 32 | 2,30 m | 0,14 m | 4,48 m |
+| Eingang Süd (geländeweiter Katalog) | 24 | — | — | — |
+
+Wo die Stufenzahl fehlt, wird sie nicht erfunden: die Ebenenwechsel in 2.2 und
+5.2 tragen `dimensionSource: "unbekannt"`.
+
+#### Die Stufen widersprechen dem Höhenmodell
+
+20 Stufen à 0,14 m sind 2,80 m. Zwischen 10.1 und 10.2 liegen nach dem
+Höhenmodell aber 7,45 m. Die Treppe kann also **nicht auf der unteren
+Hallenebene beginnen** — sie beginnt am Mittelboulevard, der demnach rund
+4,65 m über dem Hallenboden liegt.
+
+Weiter gerechnet: die Treppe Nordboulevard → Mittelboulevard fällt um 4,95 m.
+Der Nordboulevard läge damit bei rund 9,6 m — höher als die Decke von Halle
+10.1. In BEUTELTIER stehen die Hallen 6 bis 9 aber alle auf Höhe 0.
+
+Eine der beiden Annahmen ist falsch, und keine Quelle entscheidet es. Am
+wahrscheinlichsten steigt das Gelände nach Norden. Belegt ist das nicht, also
+bleibt das Höhenmodell unverändert und der Widerspruch steht in den Daten:
+jede vermaßte Treppe trägt `risesShortOfM` und eine Notiz dazu.
+
+#### Und eine Bestätigung
+
+Der geländeweite Katalog kalkuliert eine Regeltreppe mit **56 Stufen à 0,14 m
+= 7,84 m**. BEUTELTIER leitet aus lichter Höhe plus angenommener Deckenstärke
+7,45 m (Halle 10) und 7,60 m (Halle 4) ab, Spanne 7,20 bis 7,85 m. 7,84 m
+liegt am oberen Rand dieser Spanne — die Deckenstärke dürfte eher bei 2,0 m
+liegen als bei 1,5 m. Geändert wird nichts, ein Kalkulationsbeispiel ist keine
+Bauangabe. Aber die Annahme hält.
+
 ### 4. Barrierefrei-Plan (Ersatzquelle, jetzt zweite Wahl)
 
 | | |

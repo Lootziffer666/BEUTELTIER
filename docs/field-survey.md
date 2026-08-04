@@ -43,13 +43,21 @@ weil ihre Standorte in keiner Quelle stehen. Gebraucht wird je Anlage:
 - bei Rolltreppen die **Richtung** und ob sie tageszeitabhaengig wechselt
 
 - **Aufzug 2.1 ↔ 2.2** (2.1 ↔ 2.2)
-- **Rolltreppe 2.1 ↔ 2.2** (2.1 ↔ 2.2)
+- **Rolltreppe 2.1 ↔ 2.2 (West der Treppe)** (2.1 ↔ 2.2)
+- **Treppe 2.1 ↔ 2.2** (2.1 ↔ 2.2)
+- **Rolltreppe 2.1 ↔ 2.2 (Ost der Treppe)** (2.1 ↔ 2.2)
 - **Aufzug 4.1 ↔ 4.2** (4.1 ↔ 4.2)
-- **Rolltreppe 4.1 ↔ 4.2** (4.1 ↔ 4.2)
+- **Rolltreppe 4.1 ↔ 4.2 (West der Treppe)** (4.1 ↔ 4.2)
+- **Treppe 4.1 ↔ 4.2 (20 Stufen)** (4.1 ↔ 4.2)
+- **Rolltreppe 4.1 ↔ 4.2 (Ost der Treppe)** (4.1 ↔ 4.2)
 - **Aufzug 5.1 ↔ 5.2** (5.1 ↔ 5.2)
-- **Rolltreppe 5.1 ↔ 5.2** (5.1 ↔ 5.2)
+- **Rolltreppe 5.1 ↔ 5.2 (West der Treppe)** (5.1 ↔ 5.2)
+- **Treppe 5.1 ↔ 5.2** (5.1 ↔ 5.2)
+- **Rolltreppe 5.1 ↔ 5.2 (Ost der Treppe)** (5.1 ↔ 5.2)
 - **Aufzug 10.1 ↔ 10.2** (10.1 ↔ 10.2)
-- **Rolltreppe 10.1 ↔ 10.2** (10.1 ↔ 10.2)
+- **Rolltreppe 10.1 ↔ 10.2 (West der Treppe)** (10.1 ↔ 10.2)
+- **Treppe 10.1 ↔ 10.2 (20 Stufen)** (10.1 ↔ 10.2)
+- **Rolltreppe 10.1 ↔ 10.2 (Ost der Treppe)** (10.1 ↔ 10.2)
 
 ## 4. Betriebszustaende, die in keiner Quelle stehen
 

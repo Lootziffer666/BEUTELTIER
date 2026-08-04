@@ -62,11 +62,19 @@ den Durchgang nicht gibt -- nur, dass seine Lage grob bekannt ist.
 | Zugang Freiflaeche Halle 8 Nord | outdoor | F8 ↔ 8.1 | — |
 | Zugang Freiflaeche Halle 5 Nord | outdoor | FB ↔ 5.1 | — |
 | Aufzug 2.1 ↔ 2.2 | vertical | 2.1 ↔ 2.2 | — |
-| Rolltreppe 2.1 ↔ 2.2 | vertical | 2.1 ↔ 2.2 | — |
+| Rolltreppe 2.1 ↔ 2.2 (West der Treppe) | vertical | 2.1 ↔ 2.2 | — |
+| Treppe 2.1 ↔ 2.2 | vertical | 2.1 ↔ 2.2 | — |
+| Rolltreppe 2.1 ↔ 2.2 (Ost der Treppe) | vertical | 2.1 ↔ 2.2 | — |
 | Aufzug 4.1 ↔ 4.2 | vertical | 4.1 ↔ 4.2 | — |
-| Rolltreppe 4.1 ↔ 4.2 | vertical | 4.1 ↔ 4.2 | — |
+| Rolltreppe 4.1 ↔ 4.2 (West der Treppe) | vertical | 4.1 ↔ 4.2 | — |
+| Treppe 4.1 ↔ 4.2 (20 Stufen) | vertical | 4.1 ↔ 4.2 | — |
+| Rolltreppe 4.1 ↔ 4.2 (Ost der Treppe) | vertical | 4.1 ↔ 4.2 | — |
 | Aufzug 5.1 ↔ 5.2 | vertical | 5.1 ↔ 5.2 | — |
-| Rolltreppe 5.1 ↔ 5.2 | vertical | 5.1 ↔ 5.2 | — |
+| Rolltreppe 5.1 ↔ 5.2 (West der Treppe) | vertical | 5.1 ↔ 5.2 | — |
+| Treppe 5.1 ↔ 5.2 | vertical | 5.1 ↔ 5.2 | — |
+| Rolltreppe 5.1 ↔ 5.2 (Ost der Treppe) | vertical | 5.1 ↔ 5.2 | — |
 | Aufzug 10.1 ↔ 10.2 | vertical | 10.1 ↔ 10.2 | — |
-| Rolltreppe 10.1 ↔ 10.2 | vertical | 10.1 ↔ 10.2 | — |
+| Rolltreppe 10.1 ↔ 10.2 (West der Treppe) | vertical | 10.1 ↔ 10.2 | — |
+| Treppe 10.1 ↔ 10.2 (20 Stufen) | vertical | 10.1 ↔ 10.2 | — |
+| Rolltreppe 10.1 ↔ 10.2 (Ost der Treppe) | vertical | 10.1 ↔ 10.2 | — |
 

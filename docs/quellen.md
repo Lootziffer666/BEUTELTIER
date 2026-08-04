@@ -15,6 +15,7 @@ andere zusammengetragen haben. Diese Seite hält fest, wem was gehört.
 | **Koelnmesse — Barrierefreier Messeaufenthalt** (PDF) | Übersicht beider Ebenen, Aufzüge, behindertengerechte WCs, Sanitätsstationen, Eingänge | Lage der Hallen ohne 2025er Belegung (1, 3, 11). |
 | **Koelnmesse — Hallendaten** | Fläche, lichte Höhe und Bodenbelastung je Halle | Validierung der Umrisse und Grundlage des Höhenmodells. Gepflegt in `data/curated/hall-metadata.json`. |
 | **Koelnmesse — Technische Richtlinien** | Verortete Aufzüge und Tore, lichte Höhen, örtliche Höhenbeschränkungen | Lage der Hallen ohne 2025er Belegung (±7 m, genauer als der Barrierefrei-Plan) und Standorte der Ebenenwechsel. |
+| **Koelnmesse — Werbeflächen-Kataloge**<br>gelände­weit sowie FIBO 2022/2024/2025 | Treppen und Rolltreppen: Stufenzahl, Breite, Steigung; die Regel „Jeder Aufgang verfügt über zwei Rolltreppen" | Die **einzige** Quelle im Projekt, die Rolltreppen belegt. Kein Kartenwerk führt sie. Gepflegt in `data/curated/vertical-access.json`, jede Angabe mit Wortlaut und Seitenzahl. |
 | **pc games / GamesWirtschaft — historische Hallenpläne** | Hallen-Innenleben früherer Jahre | Referenzmaterial für Eingänge, Rolltreppen und Treppen. Nicht in den Daten. |
 
 ## Aussteller
