@@ -86,6 +86,7 @@ interface CompactConnector {
   level: number;
   meta: Record<string, unknown>;
   ends: CompactEnd[];
+  state?: EdgeState;
 }
 
 export interface CompactGraph {
@@ -197,10 +198,14 @@ export class RouteGraph {
           end.nodeId ??
           (end.hallKey && end.cell ? aisleId(end.hallKey, end.cell[0], end.cell[1]) : undefined);
         if (!target || !graph.nodes.has(target)) continue;
+        // Der Zustand kommt aus der Aufbereitung. Was in keiner Quelle steht,
+        // bleibt unbestätigt — auch der Ebenenwechsel: die Aufzüge der
+        // Technischen Richtlinien sind Lastenaufzüge, ihre Lage ist amtlich,
+        // ihre Benutzbarkeit für Besucher ist es nicht.
+        const state: EdgeState = connector.state ?? 'unbestaetigt';
         graph.link(connector.id, target, kind, {
-          // Was in keiner Quelle steht, wird nicht als bestätigt ausgegeben.
-          state: connector.kind === 'vertical' ? 'offen' : 'unbestaetigt',
-          confirmed: connector.kind === 'vertical',
+          state,
+          confirmed: state === 'offen',
           label: connector.label,
         });
       }

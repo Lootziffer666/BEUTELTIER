@@ -33,6 +33,9 @@ ROOT = Path(__file__).resolve().parent.parent
 SITEMAP_PDF = ROOT / "data" / "raw" / "pdf" / "gamescom-2025-hallenplan.pdf"
 ACCESS_PDF = ROOT / "data" / "raw" / "pdf" / "koelnmesse-barrierefrei.pdf"
 TECHGUIDE_PDF = ROOT / "data" / "raw" / "pdf" / "technische-richtlinien-2022.pdf"
+
+# Wie weit eine Planbeschriftung hoechstens auf die Hallenkante gezogen wird.
+MAX_SNAP_M = 35.0
 LAYOUT = ROOT / "data" / "raw" / "hall-layout.json"
 OUT = ROOT / "data" / "build" / "site.json"
 
@@ -298,10 +301,28 @@ def main() -> int:
     # Uebersichtsplaenen ein. Damit stehen Aufzuege nicht mehr rechnerisch in
     # der Hallenmitte, sondern dort, wo die Koelnmesse sie eintraegt.
     facilities = []
+    hall_outlines = {hall["key"]: hall["footprint"] for hall in halls}
     for page, kind in ((techguide.ELEVATOR_PAGE, "elevator"), (techguide.GATE_PAGE, "gate")):
         marks, plan_halls = techguide.read_marks(TECHGUIDE_PDF, page)
         if not marks:
             continue
+        # Auf derselben Seite steht die Abmessungstabelle. Sie trennt Portal
+        # von Nebentuer -- ein 6,00-m-Tor ist ein Weg, ein 3,10-m-Durchlass
+        # eher nicht.
+        openings = techguide.read_openings(TECHGUIDE_PDF, page, kind)
+        dimensions = techguide.dimension_index(openings)
+        # Plan und Tabelle sind sich nicht ueberall einig: fuer Halle 1.2
+        # zeichnet der Plan die Tore A-F, die Tabelle fuehrt A-E und H. Wo
+        # eine Halle nur eine einzige Massangabe hat, gilt sie fuer alle ihre
+        # Durchlaesse -- das steht so in der Zeile. Der Umweg wird vermerkt.
+        uniform: dict[str, dict] = {}
+        for opening in openings:
+            spec = opening.spec()
+            previous = uniform.get(opening.hall_key)
+            if previous is None:
+                uniform[opening.hall_key] = spec
+            elif previous != spec:
+                uniform[opening.hall_key] = {}
         base_centres = {key.split(".")[0]: value for key, value in site_centres.items()
                         if key.endswith(".1")}
         try:
@@ -313,19 +334,98 @@ def main() -> int:
 
         p_scale, p_rot, p_tx, p_ty = plan_params
         p_cos, p_sin = math.cos(p_rot) * p_scale, math.sin(p_rot) * p_scale
+        # Die Marke ist eine Beschriftung *neben* der Anlage -- im Plan steht
+        # "4.1 E" links ausserhalb der Halle, mit Bezug auf einen Punkt an
+        # ihrer Kante. Tore und Aufzugsschaechte sitzen in der Hallenhuelle.
+        # Also wird die Marke auf den Umriss gezogen; wie weit, steht dabei.
+        # Liegt die Marke bereits im belegten Bereich, wird sie in Ruhe
+        # gelassen: dann ist nicht zu entscheiden, welche Wand gemeint ist,
+        # und die naechste Kante waere geraten, nicht gemessen.
+        def inside(hall: list, point: tuple[float, float]) -> bool:
+            hit = False
+            for index in range(len(hall)):
+                ax, ay = hall[index]
+                bx, by = hall[index - 1]
+                if (ay > point[1]) != (by > point[1]):
+                    cross = ax + (point[1] - ay) * (bx - ax) / (by - ay)
+                    if point[0] < cross:
+                        hit = not hit
+            return hit
+
+        def snap_to_outline(hall_key: str, point: tuple[float, float]):
+            hall = hall_outlines.get(hall_key)
+            if not hall or inside(hall, point):
+                return None
+            best, best_d = None, float("inf")
+            for index in range(len(hall)):
+                ax, ay = hall[index]
+                bx, by = hall[(index + 1) % len(hall)]
+                dx, dy = bx - ax, by - ay
+                span = dx * dx + dy * dy
+                t = 0.0 if span == 0 else max(0.0, min(1.0, (
+                    (point[0] - ax) * dx + (point[1] - ay) * dy) / span))
+                cx, cy = ax + t * dx, ay + t * dy
+                distance = math.dist(point, (cx, cy))
+                if distance < best_d:
+                    best, best_d = (cx, cy), distance
+            # Weiter als eine halbe Hallenbreite weg heisst: die Beschriftung
+            # gehoert nicht mehr erkennbar zu einer Kante. Dann bleibt sie,
+            # wo sie steht, und die Karte sagt "ungefaehr hier".
+            return None if best_d > MAX_SNAP_M else (best, best_d)
+
+        measured = 0
         for mark in marks:
-            facilities.append({
+            label_at = (round(p_cos * mark.x - p_sin * mark.y + p_tx, 2),
+                        round(p_sin * mark.x + p_cos * mark.y + p_ty, 2))
+            entry = {
                 "id": f"{kind}:{mark.id}",
                 "kind": kind,
                 "hallKey": mark.hall_key,
                 "designator": mark.designator,
-                "position": [round(p_cos * mark.x - p_sin * mark.y + p_tx, 2),
-                             round(p_sin * mark.x + p_cos * mark.y + p_ty, 2)],
+                "position": list(label_at),
+                "labelPosition": list(label_at),
+                "positionSource": "plan-beschriftung",
                 "source": "official",
                 "uncertaintyM": round(plan_cross, 1),
-            })
-        print(f"  {kind}: {len(marks)} verortet, Plan auf ±{plan_cross:.1f} m "
-              f"({plan_n} Stuetzen)")
+            }
+            snapped = snap_to_outline(mark.hall_key, label_at)
+            if snapped:
+                (sx, sy), distance = snapped
+                entry["position"] = [round(sx, 2), round(sy, 2)]
+                entry["positionSource"] = "auf Hallenkante gezogen"
+                entry["snapM"] = round(distance, 1)
+                entry["uncertaintyM"] = round(plan_cross + distance / 2, 1)
+            spec = dimensions.get((mark.hall_key, mark.designator))
+            if spec:
+                entry["dimensions"] = dict(spec, matchedBy="kennbuchstabe")
+                measured += 1
+            elif uniform.get(mark.hall_key):
+                entry["dimensions"] = dict(uniform[mark.hall_key],
+                                           matchedBy="hallenzeile")
+                entry["note"] = (f"Plan zeichnet {mark.id}, die Tabelle fuehrt "
+                                 f"diesen Kennbuchstaben nicht. Uebernommen "
+                                 f"wurde die einheitliche Zeile der Halle.")
+                measured += 1
+            facilities.append(entry)
+
+        # Welcher Durchlass einer Halle der groesste ist, steht nicht im
+        # Dokument -- es ergibt sich aus seinen eigenen Zahlen. Deshalb
+        # "derived": kein geratener Schwellwert, ein Vergleich.
+        by_hall: dict[str, list[dict]] = {}
+        for entry in facilities:
+            if entry["kind"] == kind and "dimensions" in entry:
+                by_hall.setdefault(entry["hallKey"], []).append(entry)
+        for group in by_hall.values():
+            def opening_area(item: dict) -> float:
+                dims = item["dimensions"]
+                return dims["widthM"] * dims["heightM"]
+            widest = max(opening_area(item) for item in group)
+            for item in group:
+                item["dimensions"]["largestInHall"] = (
+                    abs(opening_area(item) - widest) < 1e-9)
+                item["dimensions"]["rankSource"] = "derived"
+        print(f"  {kind}: {len(marks)} verortet, davon {measured} vermessen, "
+              f"Plan auf ±{plan_cross:.1f} m ({plan_n} Stuetzen)")
 
     # --- Durchgaenge aus der Layout-Tabelle ----------------------------------
     # Die Tabelle lebt in ihrem eigenen Zeichenraum und braucht eine eigene

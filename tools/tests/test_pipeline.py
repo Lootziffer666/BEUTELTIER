@@ -16,6 +16,7 @@ from beuteltier import georef, hallplan  # noqa: E402
 from beuteltier.graph import Graph, Node  # noqa: E402
 
 BUILD = ROOT / "data" / "build"
+TECHGUIDE_PDF = ROOT / "data" / "raw" / "pdf" / "technische-richtlinien-2022.pdf"
 
 
 @pytest.fixture(scope="module")
@@ -333,6 +334,138 @@ class TestTechnicalGuidelines:
             # sitzen naturgemaess an der Aussenkante.
             assert min(xs) - 90 <= x <= max(xs) + 90, facility["id"]
             assert min(ys) - 90 <= y <= max(ys) + 90, facility["id"]
+
+    def test_haelt_lichte_hoehe_und_beschraenkung_auseinander(self):
+        """Der Fehler, der bei Halle 4.1 am naechsten liegt.
+
+        Fuenf unabhaengige Zusammenfassungen des Dokuments haben die 4,50 m
+        der Fussnote als lichte Hoehe der Halle 4.1 ausgegeben. Das ist eine
+        oertliche Stelle unter dem Verteilerkanal; die Halle ist 5,85 m hoch.
+        Wer beides zusammenzieht, verliert 1,35 m im ganzen Rest der Halle.
+        """
+        from beuteltier import techguide
+        assert techguide.clear_height("4.1") == 5.85
+        restriction = techguide.clearance_restrictions("4.1")[0]
+        assert restriction["clearHeightM"] == 4.50
+        assert restriction["clearHeightM"] != techguide.clear_height("4.1")
+        # Und die Stelle ist nicht flaechig -- das Dokument sagt nicht, wo.
+        assert restriction["extent"] == "unbekannt"
+
+
+class TestOpeningDimensions:
+    """Die Abmessungstabellen -- was durch eine Oeffnung passt."""
+
+    @staticmethod
+    def _read(kind):
+        from beuteltier import techguide
+        page = (techguide.ELEVATOR_PAGE if kind == "elevator"
+                else techguide.GATE_PAGE)
+        return techguide.read_openings(TECHGUIDE_PDF, page, kind)
+
+    def test_liest_die_aufzugstabelle_vollstaendig(self):
+        from beuteltier import techguide
+        lifts = self._read("elevator")
+        assert len(lifts) == 10
+        index = techguide.dimension_index(lifts)
+        # 16 Anlagen in 10 Zeilen: baugleiche fasst das Dokument zusammen.
+        assert len(index) == 16
+        # Stichprobe gegen das Dokument, Spaltenreihenfolge Breite/Tiefe/Hoehe.
+        assert index[("2.1", "B")] == index[("2.1", "C")]
+        assert index[("2.1", "B")]["widthM"] == 2.30
+        assert index[("2.1", "B")]["depthM"] == 5.40
+        assert index[("2.1", "B")]["heightM"] == 2.85
+        assert index[("2.1", "B")]["loadKn"] == 100.0
+
+    def test_weist_aufzuege_als_lastenaufzuege_aus(self):
+        """30 bis 100 kN sind drei bis zehn Tonnen. Das ist kein Besucherlift."""
+        from beuteltier import techguide
+        index = techguide.dimension_index(self._read("elevator"))
+        assert index
+        for key, spec in index.items():
+            assert spec["loadKn"] >= 30.0, key
+            assert spec["usage"] == "lastenaufzug", key
+
+    def test_liest_die_tortabelle_vollstaendig(self):
+        from beuteltier import techguide
+        doors = self._read("gate")
+        assert len(doors) == 30
+        index = techguide.dimension_index(doors)
+        assert len(index) == 65
+        # Das Hallenportal und die Nebentuer -- der Unterschied, um den es geht.
+        assert index[("9", "H")] == {"widthM": 6.00, "heightM": 6.00,
+                                     "source": "official"}
+        assert index[("11.1", "C")]["widthM"] == 3.10
+        assert index[("11.1", "C")]["heightM"] == 3.40
+        # Halle 6: ein Tor 6,00 x 6,00, die uebrigen acht 6,00 x 4,50.
+        assert index[("6", "D")]["heightM"] == 6.00
+        assert index[("6", "A")]["heightM"] == 4.50
+        assert index[("6", "A")]["sharedWith"] == list("ABCEFGHI")
+
+    def test_traegt_keine_masse_ohne_kennbuchstaben_ein(self):
+        """Eine Zeile der Tortabelle nennt Halle 3.1 ohne Kennbuchstaben.
+
+        Das Dokument laesst die Zelle leer. Die Zeile wird gelesen, aber
+        keiner Marke zugeordnet -- geraten wird nichts.
+        """
+        from beuteltier import techguide
+        doors = self._read("gate")
+        blank = [d for d in doors if not d.designators]
+        assert len(blank) == 1
+        assert blank[0].hall_key == "3.1"
+        assert ("3.1", "") not in techguide.dimension_index(doors)
+
+    def test_haengt_die_masse_an_die_verorteten_anlagen(self, site):
+        for facility in site["facilities"]:
+            dims = facility.get("dimensions")
+            assert dims, facility["id"]
+            assert dims["source"] == "official"
+            assert dims["widthM"] > 0 and dims["heightM"] > 0
+            # Der Groessenvergleich innerhalb der Halle ist gerechnet,
+            # nicht abgeschrieben. Das steht auch dran.
+            assert dims["rankSource"] == "derived"
+            assert isinstance(dims["largestInHall"], bool)
+            assert dims["matchedBy"] in {"kennbuchstabe", "hallenzeile"}
+            # Die Marke im Plan ist eine Beschriftung neben der Anlage. Ob sie
+            # auf die Hallenkante gezogen wurde, steht am Eintrag -- samt
+            # Sprungweite, die in die Unsicherheit eingeht.
+            assert facility["positionSource"] in {"plan-beschriftung",
+                                                  "auf Hallenkante gezogen"}
+            if facility["positionSource"] == "auf Hallenkante gezogen":
+                assert facility["snapM"] <= 35.0
+                assert facility["uncertaintyM"] > facility["snapM"] / 2
+
+    def test_findet_getrennt_gesetzte_marken(self):
+        """"4.1 E" steht im Plan mit Leerzeichen, "4.1" und "H" sogar getrennt."""
+        from beuteltier import techguide
+        lifts, _ = techguide.read_marks(TECHGUIDE_PDF, techguide.ELEVATOR_PAGE)
+        found = {mark.id for mark in lifts}
+        # Alle zehn Tabellenzeilen muessen im Plan wiederauftauchen.
+        table = set(techguide.dimension_index(self._read("elevator")))
+        assert {f"{hall}{des}" for hall, des in table} <= found
+
+    def test_erfindet_keinen_aufzug_fuer_halle_10(self):
+        """Halle 10 hat in beiden Quellen keinen Aufzug -- und bekommt keinen."""
+        from beuteltier import techguide
+        assert not [o for o in self._read("elevator") if o.hall_key.startswith("10")]
+        marks, _ = techguide.read_marks(TECHGUIDE_PDF, techguide.ELEVATOR_PAGE)
+        assert not [m for m in marks if m.hall_key.startswith("10")]
+
+    def test_ebenenwechsel_bleibt_unbestaetigt(self, graph_data):
+        """Ort amtlich, Benutzbarkeit offen -- beides steht in den Daten."""
+        verticals = [c for c in graph_data["connectors"] if c["kind"] == "vertical"]
+        assert verticals
+        for connector in verticals:
+            assert connector["state"] == "unbestaetigt", connector["id"]
+            # Beide Enden muessen dranhaengen, sonst fuehrt der Wechsel ins
+            # Leere: angebunden wird von unten, gefuehrt wird nach oben.
+            assert len(connector["ends"]) == 2, connector["id"]
+            assert connector["meta"]["kind"] in {"elevator", "escalator"}
+
+        official = [c for c in verticals if c["meta"].get("source") == "official"]
+        assert official
+        for connector in official:
+            assert connector["meta"]["usage"] == "lastenaufzug"
+            assert connector["meta"]["uncertaintyM"] > 0
 
 
 class TestReferenceChoice:

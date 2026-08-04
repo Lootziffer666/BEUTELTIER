@@ -106,12 +106,56 @@ Messung, keine Geschmacksfrage.
 Daraus gewonnen:
 
 - **Halle 1.2 und 3.2: ±27 m → ±7 m**
-- **11 Aufzüge** offiziell verortet (2.1, 3.1, 5.1, 11.1) — die Ebenenwechsel
-  in 2.1↔2.2 und 5.1↔5.2 stehen damit nicht mehr rechnerisch in der Hallenmitte
-- **17 Tore** offiziell verortet, ±14,1 m
+- **16 Aufzüge** offiziell verortet (1.1, 2.1, 3.1, 4.1, 5.1, 11.1) — die
+  Ebenenwechsel in 2.1↔2.2 und 5.1↔5.2 stehen damit nicht mehr rechnerisch in
+  der Hallenmitte
+- **28 Tore** offiziell verortet, ±14,1 m
+- **Abmessungen zu jeder Anlage** aus den Tabellen 3.1.c und 3.1.e: Kabine und
+  Tragfähigkeit je Aufzug, Breite × Höhe je Tor
 - **Örtliche Höhenbeschränkung: 4,50 m unter Verteilerkanälen** — und zwar in
   **sechs** Hallenebenen (4.1, 4.2, 5.1, 5.2, 10.1, 10.2), nicht nur in 10.2.
   Dazu 10,80 m unter der Kanaltrennwand in Halle 1.1.
+
+#### Marken werden uneinheitlich gesetzt
+
+Zuerst wurden nur 11 Aufzüge und 17 Tore gefunden. Der Grund war der Satz des
+Dokuments: es schreibt mal `5.1F`, mal `4.1 E` mit Leerzeichen, und im Torplan
+stehen Hallenebene und Kennbuchstabe als **zwei getrennte Textobjekte**
+nebeneinander (`4.1` und daneben `H`). Getrennte Hälften werden jetzt wieder
+zusammengefügt, wenn sie höchstens 12 Punkte auseinanderstehen — gemessen sind
+es 8 bis 10, die nächste fremde Beschriftung ist dreimal so weit weg. Halle 4.1
+Aufzug E kam erst dadurch überhaupt zum Vorschein.
+
+#### Die Marke ist nicht die Anlage
+
+Im Plan steht `4.1 E` **neben** der Halle, nicht auf dem Schacht. Wo die Marke
+außerhalb des belegten Umrisses liegt und die nächste Kante höchstens 35 m
+entfernt ist, wird sie auf diese Kante gezogen — Tore und Aufzugsschächte sitzen
+in der Hallenhülle. Die Sprungweite steht als `snapM` am Eintrag und geht zur
+Hälfte in die Unsicherheit ein. Liegt die Marke schon **innerhalb** des
+Umrisses, bleibt sie liegen: dann wäre die nächste Wand geraten, nicht gemessen.
+Deshalb tragen `4.1A`, `4.1H`, `4.1L` und `4.2O` weiter `plan-beschriftung`.
+
+#### Plan und Tabelle widersprechen sich bei Halle 1.2
+
+Der Torplan zeichnet für Halle 1.2 die Tore **A–F**, die Tabelle führt
+**A–E und H**. Da alle sechs dieselbe Zeile teilen (5,50 × 4,50 m), bekommt das
+sechste Tor deren Maße mit dem Vermerk `matchedBy: "hallenzeile"`. Geraten wird
+nichts, aber der Fall bleibt sichtbar.
+
+#### Halle 10 hat keinen Aufzug im Dokument
+
+Weder die Tabelle 3.1.c noch der Aufzugsplan führen für Halle 10 eine Anlage.
+Der Ebenenwechsel 10.1↔10.2 steht deshalb weiter als `placeholder` in der
+Hallenmitte. Das ist kein Fehler der Auswertung, sondern der Kenntnisstand.
+
+#### Es sind Lastenaufzüge
+
+Die Tabelle nennt Tragfähigkeiten von 30 bis 100 kN — drei bis zehn Tonnen, bei
+Kabinen bis 2,30 × 5,40 m. Das sind Aufzüge für den Standbau, keine
+Besucheraufzüge. Ihre **Lage** ist amtlich, ihre **Benutzbarkeit für Besucher**
+steht nirgends. Alle Ebenenwechsel bleiben daher `unbestaetigt`; die App führt
+sie mit Strafgewicht und weist sie aus, statt sie als offenen Weg zu verkaufen.
 
 #### Ein Widerspruch zwischen zwei offiziellen Quellen
 

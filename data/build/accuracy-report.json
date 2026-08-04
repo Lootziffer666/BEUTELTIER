@@ -610,7 +610,7 @@
     "2.2"
    ],
    "snapM": null,
-   "uncertaintyM": 7.0
+   "uncertaintyM": 21.4
   },
   {
    "id": "v:2.1:escalator",
@@ -632,7 +632,7 @@
     "4.2"
    ],
    "snapM": null,
-   "uncertaintyM": null
+   "uncertaintyM": 22.3
   },
   {
    "id": "v:4.1:escalator",
@@ -654,7 +654,7 @@
     "5.2"
    ],
    "snapM": null,
-   "uncertaintyM": 7.0
+   "uncertaintyM": 22.8
   },
   {
    "id": "v:5.1:escalator",

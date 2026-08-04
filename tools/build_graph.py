@@ -243,17 +243,29 @@ def main() -> int:
 
         lifts = official_lifts.get(lower_key) or []
         if lifts:
-            # Der erste verzeichnete Aufzug der Halle gibt die Stelle vor.
-            cx, cy = lifts[0]["position"]
+            # Von mehreren verzeichneten Aufzuegen gibt der mit der groessten
+            # Kabine die Stelle vor -- er markiert den Hauptkern der Halle.
+            def cabin_area(facility: dict) -> float:
+                dims = facility.get("dimensions") or {}
+                return dims.get("widthM", 0.0) * dims.get("depthM", 0.0)
+
+            anchor = max(lifts, key=cabin_area)
+            cx, cy = anchor["position"]
             lift_source = "official"
-            lift_uncertainty = lifts[0]["uncertaintyM"]
+            lift_uncertainty = anchor["uncertaintyM"]
+            lift_usage = (anchor.get("dimensions") or {}).get("usage")
         else:
             cx = sum(p[0] for p in lower["footprint"]) / len(lower["footprint"])
             cy = sum(p[1] for p in lower["footprint"]) / len(lower["footprint"])
             lift_source = "placeholder"
             lift_uncertainty = None
+            lift_usage = None
 
-        for kind, offset, confirmed in (("elevator", 0.0, lift_source == "official"),
+        # Die Richtlinien fuehren Tragfaehigkeiten von 30 bis 100 kN -- das
+        # sind Lastenaufzuege fuer den Standbau. Ihre Lage ist amtlich, ihre
+        # Benutzbarkeit fuer Besucher steht nirgends. Also: Ort offiziell,
+        # Weg unbestaetigt. Das ist keine Vorsicht, das ist der Kenntnisstand.
+        for kind, offset, confirmed in (("elevator", 0.0, False),
                                         ("escalator", 18.0, False)):
             lower_hit = nearest_aisle(graph, cx + offset, cy, lower_key, PORTAL_SNAP_M)
             upper_hit = nearest_aisle(graph, cx + offset, cy, upper_key, PORTAL_SNAP_M)
@@ -270,9 +282,12 @@ def main() -> int:
                                 label=(f"{'Aufzug' if kind == 'elevator' else 'Rolltreppe'} "
                                        f"{lower_key} ↔ {upper_key}"),
                                 meta={"connects": [lower_key, upper_key],
+                                      "kind": kind,
                                       "source": lift_source if kind == "elevator" else "placeholder",
                                       **({"uncertaintyM": lift_uncertainty}
-                                         if kind == "elevator" and lift_uncertainty else {})}))
+                                         if kind == "elevator" and lift_uncertainty else {}),
+                                      **({"usage": lift_usage}
+                                         if kind == "elevator" and lift_usage else {})}))
             graph.connect(lower_aisle, node_id, kind, state="offen")
             # Die eigentliche vertikale Kante traegt die Hoehendifferenz.
             graph.add_edge(Edge(
@@ -338,18 +353,31 @@ def main() -> int:
                                 "hallKey": stand_node.hall_key, "cell": cell})
 
     def link_payload(node: Node) -> dict:
+        # Beide Richtungen einsammeln. Ein Ebenenwechsel wird von unten
+        # angebunden und nach oben gefuehrt -- wer nur die ausgehenden Kanten
+        # nimmt, verliert die untere Haelfte und damit den ganzen Wechsel.
         ends = []
+        state = None
         for edge in graph.edges:
-            if edge.source != node.id:
-                continue
-            cell = cell_of(edge.target)
-            if cell is not None:
-                ends.append({"hallKey": graph.nodes[edge.target].hall_key, "cell": cell})
+            if edge.source == node.id:
+                other = edge.target
+            elif edge.target == node.id and not edge.directed:
+                other = edge.source
             else:
-                ends.append({"nodeId": edge.target})
-        return {"id": node.id, "kind": node.kind, "label": node.label,
-                "x": round(node.x, 2), "y": round(node.y, 2), "z": round(node.z, 2),
-                "level": node.level, "meta": node.meta, "ends": ends}
+                continue
+            if state is None or edge.state == "unbestaetigt":
+                state = edge.state
+            cell = cell_of(other)
+            end = ({"hallKey": graph.nodes[other].hall_key, "cell": cell}
+                   if cell is not None else {"nodeId": other})
+            if end not in ends:
+                ends.append(end)
+        payload = {"id": node.id, "kind": node.kind, "label": node.label,
+                   "x": round(node.x, 2), "y": round(node.y, 2), "z": round(node.z, 2),
+                   "level": node.level, "meta": node.meta, "ends": ends}
+        # Der Zustand gehoert an die Verbindung, nicht in eine Annahme der App.
+        payload["state"] = state or "unbestaetigt"
+        return payload
 
     connectors_out = [link_payload(node) for node in graph.nodes.values()
                       if node.kind in ("portal", "outdoor", "vertical")]
