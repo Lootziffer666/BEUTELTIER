@@ -32,6 +32,7 @@ import {
 } from './materials';
 import { Beleuchtung } from './lighting';
 import { Deckenleuchten } from './interior';
+import { Vertikalverbindungen } from './vertical';
 
 export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
@@ -753,6 +754,7 @@ export function SiteScene(props: SceneProps) {
         onSelectStand={props.onSelectStand}
       />
       <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
+      <Vertikalverbindungen data={data} centre={centre} />
       <RouteRibbon data={data} route={route} centre={centre} />
       {preset !== 'ego' && (
         <HallLabels data={data} centre={centre} upperOpacity={upperOpacity} />
