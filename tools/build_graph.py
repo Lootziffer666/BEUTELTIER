@@ -380,31 +380,22 @@ def main() -> int:
                     meta["uncertaintyM"] = observed["facility"]["uncertaintyM"]
                 else:
                     meta["positionSource"] = "placeholder"
-                if kind == "stairs" and not stair.get("steps"):
-                    # Die Regel belegt die Treppe, nicht ihr Mass.
+                if kind == "stairs":
+                    # Die Stufenmasse des Katalogs gehoeren zu einer anderen
+                    # Stelle: 20 Stufen sind 2,80 m, der Geschosswechsel misst
+                    # ueber 7 m, und der Boulevard liegt flach auf Ebene 2.
+                    # Die Verbindung bleibt belegt, ihr Mass gilt woanders.
                     label = f"Treppe {lower_key} ↔ {upper_key}"
                     meta["dimensionSource"] = "unbekannt"
-                elif kind == "stairs":
-                    label = (f"Treppe {lower_key} ↔ {upper_key} "
-                             f"({stair['steps']} Stufen)")
-                    meta["steps"] = stair["steps"]
-                    meta["stepRiseM"] = stair["stepRiseM"]
-                    meta["widthM"] = stair["widthM"]
-                    meta["riseM"] = round(stair["steps"] * stair["stepRiseM"], 2)
-                    meta["dimensionSource"] = "official"
-                    # Die 2,80 m reichen nicht von Ebene zu Ebene. Der Aufgang
-                    # beginnt am Mittelboulevard, nicht auf dem Hallenboden --
-                    # hier steht er trotzdem als Wechsel zwischen den Ebenen,
-                    # weil der Boulevard im Modell noch fehlt.
-                    gap = round(upper["baseY"] - lower["baseY"], 2)
-                    if gap > meta["riseM"] + 0.5:
-                        meta["risesShortOfM"] = gap
+                    if stair.get("notTheLevelChange"):
                         meta["note"] = (
-                            f"{stair['steps']} Stufen sind {meta['riseM']} m, die "
-                            f"Ebenen liegen {gap} m auseinander. Der Aufgang "
-                            f"beginnt am Mittelboulevard; der fehlt im Modell "
-                            f"noch, deshalb haengt die Treppe hier zwischen den "
-                            f"Hallenebenen.")
+                            f"Der Katalog vermasst den Aufgang mit "
+                            f"{stair['steps']} Stufen "
+                            f"({round(stair['steps'] * stair['stepRiseM'], 2)} m). "
+                            f"Das ist nicht dieser Wechsel: die Ebenen liegen "
+                            f"{round(upper['baseY'] - lower['baseY'], 2)} m "
+                            f"auseinander. Die Stufen gehoeren zur Passage, "
+                            f"die BEUTELTIER nicht modelliert.")
                 else:
                     label = (f"Rolltreppe {lower_key} ↔ {upper_key} "
                              f"({'West' if index == 0 else 'Ost'} der Treppe)")

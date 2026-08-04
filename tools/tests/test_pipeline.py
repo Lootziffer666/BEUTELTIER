@@ -458,9 +458,9 @@ class TestOpeningDimensions:
             flanking = [c for c in group if c["meta"].get("flanksStairs")]
             assert len(stairs) == 1, lower
             assert len(flanking) == 2, lower
-            assert stairs[0]["meta"]["steps"] == 20
-            assert stairs[0]["meta"]["riseM"] == 2.8
-            assert stairs[0]["meta"]["widthM"] == 1.8
+            # Die Stufenmasse des Katalogs gehoeren nicht hierher.
+            assert "steps" not in stairs[0]["meta"], lower
+            assert stairs[0]["meta"]["dimensionSource"] == "unbekannt"
             # Existenz und Mass sind belegt, die Lage ist es nicht -- ausser
             # wo eine Beobachtung sie an ein verortetes Tor bindet.
             assert stairs[0]["meta"]["source"] == "official"
@@ -480,23 +480,27 @@ class TestOpeningDimensions:
             assert len([c for c in group if c["meta"]["kind"] == "stairs"]) == 1, lower
             assert len([c for c in group if c["meta"].get("flanksStairs")]) == 2, lower
 
-        measured = {c["meta"]["connects"][0] for c in graph_data["connectors"]
-                    if c["meta"].get("dimensionSource") == "official"}
-        assert measured == {"4.1", "10.1"}
+        # Vermasst ist keiner mehr -- die Katalogmasse gelten woanders.
+        assert not [c for c in graph_data["connectors"]
+                    if c["meta"].get("dimensionSource") == "official"]
 
-    def test_haelt_die_hoehenluecke_des_aufgangs_fest(self, graph_data):
-        """20 Stufen sind 2,80 m, die Ebenen liegen ueber 7 m auseinander.
+    def test_leiht_dem_ebenenwechsel_keine_fremden_stufen(self, graph_data, site):
+        """Der Katalog vermasst eine andere Stelle -- das muss dranstehen.
 
-        Der Aufgang beginnt am Mittelboulevard, nicht auf dem Hallenboden. So
-        lange der Boulevard im Modell fehlt, wird die Luecke ausgewiesen statt
-        stillschweigend ueberbrueckt.
+        20 Stufen sind 2,80 m. Halle 10.1 hat 5,70 m lichte Hoehe, mit Decke
+        liegt der Boden von 10.2 ueber sieben Meter hoch, und der Boulevard
+        liegt laut Beobachtung flach auf Ebene 2. Die Stufen gehoeren also
+        weder zum Geschosswechsel noch zum Schritt vom Boulevard in die Halle.
         """
-        stairs = [c for c in graph_data["connectors"]
-                  if c["meta"].get("dimensionSource") == "official"]
-        assert stairs
-        for connector in stairs:
-            assert connector["meta"]["risesShortOfM"] > connector["meta"]["riseM"]
-            assert "Mittelboulevard" in connector["meta"]["note"]
+        halls = {h["key"]: h for h in site["halls"]}
+        noted = [c for c in graph_data["connectors"]
+                 if c["meta"].get("kind") == "stairs" and c["meta"].get("note")]
+        assert {c["meta"]["connects"][0] for c in noted} == {"4.1", "10.1"}
+        for connector in noted:
+            lower, upper = connector["meta"]["connects"]
+            assert halls[upper]["baseY"] - halls[lower]["baseY"] > 2.8 * 2, lower
+            assert "Passage" in connector["meta"]["note"]
+            assert "riseM" not in connector["meta"]
 
     def test_beobachtung_verankert_den_aufgang_10_2(self, graph_data, site):
         """Eine Beobachtung schlaegt eine Ableitung -- wenn sie dranstehen bleibt.

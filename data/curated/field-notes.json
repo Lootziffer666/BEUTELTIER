@@ -36,24 +36,37 @@
     },
     {
       "id": "boulevard-liegt-auf-ebene-2",
-      "where": "Mittelboulevard, zwischen den Hallen 4/5 und 10",
+      "where": "Mittelboulevard, Suedteil",
       "what": [
-        "Der Boulevard laeuft im Suedteil auf derselben Ebene wie 10.2 und 5.2",
-        "-- er ist das Deck zwischen den oberen Hallen, nicht ein Weg neben",
-        "ihnen. Erst zwischen Halle 9 und Halle 10 faellt er nach Norden ab."
+        "Der Boulevard liegt exakt auf der zweiten Ebene. Oben muss man keine",
+        "Stufen gehen -- Halle 10.2, 5.2 und die uebrigen oberen Hallen liegen",
+        "flach am Boulevard.",
+        "Nach links geht es hinunter zu Halle 1, geradeaus weiter zu Halle 8,",
+        "und wer vorher rechts abbiegt, kommt zu Halle 10.",
+        "Erst zwischen Halle 9 und Halle 10 faellt der Boulevard nach Norden ab."
       ],
       "sketch": {
         "boulevardWidthM": 15,
         "apronWidthM": 15,
         "note": "Handskizze mit Schrittmass, keine Vermessung."
       },
-      "usedFor": "Bestaetigt die Korridorbreite des Modells und die Ebenenlage des Boulevards.",
+      "usedFor": "Nimmt die geliehenen Stufenmasse aus dem Ebenenwechsel wieder heraus.",
+      "corrects": [
+        "Aus '20 Stufen Aufgang Halle 10.2' war geschlossen worden, der",
+        "Mittelboulevard liege 2,80 m unter Ebene 2. Das ist falsch: er liegt",
+        "flach darauf.",
+        "Die Rechnung bestaetigt die Beobachtung. Halle 10.1 hat 5,70 m lichte",
+        "Hoehe, dazu die Decke -- der Boden von 10.2 liegt bei mindestens",
+        "7,20 m. 2,80 m koennen weder der Wechsel 10.1 auf 10.2 sein noch der",
+        "Schritt vom Boulevard nach 10.2. Die 20 Stufen gehoeren zu einer",
+        "dritten Stelle, die BEUTELTIER nicht modelliert.",
+        "Konsequenz: die Stufenmasse werden aus dem Ebenenwechsel entfernt. Die",
+        "Verbindung bleibt, ihr Mass ist wieder unbekannt."
+      ],
       "crossCheck": [
-        "BEUTELTIER misst zwischen Halle 5.2 (Ost) und Halle 10.2 (West) 26,6 m,",
-        "auf Hoehe Halle 4.2 sind es 23,4 m. Die Skizze kommt auf 15 + 15 = 30 m.",
-        "Drei bis sieben Meter Abweichung -- fuer ein Schrittmass gegen eine",
-        "eingemessene Geometrie ist das eine Bestaetigung, keine Korrektur.",
-        "Geaendert wird nichts."
+        "Die Korridorbreite bleibt bestaetigt: BEUTELTIER misst zwischen Halle",
+        "5.2 (Ost) und Halle 10.2 (West) 26,6 m, auf Hoehe Halle 4.2 23,4 m.",
+        "Die Skizze kommt auf 15 + 15 = 30 m."
       ]
     },
     {

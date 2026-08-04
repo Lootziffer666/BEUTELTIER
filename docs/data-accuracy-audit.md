@@ -204,32 +204,37 @@ Vermaßt sind nur zwei Aufgänge:
 Wo die Stufenzahl fehlt, wird sie nicht erfunden: die Ebenenwechsel in 2.2 und
 5.2 tragen `dimensionSource: "unbekannt"`.
 
-#### Die Stufen widersprechen dem Höhenmodell
+#### Die 20 Stufen gehören nicht zum Ebenenwechsel
 
-20 Stufen à 0,14 m sind 2,80 m. Zwischen 10.1 und 10.2 liegen nach dem
-Höhenmodell aber 7,45 m. Die Treppe kann also **nicht auf der unteren
-Hallenebene beginnen** — sie beginnt am Mittelboulevard, der demnach rund
-4,65 m über dem Hallenboden liegt.
+Das hat zwei Korrekturrunden gebraucht, und beide gingen von einer Beobachtung
+vor Ort aus (`data/curated/field-notes.json`).
 
-Weiter gerechnet: die Treppe Nordboulevard → Mittelboulevard fällt um 4,95 m.
-Der Nordboulevard läge damit bei rund 9,6 m — höher als die Decke von Halle
-10.1. In BEUTELTIER stehen die Hallen 6 bis 9 aber alle auf Höhe 0.
+20 Stufen à 0,14 m sind **2,80 m**. Zwischen 10.1 und 10.2 liegen aber über
+sieben Meter — Halle 10.1 hat allein 5,70 m lichte Höhe, dazu die Decke. Die
+Treppe kann der Geschosswechsel also nicht sein.
 
-Ich hatte daraus zunächst geschlossen, das Gelände steige nach Norden. **Eine
-Beobachtung vor Ort hat das widerlegt** (`data/curated/field-notes.json`):
-Halle 10.2 kragt als Betondeck auf Stützen über eine offene Fläche auf
-Bodenniveau aus; die Südseite von Halle 9 und der ebenerdige Zugang zu Halle
-10.1 liegen auf **derselben** Fläche. Vom Boulevard führt eine asphaltierte
-Auffahrt *hinunter* auf dieses Niveau.
+*Erster Versuch:* Dann beginnt sie eben am Mittelboulevard, der 2,80 m unter
+Ebene 2 läge. **Falsch.** Der Boulevard liegt im Südteil **exakt auf Ebene 2** —
+oben geht man keine Stufen, die oberen Hallen liegen flach daran. Erst zwischen
+Halle 9 und Halle 10 fällt er nach Norden ab.
 
-Damit ist die Lage anders herum, als ich vermutet hatte: die Hallen teilen ein
-gemeinsames Bodenniveau, und **der Boulevard ist das erhöhte Deck darüber** —
-im Südteil auf derselben Ebene wie 10.2 und 5.2, und erst zwischen Halle 9 und
-Halle 10 fällt er nach Norden ab. Das passt zu den 20 Stufen, die vom
-Mittelboulevard nach Halle 10.2 hinaufführen. Ein Höhenmaß wurde nicht
-genommen, das Höhenmodell bleibt deshalb unverändert. Aber die falsche
-Vermutung ist raus, und der Widerspruch steht weiter in den Daten: jede
-vermaßte Treppe trägt `risesShortOfM` und eine Notiz dazu.
+*Was übrig bleibt:* eine dritte Stelle, die der Katalog selbst nennt —
+„Beklebung Treppe Passage 10/4, Position: **zum Mittelboulevard**, 20 Stufen".
+Die Passagen liegen also rund 2,80 m unter dem Boulevard, bei etwa 4,65 m.
+**Diese Zwischenebene modelliert BEUTELTIER nicht.**
+
+Konsequenz: die Stufenmaße sind wieder aus dem Ebenenwechsel heraus. Die
+Verbindung bleibt belegt (die Zwei-Rolltreppen-Regel gilt weiter), ihr Maß
+trägt `dimensionSource: "unbekannt"` und bei 4.1 und 10.1 eine Notiz, wohin
+die Katalogzahlen tatsächlich gehören.
+
+#### Und was daran richtig war
+
+Die begleitende Beobachtung steht: Halle 10.2 kragt als Betondeck auf Stützen
+über eine offene Fläche auf Bodenniveau aus; die Südseite von Halle 9 und der
+ebenerdige Zugang zu Halle 10.1 liegen auf **derselben** Fläche, und eine
+asphaltierte Auffahrt führt vom Boulevard dorthin hinunter. Meine ursprüngliche
+Vermutung, das Gelände steige nach Norden, ist damit erledigt.
 
 #### Eine Handskizze bestätigt die Korridorbreite
 

@@ -670,7 +670,7 @@
   {
    "id": "v:4.1:stairs",
    "kind": "vertical",
-   "label": "Treppe 4.1 ↔ 4.2 (20 Stufen)",
+   "label": "Treppe 4.1 ↔ 4.2",
    "connects": [
     "4.1",
     "4.2"
@@ -758,7 +758,7 @@
   {
    "id": "v:10.1:stairs",
    "kind": "vertical",
-   "label": "Treppe 10.1 ↔ 10.2 (20 Stufen)",
+   "label": "Treppe 10.1 ↔ 10.2",
    "connects": [
     "10.1",
     "10.2"
