@@ -16,6 +16,7 @@ Aufruf:
 """
 from __future__ import annotations
 
+import base64
 import json
 import math
 import re
@@ -25,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from beuteltier.graph import Edge, Graph, Node, attach_stands, build_hall_aisles  # noqa: E402
+from beuteltier.graph import GRID_M, Edge, Graph, Node, attach_stands, build_hall_aisles  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "data" / "build" / "site.json"
@@ -178,15 +179,19 @@ def main() -> int:
             snap = max(ends[0][1], ends[1][1])
 
             node_id = f"p:{connector['key']}:{left}:{right}"
+            # Die Ebenen mit in den Namen: derselbe Durchgang existiert oft im
+            # Erd- und im Obergeschoss, und wer zwei gleich benannte Schalter
+            # sieht, weiss nicht, welchen er gerade umlegt.
+            label = f"{note} ({left} ↔ {right})"
             graph.add_node(Node(
                 id=node_id, x=(first.x + second.x) / 2, y=(first.y + second.y) / 2,
-                z=halls[left]["baseY"], kind="portal", level=level, label=note,
+                z=halls[left]["baseY"], kind="portal", level=level, label=label,
                 meta={"connects": [left, right], "snapM": round(snap, 1),
                       "uncertaintyM": connector.get("uncertaintyM")}))
 
             for end, _ in ends:
                 graph.connect(node_id, end, "portal",
-                              state="unbestaetigt", confirmed=False, label=note)
+                              state="unbestaetigt", confirmed=False, label=label)
             portals += 1
             print(f"  {note:<32} {left:<5} <-> {right:<5} (Anschluss {snap:5.0f} m)")
 
@@ -244,7 +249,8 @@ def main() -> int:
             graph.add_node(Node(id=node_id, x=node_lower.x, y=node_lower.y,
                                 z=node_lower.z, kind="vertical", hall_key=lower_key,
                                 level=lower["level"],
-                                label=("Aufzug" if kind == "elevator" else "Rolltreppe"),
+                                label=(f"{'Aufzug' if kind == 'elevator' else 'Rolltreppe'} "
+                                       f"{lower_key} ↔ {upper_key}"),
                                 meta={"connects": [lower_key, upper_key]}))
             graph.connect(lower_aisle, node_id, kind, state="offen")
             # Die eigentliche vertikale Kante traegt die Hoehendifferenz.
@@ -256,27 +262,83 @@ def main() -> int:
                                            (node_upper.x, node_upper.y)), 2),
                 state="offen" if confirmed else "unbestaetigt",
                 confirmed=confirmed,
-                label="Aufzug" if kind == "elevator" else "Rolltreppe",
+                label=(f"{'Aufzug' if kind == 'elevator' else 'Rolltreppe'} "
+                       f"{lower_key} ↔ {upper_key}"),
             ))
             verticals += 1
             print(f"  {lower_key} -> {upper_key} ueber "
                   f"{'Aufzug' if kind == 'elevator' else 'Rolltreppe'}"
                   f"{'' if confirmed else ' (unbestaetigt)'}")
 
+    # --- Kompakt schreiben ----------------------------------------------------
+    # Das Gangnetz ist ein regelmaessiges Raster; als 15.000 Einzelobjekte
+    # ausgeschrieben waere es mehrere Megabyte, die auf dem Messegelaende ueber
+    # ueberlastetes WLAN gehen muessten. Uebertragen wird deshalb je Halle nur
+    # die Bitmaske der begehbaren Zellen -- die App baut Knoten und Kanten in
+    # Millisekunden daraus auf.
+    hall_grids = []
+    for key, index in sorted(indices.items()):
+        if not index:
+            continue
+        hall = halls[key]
+        footprint = hall["footprint"]
+        origin = (min(p[0] for p in footprint), min(p[1] for p in footprint))
+        cols = max(ix for ix, _ in index) + 1
+        rows = max(iy for _, iy in index) + 1
+
+        bits = bytearray((cols * rows + 7) // 8)
+        for ix, iy in index:
+            position = iy * cols + ix
+            bits[position >> 3] |= 1 << (position & 7)
+
+        hall_grids.append({
+            "key": key,
+            "origin": [round(origin[0], 2), round(origin[1], 2)],
+            "z": hall["baseY"],
+            "level": hall["level"],
+            "cols": cols,
+            "rows": rows,
+            "walkable": base64.b64encode(bytes(bits)).decode("ascii"),
+        })
+
+    def cell_of(node_id: str) -> list[int] | None:
+        parts = node_id.split(":")
+        return [int(parts[-2]), int(parts[-1])] if parts[0] == "a" else None
+
+    stand_links = []
+    for edge in graph.edges:
+        if edge.kind != "stand_access":
+            continue
+        stand_node = graph.nodes[edge.source]
+        cell = cell_of(edge.target)
+        if cell is not None:
+            stand_links.append({"standId": stand_node.meta.get("standId"),
+                                "hallKey": stand_node.hall_key, "cell": cell})
+
+    def link_payload(node: Node) -> dict:
+        ends = []
+        for edge in graph.edges:
+            if edge.source != node.id:
+                continue
+            cell = cell_of(edge.target)
+            if cell is not None:
+                ends.append({"hallKey": graph.nodes[edge.target].hall_key, "cell": cell})
+            else:
+                ends.append({"nodeId": edge.target})
+        return {"id": node.id, "kind": node.kind, "label": node.label,
+                "x": round(node.x, 2), "y": round(node.y, 2), "z": round(node.z, 2),
+                "level": node.level, "meta": node.meta, "ends": ends}
+
+    connectors_out = [link_payload(node) for node in graph.nodes.values()
+                      if node.kind in ("portal", "outdoor", "vertical")]
+
     payload = {
-        "schema": "beuteltier.graph.v1",
-        "gridM": 3.0,
-        "nodes": [{"id": n.id, "x": round(n.x, 2), "y": round(n.y, 2), "z": round(n.z, 2),
-                   "kind": n.kind, "hallKey": n.hall_key, "level": n.level,
-                   **({"label": n.label} if n.label else {}),
-                   **({"meta": n.meta} if n.meta else {})}
-                  for n in graph.nodes.values()],
-        "edges": [{"id": e.id, "source": e.source, "target": e.target, "kind": e.kind,
-                   "lengthM": e.length_m, "state": e.state, "directed": e.directed,
-                   "crowd": e.crowd, "confirmed": e.confirmed,
-                   **({"access": e.access} if e.access else {}),
-                   **({"label": e.label} if e.label else {})}
-                  for e in graph.edges],
+        "schema": "beuteltier.graph.v2",
+        "gridM": GRID_M,
+        "grids": hall_grids,
+        "standLinks": stand_links,
+        "connectors": connectors_out,
+        "counts": {"nodes": len(graph.nodes), "edges": len(graph.edges)},
     }
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

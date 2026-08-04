@@ -10,6 +10,7 @@ Aufruf:
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -25,7 +26,7 @@ STEPS = ["build_site.py", "build_graph.py", "build_registry.py"]
 EXPECTATIONS = {
     "halls": 17,
     "stands": 1000,
-    "placementsWithGeometry": 1340,
+    "placementsWithGeometry": 900,
     "graphNodes": 14000,
     "portals": 19,
 }
@@ -47,9 +48,19 @@ def main() -> int:
         "halls": len(site["halls"]),
         "stands": len(site["stands"]),
         "placementsWithGeometry": registry["coverage"]["withGeometry"],
-        "graphNodes": len(graph["nodes"]),
-        "portals": sum(1 for n in graph["nodes"] if n["kind"] == "portal"),
+        "graphNodes": graph["counts"]["nodes"],
+        "portals": sum(1 for c in graph["connectors"] if c["kind"] == "portal"),
     }
+
+    # Die App liest ihre eigene Kopie unter public/. Sie hier mitzuschreiben
+    # verhindert genau den Fehler, bei dem die Oberflaeche noch auf einem
+    # aelteren Datenstand laeuft als die Aufbereitung.
+    app_data = ROOT / "app" / "public" / "data"
+    if app_data.parent.exists():
+        app_data.mkdir(parents=True, exist_ok=True)
+        for name in ("site.json", "graph.json", "registry.json"):
+            shutil.copyfile(ROOT / "data" / "build" / name, app_data / name)
+        print(f"\nDatenstand nach {app_data} kopiert")
 
     print("\n=== Bericht " + "=" * 56)
     estimated = [h for h in site["halls"] if h["placement"]["source"] == "geschaetzt"]

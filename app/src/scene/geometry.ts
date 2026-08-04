@@ -1,0 +1,96 @@
+/**
+ * Aus Grundrissen werden Körper.
+ *
+ * Alle Polygone liegen in Geländemetern in der XY-Ebene. Three.js rechnet mit
+ * Y nach oben, deshalb wird beim Extrudieren getauscht: Karten-X bleibt X,
+ * Karten-Y wird zu -Z, und die Höhe wandert auf Y. Ohne diesen Tausch stünde
+ * das ganze Gelände hochkant.
+ */
+
+import * as THREE from 'three';
+import type { Placement2D } from '../data/types';
+
+/** Nach unten gedrehte Extrusion: Grundriss in XZ, Höhe in Y. */
+export function extrudePolygon(
+  points: Placement2D[],
+  height: number,
+  centre: [number, number],
+): THREE.BufferGeometry {
+  const shape = new THREE.Shape();
+  points.forEach(([x, y], index) => {
+    const px = x - centre[0];
+    const py = y - centre[1];
+    if (index === 0) shape.moveTo(px, py);
+    else shape.lineTo(px, py);
+  });
+  shape.closePath();
+
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: Math.max(height, 0.01),
+    bevelEnabled: false,
+    curveSegments: 1,
+  });
+  // Aus der XY-Ebene in die XZ-Ebene kippen.
+  geometry.rotateX(-Math.PI / 2);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+export function polygonCentre(points: Placement2D[]): [number, number] {
+  const sum = points.reduce<[number, number]>(
+    (acc, point) => [acc[0] + point[0], acc[1] + point[1]],
+    [0, 0],
+  );
+  return [sum[0] / points.length, sum[1] / points.length];
+}
+
+export function toScene(
+  x: number,
+  y: number,
+  z: number,
+  centre: [number, number],
+): THREE.Vector3 {
+  return new THREE.Vector3(x - centre[0], z, -(y - centre[1]));
+}
+
+/**
+ * Fasst viele Grundrisse zu einer Geometrie zusammen.
+ *
+ * Tausend Standflächen als tausend Meshes wären tausend Zeichenaufrufe je
+ * Bild; als ein zusammengeführtes Netz ist es einer. Die Zuordnung zurück auf
+ * den einzelnen Stand läuft über die Vertex-Bereiche.
+ */
+export interface MergedPolygons {
+  geometry: THREE.BufferGeometry;
+  ranges: { id: string; start: number; count: number }[];
+}
+
+export function mergePolygons(
+  items: { id: string; polygon: Placement2D[]; baseY: number; height: number }[],
+  centre: [number, number],
+): MergedPolygons {
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const ranges: MergedPolygons['ranges'] = [];
+
+  for (const item of items) {
+    const geometry = extrudePolygon(item.polygon, item.height, centre);
+    geometry.translate(0, item.baseY, 0);
+
+    const position = geometry.getAttribute('position');
+    const normal = geometry.getAttribute('normal');
+    const start = positions.length / 3;
+
+    for (let i = 0; i < position.count; i += 1) {
+      positions.push(position.getX(i), position.getY(i), position.getZ(i));
+      normals.push(normal.getX(i), normal.getY(i), normal.getZ(i));
+    }
+    ranges.push({ id: item.id, start, count: position.count });
+    geometry.dispose();
+  }
+
+  const merged = new THREE.BufferGeometry();
+  merged.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  merged.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  return { geometry: merged, ranges };
+}

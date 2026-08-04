@@ -77,8 +77,6 @@ def main() -> int:
             if stand_id is None:
                 unmatched.append({"exhibitor": exhibitor.name, "hall": placement.hall,
                                   "stand": placement.stand, "raw": placement.raw})
-            else:
-                occupancy[stand_id].append(exhibitor.id)
 
             placements.append({
                 "hall": placement.hall,
@@ -87,6 +85,30 @@ def main() -> int:
                 "outdoor": bool(placement.outdoor_key),
                 **({"derivedFrom": placement.derived_from} if placement.derived_from else {}),
             })
+
+        # Dieselbe Flaeche wird oft unter zwei Codes gefuehrt: die
+        # Ausstellersuche nennt "D050 F051", der Hallenplan kennt beide als eine
+        # Standflaeche. Ohne Zusammenfassen saehe jeder solche Aussteller aus,
+        # als stuende er an zwei Orten -- und der Beutezug liefe ihn zweimal an.
+        merged: list[dict] = []
+        by_stand: dict[str, dict] = {}
+        for placement in placements:
+            stand_id = placement["standId"]
+            if stand_id is None:
+                merged.append(placement)
+                continue
+            existing = by_stand.get(stand_id)
+            if existing is None:
+                placement["codes"] = [placement["stand"]]
+                by_stand[stand_id] = placement
+                merged.append(placement)
+            elif placement["stand"] not in existing["codes"]:
+                existing["codes"].append(placement["stand"])
+        placements = merged
+
+        for placement in placements:
+            if placement["standId"]:
+                occupancy[placement["standId"]].append(exhibitor.id)
 
         exhibitors_out.append({
             "id": exhibitor.id,

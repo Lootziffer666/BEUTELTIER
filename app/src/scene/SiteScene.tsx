@@ -1,0 +1,413 @@
+/**
+ * Das Gelände in 3D.
+ *
+ * Warum nicht flach: die Koelnmesse geht über zwei Ebenen, und die Laufwege
+ * ändern sich stündlich. Eine 2D-Karte mit Ebenenumschalter zerreißt genau
+ * die Information, auf die es ankommt -- den Ebenenwechsel als Teil der Route.
+ * Hier ist er ein sichtbares senkrechtes Stück im Weg.
+ *
+ * Die flache Ansicht geht dabei nicht verloren: „Laufmodus" ist eine
+ * Kameraposition von oben, kein zweiter Renderer.
+ */
+
+import { useEffect, useMemo, useRef } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Html, OrbitControls, type OrbitControlsProps } from '@react-three/drei';
+import * as THREE from 'three';
+
+import type { Dataset } from '../data/load';
+import { siteCentre } from '../data/load';
+import type { Route } from '../routing/route';
+import { mergePolygons, polygonCentre, toScene } from './geometry';
+
+export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus';
+
+export interface SceneProps {
+  data: Dataset;
+  /** Sichtbarkeit der oberen Ebene: 0 = ausgeblendet, 1 = voll. */
+  upperOpacity: number;
+  selectedStandId: string | null;
+  routeStandIds: string[];
+  route: Route | null;
+  preset: CameraPreset;
+  focusHallKey: string | null;
+  onSelectStand: (standId: string | null) => void;
+}
+
+const COLOURS = {
+  ground: '#12141b',
+  hallLower: '#243044',
+  hallUpper: '#3a2f46',
+  block: '#161b26',
+  standLower: '#3f7dd6',
+  standUpper: '#d98a3f',
+  standOccupied: '#f0b23c',
+  selected: '#ff5c8a',
+  route: '#4ade80',
+  routeUnconfirmed: '#facc15',
+  estimated: '#8b6f2f',
+};
+
+const STAND_HEIGHT_M = 2.6;
+
+function Ground({ extent }: { extent: number }) {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]} receiveShadow>
+      <planeGeometry args={[extent * 2.2, extent * 2.2]} />
+      <meshStandardMaterial color={COLOURS.ground} roughness={1} />
+    </mesh>
+  );
+}
+
+function Halls({
+  data,
+  centre,
+  upperOpacity,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  upperOpacity: number;
+}) {
+  const groups = useMemo(() => {
+    const lower = data.site.halls.filter((hall) => hall.level <= 1);
+    const upper = data.site.halls.filter((hall) => hall.level > 1);
+    const build = (halls: typeof lower) =>
+      mergePolygons(
+        halls.map((hall) => ({
+          id: hall.key,
+          polygon: hall.footprint,
+          baseY: hall.baseY,
+          height: hall.wallHeightM || 0.3,
+        })),
+        centre,
+      );
+    return { lower: build(lower), upper: build(upper) };
+  }, [data, centre]);
+
+  useEffect(
+    () => () => {
+      groups.lower.geometry.dispose();
+      groups.upper.geometry.dispose();
+    },
+    [groups],
+  );
+
+  return (
+    <group>
+      <mesh geometry={groups.lower.geometry}>
+        <meshStandardMaterial
+          color={COLOURS.hallLower}
+          transparent
+          opacity={0.28}
+          roughness={0.9}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      {upperOpacity > 0.02 && (
+        <mesh geometry={groups.upper.geometry}>
+          <meshStandardMaterial
+            color={COLOURS.hallUpper}
+            transparent
+            opacity={0.26 * upperOpacity}
+            roughness={0.9}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+function Stands({
+  data,
+  centre,
+  upperOpacity,
+  selectedStandId,
+  routeStandIds,
+  onSelectStand,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  upperOpacity: number;
+  selectedStandId: string | null;
+  routeStandIds: string[];
+  onSelectStand: (standId: string | null) => void;
+}) {
+  const merged = useMemo(() => {
+    const build = (level: 'lower' | 'upper') =>
+      mergePolygons(
+        data.site.stands
+          .filter((stand) => (level === 'lower' ? stand.level <= 1 : stand.level > 1))
+          .map((stand) => ({
+            id: stand.id,
+            polygon: stand.polygon,
+            baseY: stand.baseY + 0.05,
+            height: STAND_HEIGHT_M,
+          })),
+        centre,
+      );
+    return { lower: build('lower'), upper: build('upper') };
+  }, [data, centre]);
+
+  useEffect(
+    () => () => {
+      merged.lower.geometry.dispose();
+      merged.upper.geometry.dispose();
+    },
+    [merged],
+  );
+
+  /** Belegte Stände heben sich ab -- ein leerer Stand ist kein Ziel. */
+  const paint = (group: typeof merged.lower, level: 'lower' | 'upper') => {
+    const geometry = group.geometry;
+    const count = geometry.getAttribute('position').count;
+    const colours = new Float32Array(count * 3);
+    const base = new THREE.Color(level === 'lower' ? COLOURS.standLower : COLOURS.standUpper);
+    const occupied = new THREE.Color(COLOURS.standOccupied);
+    const selected = new THREE.Color(COLOURS.selected);
+    const onRoute = new THREE.Color(COLOURS.route);
+
+    for (const range of group.ranges) {
+      let colour = base;
+      if (data.registry.occupancy[range.id]) colour = occupied;
+      if (routeStandIds.includes(range.id)) colour = onRoute;
+      if (range.id === selectedStandId) colour = selected;
+      for (let i = range.start; i < range.start + range.count; i += 1) {
+        colours[i * 3] = colour.r;
+        colours[i * 3 + 1] = colour.g;
+        colours[i * 3 + 2] = colour.b;
+      }
+    }
+    geometry.setAttribute('color', new THREE.BufferAttribute(colours, 3));
+    return geometry;
+  };
+
+  const lowerGeometry = useMemo(
+    () => paint(merged.lower, 'lower'),
+    [merged, selectedStandId, routeStandIds, data],
+  );
+  const upperGeometry = useMemo(
+    () => paint(merged.upper, 'upper'),
+    [merged, selectedStandId, routeStandIds, data],
+  );
+
+  const pick = (group: typeof merged.lower) => (faceIndex: number | null | undefined) => {
+    if (faceIndex === null || faceIndex === undefined) return;
+    const vertex = faceIndex * 3;
+    const hit = group.ranges.find(
+      (range) => vertex >= range.start && vertex < range.start + range.count,
+    );
+    onSelectStand(hit?.id ?? null);
+  };
+
+  return (
+    <group>
+      <mesh
+        geometry={lowerGeometry}
+        onClick={(event) => {
+          event.stopPropagation();
+          pick(merged.lower)(event.faceIndex);
+        }}
+      >
+        <meshStandardMaterial vertexColors roughness={0.55} metalness={0.05} />
+      </mesh>
+      {upperOpacity > 0.02 && (
+        <mesh
+          geometry={upperGeometry}
+          onClick={(event) => {
+            event.stopPropagation();
+            pick(merged.upper)(event.faceIndex);
+          }}
+        >
+          <meshStandardMaterial
+            vertexColors
+            roughness={0.55}
+            transparent
+            opacity={upperOpacity}
+          />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+/**
+ * Die Route als Band durch beide Ebenen.
+ *
+ * Die senkrechten Stücke sind die eigentliche Aussage: hier wechselt man das
+ * Geschoss. In einer flachen Karte wäre genau das unsichtbar.
+ */
+function RouteRibbon({
+  data,
+  route,
+  centre,
+}: {
+  data: Dataset;
+  route: Route | null;
+  centre: [number, number];
+}) {
+  const geometry = useMemo(() => {
+    if (!route || route.steps.length === 0) return null;
+    const points = route.nodeIds
+      .map((id) => data.graph.nodes.get(id))
+      .filter((node): node is NonNullable<typeof node> => Boolean(node))
+      .map((node) => toScene(node.x, node.y, node.z + 1.6, centre));
+    if (points.length < 2) return null;
+    const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.02);
+    return new THREE.TubeGeometry(curve, Math.min(points.length * 2, 900), 1.1, 6, false);
+  }, [route, data, centre]);
+
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+  if (!geometry) return null;
+
+  const hasUnconfirmed = (route?.unconfirmed.length ?? 0) > 0;
+  return (
+    <mesh geometry={geometry}>
+      <meshStandardMaterial
+        color={hasUnconfirmed ? COLOURS.routeUnconfirmed : COLOURS.route}
+        emissive={hasUnconfirmed ? COLOURS.routeUnconfirmed : COLOURS.route}
+        emissiveIntensity={0.65}
+        roughness={0.4}
+      />
+    </mesh>
+  );
+}
+
+function HallLabels({
+  data,
+  centre,
+  upperOpacity,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  upperOpacity: number;
+}) {
+  return (
+    <group>
+      {data.site.halls.map((hall) => {
+        const [cx, cy] = polygonCentre(hall.footprint);
+        const estimated = hall.placement.source === 'geschaetzt';
+        const dim = hall.level > 1 && upperOpacity < 0.2;
+        if (dim) return null;
+        return (
+          <Html
+            key={hall.key}
+            position={toScene(cx, cy, hall.baseY + hall.wallHeightM + 6, centre)}
+            center
+            distanceFactor={340}
+            occlude={false}
+          >
+            <div className={`hall-label${estimated ? ' hall-label--estimated' : ''}`}>
+              {hall.outdoor ? hall.name : hall.key}
+              {estimated && (
+                <span
+                  className="hall-label__badge"
+                  title={`Lage geschätzt, rund ${Math.round(hall.placement.residualM ?? 0)} m genau`}
+                >
+                  ±{Math.round(hall.placement.residualM ?? 0)} m
+                </span>
+              )}
+            </div>
+          </Html>
+        );
+      })}
+    </group>
+  );
+}
+
+function CameraRig({
+  preset,
+  focus,
+  extent,
+}: {
+  preset: CameraPreset;
+  focus: THREE.Vector3 | null;
+  extent: number;
+}) {
+  const controls = useRef<OrbitControlsProps & { target: THREE.Vector3; update: () => void }>(null);
+  const { camera } = useThree();
+  const target = useRef(new THREE.Vector3());
+  const wanted = useRef(new THREE.Vector3());
+
+  useEffect(() => {
+    const centre = focus ?? new THREE.Vector3(0, 0, 0);
+    target.current.copy(centre);
+    if (preset === 'laufmodus') {
+      // Praktisch von oben -- die flache Karte, ohne den Renderer zu wechseln.
+      wanted.current.set(centre.x, centre.y + extent * 0.9, centre.z + 0.001);
+    } else if (preset === 'halle') {
+      wanted.current.set(centre.x + extent * 0.16, centre.y + extent * 0.22, centre.z + extent * 0.3);
+    } else {
+      wanted.current.set(centre.x + extent * 0.5, centre.y + extent * 0.62, centre.z + extent * 0.85);
+    }
+  }, [preset, focus, extent]);
+
+  useFrame((_, delta) => {
+    const speed = Math.min(1, delta * 3);
+    camera.position.lerp(wanted.current, speed);
+    if (controls.current) {
+      controls.current.target.lerp(target.current, speed);
+      controls.current.update();
+    }
+  });
+
+  return (
+    <OrbitControls
+      ref={controls as never}
+      enableDamping
+      dampingFactor={0.12}
+      maxPolarAngle={Math.PI / 2.05}
+      minDistance={30}
+      maxDistance={extent * 2.4}
+    />
+  );
+}
+
+export function SiteScene(props: SceneProps) {
+  const { data, upperOpacity, route, preset, focusHallKey } = props;
+  const centre = useMemo(() => siteCentre(data.site), [data.site]);
+
+  const extent = useMemo(() => {
+    const points = data.site.halls.flatMap((hall) => hall.footprint);
+    const xs = points.map((point) => point[0]);
+    const ys = points.map((point) => point[1]);
+    return Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+  }, [data.site]);
+
+  const focus = useMemo(() => {
+    if (!focusHallKey) return null;
+    const hall = data.hallsByKey.get(focusHallKey);
+    if (!hall) return null;
+    const [cx, cy] = polygonCentre(hall.footprint);
+    return toScene(cx, cy, hall.baseY, centre);
+  }, [focusHallKey, data, centre]);
+
+  return (
+    <Canvas
+      camera={{ fov: 42, near: 1, far: extent * 6, position: [extent * 0.5, extent * 0.6, extent * 0.85] }}
+      dpr={[1, 1.8]}
+      onPointerMissed={() => props.onSelectStand(null)}
+    >
+      <color attach="background" args={['#0b0d12']} />
+      <fog attach="fog" args={['#0b0d12', extent * 0.9, extent * 3]} />
+      <ambientLight intensity={0.55} />
+      <directionalLight position={[extent * 0.4, extent * 0.8, extent * 0.3]} intensity={1.1} />
+      <directionalLight position={[-extent * 0.5, extent * 0.4, -extent * 0.4]} intensity={0.35} />
+
+      <Ground extent={extent} />
+      <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
+      <Stands
+        data={data}
+        centre={centre}
+        upperOpacity={upperOpacity}
+        selectedStandId={props.selectedStandId}
+        routeStandIds={props.routeStandIds}
+        onSelectStand={props.onSelectStand}
+      />
+      <RouteRibbon data={data} route={route} centre={centre} />
+      <HallLabels data={data} centre={centre} upperOpacity={upperOpacity} />
+      <CameraRig preset={preset} focus={focus} extent={extent} />
+    </Canvas>
+  );
+}
