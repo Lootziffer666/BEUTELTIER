@@ -18,7 +18,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = Path(__file__).resolve().parent
 
-STEPS = ["build_site.py", "build_graph.py", "build_registry.py"]
+STEPS = ["build_site.py", "build_graph.py", "build_registry.py",
+         "build_accuracy_report.py"]
 
 # Untergrenzen, die nach jedem Lauf gelten muessen. Sie sind nicht willkuerlich,
 # sondern der Stand, der einmal erreicht war -- faellt etwas darunter, ist bei
@@ -27,9 +28,15 @@ EXPECTATIONS = {
     "halls": 17,
     "stands": 1000,
     "placementsWithGeometry": 900,
-    "graphNodes": 14000,
+    "standsLinked": 1027,
     "portals": 19,
 }
+
+# Die reine Knotenzahl taugt nicht als Untergrenze: als die Hallenumrisse von
+# der Bounding-Box auf die Huelle der Inhalte umgestellt wurden, fiel sie von
+# 14.843 auf 12.139 -- weil begehbare Zellen ausserhalb der Gebaeude
+# verschwanden. Das ist eine Verbesserung. Gezaehlt wird deshalb, was zaehlt:
+# ob jeder Stand angebunden bleibt.
 
 
 def main() -> int:
@@ -48,7 +55,7 @@ def main() -> int:
         "halls": len(site["halls"]),
         "stands": len(site["stands"]),
         "placementsWithGeometry": registry["coverage"]["withGeometry"],
-        "graphNodes": graph["counts"]["nodes"],
+        "standsLinked": len(graph["standLinks"]),
         "portals": sum(1 for c in graph["connectors"] if c["kind"] == "portal"),
     }
 
@@ -70,8 +77,18 @@ def main() -> int:
     print(f"Standflaechen          {actual['stands']:6d}")
     print(f"Belegungen mit Lage    {actual['placementsWithGeometry']:6d} von "
           f"{registry['coverage']['placements']}")
-    print(f"Graphknoten            {actual['graphNodes']:6d}")
+    print(f"Graphknoten            {graph['counts']['nodes']:6d}")
+    print(f"Staende am Netz        {actual['standsLinked']:6d}")
     print(f"Durchgaenge            {actual['portals']:6d}")
+
+    deviations = [abs(h["area"]["deviationPct"]) for h in site["halls"]
+                  if h["area"].get("deviationPct") is not None]
+    if deviations:
+        print(f"Flaechenabweichung     {sum(deviations) / len(deviations):6.1f} %  "
+              f"(Mittel gegen die offiziellen Hallenflaechen)")
+    derived = [h for h in site["halls"] if h["height"]["heightSource"] == "derived"]
+    print(f"Bodenhoehen gerechnet  {len(derived):6d}  "
+          f"(aus lichter Hoehe plus Deckenstaerke)")
 
     failed = {k: (v, actual[k]) for k, v in EXPECTATIONS.items() if actual[k] < v}
     if failed:

@@ -1,0 +1,693 @@
+{
+ "schema": "beuteltier.accuracy.v1",
+ "summary": {
+  "hallLevels": 17,
+  "measured": 8,
+  "estimated": 5,
+  "measuredResidualMeanM": 0.268,
+  "measuredResidualMaxM": 1.46,
+  "areaDeviationMeanPct": 9.1,
+  "areaDeviationMedianPct": 9.2,
+  "referenceCrossValidatedM": 27.0,
+  "slabAssumptionM": [
+   1.5,
+   2.0
+  ],
+  "connectorSnapMaxM": 372.4,
+  "connectorSnapMedianM": 58.9
+ },
+ "halls": [
+  {
+   "key": "1.2",
+   "placementSource": "geschaetzt",
+   "placementLabel": "geschaetzt",
+   "supports": 0,
+   "residualM": 26.99,
+   "maxResidualM": 26.99,
+   "rotationDeg": 90.0,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 8939.0,
+   "officialAreaSqm": 10512,
+   "areaDeviationPct": -15.0,
+   "floorElevationRenderM": 0.0,
+   "floorElevationMinM": 0.0,
+   "floorElevationMaxM": 0.0,
+   "clearHeightM": 11.1,
+   "heightSource": "official",
+   "heightUncertaintyM": 0.0,
+   "routable": true
+  },
+  {
+   "key": "10.1",
+   "placementSource": "procrustes",
+   "placementLabel": "eingemessen",
+   "supports": 37,
+   "residualM": 0.34,
+   "maxResidualM": 0.77,
+   "rotationDeg": 89.96,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 22526.0,
+   "officialAreaSqm": 22332,
+   "areaDeviationPct": 0.9,
+   "floorElevationRenderM": 0.0,
+   "floorElevationMinM": 0.0,
+   "floorElevationMaxM": 0.0,
+   "clearHeightM": 5.7,
+   "heightSource": "official",
+   "heightUncertaintyM": 0.0,
+   "routable": true
+  },
+  {
+   "key": "10.2",
+   "placementSource": "abgeleitet",
+   "placementLabel": "von der Ebene darunter uebernommen",
+   "supports": 37,
+   "residualM": 0.34,
+   "maxResidualM": 0.77,
+   "rotationDeg": 89.96,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 26605.0,
+   "officialAreaSqm": 22415,
+   "areaDeviationPct": 18.7,
+   "floorElevationRenderM": 7.45,
+   "floorElevationMinM": 7.2,
+   "floorElevationMaxM": 7.7,
+   "clearHeightM": 5.7,
+   "heightSource": "derived",
+   "heightUncertaintyM": 0.25,
+   "routable": true
+  },
+  {
+   "key": "2.1",
+   "placementSource": "procrustes",
+   "placementLabel": "eingemessen",
+   "supports": 15,
+   "residualM": 0.18,
+   "maxResidualM": 0.44,
+   "rotationDeg": 90.21,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 9907.0,
+   "officialAreaSqm": 9580,
+   "areaDeviationPct": 3.4,
+   "floorElevationRenderM": 0.0,
+   "floorElevationMinM": 0.0,
+   "floorElevationMaxM": 0.0,
+   "clearHeightM": 6.0,
+   "heightSource": "official",
+   "heightUncertaintyM": 0.0,
+   "routable": true
+  },
+  {
+   "key": "2.2",
+   "placementSource": "abgeleitet",
+   "placementLabel": "von der Ebene darunter uebernommen",
+   "supports": 15,
+   "residualM": 0.18,
+   "maxResidualM": 0.44,
+   "rotationDeg": 90.21,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 9856.0,
+   "officialAreaSqm": 9736,
+   "areaDeviationPct": 1.2,
+   "floorElevationRenderM": 7.75,
+   "floorElevationMinM": 7.5,
+   "floorElevationMaxM": 8.0,
+   "clearHeightM": 6.0,
+   "heightSource": "derived",
+   "heightUncertaintyM": 0.25,
+   "routable": true
+  },
+  {
+   "key": "3.2",
+   "placementSource": "geschaetzt",
+   "placementLabel": "geschaetzt",
+   "supports": 0,
+   "residualM": 26.99,
+   "maxResidualM": 26.99,
+   "rotationDeg": 90.0,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 8384.0,
+   "officialAreaSqm": 8574,
+   "areaDeviationPct": -2.2,
+   "floorElevationRenderM": 6.5,
+   "floorElevationMinM": 6.25,
+   "floorElevationMaxM": 6.75,
+   "clearHeightM": 6.45,
+   "heightSource": "derived",
+   "heightUncertaintyM": 0.25,
+   "routable": true
+  },
+  {
+   "key": "4.1",
+   "placementSource": "procrustes",
+   "placementLabel": "eingemessen",
+   "supports": 6,
+   "residualM": 0.0,
+   "maxResidualM": 0.0,
+   "rotationDeg": -0.0,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 14756.0,
+   "officialAreaSqm": 14123,
+   "areaDeviationPct": 4.5,
+   "floorElevationRenderM": 0.0,
+   "floorElevationMinM": 0.0,
+   "floorElevationMaxM": 0.0,
+   "clearHeightM": 5.85,
+   "heightSource": "official",
+   "heightUncertaintyM": 0.0,
+   "routable": true
+  },
+  {
+   "key": "4.2",
+   "placementSource": "abgeleitet",
+   "placementLabel": "von der Ebene darunter uebernommen",
+   "supports": 6,
+   "residualM": 0.0,
+   "maxResidualM": 0.0,
+   "rotationDeg": -0.0,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 14805.0,
+   "officialAreaSqm": 14390,
+   "areaDeviationPct": 2.9,
+   "floorElevationRenderM": 7.6,
+   "floorElevationMinM": 7.35,
+   "floorElevationMaxM": 7.85,
+   "clearHeightM": 5.85,
+   "heightSource": "derived",
+   "heightUncertaintyM": 0.25,
+   "routable": true
+  },
+  {
+   "key": "5.1",
+   "placementSource": "procrustes",
+   "placementLabel": "eingemessen",
+   "supports": 39,
+   "residualM": 0.94,
+   "maxResidualM": 1.46,
+   "rotationDeg": 0.27,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 12134.0,
+   "officialAreaSqm": 12225,
+   "areaDeviationPct": -0.7,
+   "floorElevationRenderM": 0.0,
+   "floorElevationMinM": 0.0,
+   "floorElevationMaxM": 0.0,
+   "clearHeightM": 5.85,
+   "heightSource": "official",
+   "heightUncertaintyM": 0.0,
+   "routable": true
+  },
+  {
+   "key": "5.2",
+   "placementSource": "abgeleitet",
+   "placementLabel": "von der Ebene darunter uebernommen",
+   "supports": 39,
+   "residualM": 0.94,
+   "maxResidualM": 1.46,
+   "rotationDeg": 0.27,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 13811.0,
+   "officialAreaSqm": 11949,
+   "areaDeviationPct": 15.6,
+   "floorElevationRenderM": 7.6,
+   "floorElevationMinM": 7.35,
+   "floorElevationMaxM": 7.85,
+   "clearHeightM": 5.85,
+   "heightSource": "derived",
+   "heightUncertaintyM": 0.25,
+   "routable": true
+  },
+  {
+   "key": "6.1",
+   "placementSource": "procrustes",
+   "placementLabel": "eingemessen",
+   "supports": 4,
+   "residualM": 0.04,
+   "maxResidualM": 0.05,
+   "rotationDeg": -0.1,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 17960.0,
+   "officialAreaSqm": 20846,
+   "areaDeviationPct": -13.8,
+   "floorElevationRenderM": 0.0,
+   "floorElevationMinM": 0.0,
+   "floorElevationMaxM": 0.0,
+   "clearHeightM": 11.0,
+   "heightSource": "official",
+   "heightUncertaintyM": 0.0,
+   "routable": true
+  },
+  {
+   "key": "7.1",
+   "placementSource": "procrustes",
+   "placementLabel": "eingemessen",
+   "supports": 4,
+   "residualM": 0.0,
+   "maxResidualM": 0.0,
+   "rotationDeg": 0.0,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 14268.0,
+   "officialAreaSqm": 16830,
+   "areaDeviationPct": -15.2,
+   "floorElevationRenderM": 0.0,
+   "floorElevationMinM": 0.0,
+   "floorElevationMaxM": 0.0,
+   "clearHeightM": 11.0,
+   "heightSource": "official",
+   "heightUncertaintyM": 0.0,
+   "routable": true
+  },
+  {
+   "key": "8.1",
+   "placementSource": "procrustes",
+   "placementLabel": "eingemessen",
+   "supports": 6,
+   "residualM": 0.64,
+   "maxResidualM": 1.06,
+   "rotationDeg": -0.16,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 14178.0,
+   "officialAreaSqm": 16830,
+   "areaDeviationPct": -15.8,
+   "floorElevationRenderM": 0.0,
+   "floorElevationMinM": 0.0,
+   "floorElevationMaxM": 0.0,
+   "clearHeightM": 15.0,
+   "heightSource": "official",
+   "heightUncertaintyM": 0.0,
+   "routable": true
+  },
+  {
+   "key": "9.1",
+   "placementSource": "procrustes",
+   "placementLabel": "eingemessen",
+   "supports": 4,
+   "residualM": 0.0,
+   "maxResidualM": 0.0,
+   "rotationDeg": 0.0,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 11140.0,
+   "officialAreaSqm": 13470,
+   "areaDeviationPct": -17.3,
+   "floorElevationRenderM": 0.0,
+   "floorElevationMinM": 0.0,
+   "floorElevationMaxM": 0.0,
+   "clearHeightM": 11.0,
+   "heightSource": "official",
+   "heightUncertaintyM": 0.0,
+   "routable": true
+  },
+  {
+   "key": "F2",
+   "placementSource": "geschaetzt",
+   "placementLabel": "geschaetzt",
+   "supports": 0,
+   "residualM": 26.99,
+   "maxResidualM": 26.99,
+   "rotationDeg": -0.1,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 5434.0,
+   "officialAreaSqm": null,
+   "areaDeviationPct": null,
+   "floorElevationRenderM": 0.0,
+   "floorElevationMinM": 0.0,
+   "floorElevationMaxM": 0.0,
+   "clearHeightM": 6.0,
+   "heightSource": "estimated",
+   "heightUncertaintyM": 3.0,
+   "routable": true
+  },
+  {
+   "key": "F8",
+   "placementSource": "geschaetzt",
+   "placementLabel": "geschaetzt",
+   "supports": 0,
+   "residualM": 26.99,
+   "maxResidualM": 26.99,
+   "rotationDeg": -0.16,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 12042.0,
+   "officialAreaSqm": null,
+   "areaDeviationPct": null,
+   "floorElevationRenderM": 0.0,
+   "floorElevationMinM": 0.0,
+   "floorElevationMaxM": 0.0,
+   "clearHeightM": 6.0,
+   "heightSource": "estimated",
+   "heightUncertaintyM": 3.0,
+   "routable": true
+  },
+  {
+   "key": "FB",
+   "placementSource": "geschaetzt",
+   "placementLabel": "geschaetzt",
+   "supports": 0,
+   "residualM": 26.99,
+   "maxResidualM": 26.99,
+   "rotationDeg": 0.27,
+   "outlineSource": "inhaltshuelle",
+   "extentAreaSqm": 6445.0,
+   "officialAreaSqm": null,
+   "areaDeviationPct": null,
+   "floorElevationRenderM": 0.0,
+   "floorElevationMinM": 0.0,
+   "floorElevationMaxM": 0.0,
+   "clearHeightM": 6.0,
+   "heightSource": "estimated",
+   "heightUncertaintyM": 3.0,
+   "routable": true
+  }
+ ],
+ "connectors": [
+  {
+   "id": "p:P14:1.2:4.1",
+   "kind": "portal",
+   "label": "Durchgang H1 H4 (1.2 ↔ 4.1)",
+   "connects": [
+    "1.2",
+    "4.1"
+   ],
+   "snapM": 329.9,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:P14:1.2:4.2",
+   "kind": "portal",
+   "label": "Durchgang H1 H4 (1.2 ↔ 4.2)",
+   "connects": [
+    "1.2",
+    "4.2"
+   ],
+   "snapM": 330.0,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:P15:1.2:5.1",
+   "kind": "portal",
+   "label": "Durchgang H1 H5 (1.2 ↔ 5.1)",
+   "connects": [
+    "1.2",
+    "5.1"
+   ],
+   "snapM": 372.4,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:P15:1.2:5.2",
+   "kind": "portal",
+   "label": "Durchgang H1 H5 (1.2 ↔ 5.2)",
+   "connects": [
+    "1.2",
+    "5.2"
+   ],
+   "snapM": 372.4,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:D16:1.2:6.1",
+   "kind": "portal",
+   "label": "Durchgang zwischen Halle 1 und 6 (1.2 ↔ 6.1)",
+   "connects": [
+    "1.2",
+    "6.1"
+   ],
+   "snapM": 51.1,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:D67:6.1:7.1",
+   "kind": "portal",
+   "label": "Durchgang halle 6 zu 7 (6.1 ↔ 7.1)",
+   "connects": [
+    "6.1",
+    "7.1"
+   ],
+   "snapM": 34.3,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:D78:7.1:8.1",
+   "kind": "portal",
+   "label": "Durchgang 7 zu 8 (7.1 ↔ 8.1)",
+   "connects": [
+    "7.1",
+    "8.1"
+   ],
+   "snapM": 34.2,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:P4:4.1:5.1",
+   "kind": "portal",
+   "label": "Passage 4-5 (4.1 ↔ 5.1)",
+   "connects": [
+    "4.1",
+    "5.1"
+   ],
+   "snapM": 37.5,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:P4:4.2:5.2",
+   "kind": "portal",
+   "label": "Passage 4-5 (4.2 ↔ 5.2)",
+   "connects": [
+    "4.2",
+    "5.2"
+   ],
+   "snapM": 37.5,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:PA:5.1:10.1",
+   "kind": "portal",
+   "label": "Passage 5-10 (5.1 ↔ 10.1)",
+   "connects": [
+    "5.1",
+    "10.1"
+   ],
+   "snapM": 50.3,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:PA:5.2:10.2",
+   "kind": "portal",
+   "label": "Passage 5-10 (5.2 ↔ 10.2)",
+   "connects": [
+    "5.2",
+    "10.2"
+   ],
+   "snapM": 50.2,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:D109:10.1:9.1",
+   "kind": "portal",
+   "label": "Durchgang Halle 10 zu 9 (10.1 ↔ 9.1)",
+   "connects": [
+    "10.1",
+    "9.1"
+   ],
+   "snapM": 58.9,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:D109:10.2:9.1",
+   "kind": "portal",
+   "label": "Durchgang Halle 10 zu 9 (10.2 ↔ 9.1)",
+   "connects": [
+    "10.2",
+    "9.1"
+   ],
+   "snapM": 58.9,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:D34:3.2:4.1",
+   "kind": "portal",
+   "label": "Durchgang Halle 3 zu 4 (3.2 ↔ 4.1)",
+   "connects": [
+    "3.2",
+    "4.1"
+   ],
+   "snapM": 84.9,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:D34:3.2:4.2",
+   "kind": "portal",
+   "label": "Durchgang Halle 3 zu 4 (3.2 ↔ 4.2)",
+   "connects": [
+    "3.2",
+    "4.2"
+   ],
+   "snapM": 84.9,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:P9:2.1:3.2",
+   "kind": "portal",
+   "label": "Passage 2-3 (2.1 ↔ 3.2)",
+   "connects": [
+    "2.1",
+    "3.2"
+   ],
+   "snapM": 6.8,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:P9:2.2:3.2",
+   "kind": "portal",
+   "label": "Passage 2-3 (2.2 ↔ 3.2)",
+   "connects": [
+    "2.2",
+    "3.2"
+   ],
+   "snapM": 16.8,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:P1:2.1:4.1",
+   "kind": "portal",
+   "label": "Passage 2-4 (2.1 ↔ 4.1)",
+   "connects": [
+    "2.1",
+    "4.1"
+   ],
+   "snapM": 75.6,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "p:P1:2.2:4.2",
+   "kind": "portal",
+   "label": "Passage 2-4 (2.2 ↔ 4.2)",
+   "connects": [
+    "2.2",
+    "4.2"
+   ],
+   "snapM": 69.7,
+   "uncertaintyM": 46.8
+  },
+  {
+   "id": "o:F2",
+   "kind": "outdoor",
+   "label": "Zugang Freiflaeche Halle 6 Nord",
+   "connects": [
+    "F2",
+    "6.1"
+   ],
+   "snapM": null,
+   "uncertaintyM": null
+  },
+  {
+   "id": "o:F8",
+   "kind": "outdoor",
+   "label": "Zugang Freiflaeche Halle 8 Nord",
+   "connects": [
+    "F8",
+    "8.1"
+   ],
+   "snapM": null,
+   "uncertaintyM": null
+  },
+  {
+   "id": "o:FB",
+   "kind": "outdoor",
+   "label": "Zugang Freiflaeche Halle 5 Nord",
+   "connects": [
+    "FB",
+    "5.1"
+   ],
+   "snapM": null,
+   "uncertaintyM": null
+  },
+  {
+   "id": "v:2.1:elevator",
+   "kind": "vertical",
+   "label": "Aufzug 2.1 ↔ 2.2",
+   "connects": [
+    "2.1",
+    "2.2"
+   ],
+   "snapM": null,
+   "uncertaintyM": null
+  },
+  {
+   "id": "v:2.1:escalator",
+   "kind": "vertical",
+   "label": "Rolltreppe 2.1 ↔ 2.2",
+   "connects": [
+    "2.1",
+    "2.2"
+   ],
+   "snapM": null,
+   "uncertaintyM": null
+  },
+  {
+   "id": "v:4.1:elevator",
+   "kind": "vertical",
+   "label": "Aufzug 4.1 ↔ 4.2",
+   "connects": [
+    "4.1",
+    "4.2"
+   ],
+   "snapM": null,
+   "uncertaintyM": null
+  },
+  {
+   "id": "v:4.1:escalator",
+   "kind": "vertical",
+   "label": "Rolltreppe 4.1 ↔ 4.2",
+   "connects": [
+    "4.1",
+    "4.2"
+   ],
+   "snapM": null,
+   "uncertaintyM": null
+  },
+  {
+   "id": "v:5.1:elevator",
+   "kind": "vertical",
+   "label": "Aufzug 5.1 ↔ 5.2",
+   "connects": [
+    "5.1",
+    "5.2"
+   ],
+   "snapM": null,
+   "uncertaintyM": null
+  },
+  {
+   "id": "v:5.1:escalator",
+   "kind": "vertical",
+   "label": "Rolltreppe 5.1 ↔ 5.2",
+   "connects": [
+    "5.1",
+    "5.2"
+   ],
+   "snapM": null,
+   "uncertaintyM": null
+  },
+  {
+   "id": "v:10.1:elevator",
+   "kind": "vertical",
+   "label": "Aufzug 10.1 ↔ 10.2",
+   "connects": [
+    "10.1",
+    "10.2"
+   ],
+   "snapM": null,
+   "uncertaintyM": null
+  },
+  {
+   "id": "v:10.1:escalator",
+   "kind": "vertical",
+   "label": "Rolltreppe 10.1 ↔ 10.2",
+   "connects": [
+    "10.1",
+    "10.2"
+   ],
+   "snapM": null,
+   "uncertaintyM": null
+  }
+ ]
+}

@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from beuteltier import accessibility, georef, hallplan, pdf_vector  # noqa: E402
+from beuteltier import accessibility, building, georef, hallplan, pdf_vector  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SITEMAP_PDF = ROOT / "data" / "raw" / "pdf" / "gamescom-2025-hallenplan.pdf"
@@ -34,15 +34,22 @@ ACCESS_PDF = ROOT / "data" / "raw" / "pdf" / "koelnmesse-barrierefrei.pdf"
 LAYOUT = ROOT / "data" / "raw" / "hall-layout.json"
 OUT = ROOT / "data" / "build" / "site.json"
 
-# Hoehe je Ebene in Metern. Die Hallen der Koelnmesse sind zweigeschossig mit
-# rund zehn Metern lichter Hoehe je Ebene; fuer die Darstellung reicht das.
-LEVEL_HEIGHT_M = 11.0
-HALL_WALL_HEIGHT_M = 9.5
+# Die Hoehen kommen jetzt aus data/curated/hall-metadata.json. Diese Festwerte
+# bleiben nur als Rueckfallebene stehen, falls die Datei fehlt -- sie duerfen
+# die Geometrie nicht mehr bestimmen.
+LEGACY_LEVEL_HEIGHT_M = 11.0
+LEGACY_WALL_HEIGHT_M = 9.5
 
 # Welche Ebene ihre Lage von welcher erbt. Halle 10.2 liegt baulich unmittelbar
 # ueber 10.1 und teilt deren Grundriss.
 STACKED_ON = {"10.2": "10.1", "2.2": "2.1", "4.2": "4.1", "5.2": "5.1",
               "3.2": "3.1", "1.2": "1.1", "11.2": "11.1"}
+
+# Welche Ebene baulich unter welcher liegt -- fuer das Hoehenmodell. Halle 1.2
+# ist eingeschossig und steht trotz der Ziffer 2 im Schluessel auf dem Boden;
+# sie taucht hier deshalb nicht auf.
+STACKED_ON_LOWER = {"2.2": "2.1", "3.2": "3.1", "4.2": "4.1", "5.2": "5.1",
+                    "10.2": "10.1", "11.2": "11.1"}
 
 # "Freiflaeche Halle 5 Nord" -> Bezugshalle 5, Seite Nord.
 OUTDOOR_SIDE = re.compile(r"Halle\s+(\d+)\s+(Nord|Sued|Ost|West)", re.IGNORECASE)
@@ -60,6 +67,8 @@ def main() -> int:
         print("data/raw/hall-layout.json fehlt -- erst tools/fetch_hall_layout.py laufen lassen",
               file=sys.stderr)
         return 1
+
+    buildings = building.Buildings()
 
     levels = hallplan.load_levels()
     if not levels:
@@ -178,7 +187,15 @@ def main() -> int:
         if transform is None:
             continue
 
-        base_y = 0.0 if level.level <= 1 else LEVEL_HEIGHT_M * (level.level - 1)
+        outdoor = level.hall in hallplan.OUTDOOR_NAMES
+
+        # Hoehenmodell: der Boden einer oberen Ebene ergibt sich aus der lichten
+        # Hoehe darunter plus Geschossdecke, nicht aus einer Pauschale. Halle
+        # 3.2 stand mit dem alten Festwert von 11 m mehr als vier Meter zu hoch.
+        lower_key = STACKED_ON_LOWER.get(key)
+        height = buildings.height_model(key, level.level, lower_key)
+        base_y = height.floor_render_m
+
         corners = [
             (level.origin[0], level.origin[1]),
             (level.origin[0] + level.width_m, level.origin[1]),
@@ -186,17 +203,44 @@ def main() -> int:
             (level.origin[0], level.origin[1] + level.height_m),
         ]
 
+        # Die Umgrenzung ist der belegte Bereich, nicht der Gebaeudeumriss. Die
+        # Bounding-Box der Schnittstelle greift bei L-foermigen Hallen weit
+        # darueber hinaus; die Huelle der gezeichneten Flaechen trifft besser.
+        content = [point for stand in level.stands for point in stand.polygon]
+        content += [point for block in level.blocks for point in block]
+        outline, outline_source = building.hall_outline(content, corners)
+        footprint = [transform.apply(x, y) for x, y in outline]
+
+        extent_area = building.polygon_area(footprint)
+        official_area = buildings.official_area(key)
+        area_check = {
+            "extentAreaSqm": round(extent_area, 0),
+            "officialAreaSqm": official_area,
+            "deviationPct": (None if not official_area
+                             else round(100 * (extent_area - official_area) / official_area, 1)),
+            "outlineSource": outline_source,
+            "note": ("Belegter Bereich, nicht der Gebaeudeumriss -- wo gamescom nur "
+                     "einen Teil der Halle nutzt, faellt er kleiner aus."
+                     if official_area else "Keine offizielle Flaeche hinterlegt."),
+        }
+
         halls.append({
             "key": key,
             "hall": level.hall,
             "level": level.level,
-            "outdoor": level.hall in hallplan.OUTDOOR_NAMES,
+            "outdoor": outdoor,
             "name": hallplan.OUTDOOR_NAMES.get(level.hall, f"Halle {key}"),
             "widthM": round(level.width_m, 2),
             "depthM": round(level.height_m, 2),
-            "baseY": base_y,
-            "wallHeightM": 0.0 if level.hall in hallplan.OUTDOOR_NAMES else HALL_WALL_HEIGHT_M,
-            "footprint": _round_points(transform.apply(x, y) for x, y in corners),
+            "baseY": round(base_y, 2),
+            # Die sichtbare Wandhoehe ist die lichte Hoehe der Ebene, gedeckelt
+            # auf etwas Ansehnliches -- eine 15 m hohe Halle 8 wuerde die
+            # Uebersicht sonst erschlagen.
+            "wallHeightM": 0.0 if outdoor else round(min(height.clear_height_m, 12.0), 2),
+            "height": height.as_dict(),
+            "area": area_check,
+            "routable": buildings.is_routable(key),
+            "footprint": _round_points(footprint),
             "blocks": [_round_points(transform.apply(x, y) for x, y in block)
                        for block in level.blocks],
             "placement": {
@@ -264,8 +308,8 @@ def main() -> int:
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps({
-        "schema": "beuteltier.site.v1",
-        "levelHeightM": LEVEL_HEIGHT_M,
+        "schema": "beuteltier.site.v2",
+        "slabAssumptionM": [buildings.slab_min, buildings.slab_max],
         "referenceFit": {"supports": supports,
                          "residualM": round(fit_error, 1),
                          "crossValidatedM": round(cross_error, 1)},

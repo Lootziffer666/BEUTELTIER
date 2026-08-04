@@ -13,6 +13,7 @@ andere zusammengetragen haben. Diese Seite hält fest, wem was gehört.
 | **Koelnmesse / gamescom — Hallenplan-Schnittstelle**<br>`backends.koelnmesse.io`, verlinkt von `exhibitors.gamescom.global` | Standflächen als Polygone in Metern, Hallenmaße, Strukturblöcke, Durchgangstabelle | Die gesamte Karte. Als Schnappschuss unter `data/raw/hallplan/` eingecheckt und offline gelesen — die App fragt die Schnittstelle im Betrieb nie an. |
 | **gamescom — Hallenplan 2025** (PDF) | Lage der Hallen zueinander auf dem Gelände | Georeferenz. Über die Standcodes werden die Hallen eingemessen. |
 | **Koelnmesse — Barrierefreier Messeaufenthalt** (PDF) | Übersicht beider Ebenen, Aufzüge, behindertengerechte WCs, Sanitätsstationen, Eingänge | Lage der Hallen ohne 2025er Belegung (1, 3, 11). |
+| **Koelnmesse — Hallendaten** | Fläche, lichte Höhe und Bodenbelastung je Halle | Validierung der Umrisse und Grundlage des Höhenmodells. Gepflegt in `data/curated/hall-metadata.json`. |
 | **Koelnmesse — Technische Richtlinien** | Aufzugstabelle, Tor- und Boulevard-Übersicht | Hintergrund, bislang nicht in der Karte. |
 | **pc games / GamesWirtschaft — historische Hallenpläne** | Hallen-Innenleben früherer Jahre | Referenzmaterial für Eingänge, Rolltreppen und Treppen. Nicht in den Daten. |
 

@@ -95,10 +95,19 @@ class TestSite:
                 assert min(xs) - 12 <= x <= max(xs) + 12, stand["id"]
                 assert min(ys) - 12 <= y <= max(ys) + 12, stand["id"]
 
-    def test_ebene_zwei_liegt_ueber_ebene_eins(self, site):
-        for hall in site["halls"]:
-            if hall["level"] > 1:
-                assert hall["baseY"] > 0, hall["key"]
+    def test_gestapelte_ebenen_liegen_ueber_ihrer_unteren(self, site):
+        """Nur wer wirklich auf einer Halle steht, liegt hoeher.
+
+        Halle 1.2 traegt die Ziffer 2 fuer die *Gelaendeebene*, ist aber
+        eingeschossig und steht auf dem Boden. Die frueher gepruefte Regel
+        "Ebene 2 liegt oben" war deshalb falsch.
+        """
+        halls = {h["key"]: h for h in site["halls"]}
+        for upper in ("2.2", "3.2", "4.2", "5.2", "10.2"):
+            if upper in halls:
+                assert halls[upper]["baseY"] > 0, upper
+        if "1.2" in halls:
+            assert halls["1.2"]["baseY"] == 0.0
 
 
 class TestRegistry:
@@ -159,3 +168,109 @@ class TestGraphHelpers:
         graph = Graph()
         graph.add_node(Node(id="a", x=0, y=0, z=0, kind="aisle"))
         assert graph.connect("a", "fehlt", "aisle") is None
+
+
+@pytest.fixture(scope="module")
+def buildings():
+    from beuteltier.building import Buildings
+    return Buildings()
+
+
+class TestBuildingMetadata:
+    """Offizielle Gebaeudedaten und was daraus abgeleitet wird."""
+
+    def test_findet_eingeschossige_hallen_ohne_ebenenziffer(self, buildings):
+        # Die Quelle fuehrt "6", der Hallenplan "6.1" -- dasselbe Bauwerk.
+        assert buildings.official_area("6.1") == 20846
+        assert buildings.clear_height("8.1") == (15.0, True)
+
+    def test_haelt_11_3_aus_dem_routing(self, buildings):
+        assert buildings.is_routable("11.3") is False
+        assert buildings.is_routable("10.2") is True
+
+    def test_erdgeschoss_liegt_auf_null(self, buildings):
+        model = buildings.height_model("10.1", 1, None)
+        assert model.floor_render_m == 0.0
+        assert model.source == "official"
+
+    def test_obergeschoss_wird_aus_der_lichten_hoehe_gerechnet(self, buildings):
+        # 10.1 hat 5,70 m lichte Hoehe, Decke 1,5-2,0 m -> Boden 7,20-7,70 m.
+        model = buildings.height_model("10.2", 2, "10.1")
+        assert model.floor_min_m == pytest.approx(7.20)
+        assert model.floor_max_m == pytest.approx(7.70)
+        assert model.floor_render_m == pytest.approx(7.45)
+        # Gerechnet, nie amtlich -- die Deckenstaerke bleibt Annahme.
+        assert model.source == "derived"
+        assert model.uncertainty_m == pytest.approx(0.25)
+
+    def test_keine_obere_ebene_mehr_auf_pauschalen_elf_metern(self, buildings, site):
+        for hall in site["halls"]:
+            if hall["level"] > 1 and hall["key"] in {"2.2", "3.2", "4.2", "5.2", "10.2"}:
+                assert hall["baseY"] != 11.0, hall["key"]
+                assert hall["height"]["heightSource"] == "derived"
+
+    def test_lichte_hoehe_ist_nie_die_aussenhoehe(self, buildings):
+        model = buildings.height_model("8.1", 1, None)
+        assert model.envelope_min_m is not None
+        assert model.envelope_min_m > model.clear_height_m
+        # Halle 8: 15 m licht, rund 3 m Dachzone -> etwa 18 m Huelle.
+        assert 17.0 <= model.envelope_min_m <= 19.0
+
+    def test_hoehe_von_11_3_wird_nicht_geraten(self):
+        import json as _json
+        from beuteltier.building import METADATA
+        raw = _json.loads(METADATA.read_text(encoding="utf-8"))
+        entry = raw["halls"]["11.3"]
+        assert "floorElevationRenderM" not in entry
+        assert entry["routable"] is False
+
+
+class TestOutlines:
+    """Der Hallenumriss ist der belegte Bereich, nicht das Gebaeude."""
+
+    def test_flaeche_stimmt_fuer_beliebige_polygone(self):
+        from beuteltier.building import polygon_area
+        # L-Form: 3 breit, 2 hoch, plus ein 1x1-Sporn oben links -> 7 m².
+        shape = [(0, 0), (3, 0), (3, 2), (1, 2), (1, 3), (0, 3)]
+        assert polygon_area(shape) == pytest.approx(7.0)
+        # Umlaufrichtung darf das Ergebnis nicht aendern.
+        assert polygon_area(list(reversed(shape))) == pytest.approx(7.0)
+
+    def test_huelle_umschliesst_alle_punkte(self):
+        from beuteltier.building import convex_hull, polygon_area
+        points = [(0, 0), (4, 0), (4, 4), (0, 4), (2, 2), (1, 3)]
+        hull = convex_hull(points)
+        assert polygon_area(hull) == pytest.approx(16.0)
+        # Der innere Punkt gehoert nicht zur Huelle.
+        assert (2, 2) not in hull
+
+    def test_huelle_schlaegt_boundingbox_bei_L_form(self):
+        from beuteltier.building import hall_outline, polygon_area
+        # Inhalte fuellen nur ein L; die Box greift darueber hinaus.
+        content = [(0, 0), (10, 0), (10, 3), (3, 3), (3, 10), (0, 10)]
+        box = [(0, 0), (10, 0), (10, 10), (0, 10)]
+        outline, source = hall_outline(content, box)
+        assert source == "inhaltshuelle"
+        assert polygon_area(outline) < polygon_area(box)
+
+    def test_faellt_auf_die_box_zurueck_wenn_zu_wenig_inhalt(self):
+        from beuteltier.building import hall_outline
+        box = [(0, 0), (100, 0), (100, 100), (0, 100)]
+        outline, source = hall_outline([(1, 1), (2, 1), (2, 2)], box)
+        assert source == "boundingbox"
+        assert outline == box
+
+    def test_umrisse_bleiben_nahe_an_den_offiziellen_flaechen(self, site):
+        # Vor der Umstellung lag die mittlere Abweichung bei 18,5 Prozent.
+        deviations = [abs(h["area"]["deviationPct"]) for h in site["halls"]
+                      if h["area"]["deviationPct"] is not None]
+        assert sum(deviations) / len(deviations) < 12.0
+
+    def test_gut_belegte_hallen_treffen_die_offizielle_flaeche(self, site):
+        halls = {h["key"]: h for h in site["halls"]}
+        for key in ("10.1", "2.1", "2.2", "5.1", "3.2"):
+            assert abs(halls[key]["area"]["deviationPct"]) < 5.0, key
+
+    def test_jede_halle_sagt_woher_ihr_umriss_stammt(self, site):
+        for hall in site["halls"]:
+            assert hall["area"]["outlineSource"] in {"inhaltshuelle", "boundingbox"}
