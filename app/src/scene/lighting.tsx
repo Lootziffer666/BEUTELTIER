@@ -53,32 +53,76 @@ const SKY_FRAGMENT = /* glsl */ `
 `;
 
 /**
+ * Die Umgebung *in* einer Halle.
+ *
+ * Drinnen den Himmel zu spiegeln ist nicht bloß ungenau, es ist verkehrt: der
+ * Boden einer Messehalle wirft die Leuchtenreihen zurück, nicht das
+ * Firmament. Deshalb eine zweite Kugel — oben ein warmes helles Band aus
+ * Deckenlicht über dunklem Dach, in der Mitte die matten Wände, unten der
+ * aufgehellte Boden. Nach dem PMREM-Filter ist genau das die Spiegelung, die
+ * auf den Referenzfotos den ganzen Raum trägt.
+ */
+const HALL_FRAGMENT = /* glsl */ `
+  varying vec3 vDirection;
+  uniform vec3 lamp;
+  uniform vec3 deck;
+  uniform vec3 wall;
+  uniform vec3 floorTone;
+
+  void main() {
+    float height = vDirection.y;
+
+    // Decke: dunkles Trapezblech, in das die Leuchtbaender eingelassen sind.
+    // Der Streifenanteil bestimmt, wie hell der Boden zurueckwirft.
+    float bands = smoothstep(0.35, 0.95, abs(sin(vDirection.x * 9.0)));
+    vec3 ceiling = mix(deck, lamp, bands);
+
+    vec3 colour = wall;
+    colour = mix(colour, ceiling, smoothstep(0.18, 0.62, height));
+    colour = mix(colour, floorTone, smoothstep(-0.12, -0.55, height));
+
+    gl_FragColor = vec4(colour, 1.0);
+  }
+`;
+
+/**
  * Erzeugt eine Umgebungskarte aus einem Farbverlauf.
  *
  * `PMREMGenerator.fromScene` filtert die Kugel für alle Rauheitsstufen vor --
  * damit reagiert glatter Beton anders als Glas, ohne dass dafür ein Bild
  * ausgeliefert werden muss.
  */
-export function useProceduralSky(intensity = 1): void {
+export function useProceduralSky(intensity = 1, hall = false): void {
   const { gl, scene } = useThree();
 
   const environment = useMemo(() => {
-    const sky = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 32, 24),
-      new THREE.ShaderMaterial({
-        side: THREE.BackSide,
-        depthWrite: false,
-        vertexShader: SKY_VERTEX,
-        fragmentShader: SKY_FRAGMENT,
-        uniforms: {
-          zenith: { value: new THREE.Color('#3f6fa8').multiplyScalar(intensity) },
-          horizon: { value: new THREE.Color('#c3d3e2').multiplyScalar(intensity) },
-          ground: { value: new THREE.Color('#39373a').multiplyScalar(intensity) },
-          sun: { value: SUN },
-        },
-      }),
-    );
+    const material = hall
+      ? new THREE.ShaderMaterial({
+          side: THREE.BackSide,
+          depthWrite: false,
+          vertexShader: SKY_VERTEX,
+          fragmentShader: HALL_FRAGMENT,
+          uniforms: {
+            lamp: { value: new THREE.Color('#fff4de').multiplyScalar(3.4 * intensity) },
+            deck: { value: new THREE.Color('#2b2e34').multiplyScalar(intensity) },
+            wall: { value: new THREE.Color('#8d8b84').multiplyScalar(intensity) },
+            floorTone: { value: new THREE.Color('#5c5e63').multiplyScalar(intensity) },
+          },
+        })
+      : new THREE.ShaderMaterial({
+          side: THREE.BackSide,
+          depthWrite: false,
+          vertexShader: SKY_VERTEX,
+          fragmentShader: SKY_FRAGMENT,
+          uniforms: {
+            zenith: { value: new THREE.Color('#3f6fa8').multiplyScalar(intensity) },
+            horizon: { value: new THREE.Color('#c3d3e2').multiplyScalar(intensity) },
+            ground: { value: new THREE.Color('#39373a').multiplyScalar(intensity) },
+            sun: { value: SUN },
+          },
+        });
 
+    const sky = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 24), material);
     const source = new THREE.Scene();
     source.add(sky);
 
@@ -87,9 +131,9 @@ export function useProceduralSky(intensity = 1): void {
     const target = generator.fromScene(source, 0.02);
     generator.dispose();
     sky.geometry.dispose();
-    (sky.material as THREE.Material).dispose();
+    material.dispose();
     return target.texture;
-  }, [gl, intensity]);
+  }, [gl, intensity, hall]);
 
   useEffect(() => {
     scene.environment = environment;
@@ -108,19 +152,29 @@ export function useProceduralSky(intensity = 1): void {
  * brauchbare Auflösung mehr.
  */
 export function Beleuchtung({ extent, interior }: { extent: number; interior: boolean }) {
-  useProceduralSky(interior ? 0.35 : 1);
+  useProceduralSky(1, interior);
 
   const span = extent * 0.62;
+
+  if (interior) {
+    // Drinnen keine Sonne: sie stünde durch die Wand und legte einen
+    // Schlagschatten quer durch die Halle, den es dort nicht gibt. Das Licht
+    // kommt von oben aus den Leuchtenreihen -- der Rest aus der Umgebung.
+    return (
+      <>
+        <hemisphereLight args={['#fff3dd', '#3d3f45', 1.15]} position={[0, extent, 0]} />
+        <ambientLight intensity={0.16} color="#cfd7e2" />
+      </>
+    );
+  }
+
   return (
     <>
-      <hemisphereLight
-        args={['#cfe0f2', '#4a4740', interior ? 0.35 : 0.9]}
-        position={[0, extent, 0]}
-      />
+      <hemisphereLight args={['#cfe0f2', '#4a4740', 0.9]} position={[0, extent, 0]} />
       <directionalLight
-        castShadow={!interior}
+        castShadow
         position={[SUN.x * extent, SUN.y * extent, SUN.z * extent]}
-        intensity={interior ? 0.6 : 2.6}
+        intensity={2.6}
         color="#fff4e2"
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0006}
@@ -136,10 +190,9 @@ export function Beleuchtung({ extent, interior }: { extent: number; interior: bo
           schwarz, und schwarze Flächen lesen sich als Loch. */}
       <directionalLight
         position={[-extent * 0.5, extent * 0.35, -extent * 0.45]}
-        intensity={interior ? 0.25 : 0.5}
+        intensity={0.5}
         color="#b9cde2"
       />
-      {interior && <ambientLight intensity={0.45} color="#e8eef6" />}
     </>
   );
 }

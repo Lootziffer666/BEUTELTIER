@@ -27,6 +27,7 @@ import {
   facadeSurface,
   floorSurface,
   orthoTexture,
+  standSurface,
   type Surface,
 } from './materials';
 import { Beleuchtung } from './lighting';
@@ -297,6 +298,7 @@ function Stands({
   upperOpacity,
   selectedStandId,
   routeStandIds,
+  interior,
   onSelectStand,
 }: {
   data: Dataset;
@@ -304,12 +306,26 @@ function Stands({
   upperOpacity: number;
   selectedStandId: string | null;
   routeStandIds: string[];
+  /** Steht der Betrachter mitten drin? Dann gelten andere Regeln. */
+  interior: boolean;
   onSelectStand: (standId: string | null) => void;
 }) {
+  const surface = useMemo(() => standSurface(), []);
+  useEffect(() => () => disposeSurface(surface), [surface]);
+
   const merged = useMemo(() => {
+    // Aus der Vogelperspektive ist eine um ±25 m unsichere Freifläche eine
+    // nützliche Angabe. Auf Augenhöhe ist sie es nicht: dort steht sie mitten
+    // in einer anderen Halle und verdeckt den halben Blick. Was nicht genau
+    // genug verortet ist, um daneben zu stehen, wird hier nicht gezeichnet.
+    const shown = data.site.stands.filter((stand) => {
+      if (!interior) return true;
+      const hall = data.hallsByKey.get(stand.hallKey);
+      return !hall || hall.placement.source !== 'geschaetzt';
+    });
     const build = (level: 'lower' | 'upper') =>
       mergePolygons(
-        data.site.stands
+        shown
           .filter((stand) => (level === 'lower' ? stand.level <= 1 : stand.level > 1))
           .map((stand) => ({
             id: stand.id,
@@ -320,7 +336,7 @@ function Stands({
         centre,
       );
     return { lower: build('lower'), upper: build('upper') };
-  }, [data, centre]);
+  }, [data, centre, interior]);
 
   useEffect(
     () => () => {
@@ -382,7 +398,15 @@ function Stands({
           pick(merged.lower)(event.faceIndex);
         }}
       >
-        <meshStandardMaterial vertexColors roughness={0.55} metalness={0.05} />
+        <meshStandardMaterial
+          vertexColors
+          map={surface.map}
+          normalMap={surface.normalMap}
+          roughnessMap={surface.roughnessMap}
+          roughness={0.82}
+          metalness={0.04}
+          envMapIntensity={0.7}
+        />
       </mesh>
       {upperOpacity > 0.02 && (
         <mesh
@@ -394,8 +418,13 @@ function Stands({
         >
           <meshStandardMaterial
             vertexColors
-            roughness={0.55}
-            transparent
+            map={surface.map}
+            normalMap={surface.normalMap}
+            roughnessMap={surface.roughnessMap}
+            roughness={0.82}
+            metalness={0.04}
+            envMapIntensity={0.7}
+            transparent={upperOpacity < 0.99}
             opacity={upperOpacity}
           />
         </mesh>
@@ -707,18 +736,27 @@ export function SiteScene(props: SceneProps) {
           interior={preset === 'ego'}
         />
       </Suspense>
-      <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
+      {/* Hallenkörper und Schilder sind Hilfsmittel der Übersicht. Auf
+          Augenhöhe stehen sie als farbiger Schleier vor der Nase und legen
+          sich über genau das, was man sehen will -- dort sind die Wände des
+          Gebäudemodells die Halle, nicht ein eingefärbter Block darüber. */}
+      {preset !== 'ego' && (
+        <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
+      )}
       <Stands
         data={data}
         centre={centre}
         upperOpacity={upperOpacity}
         selectedStandId={props.selectedStandId}
         routeStandIds={props.routeStandIds}
+        interior={preset === 'ego'}
         onSelectStand={props.onSelectStand}
       />
       <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
       <RouteRibbon data={data} route={route} centre={centre} />
-      <HallLabels data={data} centre={centre} upperOpacity={upperOpacity} />
+      {preset !== 'ego' && (
+        <HallLabels data={data} centre={centre} upperOpacity={upperOpacity} />
+      )}
       {preset === 'ego' ? (
         <WalkControls
           data={data}

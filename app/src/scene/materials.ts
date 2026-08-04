@@ -336,6 +336,60 @@ export function ceilingSurface(): Surface {
   };
 }
 
+/**
+ * Standflächen: Teppich, Messebauplatte, Stoffbanner.
+ *
+ * Die Farbe eines Standes trägt Information — belegt, gewählt, auf der Route —
+ * und kommt deshalb aus den Vertexfarben. Diese Karte darf sie nicht
+ * überschreiben, sondern nur brechen: sie ist fast weiß und liefert
+ * ausschließlich Struktur. Multipliziert mit der Vertexfarbe bleibt die
+ * Aussage erhalten, aber die Fläche hört auf, ein Farbklecks zu sein.
+ */
+export function standSurface(): Surface {
+  const [colour, ctx] = layer('#f2f2f2');
+  const [height, hctx] = layer('#808080');
+  const [rough, rctx] = layer('#d2d2d2');
+
+  // Gewebe: zwei versetzte Rasterrichtungen, wie bei Messeteppich.
+  const weave = 6;
+  for (let y = 0; y < SIZE; y += weave) {
+    for (let x = 0; x < SIZE; x += weave) {
+      const shade = 226 + Math.floor(Math.random() * 26);
+      ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
+      ctx.fillRect(x, y, weave - 1, weave - 1);
+      const bump = 96 + Math.floor(Math.random() * 96);
+      hctx.fillStyle = `rgb(${bump}, ${bump}, ${bump})`;
+      hctx.fillRect(x, y, weave - 1, weave - 1);
+    }
+  }
+
+  // Plattenstöße des Systembaus alle zweieinhalb Kacheln: die einzige harte
+  // Kante auf einem Stand, und die, an der man den Maßstab abliest.
+  const panel = SIZE / 4;
+  ctx.strokeStyle = 'rgba(150, 150, 152, 0.55)';
+  hctx.strokeStyle = '#303030';
+  rctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+  for (const context of [ctx, hctx, rctx]) {
+    context.lineWidth = 3;
+    for (let step = 0; step <= SIZE; step += panel) {
+      context.beginPath();
+      context.moveTo(step, 0);
+      context.lineTo(step, SIZE);
+      context.moveTo(0, step);
+      context.lineTo(SIZE, step);
+      context.stroke();
+    }
+  }
+
+  speckle(ctx, 0.02);
+
+  return {
+    map: texture(colour, [1, 1], true),
+    normalMap: texture(toNormalMap(height, 0.9), [1, 1]),
+    roughnessMap: texture(rough, [1, 1]),
+  };
+}
+
 /** Lädt das entzerrte Luftbild. */
 export function orthoTexture(url: string): THREE.Texture {
   const map = new THREE.TextureLoader().load(url);

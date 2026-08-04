@@ -17,11 +17,22 @@ import * as THREE from 'three';
 import type { Dataset } from '../data/load';
 
 /** Abstand der Leuchtenreihen quer zur Halle. */
-const ROW_SPACING_M = 14;
+const ROW_SPACING_M = 11;
 /** Wie weit unter der Decke die Bänder hängen. */
-const DROP_M = 0.8;
-const STRIP_WIDTH_M = 0.34;
-const STRIP_THICKNESS_M = 0.14;
+const DROP_M = 0.55;
+const STRIP_WIDTH_M = 0.28;
+const STRIP_THICKNESS_M = 0.12;
+/**
+ * Eine Reihe ist keine durchgehende Stange.
+ *
+ * Ein einzelner 160 m langer Balken war der Grund, warum die Leuchten im
+ * Vordergrund wie weiße Bretter über der Kamera lagen: kein Ende, keine Lücke,
+ * kein Anhaltspunkt für die Entfernung. Echte Bänder bestehen aus Leuchten von
+ * gut fünf Metern mit sichtbarem Spalt dazwischen — und genau diese Folge aus
+ * Hell und Dunkel macht die Länge der Halle lesbar.
+ */
+const SEGMENT_M = 5.6;
+const GAP_M = 1.1;
 
 export function Deckenleuchten({
   data,
@@ -56,16 +67,28 @@ export function Deckenleuchten({
       const rows = Math.max(2, Math.floor((alongX ? depth : width) / ROW_SPACING_M));
       const length = (alongX ? width : depth) * 0.86;
 
+      const pitch = SEGMENT_M + GAP_M;
+      const segments = Math.max(1, Math.floor(length / pitch));
+      const run = segments * pitch - GAP_M;
+
       for (let row = 1; row <= rows; row += 1) {
         const t = row / (rows + 1);
         const cx = alongX ? (minX + maxX) / 2 : minX + width * t;
         const cy = alongX ? minY + depth * t : (minY + maxY) / 2;
 
-        dummy.position.set(cx - centre[0], ceiling, -(cy - centre[1]));
-        dummy.rotation.set(0, alongX ? 0 : Math.PI / 2, 0);
-        dummy.scale.set(length, STRIP_THICKNESS_M, STRIP_WIDTH_M);
-        dummy.updateMatrix();
-        out.push({ matrix: dummy.matrix.clone() });
+        for (let segment = 0; segment < segments; segment += 1) {
+          // Versatz entlang der Reihe, gemessen von ihrer Mitte.
+          const offset = -run / 2 + SEGMENT_M / 2 + segment * pitch;
+          dummy.position.set(
+            cx - centre[0] + (alongX ? offset : 0),
+            ceiling,
+            -(cy - centre[1]) - (alongX ? 0 : offset),
+          );
+          dummy.rotation.set(0, alongX ? 0 : Math.PI / 2, 0);
+          dummy.scale.set(SEGMENT_M, STRIP_THICKNESS_M, STRIP_WIDTH_M);
+          dummy.updateMatrix();
+          out.push({ matrix: dummy.matrix.clone() });
+        }
       }
     }
     return out;
@@ -92,10 +115,10 @@ export function Deckenleuchten({
           sie strahlt selbst. Mit Tone Mapping bleibt sie hell, ohne den Rest
           des Bildes auszubrennen. */}
       <meshStandardMaterial
-        color="#ffffff"
-        emissive="#fff6e2"
-        emissiveIntensity={1.5}
-        roughness={0.4}
+        color="#f6f3ec"
+        emissive="#fff3d8"
+        emissiveIntensity={1.9}
+        roughness={0.35}
         toneMapped
       />
     </instancedMesh>
