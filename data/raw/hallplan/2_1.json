@@ -1,0 +1,4112 @@
+{
+ "bloecke": [
+  {
+   "mb_pk": "24089401",
+   "pl": [
+    [
+     44.5,
+     4
+    ],
+    [
+     56.5,
+     4
+    ],
+    [
+     56.5,
+     31
+    ],
+    [
+     44.5,
+     31
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089402",
+   "pl": [
+    [
+     26,
+     31
+    ],
+    [
+     40.5,
+     31
+    ],
+    [
+     40.5,
+     4
+    ],
+    [
+     26,
+     4
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089403",
+   "pl": [
+    [
+     77.43,
+     59.5
+    ],
+    [
+     77.43,
+     71.5
+    ],
+    [
+     107.43,
+     71.5
+    ],
+    [
+     107.43,
+     59.5
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089404",
+   "pl": [
+    [
+     5.5,
+     55.5
+    ],
+    [
+     22,
+     55.5
+    ],
+    [
+     22,
+     35
+    ],
+    [
+     5.5,
+     35
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089405",
+   "pl": [
+    [
+     113.5,
+     50.5
+    ],
+    [
+     119.5,
+     50.5
+    ],
+    [
+     119.5,
+     62.5
+    ],
+    [
+     113.5,
+     62.5
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089406",
+   "pl": [
+    [
+     26,
+     35
+    ],
+    [
+     40.5,
+     35
+    ],
+    [
+     40.5,
+     55.5
+    ],
+    [
+     26,
+     55.5
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089407",
+   "pl": [
+    [
+     70.5,
+     59.5
+    ],
+    [
+     74.5,
+     59.5
+    ],
+    [
+     74.5,
+     62
+    ],
+    [
+     70.5,
+     62
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089408",
+   "pl": [
+    [
+     113,
+     -0.5
+    ],
+    [
+     119.5,
+     -0.5
+    ],
+    [
+     119.5,
+     29
+    ],
+    [
+     113,
+     29
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089409",
+   "pl": [
+    [
+     44.5,
+     35
+    ],
+    [
+     56.5,
+     35
+    ],
+    [
+     56.5,
+     55.5
+    ],
+    [
+     44.5,
+     55.5
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089410",
+   "pl": [
+    [
+     86,
+     35
+    ],
+    [
+     107.5,
+     35
+    ],
+    [
+     107.5,
+     55.5
+    ],
+    [
+     86,
+     55.5
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089411",
+   "pl": [
+    [
+     90.5,
+     0
+    ],
+    [
+     106,
+     0
+    ],
+    [
+     106,
+     -11.5
+    ],
+    [
+     90.5,
+     -11.5
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089412",
+   "pl": [
+    [
+     112,
+     -11.5
+    ],
+    [
+     119.5,
+     -11.5
+    ],
+    [
+     119.5,
+     -4.5
+    ],
+    [
+     112,
+     -4.5
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089413",
+   "pl": [
+    [
+     45,
+     0
+    ],
+    [
+     63,
+     0
+    ],
+    [
+     63,
+     -11.5
+    ],
+    [
+     45,
+     -11.5
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089414",
+   "pl": [
+    [
+     60.5,
+     31
+    ],
+    [
+     108.5,
+     31
+    ],
+    [
+     108.5,
+     4
+    ],
+    [
+     60.5,
+     4
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089415",
+   "pl": [
+    [
+     60.5,
+     35
+    ],
+    [
+     82,
+     35
+    ],
+    [
+     82,
+     55.5
+    ],
+    [
+     60.5,
+     55.5
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089416",
+   "pl": [
+    [
+     5.5,
+     4
+    ],
+    [
+     22,
+     4
+    ],
+    [
+     22,
+     31
+    ],
+    [
+     5.5,
+     31
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089417",
+   "pl": [
+    [
+     1.5,
+     16.5
+    ],
+    [
+     -5.5,
+     16.5
+    ],
+    [
+     -5.5,
+     -6
+    ],
+    [
+     15.5,
+     -6
+    ],
+    [
+     15.5,
+     0
+    ],
+    [
+     1.5,
+     0
+    ]
+   ]
+  },
+  {
+   "mb_pk": "24089418",
+   "pl": [
+    [
+     1.5,
+     59.5
+    ],
+    [
+     16.5,
+     59.5
+    ],
+    [
+     16.5,
+     66
+    ],
+    [
+     -5.5,
+     66
+    ],
+    [
+     -5.5,
+     43.5
+    ],
+    [
+     1.5,
+     43.5
+    ]
+   ]
+  }
+ ],
+ "etage": 1,
+ "events": "1",
+ "halle": "2",
+ "minmax": {
+  "dh": 6,
+  "dw": 0,
+  "h": 95.027,
+  "maxx": 125.357,
+  "maxy": 83.527,
+  "minx": -5.5,
+  "miny": -11.5,
+  "rotation": 0,
+  "scalex": -0.87,
+  "scaley": -0.92,
+  "w": 130.857
+ },
+ "minmaxFound": "BLOECKE",
+ "staende": [
+  {
+   "area": 837,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A010g C011g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089414",
+   "pl": [
+    [
+     108.5,
+     31
+    ],
+    [
+     77.5,
+     31
+    ],
+    [
+     77.5,
+     4
+    ],
+    [
+     108.5,
+     4
+    ]
+   ],
+   "standnr": "A010g",
+   "standnr2": "A-010g C-011g"
+  },
+  {
+   "area": 837,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A010 C011",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042081714",
+     "LOGO_DE": "",
+     "TITEL": "1 SP Agency GmbH   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0040173929",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0040173929/de/images/logo.gif",
+     "TITEL": "AMS Neue Medien GmbH   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042046711",
+     "LOGO_DE": "",
+     "TITEL": "Asetek Danmark A/S   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042081596",
+     "LOGO_DE": "",
+     "TITEL": "Bolt Production International Ltd   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042101472",
+     "LOGO_DE": "",
+     "TITEL": "Centresoft GmbH   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042061329",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042061329/de/images/logo.gif",
+     "TITEL": "Funnivation A/S   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042101481",
+     "LOGO_DE": "",
+     "TITEL": "Global Step Management Services, LLC   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042061673",
+     "LOGO_DE": "",
+     "TITEL": "Globant France S.A.S   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042102463",
+     "LOGO_DE": "",
+     "TITEL": "LinkME Limited   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042061654",
+     "LOGO_DE": "",
+     "TITEL": "Pico Immersive Pte. Ltd.   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0015684915",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0015684915/de/images/logo.gif",
+     "TITEL": "Plug in Digital SAS   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042101489",
+     "LOGO_DE": "",
+     "TITEL": "ProbablyMonsters Inc.   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042101491",
+     "LOGO_DE": "",
+     "TITEL": "Skybound Games Europe B.V.   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042061666",
+     "LOGO_DE": "",
+     "TITEL": "Solutions 2 GO Inc.   "
+    }
+   ],
+   "kundennr": [
+    "0042101472",
+    "0042081596",
+    "0042101481",
+    "0042061329",
+    "0042081714",
+    "0042061673",
+    "0042101489",
+    "0042101491",
+    "0042061654",
+    "0015684915",
+    "0042046711",
+    "0042061666",
+    "0042102463",
+    "0040173929"
+   ],
+   "mb_fk": "24089414",
+   "pl": [
+    [
+     77.5,
+     4
+    ],
+    [
+     108.5,
+     4
+    ],
+    [
+     108.5,
+     31
+    ],
+    [
+     77.5,
+     31
+    ]
+   ],
+   "standnr": "A010",
+   "standnr2": "A-010 C-011"
+  },
+  {
+   "area": 495,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E054",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042069463",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042069463/de/images/logo.gif",
+     "TITEL": "NJ Live   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042069463",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042069463/de/images/logo.gif",
+     "TITEL": "NJ Live   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042069463",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042069463/de/images/logo.gif",
+     "TITEL": "NJ Live   "
+    }
+   ],
+   "kundennr": [
+    "0042069463"
+   ],
+   "mb_fk": "24089418",
+   "pl": [
+    [
+     16.5,
+     59.5
+    ],
+    [
+     16.5,
+     66
+    ],
+    [
+     -5.5,
+     66
+    ],
+    [
+     -5.5,
+     43.5
+    ],
+    [
+     1.5,
+     43.5
+    ],
+    [
+     1.5,
+     59.5
+    ]
+   ],
+   "standnr": "E054",
+   "standnr2": "E-054"
+  },
+  {
+   "area": 472.5,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A059",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089417",
+   "pl": [
+    [
+     15.5,
+     0
+    ],
+    [
+     15.5,
+     -6
+    ],
+    [
+     -5.5,
+     -6
+    ],
+    [
+     -5.5,
+     16.5
+    ],
+    [
+     1.5,
+     16.5
+    ],
+    [
+     1.5,
+     0
+    ]
+   ],
+   "standnr": "A059",
+   "standnr2": "A-059"
+  },
+  {
+   "area": 445.5,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A056 C055",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042069463",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042069463/de/images/logo.gif",
+     "TITEL": "NJ Live   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042069463",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042069463/de/images/logo.gif",
+     "TITEL": "NJ Live   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042069463",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042069463/de/images/logo.gif",
+     "TITEL": "NJ Live   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042015662",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042015662/de/images/logo.gif",
+     "TITEL": "SEGA Europe   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042015662",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042015662/de/images/logo.gif",
+     "TITEL": "SEGA Europe   "
+    },
+    {
+     "AMZ": "M",
+     "KUNDENNUMMER": "0042015662",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042015662/de/images/logo.gif",
+     "TITEL": "SEGA Europe   "
+    }
+   ],
+   "kundennr": [
+    "0042069463",
+    "0042015662"
+   ],
+   "mb_fk": "24089416",
+   "pl": [
+    [
+     5.5,
+     31
+    ],
+    [
+     22,
+     31
+    ],
+    [
+     22,
+     4
+    ],
+    [
+     5.5,
+     4
+    ]
+   ],
+   "standnr": "A056",
+   "standnr2": "A-056 C-055"
+  },
+  {
+   "area": 360,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E010",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089403",
+   "pl": [
+    [
+     77.43,
+     59.5
+    ],
+    [
+     107.43,
+     59.5
+    ],
+    [
+     107.43,
+     71.5
+    ],
+    [
+     77.43,
+     71.5
+    ]
+   ],
+   "standnr": "E010",
+   "standnr2": "E-010"
+  },
+  {
+   "area": 351,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A012 C013",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089414",
+   "pl": [
+    [
+     60.5,
+     23
+    ],
+    [
+     72.5,
+     23
+    ],
+    [
+     72.5,
+     31
+    ],
+    [
+     73.5,
+     31
+    ],
+    [
+     73.5,
+     4
+    ],
+    [
+     60.5,
+     4
+    ]
+   ],
+   "standnr": "A012",
+   "standnr2": "A-012 C-013"
+  },
+  {
+   "area": 338.25,
+   "events": [],
+   "farbe": "",
+   "hs": "Hall 2 | Stand C050 E051<br>The Junction<br>Sega",
+   "hsnr": "021C050 E051",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042069463",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042069463/de/images/logo.gif",
+     "TITEL": "NJ Live   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042069463",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042069463/de/images/logo.gif",
+     "TITEL": "NJ Live   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042069463",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042069463/de/images/logo.gif",
+     "TITEL": "NJ Live   "
+    }
+   ],
+   "kundennr": [
+    "0042069463"
+   ],
+   "mb_fk": "24089404",
+   "pl": [
+    [
+     5.5,
+     35
+    ],
+    [
+     22,
+     35
+    ],
+    [
+     22,
+     55.5
+    ],
+    [
+     5.5,
+     55.5
+    ]
+   ],
+   "standnr": "C050",
+   "standnr2": "C-050 E-051"
+  },
+  {
+   "area": 210.25,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A048",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089402",
+   "pl": [
+    [
+     26,
+     4
+    ],
+    [
+     40.5,
+     4
+    ],
+    [
+     40.5,
+     18.5
+    ],
+    [
+     26,
+     18.5
+    ]
+   ],
+   "standnr": "A048",
+   "standnr2": "A-048"
+  },
+  {
+   "area": 181.25,
+   "events": [],
+   "farbe": "",
+   "hs": "Hall 2 | Stand C049<br>Business Café",
+   "hsnr": "021C049",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042024233",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042024233/de/images/logo.gif",
+     "TITEL": "gamescom &nbsp; "
+    }
+   ],
+   "kundennr": [
+    "0042024233"
+   ],
+   "mb_fk": "24089402",
+   "pl": [
+    [
+     26,
+     31
+    ],
+    [
+     40.5,
+     31
+    ],
+    [
+     40.5,
+     18.5
+    ],
+    [
+     26,
+     18.5
+    ]
+   ],
+   "standnr": "C049",
+   "standnr2": "C-049"
+  },
+  {
+   "area": 133,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D017 C018",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042026449",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042026449/de/images/logo.gif",
+     "TITEL": "Sumo Digital Ltd   "
+    }
+   ],
+   "kundennr": [
+    "0042026449"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     82,
+     35
+    ],
+    [
+     68,
+     35
+    ],
+    [
+     68,
+     44.5
+    ],
+    [
+     82,
+     44.5
+    ]
+   ],
+   "standnr": "D017",
+   "standnr2": "D-017 C-018"
+  },
+  {
+   "area": 115.5,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C010",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042034492",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042034492/de/images/logo.gif",
+     "TITEL": "RAW FURY AB   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042034492",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042034492/de/images/logo.gif",
+     "TITEL": "RAW FURY AB   "
+    }
+   ],
+   "kundennr": [
+    "0042034492"
+   ],
+   "mb_fk": "24089410",
+   "pl": [
+    [
+     107.5,
+     35
+    ],
+    [
+     96.5,
+     35
+    ],
+    [
+     96.5,
+     45.5
+    ],
+    [
+     107.5,
+     45.5
+    ]
+   ],
+   "standnr": "C010",
+   "standnr2": "C-010"
+  },
+  {
+   "area": 114,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C030 D029",
+   "kunden": [
+    {
+     "AMZ": "G",
+     "KUNDENNUMMER": "0042060563",
+     "LOGO_DE": "",
+     "TITEL": "NEOM Co.   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042103382",
+     "LOGO_DE": "",
+     "TITEL": "Edge Interactive LLC. Edge of the World Studios  "
+    }
+   ],
+   "kundennr": [
+    "0042060563",
+    "0042103382"
+   ],
+   "mb_fk": "24089409",
+   "pl": [
+    [
+     44.5,
+     35
+    ],
+    [
+     56.5,
+     35
+    ],
+    [
+     56.5,
+     44.5
+    ],
+    [
+     44.5,
+     44.5
+    ]
+   ],
+   "standnr": "C030",
+   "standnr2": "C-030 D-029"
+  },
+  {
+   "area": 114,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C030a D029a",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042102046",
+     "LOGO_DE": "",
+     "TITEL": "Ayqwnat Alalaab   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042102044",
+     "LOGO_DE": "",
+     "TITEL": "Company alab alttawaqiat   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042101803",
+     "LOGO_DE": "",
+     "TITEL": "OFF BOX Studio   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042102164",
+     "LOGO_DE": "",
+     "TITEL": "Sna Alasr for Information and Technology   "
+    }
+   ],
+   "kundennr": [
+    "0042101803",
+    "0042102046",
+    "0042102044",
+    "0042102164"
+   ],
+   "mb_fk": "24089409",
+   "pl": [
+    [
+     44.5,
+     44.5
+    ],
+    [
+     56.5,
+     44.5
+    ],
+    [
+     56.5,
+     35
+    ],
+    [
+     44.5,
+     35
+    ]
+   ],
+   "standnr": "C030a",
+   "standnr2": "C-030a D-029a"
+  },
+  {
+   "area": 110,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E007",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042093732",
+     "LOGO_DE": "",
+     "TITEL": "Coffee Stain Publishing (CSP)   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042093732",
+     "LOGO_DE": "",
+     "TITEL": "Coffee Stain Publishing (CSP)   "
+    }
+   ],
+   "kundennr": [
+    "0042093732"
+   ],
+   "mb_fk": "24089410",
+   "pl": [
+    [
+     96.5,
+     55.5
+    ],
+    [
+     107.5,
+     55.5
+    ],
+    [
+     107.5,
+     45.5
+    ],
+    [
+     96.5,
+     45.5
+    ]
+   ],
+   "standnr": "E007",
+   "standnr2": "E-007"
+  },
+  {
+   "area": 96,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C013y",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089414",
+   "pl": [
+    [
+     60.5,
+     23
+    ],
+    [
+     72.5,
+     23
+    ],
+    [
+     72.5,
+     31
+    ],
+    [
+     60.5,
+     31
+    ]
+   ],
+   "standnr": "C013y",
+   "standnr2": "C-013y"
+  },
+  {
+   "area": 77.5,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A011",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042078396",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042078396/de/images/logo.gif",
+     "TITEL": "Fandom, Inc.   "
+    }
+   ],
+   "kundennr": [
+    "0042078396"
+   ],
+   "mb_fk": "24089411",
+   "pl": [
+    [
+     90.5,
+     0
+    ],
+    [
+     106,
+     0
+    ],
+    [
+     106,
+     -5
+    ],
+    [
+     90.5,
+     -5
+    ]
+   ],
+   "standnr": "A011",
+   "standnr2": "A-011"
+  },
+  {
+   "area": 71.25,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C034 D035",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042086595",
+     "LOGO_DE": "",
+     "TITEL": "MBC Game Studio Limited   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042086595",
+     "LOGO_DE": "",
+     "TITEL": "MBC Game Studio Limited   "
+    }
+   ],
+   "kundennr": [
+    "0042086595"
+   ],
+   "mb_fk": "24089406",
+   "pl": [
+    [
+     40.5,
+     35
+    ],
+    [
+     33,
+     35
+    ],
+    [
+     33,
+     44.5
+    ],
+    [
+     40.5,
+     44.5
+    ]
+   ],
+   "standnr": "C034",
+   "standnr2": "C-034 D-035"
+  },
+  {
+   "area": 54,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A031y",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089413",
+   "pl": [
+    [
+     45,
+     -3.5
+    ],
+    [
+     63,
+     -3.5
+    ],
+    [
+     63,
+     -6.5
+    ],
+    [
+     45,
+     -6.5
+    ]
+   ],
+   "standnr": "A031y",
+   "standnr2": "A-031y"
+  },
+  {
+   "area": 52.5,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C040",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042097835",
+     "LOGO_DE": "",
+     "TITEL": "Cinemo GmbH   "
+    }
+   ],
+   "kundennr": [
+    "0042097835"
+   ],
+   "mb_fk": "24089406",
+   "pl": [
+    [
+     33,
+     35
+    ],
+    [
+     26,
+     35
+    ],
+    [
+     26,
+     42.5
+    ],
+    [
+     33,
+     42.5
+    ]
+   ],
+   "standnr": "C040",
+   "standnr2": "C-040"
+  },
+  {
+   "area": 48,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C029",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042045938",
+     "LOGO_DE": "",
+     "TITEL": "Nazara Technologies Ltd   "
+    }
+   ],
+   "kundennr": [
+    "0042045938"
+   ],
+   "mb_fk": "24089401",
+   "pl": [
+    [
+     56.5,
+     31
+    ],
+    [
+     48.5,
+     31
+    ],
+    [
+     48.5,
+     25
+    ],
+    [
+     56.5,
+     25
+    ]
+   ],
+   "standnr": "C029",
+   "standnr2": "C-029"
+  },
+  {
+   "area": 40,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021B032",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042058763",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042058763/de/images/logo.gif",
+     "TITEL": "1UP   "
+    }
+   ],
+   "kundennr": [
+    "0042058763"
+   ],
+   "mb_fk": "24089401",
+   "pl": [
+    [
+     44.5,
+     22.5
+    ],
+    [
+     52.5,
+     22.5
+    ],
+    [
+     52.5,
+     17.5
+    ],
+    [
+     44.5,
+     17.5
+    ]
+   ],
+   "standnr": "B032",
+   "standnr2": "B-032"
+  },
+  {
+   "area": 40,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A002",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042079074",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042079074/de/images/logo.gif",
+     "TITEL": "LED Sound Ltd.   "
+    },
+    {
+     "AMZ": "M",
+     "KUNDENNUMMER": "0042061293",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042061293/de/images/logo.gif",
+     "TITEL": "Hyperkin Inc.   "
+    },
+    {
+     "AMZ": "M",
+     "KUNDENNUMMER": "0042080784",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042080784/de/images/logo.gif",
+     "TITEL": "Venom Ltd.   "
+    }
+   ],
+   "kundennr": [
+    "0042079074",
+    "0042061293",
+    "0042080784"
+   ],
+   "mb_fk": "24089408",
+   "pl": [
+    [
+     113,
+     -0.5
+    ],
+    [
+     117,
+     -0.5
+    ],
+    [
+     117,
+     9.5
+    ],
+    [
+     113,
+     9.5
+    ]
+   ],
+   "standnr": "A002",
+   "standnr2": "A-002"
+  },
+  {
+   "area": 36,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D040 E039",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0002387395",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0002387395/de/images/logo.gif",
+     "TITEL": "Samsung Electronics Co., Ltd.   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0002387395",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0002387395/de/images/logo.gif",
+     "TITEL": "Samsung Electronics Co., Ltd.   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0002387395",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0002387395/de/images/logo.gif",
+     "TITEL": "Samsung Electronics Co., Ltd.   "
+    }
+   ],
+   "kundennr": [
+    "0002387395"
+   ],
+   "mb_fk": "24089406",
+   "pl": [
+    [
+     32,
+     49.5
+    ],
+    [
+     26,
+     49.5
+    ],
+    [
+     26,
+     55.5
+    ],
+    [
+     32,
+     55.5
+    ]
+   ],
+   "standnr": "D040",
+   "standnr2": "D-040 E-039"
+  },
+  {
+   "area": 36,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C012",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0040171233",
+     "LOGO_DE": "",
+     "TITEL": "PCB Distribution AB   "
+    }
+   ],
+   "kundennr": [
+    "0040171233"
+   ],
+   "mb_fk": "24089410",
+   "pl": [
+    [
+     92,
+     35
+    ],
+    [
+     86,
+     35
+    ],
+    [
+     86,
+     41
+    ],
+    [
+     92,
+     41
+    ]
+   ],
+   "standnr": "C012",
+   "standnr2": "C-012"
+  },
+  {
+   "area": 33.75,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C024",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042018928",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042018928/de/images/logo.gif",
+     "TITEL": "Future Publishing plc   "
+    }
+   ],
+   "kundennr": [
+    "0042018928"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     68,
+     35
+    ],
+    [
+     60.5,
+     35
+    ],
+    [
+     60.5,
+     39.5
+    ],
+    [
+     68,
+     39.5
+    ]
+   ],
+   "standnr": "C024",
+   "standnr2": "C-024"
+  },
+  {
+   "area": 32,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A034",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042078794",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042078794/de/images/logo.gif",
+     "TITEL": "Red Hog Studio srl   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042078794",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042078794/de/images/logo.gif",
+     "TITEL": "Red Hog Studio srl   "
+    }
+   ],
+   "kundennr": [
+    "0042078794"
+   ],
+   "mb_fk": "24089401",
+   "pl": [
+    [
+     56.5,
+     4
+    ],
+    [
+     48.5,
+     4
+    ],
+    [
+     48.5,
+     8
+    ],
+    [
+     56.5,
+     8
+    ]
+   ],
+   "standnr": "A034",
+   "standnr2": "A-034"
+  },
+  {
+   "area": 31.5,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A008",
+   "kunden": [
+    {
+     "AMZ": "G",
+     "KUNDENNUMMER": "0002443801",
+     "LOGO_DE": "",
+     "TITEL": "Koelnmesse Ltd.   "
+    }
+   ],
+   "kundennr": [
+    "0002443801"
+   ],
+   "mb_fk": "24089408",
+   "pl": [
+    [
+     113,
+     16.5
+    ],
+    [
+     117.5,
+     16.5
+    ],
+    [
+     117.5,
+     9.5
+    ],
+    [
+     113,
+     9.5
+    ]
+   ],
+   "standnr": "A008",
+   "standnr2": "A-008"
+  },
+  {
+   "area": 31.5,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A008a",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042100637",
+     "LOGO_DE": "",
+     "TITEL": "THINK HUGE LIMITED   "
+    }
+   ],
+   "kundennr": [
+    "0042100637"
+   ],
+   "mb_fk": "24089408",
+   "pl": [
+    [
+     113,
+     9.5
+    ],
+    [
+     117.5,
+     9.5
+    ],
+    [
+     117.5,
+     16.5
+    ],
+    [
+     113,
+     16.5
+    ]
+   ],
+   "standnr": "A008a",
+   "standnr2": "A-008a"
+  },
+  {
+   "area": 30,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021B030",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042100836",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042100836/de/images/logo.gif",
+     "TITEL": "IGN Entertainment Inc.  "
+    }
+   ],
+   "kundennr": [
+    "0042100836"
+   ],
+   "mb_fk": "24089401",
+   "pl": [
+    [
+     52.5,
+     17.5
+    ],
+    [
+     56.5,
+     17.5
+    ],
+    [
+     56.5,
+     25
+    ],
+    [
+     52.5,
+     25
+    ]
+   ],
+   "standnr": "B030",
+   "standnr2": "B-030"
+  },
+  {
+   "area": 27,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D036 E037",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042096235",
+     "LOGO_DE": "",
+     "TITEL": "Fizz Creations Ltd   "
+    }
+   ],
+   "kundennr": [
+    "0042096235"
+   ],
+   "mb_fk": "24089406",
+   "pl": [
+    [
+     40.5,
+     55.5
+    ],
+    [
+     36,
+     55.5
+    ],
+    [
+     36,
+     49.5
+    ],
+    [
+     40.5,
+     49.5
+    ]
+   ],
+   "standnr": "D036",
+   "standnr2": "D-036 E-037"
+  },
+  {
+   "area": 24,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021A038",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042046802",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042046802/de/images/logo.gif",
+     "TITEL": "KOREA MOBILE GAME ASSOCIATION   "
+    }
+   ],
+   "kundennr": [
+    "0042046802"
+   ],
+   "mb_fk": "24089401",
+   "pl": [
+    [
+     44.5,
+     4
+    ],
+    [
+     48.5,
+     4
+    ],
+    [
+     48.5,
+     10
+    ],
+    [
+     44.5,
+     10
+    ]
+   ],
+   "standnr": "A038",
+   "standnr2": "A-038"
+  },
+  {
+   "area": 24,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E001",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042056647",
+     "LOGO_DE": "",
+     "TITEL": "Denuvo by Irdeto DENUVO GmbH  "
+    }
+   ],
+   "kundennr": [
+    "0042056647"
+   ],
+   "mb_fk": "24089405",
+   "pl": [
+    [
+     117.5,
+     50.5
+    ],
+    [
+     113.5,
+     50.5
+    ],
+    [
+     113.5,
+     56.5
+    ],
+    [
+     117.5,
+     56.5
+    ]
+   ],
+   "standnr": "E001",
+   "standnr2": "E-001"
+  },
+  {
+   "area": 21,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D013",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042006013",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042006013/de/images/logo.gif",
+     "TITEL": "bHaptics Inc.   "
+    }
+   ],
+   "kundennr": [
+    "0042006013"
+   ],
+   "mb_fk": "24089410",
+   "pl": [
+    [
+     86,
+     41
+    ],
+    [
+     92,
+     41
+    ],
+    [
+     92,
+     44.5
+    ],
+    [
+     86,
+     44.5
+    ]
+   ],
+   "standnr": "D013",
+   "standnr2": "D-013"
+  },
+  {
+   "area": 20,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021B029",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042075372",
+     "LOGO_DE": "",
+     "TITEL": "ART UP INTERNATIONAL Kft.   "
+    }
+   ],
+   "kundennr": [
+    "0042075372"
+   ],
+   "mb_fk": "24089401",
+   "pl": [
+    [
+     52.5,
+     13
+    ],
+    [
+     56.5,
+     13
+    ],
+    [
+     56.5,
+     8
+    ],
+    [
+     52.5,
+     8
+    ]
+   ],
+   "standnr": "B029",
+   "standnr2": "B-029"
+  },
+  {
+   "area": 20,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C033",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042078703",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042078703/de/images/logo.gif",
+     "TITEL": "IDLGAMES OÜ   "
+    }
+   ],
+   "kundennr": [
+    "0042078703"
+   ],
+   "mb_fk": "24089401",
+   "pl": [
+    [
+     44.5,
+     31
+    ],
+    [
+     48.5,
+     31
+    ],
+    [
+     48.5,
+     26
+    ],
+    [
+     44.5,
+     26
+    ]
+   ],
+   "standnr": "C033",
+   "standnr2": "C-033"
+  },
+  {
+   "area": 20,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C001",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0014357936",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0014357936/de/images/logo.gif",
+     "TITEL": "DreamGEAR LLC   "
+    }
+   ],
+   "kundennr": [
+    "0014357936"
+   ],
+   "mb_fk": "24089408",
+   "pl": [
+    [
+     113,
+     29
+    ],
+    [
+     117,
+     29
+    ],
+    [
+     117,
+     24
+    ],
+    [
+     113,
+     24
+    ]
+   ],
+   "standnr": "C001",
+   "standnr2": "C-001"
+  },
+  {
+   "area": 20,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D023",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042097429",
+     "LOGO_DE": "",
+     "TITEL": "Prepaid Solutions FZCO   "
+    }
+   ],
+   "kundennr": [
+    "0042097429"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     60.5,
+     39.5
+    ],
+    [
+     64.5,
+     39.5
+    ],
+    [
+     64.5,
+     44.5
+    ],
+    [
+     60.5,
+     44.5
+    ]
+   ],
+   "standnr": "D023",
+   "standnr2": "D-023"
+  },
+  {
+   "area": 18,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E013",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042056159",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042056159/de/images/logo.gif",
+     "TITEL": "The Trade Group   "
+    }
+   ],
+   "kundennr": [
+    "0042056159"
+   ],
+   "mb_fk": "24089410",
+   "pl": [
+    [
+     86,
+     55.5
+    ],
+    [
+     92,
+     55.5
+    ],
+    [
+     92,
+     52.5
+    ],
+    [
+     86,
+     52.5
+    ]
+   ],
+   "standnr": "E013",
+   "standnr2": "E-013"
+  },
+  {
+   "area": 18,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D014",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042102215",
+     "LOGO_DE": "",
+     "TITEL": "Iris Mega   "
+    }
+   ],
+   "kundennr": [
+    "0042102215"
+   ],
+   "mb_fk": "24089410",
+   "pl": [
+    [
+     86,
+     52.5
+    ],
+    [
+     92,
+     52.5
+    ],
+    [
+     92,
+     49.5
+    ],
+    [
+     86,
+     49.5
+    ]
+   ],
+   "standnr": "D014",
+   "standnr2": "D-014"
+  },
+  {
+   "area": 15,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E025",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042098947",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042098947/de/images/logo.gif",
+     "TITEL": "Buzzin Games   "
+    }
+   ],
+   "kundennr": [
+    "0042098947"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     60.5,
+     55.5
+    ],
+    [
+     65.5,
+     55.5
+    ],
+    [
+     65.5,
+     52.5
+    ],
+    [
+     60.5,
+     52.5
+    ]
+   ],
+   "standnr": "E025",
+   "standnr2": "E-025"
+  },
+  {
+   "area": 14,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C033g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089401",
+   "pl": [
+    [
+     44.5,
+     26
+    ],
+    [
+     48.5,
+     26
+    ],
+    [
+     48.5,
+     22.5
+    ],
+    [
+     44.5,
+     22.5
+    ]
+   ],
+   "standnr": "C033g",
+   "standnr2": "C-033g"
+  },
+  {
+   "area": 14,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C033a",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042100531",
+     "LOGO_DE": "",
+     "TITEL": "Beijing Beatten Cultural Co.Ltd.   "
+    }
+   ],
+   "kundennr": [
+    "0042100531"
+   ],
+   "mb_fk": "24089401",
+   "pl": [
+    [
+     44.5,
+     26
+    ],
+    [
+     48.5,
+     26
+    ],
+    [
+     48.5,
+     22.5
+    ],
+    [
+     44.5,
+     22.5
+    ]
+   ],
+   "standnr": "C033a",
+   "standnr2": "C-033a"
+  },
+  {
+   "area": 14,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D039",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042102725",
+     "LOGO_DE": "",
+     "TITEL": "Modern Forms Sp. z o.o.   "
+    }
+   ],
+   "kundennr": [
+    "0042102725"
+   ],
+   "mb_fk": "24089406",
+   "pl": [
+    [
+     26,
+     42.5
+    ],
+    [
+     33,
+     42.5
+    ],
+    [
+     33,
+     44.5
+    ],
+    [
+     26,
+     44.5
+    ]
+   ],
+   "standnr": "D039",
+   "standnr2": "D-039"
+  },
+  {
+   "area": 12.25,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E004g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089405",
+   "pl": [
+    [
+     113.5,
+     59
+    ],
+    [
+     117,
+     59
+    ],
+    [
+     117,
+     62.5
+    ],
+    [
+     113.5,
+     62.5
+    ]
+   ],
+   "standnr": "E004g",
+   "standnr2": "E-004g"
+  },
+  {
+   "area": 12.25,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C003g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089408",
+   "pl": [
+    [
+     113,
+     24
+    ],
+    [
+     116.5,
+     24
+    ],
+    [
+     116.5,
+     20.5
+    ],
+    [
+     113,
+     20.5
+    ]
+   ],
+   "standnr": "C003g",
+   "standnr2": "C-003g"
+  },
+  {
+   "area": 12.25,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E004",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0040217535",
+     "LOGO_DE": "",
+     "TITEL": "Sheer Creation Technology LLC   "
+    }
+   ],
+   "kundennr": [
+    "0040217535"
+   ],
+   "mb_fk": "24089405",
+   "pl": [
+    [
+     113.5,
+     59
+    ],
+    [
+     117,
+     59
+    ],
+    [
+     117,
+     62.5
+    ],
+    [
+     113.5,
+     62.5
+    ]
+   ],
+   "standnr": "E004",
+   "standnr2": "E-004"
+  },
+  {
+   "area": 12.25,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C003",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042077913",
+     "LOGO_DE": "",
+     "TITEL": "WeMaven Language Services Co., Ltd.   "
+    }
+   ],
+   "kundennr": [
+    "0042077913"
+   ],
+   "mb_fk": "24089408",
+   "pl": [
+    [
+     113,
+     20.5
+    ],
+    [
+     116.5,
+     20.5
+    ],
+    [
+     116.5,
+     24
+    ],
+    [
+     113,
+     24
+    ]
+   ],
+   "standnr": "C003",
+   "standnr2": "C-003"
+  },
+  {
+   "area": 12.25,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D021",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042060610",
+     "LOGO_DE": "",
+     "TITEL": "JOLLIFY OYUN YAZILIM VE PAZARLAMA A.S.   "
+    }
+   ],
+   "kundennr": [
+    "0042060610"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     64.5,
+     44.5
+    ],
+    [
+     68,
+     44.5
+    ],
+    [
+     68,
+     41
+    ],
+    [
+     64.5,
+     41
+    ]
+   ],
+   "standnr": "D021",
+   "standnr2": "D-021"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E017g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     78,
+     55.5
+    ],
+    [
+     74,
+     55.5
+    ],
+    [
+     74,
+     52.5
+    ],
+    [
+     78,
+     52.5
+    ]
+   ],
+   "standnr": "E017g",
+   "standnr2": "E-017g"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E037g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089406",
+   "pl": [
+    [
+     32,
+     52.5
+    ],
+    [
+     36,
+     52.5
+    ],
+    [
+     36,
+     55.5
+    ],
+    [
+     32,
+     55.5
+    ]
+   ],
+   "standnr": "E037g",
+   "standnr2": "E-037g"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021B035g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089401",
+   "pl": [
+    [
+     48.5,
+     10
+    ],
+    [
+     44.5,
+     10
+    ],
+    [
+     44.5,
+     13
+    ],
+    [
+     48.5,
+     13
+    ]
+   ],
+   "standnr": "B035g",
+   "standnr2": "B-035g"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D038g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089406",
+   "pl": [
+    [
+     36,
+     49.5
+    ],
+    [
+     32,
+     49.5
+    ],
+    [
+     32,
+     52.5
+    ],
+    [
+     36,
+     52.5
+    ]
+   ],
+   "standnr": "D038g",
+   "standnr2": "D-038g"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E021g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     65.5,
+     55.5
+    ],
+    [
+     69.5,
+     55.5
+    ],
+    [
+     69.5,
+     52.5
+    ],
+    [
+     65.5,
+     52.5
+    ]
+   ],
+   "standnr": "E021g",
+   "standnr2": "E-021g"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D020g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     76.5,
+     52.5
+    ],
+    [
+     72.5,
+     52.5
+    ],
+    [
+     72.5,
+     49.5
+    ],
+    [
+     76.5,
+     49.5
+    ]
+   ],
+   "standnr": "D020g",
+   "standnr2": "D-020g"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C005g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089408",
+   "pl": [
+    [
+     113,
+     20.5
+    ],
+    [
+     116,
+     20.5
+    ],
+    [
+     116,
+     16.5
+    ],
+    [
+     113,
+     16.5
+    ]
+   ],
+   "standnr": "C005g",
+   "standnr2": "C-005g"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E015g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     82,
+     52.5
+    ],
+    [
+     78,
+     52.5
+    ],
+    [
+     78,
+     55.5
+    ],
+    [
+     82,
+     55.5
+    ]
+   ],
+   "standnr": "E015g",
+   "standnr2": "E-015g"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021B033",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042102030",
+     "LOGO_DE": "",
+     "TITEL": "Lingotion   "
+    }
+   ],
+   "kundennr": [
+    "0042102030"
+   ],
+   "mb_fk": "24089401",
+   "pl": [
+    [
+     48.5,
+     13
+    ],
+    [
+     52.5,
+     13
+    ],
+    [
+     52.5,
+     10
+    ],
+    [
+     48.5,
+     10
+    ]
+   ],
+   "standnr": "B033",
+   "standnr2": "B-033"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021B035",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042100551",
+     "LOGO_DE": "",
+     "TITEL": "SapStaR Games   "
+    }
+   ],
+   "kundennr": [
+    "0042100551"
+   ],
+   "mb_fk": "24089401",
+   "pl": [
+    [
+     44.5,
+     13
+    ],
+    [
+     48.5,
+     13
+    ],
+    [
+     48.5,
+     10
+    ],
+    [
+     44.5,
+     10
+    ]
+   ],
+   "standnr": "B035",
+   "standnr2": "B-035"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E037a",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042100540",
+     "LOGO_DE": "",
+     "TITEL": "EnJoyPay   "
+    }
+   ],
+   "kundennr": [
+    "0042100540"
+   ],
+   "mb_fk": "24089406",
+   "pl": [
+    [
+     32,
+     52.5
+    ],
+    [
+     36,
+     52.5
+    ],
+    [
+     36,
+     55.5
+    ],
+    [
+     32,
+     55.5
+    ]
+   ],
+   "standnr": "E037a",
+   "standnr2": "E-037a"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D038",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042079559",
+     "LOGO_DE": "",
+     "TITEL": "Chengdu Junyun Technology Co., Ltd   "
+    }
+   ],
+   "kundennr": [
+    "0042079559"
+   ],
+   "mb_fk": "24089406",
+   "pl": [
+    [
+     32,
+     49.5
+    ],
+    [
+     36,
+     49.5
+    ],
+    [
+     36,
+     52.5
+    ],
+    [
+     32,
+     52.5
+    ]
+   ],
+   "standnr": "D038",
+   "standnr2": "D-038"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021C005",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042080511",
+     "LOGO_DE": "",
+     "TITEL": "Gamersmarket Co., Limited   "
+    }
+   ],
+   "kundennr": [
+    "0042080511"
+   ],
+   "mb_fk": "24089408",
+   "pl": [
+    [
+     113,
+     16.5
+    ],
+    [
+     116,
+     16.5
+    ],
+    [
+     116,
+     20.5
+    ],
+    [
+     113,
+     20.5
+    ]
+   ],
+   "standnr": "C005",
+   "standnr2": "C-005"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E029",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042095202",
+     "LOGO_DE": "",
+     "TITEL": "memoQ Ltd.   "
+    }
+   ],
+   "kundennr": [
+    "0042095202"
+   ],
+   "mb_fk": "24089409",
+   "pl": [
+    [
+     56.5,
+     55.5
+    ],
+    [
+     52.5,
+     55.5
+    ],
+    [
+     52.5,
+     52.5
+    ],
+    [
+     56.5,
+     52.5
+    ]
+   ],
+   "standnr": "E029",
+   "standnr2": "E-029"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D026",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042086491",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042086491/de/images/logo.gif",
+     "TITEL": "ANKA GAMES GROUP YAZILIM A.S.   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042086491",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042086491/de/images/logo.gif",
+     "TITEL": "ANKA GAMES GROUP YAZILIM A.S.   "
+    }
+   ],
+   "kundennr": [
+    "0042086491"
+   ],
+   "mb_fk": "24089409",
+   "pl": [
+    [
+     52.5,
+     49.5
+    ],
+    [
+     56.5,
+     49.5
+    ],
+    [
+     56.5,
+     52.5
+    ],
+    [
+     52.5,
+     52.5
+    ]
+   ],
+   "standnr": "D026",
+   "standnr2": "D-026"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D030",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042060874",
+     "LOGO_DE": "",
+     "TITEL": "VRCAVE INC.   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042060874",
+     "LOGO_DE": "",
+     "TITEL": "VRCAVE INC.   "
+    }
+   ],
+   "kundennr": [
+    "0042060874"
+   ],
+   "mb_fk": "24089409",
+   "pl": [
+    [
+     48.5,
+     49.5
+    ],
+    [
+     44.5,
+     49.5
+    ],
+    [
+     44.5,
+     52.5
+    ],
+    [
+     48.5,
+     52.5
+    ]
+   ],
+   "standnr": "D030",
+   "standnr2": "D-030"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E033",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0015773295",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0015773295/de/images/logo.gif",
+     "TITEL": "Steel Media Ltd   "
+    }
+   ],
+   "kundennr": [
+    "0015773295"
+   ],
+   "mb_fk": "24089409",
+   "pl": [
+    [
+     48.5,
+     55.5
+    ],
+    [
+     44.5,
+     55.5
+    ],
+    [
+     44.5,
+     52.5
+    ],
+    [
+     48.5,
+     52.5
+    ]
+   ],
+   "standnr": "E033",
+   "standnr2": "E-033"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D028",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042091505",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042091505/de/images/logo.gif",
+     "TITEL": "Ciklopea d.o.o.   "
+    }
+   ],
+   "kundennr": [
+    "0042091505"
+   ],
+   "mb_fk": "24089409",
+   "pl": [
+    [
+     48.5,
+     49.5
+    ],
+    [
+     52.5,
+     49.5
+    ],
+    [
+     52.5,
+     52.5
+    ],
+    [
+     48.5,
+     52.5
+    ]
+   ],
+   "standnr": "D028",
+   "standnr2": "D-028"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E031",
+   "kunden": [
+    {
+     "AMZ": "G",
+     "KUNDENNUMMER": "0002489220",
+     "LOGO_DE": "",
+     "TITEL": "Koelnmesse Ltd.   "
+    },
+    {
+     "AMZ": "G",
+     "KUNDENNUMMER": "0002489220",
+     "LOGO_DE": "",
+     "TITEL": "Koelnmesse Ltd.   "
+    }
+   ],
+   "kundennr": [
+    "0002489220"
+   ],
+   "mb_fk": "24089409",
+   "pl": [
+    [
+     48.5,
+     55.5
+    ],
+    [
+     52.5,
+     55.5
+    ],
+    [
+     52.5,
+     52.5
+    ],
+    [
+     48.5,
+     52.5
+    ]
+   ],
+   "standnr": "E031",
+   "standnr2": "E-031"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E031a",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042100529",
+     "LOGO_DE": "",
+     "TITEL": "YYSTV Media (Shanghai) Co., Ltd.   "
+    }
+   ],
+   "kundennr": [
+    "0042100529"
+   ],
+   "mb_fk": "24089409",
+   "pl": [
+    [
+     48.5,
+     55.5
+    ],
+    [
+     52.5,
+     55.5
+    ],
+    [
+     52.5,
+     52.5
+    ],
+    [
+     48.5,
+     52.5
+    ]
+   ],
+   "standnr": "E031a",
+   "standnr2": "E-031a"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D018",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042096807",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042096807/de/images/logo.gif",
+     "TITEL": "Ströer Content Group Sales GmbH   "
+    }
+   ],
+   "kundennr": [
+    "0042096807"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     78,
+     52.5
+    ],
+    [
+     82,
+     52.5
+    ],
+    [
+     82,
+     49.5
+    ],
+    [
+     78,
+     49.5
+    ]
+   ],
+   "standnr": "D018",
+   "standnr2": "D-018"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E019",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042095733",
+     "LOGO_DE": "",
+     "TITEL": "Mousepad 24 Anita Makarska-Gurgacz   "
+    }
+   ],
+   "kundennr": [
+    "0042095733"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     69.5,
+     52.5
+    ],
+    [
+     73.5,
+     52.5
+    ],
+    [
+     73.5,
+     55.5
+    ],
+    [
+     69.5,
+     55.5
+    ]
+   ],
+   "standnr": "E019",
+   "standnr2": "E-019"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D024",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042091995",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042091995/de/images/logo.gif",
+     "TITEL": "INPRINTING srl unipersonale   "
+    }
+   ],
+   "kundennr": [
+    "0042091995"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     64.5,
+     52.5
+    ],
+    [
+     60.5,
+     52.5
+    ],
+    [
+     60.5,
+     49.5
+    ],
+    [
+     64.5,
+     49.5
+    ]
+   ],
+   "standnr": "D024",
+   "standnr2": "D-024"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D022a",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042075853",
+     "LOGO_DE": "",
+     "TITEL": "Vietnam Cullinan Electric Co., Ltd.  "
+    }
+   ],
+   "kundennr": [
+    "0042075853"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     64.5,
+     49.5
+    ],
+    [
+     68.5,
+     49.5
+    ],
+    [
+     68.5,
+     52.5
+    ],
+    [
+     64.5,
+     52.5
+    ]
+   ],
+   "standnr": "D022a",
+   "standnr2": "D-022a"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D022",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     68.5,
+     52.5
+    ],
+    [
+     72.5,
+     52.5
+    ],
+    [
+     72.5,
+     49.5
+    ],
+    [
+     68.5,
+     49.5
+    ]
+   ],
+   "standnr": "D022",
+   "standnr2": "D-022"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E021",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042067162",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042067162/de/images/logo.gif",
+     "TITEL": "FlashFire Interactive INC.   "
+    },
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042067162",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042067162/de/images/logo.gif",
+     "TITEL": "FlashFire Interactive INC.   "
+    }
+   ],
+   "kundennr": [
+    "0042067162"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     65.5,
+     55.5
+    ],
+    [
+     69.5,
+     55.5
+    ],
+    [
+     69.5,
+     52.5
+    ],
+    [
+     65.5,
+     52.5
+    ]
+   ],
+   "standnr": "E021",
+   "standnr2": "E-021"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E015",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042100547",
+     "LOGO_DE": "",
+     "TITEL": "Panforia Interactive, Inc.   "
+    }
+   ],
+   "kundennr": [
+    "0042100547"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     82,
+     55.5
+    ],
+    [
+     78,
+     55.5
+    ],
+    [
+     78,
+     52.5
+    ],
+    [
+     82,
+     52.5
+    ]
+   ],
+   "standnr": "E015",
+   "standnr2": "E-015"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021D020",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042074661",
+     "LOGO_DE": "",
+     "TITEL": "Yeehe Co.,Ltd   "
+    }
+   ],
+   "kundennr": [
+    "0042074661"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     72.5,
+     49.5
+    ],
+    [
+     76.5,
+     49.5
+    ],
+    [
+     76.5,
+     52.5
+    ],
+    [
+     72.5,
+     52.5
+    ]
+   ],
+   "standnr": "D020",
+   "standnr2": "D-020"
+  },
+  {
+   "area": 12,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E017",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042024343",
+     "LOGO_DE": "",
+     "TITEL": "EC Innovations (Chengdu), Inc.   "
+    }
+   ],
+   "kundennr": [
+    "0042024343"
+   ],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     74,
+     52.5
+    ],
+    [
+     78,
+     52.5
+    ],
+    [
+     78,
+     55.5
+    ],
+    [
+     74,
+     55.5
+    ]
+   ],
+   "standnr": "E017",
+   "standnr2": "E-017"
+  },
+  {
+   "area": 8.75,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E003g",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089405",
+   "pl": [
+    [
+     113.5,
+     59
+    ],
+    [
+     117,
+     59
+    ],
+    [
+     117,
+     56.5
+    ],
+    [
+     113.5,
+     56.5
+    ]
+   ],
+   "standnr": "E003g",
+   "standnr2": "E-003g"
+  },
+  {
+   "area": 8.75,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E003",
+   "kunden": [
+    {
+     "AMZ": "T",
+     "KUNDENNUMMER": "0042100730",
+     "LOGO_DE": "",
+     "TITEL": "Sheer Tianyi Technology LLC   "
+    }
+   ],
+   "kundennr": [
+    "0042100730"
+   ],
+   "mb_fk": "24089405",
+   "pl": [
+    [
+     117,
+     59
+    ],
+    [
+     113.5,
+     59
+    ],
+    [
+     113.5,
+     56.5
+    ],
+    [
+     117,
+     56.5
+    ]
+   ],
+   "standnr": "E003",
+   "standnr2": "E-003"
+  },
+  {
+   "area": 4.5,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     76.5,
+     49.5
+    ],
+    [
+     78,
+     49.5
+    ],
+    [
+     78,
+     52.5
+    ],
+    [
+     76.5,
+     52.5
+    ]
+   ],
+   "standnr": "---76.549.57849.57852.576.552.5",
+   "standnr2": ""
+  },
+  {
+   "area": 4,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021E016",
+   "kunden": [
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042046647",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042046647/de/images/logo.gif",
+     "TITEL": "Paymentwall Inc   "
+    },
+    {
+     "AMZ": "A",
+     "KUNDENNUMMER": "0042046647",
+     "LOGO_DE": "https://backends.koelnmesse.io/ausstellerlogos/2026/0480/0042046647/de/images/logo.gif",
+     "TITEL": "Paymentwall Inc   "
+    }
+   ],
+   "kundennr": [
+    "0042046647"
+   ],
+   "mb_fk": "24089407",
+   "pl": [
+    [
+     74.5,
+     59.5
+    ],
+    [
+     72.5,
+     59.5
+    ],
+    [
+     72.5,
+     61.5
+    ],
+    [
+     74.5,
+     61.5
+    ]
+   ],
+   "standnr": "E016",
+   "standnr2": "E-016"
+  },
+  {
+   "area": 1.5,
+   "events": [],
+   "farbe": "",
+   "hs": "",
+   "hsnr": "021",
+   "kunden": [],
+   "kundennr": [],
+   "mb_fk": "24089415",
+   "pl": [
+    [
+     73.5,
+     55.5
+    ],
+    [
+     74,
+     55.5
+    ],
+    [
+     74,
+     52.5
+    ],
+    [
+     73.5,
+     52.5
+    ]
+   ],
+   "standnr": "---73.555.57455.57452.573.552.5",
+   "standnr2": ""
+  }
+ ]
+}

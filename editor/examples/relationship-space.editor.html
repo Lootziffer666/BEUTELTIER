@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beziehungsraum</title>
+<style>
+  :root {
+    --bg:#090c11;
+    --panel:rgba(15,20,28,.88);
+    --panel-solid:#0f141c;
+    --ink:#edf2f8;
+    --muted:#8f9bab;
+    --line:#26303d;
+    --soft:#171e28;
+    --accent:#6ea4ff;
+    --danger:#ff6b76;
+    --ok:#70d99b;
+    --display:Segoe UI,Inter,system-ui,sans-serif;
+    --mono:"Cascadia Code","SFMono-Regular",Consolas,monospace;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--ink); font-family:var(--display); }
+  button,input,select,textarea { font:inherit; }
+  #graph { position:fixed; inset:0; z-index:0; }
+  .backdrop { position:fixed; inset:0; z-index:1; pointer-events:none; background:
+    radial-gradient(55vmax 55vmax at 10% 0%, rgba(75,112,180,.13), transparent 62%),
+    radial-gradient(46vmax 46vmax at 100% 100%, rgba(75,180,159,.08), transparent 62%),
+    radial-gradient(120% 120% at 50% 50%, transparent 58%, rgba(0,0,0,.58) 100%); }
+  .grid { position:fixed; inset:-10%; z-index:1; pointer-events:none; opacity:.42;
+    background-image:radial-gradient(rgba(130,155,190,.17) 1px, transparent 1.3px); background-size:30px 30px;
+    -webkit-mask-image:radial-gradient(100% 100% at 50% 45%, #000 30%, transparent 82%);
+    mask-image:radial-gradient(100% 100% at 50% 45%, #000 30%, transparent 82%); }
+  .panel { position:fixed; z-index:10; background:var(--panel); border:1px solid var(--line); border-radius:14px; backdrop-filter:blur(12px); box-shadow:0 18px 48px -24px rgba(0,0,0,.95); }
+  #mast { top:16px; left:16px; max-width:min(520px,calc(100vw - 32px)); padding:14px 16px; }
+  #mast .kicker { font-family:var(--mono); font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+  #mast h1 { margin:6px 0 4px; font-size:22px; line-height:1.1; letter-spacing:-.35px; }
+  #mast p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; max-width:62ch; }
+  #toolbar { top:16px; right:16px; z-index:14; display:flex; gap:7px; padding:7px; flex-wrap:wrap; justify-content:flex-end; max-width:min(650px,calc(100vw - 32px)); }
+  button { border:1px solid var(--line); border-radius:9px; background:#161d27; color:var(--ink); padding:8px 11px; cursor:pointer; font-size:12px; font-weight:600; transition:.15s ease; }
+  button:hover { background:#1d2632; border-color:#3a485a; transform:translateY(-1px); }
+  button:active { transform:none; }
+  button.primary { background:#315f9f; border-color:#4d7ebd; }
+  button.primary:hover { background:#396daf; }
+  button.danger { color:#ffc0c5; border-color:#63313a; background:#28171c; }
+  button.ghost { background:transparent; }
+  button.small { padding:5px 8px; font-size:11px; }
+  #side { top:68px; right:16px; width:min(390px,calc(100vw - 32px)); max-height:calc(100vh - 84px); overflow:auto; padding:14px 15px; scrollbar-width:thin; scrollbar-color:#354150 transparent; }
+  #side h2 { margin:0; font-size:15px; }
+  #side .sub { margin:4px 0 13px; color:var(--muted); font-size:11px; line-height:1.4; }
+  .panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .icon-chip { width:13px; height:13px; border-radius:4px; flex:0 0 13px; margin-top:3px; }
+  .entity-head { display:flex; gap:9px; align-items:flex-start; }
+  .entity-id { font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:2px; word-break:break-all; }
+  .field { margin-top:11px; }
+  .field label { display:block; margin-bottom:5px; font-family:var(--mono); font-size:9.5px; letter-spacing:1.1px; text-transform:uppercase; color:var(--muted); }
+  .field input,.field select,.field textarea { width:100%; border:1px solid var(--line); border-radius:8px; background:#080c12; color:var(--ink); padding:8px 9px; font-size:12px; outline:none; }
+  .field textarea { min-height:72px; resize:vertical; line-height:1.45; }
+  .field input:focus,.field select:focus,.field textarea:focus { border-color:#557fb4; box-shadow:0 0 0 2px rgba(85,127,180,.18); }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:13px; }
+  .divider { height:1px; background:var(--line); margin:14px 0; }
+  .section-title { margin:0 0 7px; font-size:11px; font-family:var(--mono); color:#c7d0dc; text-transform:uppercase; letter-spacing:1px; }
+  .relation-list { display:flex; flex-direction:column; gap:6px; }
+  .relation-row { display:grid; grid-template-columns:10px 1fr auto; gap:8px; align-items:center; width:100%; text-align:left; padding:8px 9px; background:#111720; border:1px solid var(--line); border-radius:8px; color:var(--ink); }
+  .relation-row:hover { background:#17202b; transform:none; }
+  .relation-row .mark { width:8px; height:8px; border-radius:50%; }
+  .relation-row .main { min-width:0; }
+  .relation-row .name { font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .relation-row .meta { font-size:10px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .relation-row .arrow { color:var(--muted); font-family:var(--mono); }
+  .empty { padding:9px 0; color:#647081; font-size:11px; font-family:var(--mono); }
+  .metric-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 0 14px; }
+  .metric { border:1px solid var(--line); background:#111720; border-radius:9px; padding:9px; }
+  .metric b { display:block; font-size:19px; }
+  .metric span { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; }
+  .notice { border:1px solid #2d4158; background:#111c28; border-radius:10px; padding:10px 11px; color:#bcc8d6; font-size:11px; line-height:1.5; }
+  #legend { left:16px; bottom:16px; max-width:min(390px,calc(100vw - 32px)); padding:11px 13px; font-size:11px; }
+  #legend h3 { margin:0 0 7px; font-size:11px; font-family:var(--mono); text-transform:uppercase; letter-spacing:1px; }
+  .legend-wrap { display:flex; flex-wrap:wrap; gap:6px 12px; }
+  .legend-item { display:flex; align-items:center; gap:6px; color:#c7d0dc; white-space:nowrap; }
+  .legend-dot { width:9px; height:9px; border-radius:3px; }
+  .legend-line { width:20px; height:0; border-top:2px solid; position:relative; }
+  .legend-line.directed::after { content:""; position:absolute; right:-1px; top:-4px; border-left:6px solid currentColor; border-top:3px solid transparent; border-bottom:3px solid transparent; }
+  #status { position:fixed; z-index:18; left:50%; bottom:17px; transform:translateX(-50%); background:rgba(12,17,24,.92); border:1px solid var(--line); border-radius:999px; padding:6px 11px; font-family:var(--mono); font-size:10px; color:var(--muted); opacity:0; pointer-events:none; transition:opacity .2s; }
+  #status.show { opacity:1; }
+  #jsonText { min-height:44vh; font-family:var(--mono); font-size:10.5px; line-height:1.45; }
+  .file-input { display:none; }
+  @media (max-width:900px) {
+    #mast { max-width:54vw; }
+    #mast h1 { font-size:18px; }
+    #toolbar { top:auto; right:12px; left:12px; bottom:12px; max-width:none; justify-content:center; }
+    #legend { display:none; }
+    #side { top:112px; max-height:calc(100vh - 190px); }
+    #status { bottom:75px; }
+  }
+  @media (max-width:620px) {
+    #mast { left:10px; top:10px; max-width:calc(100vw - 20px); }
+    #mast p { display:none; }
+    #side { right:10px; top:84px; width:calc(100vw - 20px); max-height:calc(100vh - 160px); }
+    #toolbar { gap:5px; }
+    #toolbar button { padding:7px 8px; }
+  }
+</style>
+</head>
+<body>
+<div id="graph"></div>
+<div class="grid"></div>
+<div class="backdrop"></div>
+
+<header id="mast" class="panel">
+  <div class="kicker">3D Node Editor · neutraler Graphraum</div>
+  <h1 id="title"></h1>
+  <p id="subtitle"></p>
+</header>
+
+<nav id="toolbar" class="panel" aria-label="Editor-Werkzeuge">
+  <button id="addNode">＋ Node</button>
+  <button id="addEdge">＋ Beziehung</button>
+  <button id="openJson">{ } JSON</button>
+  <button id="importJson">⇧ Import</button>
+  <button id="fitGraph">◎ Einpassen</button>
+  <button id="reheat">↻ Neu ordnen</button>
+  <input id="fileInput" class="file-input" type="file" accept="application/json,.json">
+</nav>
+
+<aside id="side" class="panel" aria-live="polite"></aside>
+<aside id="legend" class="panel"></aside>
+<div id="status"></div>
+
+<script src="https://unpkg.com/three"></script>
+<script src="https://unpkg.com/3d-force-graph"></script>
+<script>
+const INITIAL_MODEL = {
+  "meta": {
+    "title": "Beziehungsraum",
+    "subtitle": "Neutrales Beispiel: dieselben Objekte können über verschiedene Beziehungstypen verbunden sein"
+  },
+  "groups": {
+    "concept": {
+      "label": "Konzept",
+      "color": "#5b8def"
+    },
+    "data": {
+      "label": "Daten",
+      "color": "#43b581"
+    },
+    "rule": {
+      "label": "Regel",
+      "color": "#b47aea"
+    },
+    "view": {
+      "label": "Ansicht",
+      "color": "#e3a438"
+    },
+    "result": {
+      "label": "Ergebnis",
+      "color": "#e16b78"
+    }
+  },
+  "relation_types": {
+    "depends": {
+      "label": "hängt ab von",
+      "color": "#8b7cf6",
+      "width": 1.8,
+      "particles": 2,
+      "directed": true
+    },
+    "transforms": {
+      "label": "transformiert",
+      "color": "#39b8c7",
+      "width": 2.2,
+      "particles": 3,
+      "directed": true
+    },
+    "describes": {
+      "label": "beschreibt",
+      "color": "#d7a93d",
+      "width": 1.4,
+      "particles": 0,
+      "directed": true
+    },
+    "related": {
+      "label": "steht in Beziehung zu",
+      "color": "#8793a3",
+      "width": 1.1,
+      "particles": 0,
+      "directed": false
+    }
+  },
+  "nodes": [
+    {
+      "id": "concept",
+      "label": "Konzept",
+      "description": "Eine abstrakte Idee oder ein fachlicher Gegenstand.",
+      "group": "concept",
+      "shape": "sphere"
+    },
+    {
+      "id": "data",
+      "label": "Daten",
+      "description": "Beobachtungen oder strukturierte Eingaben.",
+      "group": "data",
+      "shape": "cylinder"
+    },
+    {
+      "id": "rule",
+      "label": "Regel",
+      "description": "Eine Bedingung oder Transformation.",
+      "group": "rule",
+      "shape": "diamond"
+    },
+    {
+      "id": "view",
+      "label": "Ansicht",
+      "description": "Eine mögliche visuelle Projektion des Modells.",
+      "group": "view",
+      "shape": "box"
+    },
+    {
+      "id": "result",
+      "label": "Ergebnis",
+      "description": "Ein aus dem Beziehungsraum abgeleiteter Zustand.",
+      "group": "result",
+      "shape": "pill"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "source": "concept",
+      "target": "data",
+      "type": "describes",
+      "label": "ordnet Bedeutung zu",
+      "description": ""
+    },
+    {
+      "id": "edge-2",
+      "source": "rule",
+      "target": "data",
+      "type": "depends",
+      "label": "liest",
+      "description": ""
+    },
+    {
+      "id": "edge-3",
+      "source": "rule",
+      "target": "result",
+      "type": "transforms",
+      "label": "erzeugt",
+      "description": ""
+    },
+    {
+      "id": "edge-4",
+      "source": "view",
+      "target": "data",
+      "type": "depends",
+      "label": "visualisiert",
+      "description": ""
+    },
+    {
+      "id": "edge-5",
+      "source": "view",
+      "target": "concept",
+      "type": "related",
+      "label": "macht sichtbar",
+      "description": ""
+    },
+    {
+      "id": "edge-6",
+      "source": "view",
+      "target": "result",
+      "type": "describes",
+      "label": "zeigt",
+      "description": ""
+    }
+  ]
+};
+const SHAPES = {
+  box: "Box",
+  sphere: "Kugel",
+  diamond: "Raute",
+  pill: "Kapsel",
+  cylinder: "Zylinder",
+  octagon: "Achteck"
+};
+
+function normalizeClientModel(model) {
+  model.meta = model.meta && typeof model.meta === "object" ? model.meta : {};
+  model.meta.title ||= "3D Node Editor";
+  model.meta.subtitle ||= "";
+
+  const rawGroups = model.groups && typeof model.groups === "object" ? model.groups : {};
+  if (!Object.keys(rawGroups).length) rawGroups.default = { label:"Standard", color:"#5b8def" };
+  model.groups = Object.fromEntries(Object.entries(rawGroups).map(([id, value]) => {
+    const style = typeof value === "string" ? { label:id, color:value } : { ...(value || {}) };
+    style.label ||= id;
+    style.color ||= "#7f8b99";
+    return [id, style];
+  }));
+
+  const rawTypes = model.relation_types && typeof model.relation_types === "object" ? model.relation_types : {};
+  if (!Object.keys(rawTypes).length) rawTypes.related = { label:"steht in Beziehung zu", color:"#8b97a7" };
+  model.relation_types = Object.fromEntries(Object.entries(rawTypes).map(([id, value]) => {
+    const style = typeof value === "string" ? { label:id, color:value } : { ...(value || {}) };
+    style.label ||= id;
+    style.color ||= "#8b97a7";
+    style.width = Number(style.width || 1.4);
+    style.particles = Number(style.particles || 0);
+    if (style.directed == null) style.directed = true;
+    return [id, style];
+  }));
+
+  const firstGroup = Object.keys(model.groups)[0];
+  const firstType = Object.keys(model.relation_types)[0];
+  model.nodes = (model.nodes || []).map(node => ({
+    description:"",
+    group:firstGroup,
+    shape:"box",
+    ...node
+  }));
+  model.edges = (model.edges || model.links || []).map((edge, index) => ({
+    id:`edge-${index + 1}`,
+    type:firstType,
+    label:"",
+    description:"",
+    ...edge
+  }));
+  delete model.links;
+  return model;
+}
+
+let MODEL = normalizeClientModel(structuredClone(INITIAL_MODEL));
+let selected = null;
+let panelMode = "overview";
+let addEdgeDefaults = {};
+let hoverNodeId = null;
+let nodeObjects = new Map();
+let floatingLabels = [];
+let statusTimer = null;
+
+const graphEl = document.getElementById("graph");
+const sideEl = document.getElementById("side");
+const legendEl = document.getElementById("legend");
+const statusEl = document.getElementById("status");
+
+document.getElementById("title").textContent = MODEL.meta.title;
+document.getElementById("subtitle").textContent = MODEL.meta.subtitle;
+
+function idOf(value) {
+  return value && typeof value === "object" ? value.id : value;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>'"]/g, ch => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;"
+  })[ch]);
+}
+
+function slugify(text) {
+  const base = String(text || "node").toLowerCase().normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "node";
+  let id = base;
+  let i = 2;
+  const ids = new Set(MODEL.nodes.map(n => n.id));
+  while (ids.has(id)) id = `${base}-${i++}`;
+  return id;
+}
+
+function nextEdgeId() {
+  const ids = new Set(MODEL.edges.map(e => e.id));
+  let i = MODEL.edges.length + 1;
+  while (ids.has(`edge-${i}`)) i++;
+  return `edge-${i}`;
+}
+
+function groupStyle(groupId) {
+  return MODEL.groups[groupId] || { label: groupId, color: "#7f8b99" };
+}
+
+function relationStyle(typeId) {
+  return MODEL.relation_types[typeId] || {
+    label: typeId, color: "#7f8b99", width: 1.3, particles: 0, directed: true
+  };
+}
+
+function hexToRgb(hex) {
+  const clean = String(hex || "#7f8b99").replace("#", "").padEnd(6, "0").slice(0, 6);
+  return [0, 2, 4].map(i => parseInt(clean.slice(i, i + 2), 16));
+}
+
+function mix(hex, target, amount) {
+  const a = hexToRgb(hex);
+  const b = hexToRgb(target);
+  const c = a.map((v, i) => Math.round(v + (b[i] - v) * amount));
+  return `#${c.map(v => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function directNeighbours(nodeId) {
+  const set = new Set([nodeId]);
+  MODEL.edges.forEach(edge => {
+    if (edge.source === nodeId) set.add(edge.target);
+    if (edge.target === nodeId) set.add(edge.source);
+  });
+  return set;
+}
+
+function nodeIsFocused(nodeId) {
+  if (!selected) return true;
+  if (selected.kind === "node") return directNeighbours(selected.id).has(nodeId);
+  const edge = MODEL.edges.find(e => e.id === selected.id);
+  return !!edge && (edge.source === nodeId || edge.target === nodeId);
+}
+
+function edgeIsFocused(edgeId) {
+  if (!selected) return true;
+  const edge = MODEL.edges.find(e => e.id === edgeId);
+  if (!edge) return false;
+  if (selected.kind === "edge") return edgeId === selected.id;
+  return edge.source === selected.id || edge.target === selected.id;
+}
+
+function roundedRectGeometry(width, height, depth, radius) {
+  const shape = new THREE.Shape();
+  const x = -width / 2;
+  const y = -height / 2;
+  shape.moveTo(x + radius, y);
+  shape.lineTo(x + width - radius, y);
+  shape.quadraticCurveTo(x + width, y, x + width, y + radius);
+  shape.lineTo(x + width, y + height - radius);
+  shape.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  shape.lineTo(x + radius, y + height);
+  shape.quadraticCurveTo(x, y + height, x, y + height - radius);
+  shape.lineTo(x, y + radius);
+  shape.quadraticCurveTo(x, y, x + radius, y);
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth,
+    bevelEnabled:true,
+    bevelThickness:.35,
+    bevelSize:.35,
+    bevelSegments:2,
+    curveSegments:10
+  });
+  geometry.translate(0, 0, -depth / 2);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+const geometryCache = {};
+function geometryFor(shape) {
+  if (geometryCache[shape]) return geometryCache[shape];
+  let geometry;
+  switch (shape) {
+    case "sphere":
+      geometry = new THREE.SphereGeometry(7.2, 28, 20);
+      break;
+    case "diamond":
+      geometry = new THREE.BoxGeometry(12, 12, 4);
+      geometry.rotateZ(Math.PI / 4);
+      break;
+    case "pill":
+      geometry = roundedRectGeometry(22, 11, 3.5, 5.5);
+      break;
+    case "cylinder":
+      geometry = new THREE.CylinderGeometry(7, 7, 12, 30);
+      break;
+    case "octagon":
+      geometry = new THREE.CylinderGeometry(8.5, 8.5, 3.5, 8);
+      geometry.rotateX(Math.PI / 2);
+      break;
+    default:
+      geometry = roundedRectGeometry(19, 11, 3.5, 1.7);
+  }
+  geometryCache[shape] = geometry;
+  return geometry;
+}
+
+function labelCanvas(text, color, compact = false) {
+  const lines = String(text || "").split("\n");
+  const fontSize = compact ? 20 : 25;
+  const lineHeight = fontSize * 1.18;
+  const pad = compact ? 8 : 11;
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  ctx.font = `600 ${fontSize}px Segoe UI, sans-serif`;
+  const maxWidth = Math.max(...lines.map(line => ctx.measureText(line).width), 30);
+  canvas.width = Math.ceil(maxWidth + pad * 2);
+  canvas.height = Math.ceil(lines.length * lineHeight + pad * 2);
+  const r = compact ? 7 : 9;
+  ctx.beginPath();
+  ctx.roundRect(1, 1, canvas.width - 2, canvas.height - 2, r);
+  ctx.fillStyle = compact ? "rgba(7,10,15,.92)" : "rgba(7,10,15,.84)";
+  ctx.fill();
+  ctx.lineWidth = compact ? 1.5 : 2;
+  ctx.strokeStyle = color;
+  ctx.stroke();
+  ctx.font = `600 ${fontSize}px Segoe UI, sans-serif`;
+  ctx.fillStyle = compact ? color : "#eef3f9";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  lines.forEach((line, index) => {
+    ctx.fillText(line, canvas.width / 2, pad + lineHeight * (index + .5));
+  });
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.anisotropy = 4;
+  return { texture, width:canvas.width, height:canvas.height };
+}
+
+function buildNodeObject(node) {
+  const style = groupStyle(node.group);
+  const focused = nodeIsFocused(node.id);
+  const group = new THREE.Group();
+  const geometry = geometryFor(node.shape || "box");
+  const material = new THREE.MeshStandardMaterial({
+    color:style.color,
+    roughness:.5,
+    metalness:.12,
+    emissive:new THREE.Color(style.color),
+    emissiveIntensity:focused ? .32 : .04,
+    transparent:true,
+    opacity:focused ? 1 : .12
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  group.add(mesh);
+
+  const outlineMaterial = new THREE.LineBasicMaterial({
+    color:mix(style.color, "#ffffff", .55),
+    transparent:true,
+    opacity:focused ? .9 : .08
+  });
+  group.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 25), outlineMaterial));
+
+  const label = labelCanvas(node.label, style.color);
+  const spriteMaterial = new THREE.SpriteMaterial({
+    map:label.texture,
+    transparent:true,
+    depthTest:false,
+    depthWrite:false,
+    opacity:focused ? 1 : .13
+  });
+  const sprite = new THREE.Sprite(spriteMaterial);
+  sprite.scale.set(label.width * .057, label.height * .057, 1);
+  sprite.renderOrder = 5;
+  group.add(sprite);
+
+  nodeObjects.set(node.id, { group, material, outlineMaterial, spriteMaterial, baseMaterialOpacity:material.opacity, baseOutlineOpacity:outlineMaterial.opacity, baseSpriteOpacity:spriteMaterial.opacity });
+  return group;
+}
+
+function buildGraphData(preservePositions = true) {
+  const current = Graph.graphData();
+  const positions = new Map((current.nodes || []).map(node => [node.id, node]));
+  const nodes = MODEL.nodes.map(node => {
+    const clone = structuredClone(node);
+    const old = positions.get(node.id);
+    if (preservePositions && old && Number.isFinite(old.x)) {
+      ["x","y","z","vx","vy","vz","fx","fy","fz"].forEach(key => {
+        if (old[key] != null) clone[key] = old[key];
+      });
+    }
+    return clone;
+  });
+
+  const pairCounts = new Map();
+  const edges = MODEL.edges.map(edge => {
+    const clone = structuredClone(edge);
+    const key = [clone.source, clone.target].sort().join("::");
+    const count = pairCounts.get(key) || 0;
+    pairCounts.set(key, count + 1);
+    clone._curvature = clone.source === clone.target ? .5 : (count === 0 ? 0 : (count % 2 ? .18 : -.18) * Math.ceil(count / 2));
+    return clone;
+  });
+  return { nodes, links:edges };
+}
+
+function linkTooltip(edge) {
+  const style = relationStyle(edge.type);
+  const source = MODEL.nodes.find(n => n.id === idOf(edge.source));
+  const target = MODEL.nodes.find(n => n.id === idOf(edge.target));
+  return `<div style="background:#090d13;border:1px solid ${style.color};padding:7px 9px;border-radius:8px;font:12px Segoe UI;color:#edf2f8;max-width:310px">
+    <b style="color:${style.color}">${escapeHtml(edge.label || style.label)}</b><br>
+    ${escapeHtml(source?.label || idOf(edge.source))} → ${escapeHtml(target?.label || idOf(edge.target))}
+    ${edge.description ? `<br><span style="color:#98a4b3">${escapeHtml(edge.description)}</span>` : ""}
+  </div>`;
+}
+
+const Graph = ForceGraph3D()(graphEl)
+  .backgroundColor("#090c11")
+  .nodeThreeObjectExtend(false)
+  .nodeThreeObject(buildNodeObject)
+  .nodeLabel(node => {
+    const style = groupStyle(node.group);
+    return `<div style="background:#090d13;border:1px solid ${style.color};padding:7px 9px;border-radius:8px;font:12px Segoe UI;color:#edf2f8;max-width:300px">
+      <b style="color:${style.color}">${escapeHtml(node.label)}</b><br>
+      <span style="color:#98a4b3">${escapeHtml(style.label)} · ${escapeHtml(SHAPES[node.shape] || node.shape)}</span>
+      ${node.description ? `<br>${escapeHtml(node.description)}` : ""}
+    </div>`;
+  })
+  .linkLabel(linkTooltip)
+  .linkColor(edge => {
+    const style = relationStyle(edge.type);
+    return edgeIsFocused(edge.id) ? style.color : mix(style.color, "#090c11", .78);
+  })
+  .linkWidth(edge => {
+    const style = relationStyle(edge.type);
+    return edgeIsFocused(edge.id) ? Number(style.width || 1.4) : .35;
+  })
+  .linkCurvature(edge => edge._curvature || 0)
+  .linkDirectionalArrowLength(edge => {
+    const style = relationStyle(edge.type);
+    return style.directed === false ? 0 : (edgeIsFocused(edge.id) ? 5 : 2.5);
+  })
+  .linkDirectionalArrowRelPos(1)
+  .linkDirectionalParticles(edge => {
+    const style = relationStyle(edge.type);
+    return edgeIsFocused(edge.id) ? Number(style.particles || 0) : 0;
+  })
+  .linkDirectionalParticleWidth(1.4)
+  .linkDirectionalParticleSpeed(.006)
+  .onNodeHover(node => {
+    hoverNodeId = node ? node.id : null;
+    document.body.style.cursor = node ? "pointer" : "default";
+  })
+  .onNodeClick(node => selectEntity("node", node.id))
+  .onLinkClick(edge => selectEntity("edge", edge.id))
+  .onBackgroundClick(() => {
+    selected = null;
+    panelMode = "overview";
+    rebuild(true);
+  })
+  .d3AlphaDecay(.022)
+  .d3VelocityDecay(.3);
+
+const scene = Graph.scene();
+scene.add(new THREE.AmbientLight(0xffffff, .82));
+const keyLight = new THREE.DirectionalLight(0xffffff, .72);
+keyLight.position.set(1, 1, 2);
+scene.add(keyLight);
+const fillLight = new THREE.DirectionalLight(0x7da4ff, .3);
+fillLight.position.set(-1, -.6, -1);
+scene.add(fillLight);
+
+function clearFloatingLabels() {
+  floatingLabels.forEach(item => {
+    scene.remove(item.sprite);
+    item.sprite.material.map.dispose();
+    item.sprite.material.dispose();
+  });
+  floatingLabels = [];
+}
+
+function buildFloatingLabels() {
+  clearFloatingLabels();
+  if (!selected) return;
+  const edgeIds = selected.kind === "edge"
+    ? [selected.id]
+    : MODEL.edges.filter(e => e.source === selected.id || e.target === selected.id).map(e => e.id);
+
+  edgeIds.forEach(edgeId => {
+    const edge = MODEL.edges.find(e => e.id === edgeId);
+    if (!edge) return;
+    const style = relationStyle(edge.type);
+    const text = edge.label || style.label;
+    const canvas = labelCanvas(text, style.color, true);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map:canvas.texture,
+      transparent:true,
+      depthTest:false,
+      depthWrite:false
+    }));
+    sprite.scale.set(canvas.width * .048, canvas.height * .048, 1);
+    sprite.renderOrder = 7;
+    scene.add(sprite);
+    floatingLabels.push({ edgeId, sprite });
+  });
+}
+
+function rebuild(preservePositions = true) {
+  nodeObjects.clear();
+  Graph.graphData(buildGraphData(preservePositions));
+  buildFloatingLabels();
+  renderSide();
+  renderLegend();
+  document.getElementById("title").textContent = MODEL.meta.title || "3D Node Editor";
+  document.getElementById("subtitle").textContent = MODEL.meta.subtitle || "";
+}
+
+function selectEntity(kind, id) {
+  selected = { kind, id };
+  panelMode = kind;
+  rebuild(true);
+}
+
+function showStatus(message, ok = true) {
+  clearTimeout(statusTimer);
+  statusEl.textContent = message;
+  statusEl.style.color = ok ? "var(--ok)" : "var(--danger)";
+  statusEl.classList.add("show");
+  statusTimer = setTimeout(() => statusEl.classList.remove("show"), 2200);
+}
+
+function optionList(entries, selectedValue) {
+  return entries.map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === selectedValue ? "selected" : ""}>${escapeHtml(label)}</option>`).join("");
+}
+
+function renderOverview() {
+  sideEl.innerHTML = `
+    <div class="panel-head"><div><h2>Graphraum</h2><div class="sub">Wähle einen Node oder eine Beziehung aus, um sie zu bearbeiten.</div></div></div>
+    <div class="metric-grid">
+      <div class="metric"><b>${MODEL.nodes.length}</b><span>Nodes</span></div>
+      <div class="metric"><b>${MODEL.edges.length}</b><span>Beziehungen</span></div>
+      <div class="metric"><b>${Object.keys(MODEL.relation_types).length}</b><span>Typen</span></div>
+    </div>
+    <div class="notice"><b>Neutraler Kern:</b> Der Editor zeigt Beziehungen, bewertet sie aber nicht. Schleifen, Abhängigkeiten oder Konflikte erhalten nur dann Bedeutung, wenn das geladene Modell oder ein späteres Modul sie definiert.</div>
+    <div class="divider"></div>
+    <h3 class="section-title">Bedienung</h3>
+    <div class="sub">Hintergrund ziehen = Raum drehen · Scrollen = zoomen · Node ziehen = Position verändern · Klick = Inspector öffnen.</div>
+    <div class="actions">
+      <button id="overviewAddNode" class="primary">＋ Ersten / weiteren Node</button>
+      <button id="overviewAddEdge">＋ Beziehung</button>
+    </div>`;
+  document.getElementById("overviewAddNode").addEventListener("click", openAddNode);
+  document.getElementById("overviewAddEdge").addEventListener("click", () => openAddEdge({}));
+}
+
+function renderNodeInspector(node) {
+  const style = groupStyle(node.group);
+  const outgoing = MODEL.edges.filter(edge => edge.source === node.id);
+  const incoming = MODEL.edges.filter(edge => edge.target === node.id);
+  const groupOptions = optionList(Object.entries(MODEL.groups).map(([id, value]) => [id, value.label || id]), node.group);
+  const shapeOptions = optionList(Object.entries(SHAPES), node.shape);
+
+  sideEl.innerHTML = `
+    <div class="entity-head">
+      <span class="icon-chip" style="background:${style.color}"></span>
+      <div><h2>Node</h2><div class="entity-id">${escapeHtml(node.id)}</div></div>
+    </div>
+    <div class="field"><label for="nodeLabel">Label</label><input id="nodeLabel" value="${escapeHtml(node.label)}"></div>
+    <div class="field"><label for="nodeDescription">Beschreibung</label><textarea id="nodeDescription">${escapeHtml(node.description || "")}</textarea></div>
+    <div class="two">
+      <div class="field"><label for="nodeGroup">Gruppe</label><select id="nodeGroup">${groupOptions}</select></div>
+      <div class="field"><label for="nodeShape">Form</label><select id="nodeShape">${shapeOptions}</select></div>
+    </div>
+    <div class="divider"></div>
+    <h3 class="section-title">Ausgehend · ${outgoing.length}</h3>
+    <div id="outgoingList" class="relation-list"></div>
+    <div class="actions"><button id="addOutgoing" class="small">＋ von diesem Node</button></div>
+    <div class="divider"></div>
+    <h3 class="section-title">Eingehend · ${incoming.length}</h3>
+    <div id="incomingList" class="relation-list"></div>
+    <div class="actions"><button id="addIncoming" class="small">＋ zu diesem Node</button></div>
+    <div class="divider"></div>
+    <div class="actions"><button id="deleteNode" class="danger">Node löschen</button><button id="closeInspector" class="ghost">Schließen</button></div>`;
+
+  const update = () => {
+    node.label = document.getElementById("nodeLabel").value.trim() || node.id;
+    node.description = document.getElementById("nodeDescription").value;
+    node.group = document.getElementById("nodeGroup").value;
+    node.shape = document.getElementById("nodeShape").value;
+    rebuild(true);
+  };
+  ["nodeLabel","nodeDescription","nodeGroup","nodeShape"].forEach(id => document.getElementById(id).addEventListener("change", update));
+  renderRelationRows("outgoingList", outgoing, node.id);
+  renderRelationRows("incomingList", incoming, node.id);
+  document.getElementById("addOutgoing").addEventListener("click", () => openAddEdge({ source:node.id }));
+  document.getElementById("addIncoming").addEventListener("click", () => openAddEdge({ target:node.id }));
+  document.getElementById("deleteNode").addEventListener("click", () => {
+    if (!confirm(`Node "${node.label}" und alle verbundenen Beziehungen löschen?`)) return;
+    MODEL.nodes = MODEL.nodes.filter(item => item.id !== node.id);
+    MODEL.edges = MODEL.edges.filter(edge => edge.source !== node.id && edge.target !== node.id);
+    selected = null;
+    panelMode = "overview";
+    rebuild(true);
+    showStatus("Node gelöscht");
+  });
+  document.getElementById("closeInspector").addEventListener("click", closePanel);
+}
+
+function renderRelationRows(containerId, edges, nodeId) {
+  const container = document.getElementById(containerId);
+  if (!edges.length) {
+    container.innerHTML = `<div class="empty">– keine –</div>`;
+    return;
+  }
+  edges.forEach(edge => {
+    const style = relationStyle(edge.type);
+    const otherId = edge.source === nodeId ? edge.target : edge.source;
+    const other = MODEL.nodes.find(node => node.id === otherId);
+    const direction = edge.source === nodeId ? "→" : "←";
+    const button = document.createElement("button");
+    button.className = "relation-row";
+    button.innerHTML = `
+      <span class="mark" style="background:${style.color}"></span>
+      <span class="main"><span class="name">${escapeHtml(edge.label || style.label)}</span><span class="meta">${escapeHtml(other?.label || otherId)} · ${escapeHtml(style.label)}</span></span>
+      <span class="arrow">${direction}</span>`;
+    button.addEventListener("click", () => selectEntity("edge", edge.id));
+    container.appendChild(button);
+  });
+}
+
+function renderEdgeInspector(edge) {
+  const style = relationStyle(edge.type);
+  const nodeOptions = Object.fromEntries(MODEL.nodes.map(node => [node.id, node.label]));
+  const sourceOptions = optionList(Object.entries(nodeOptions), edge.source);
+  const targetOptions = optionList(Object.entries(nodeOptions), edge.target);
+  const typeOptions = optionList(Object.entries(MODEL.relation_types).map(([id, value]) => [id, value.label || id]), edge.type);
+
+  sideEl.innerHTML = `
+    <div class="entity-head">
+      <span class="icon-chip" style="background:${style.color}"></span>
+      <div><h2>Beziehung</h2><div class="entity-id">${escapeHtml(edge.id)}</div></div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="edgeSource">Quelle</label><select id="edgeSource">${sourceOptions}</select></div>
+      <div class="field"><label for="edgeTarget">Ziel</label><select id="edgeTarget">${targetOptions}</select></div>
+    </div>
+    <div class="field"><label for="edgeType">Beziehungstyp</label><select id="edgeType">${typeOptions}</select></div>
+    <div class="field"><label for="edgeLabel">Konkretes Label</label><input id="edgeLabel" value="${escapeHtml(edge.label || "")}" placeholder="optional"></div>
+    <div class="field"><label for="edgeDescription">Beschreibung</label><textarea id="edgeDescription">${escapeHtml(edge.description || "")}</textarea></div>
+    <div class="actions">
+      <button id="swapEdge">⇄ Richtung tauschen</button>
+      <button id="deleteEdge" class="danger">Beziehung löschen</button>
+      <button id="closeInspector" class="ghost">Schließen</button>
+    </div>`;
+
+  const update = () => {
+    edge.source = document.getElementById("edgeSource").value;
+    edge.target = document.getElementById("edgeTarget").value;
+    edge.type = document.getElementById("edgeType").value;
+    edge.label = document.getElementById("edgeLabel").value;
+    edge.description = document.getElementById("edgeDescription").value;
+    rebuild(true);
+  };
+  ["edgeSource","edgeTarget","edgeType","edgeLabel","edgeDescription"].forEach(id => document.getElementById(id).addEventListener("change", update));
+  document.getElementById("swapEdge").addEventListener("click", () => {
+    [edge.source, edge.target] = [edge.target, edge.source];
+    rebuild(true);
+  });
+  document.getElementById("deleteEdge").addEventListener("click", () => {
+    MODEL.edges = MODEL.edges.filter(item => item.id !== edge.id);
+    selected = null;
+    panelMode = "overview";
+    rebuild(true);
+    showStatus("Beziehung gelöscht");
+  });
+  document.getElementById("closeInspector").addEventListener("click", closePanel);
+}
+
+function renderAddNode() {
+  const firstGroup = Object.keys(MODEL.groups)[0];
+  const groupOptions = optionList(Object.entries(MODEL.groups).map(([id, value]) => [id, value.label || id]), firstGroup);
+  const shapeOptions = optionList(Object.entries(SHAPES), "box");
+  sideEl.innerHTML = `
+    <div class="panel-head"><div><h2>Node hinzufügen</h2><div class="sub">Ein neues Objekt im Graphraum.</div></div></div>
+    <div class="field"><label for="newNodeLabel">Label</label><input id="newNodeLabel" autofocus placeholder="Neuer Node"></div>
+    <div class="field"><label for="newNodeId">ID</label><input id="newNodeId" value="${slugify("node")}"></div>
+    <div class="field"><label for="newNodeDescription">Beschreibung</label><textarea id="newNodeDescription"></textarea></div>
+    <div class="two">
+      <div class="field"><label for="newNodeGroup">Gruppe</label><select id="newNodeGroup">${groupOptions}</select></div>
+      <div class="field"><label for="newNodeShape">Form</label><select id="newNodeShape">${shapeOptions}</select></div>
+    </div>
+    <div class="actions"><button id="createNode" class="primary">Node erstellen</button><button id="cancelAdd">Abbrechen</button></div>`;
+  const labelInput = document.getElementById("newNodeLabel");
+  const idInput = document.getElementById("newNodeId");
+  let idWasEdited = false;
+  idInput.addEventListener("input", () => { idWasEdited = true; });
+  labelInput.addEventListener("input", () => { if (!idWasEdited) idInput.value = slugify(labelInput.value); });
+  document.getElementById("createNode").addEventListener("click", () => {
+    const id = idInput.value.trim();
+    if (!id) return showStatus("Eine ID ist erforderlich", false);
+    if (MODEL.nodes.some(node => node.id === id)) return showStatus("Diese Node-ID existiert bereits", false);
+    const node = {
+      id,
+      label:labelInput.value.trim() || id,
+      description:document.getElementById("newNodeDescription").value,
+      group:document.getElementById("newNodeGroup").value,
+      shape:document.getElementById("newNodeShape").value
+    };
+    MODEL.nodes.push(node);
+    selected = { kind:"node", id };
+    panelMode = "node";
+    rebuild(true);
+    Graph.d3ReheatSimulation();
+    showStatus("Node erstellt");
+  });
+  document.getElementById("cancelAdd").addEventListener("click", closePanel);
+  labelInput.focus();
+}
+
+function renderAddEdge() {
+  if (MODEL.nodes.length < 1) {
+    sideEl.innerHTML = `<h2>Beziehung hinzufügen</h2><div class="sub">Dafür wird mindestens ein Node benötigt.</div><div class="actions"><button id="needNode" class="primary">Node hinzufügen</button><button id="cancelAdd">Abbrechen</button></div>`;
+    document.getElementById("needNode").addEventListener("click", openAddNode);
+    document.getElementById("cancelAdd").addEventListener("click", closePanel);
+    return;
+  }
+  const nodeEntries = MODEL.nodes.map(node => [node.id, node.label]);
+  const source = addEdgeDefaults.source || MODEL.nodes[0].id;
+  const target = addEdgeDefaults.target || MODEL.nodes[Math.min(1, MODEL.nodes.length - 1)].id;
+  const firstType = Object.keys(MODEL.relation_types)[0];
+  sideEl.innerHTML = `
+    <div class="panel-head"><div><h2>Beziehung hinzufügen</h2><div class="sub">Eine Kante zwischen zwei Objekten.</div></div></div>
+    <div class="two">
+      <div class="field"><label for="newEdgeSource">Quelle</label><select id="newEdgeSource">${optionList(nodeEntries, source)}</select></div>
+      <div class="field"><label for="newEdgeTarget">Ziel</label><select id="newEdgeTarget">${optionList(nodeEntries, target)}</select></div>
+    </div>
+    <div class="field"><label for="newEdgeType">Beziehungstyp</label><select id="newEdgeType">${optionList(Object.entries(MODEL.relation_types).map(([id,value]) => [id,value.label || id]), firstType)}</select></div>
+    <div class="field"><label for="newEdgeLabel">Konkretes Label</label><input id="newEdgeLabel" placeholder="optional"></div>
+    <div class="field"><label for="newEdgeDescription">Beschreibung</label><textarea id="newEdgeDescription"></textarea></div>
+    <div class="actions"><button id="createEdge" class="primary">Beziehung erstellen</button><button id="cancelAdd">Abbrechen</button></div>`;
+  document.getElementById("createEdge").addEventListener("click", () => {
+    const edge = {
+      id:nextEdgeId(),
+      source:document.getElementById("newEdgeSource").value,
+      target:document.getElementById("newEdgeTarget").value,
+      type:document.getElementById("newEdgeType").value,
+      label:document.getElementById("newEdgeLabel").value,
+      description:document.getElementById("newEdgeDescription").value
+    };
+    MODEL.edges.push(edge);
+    selected = { kind:"edge", id:edge.id };
+    panelMode = "edge";
+    rebuild(true);
+    Graph.d3ReheatSimulation();
+    showStatus("Beziehung erstellt");
+  });
+  document.getElementById("cancelAdd").addEventListener("click", closePanel);
+}
+
+function validateModel(model) {
+  if (!model || typeof model !== "object") throw new Error("Wurzel muss ein Objekt sein");
+  if (!Array.isArray(model.nodes)) throw new Error("nodes[] fehlt");
+  if (!Array.isArray(model.edges) && !Array.isArray(model.links)) throw new Error("edges[] fehlt");
+
+  model = normalizeClientModel(model);
+  const groupIds = new Set(Object.keys(model.groups));
+  const typeIds = new Set(Object.keys(model.relation_types));
+  const ids = new Set();
+
+  model.nodes.forEach(node => {
+    node.id = String(node.id || "").trim();
+    if (!node.id) throw new Error("Jeder Node benötigt eine ID");
+    if (ids.has(node.id)) throw new Error(`Doppelte Node-ID: ${node.id}`);
+    if (!groupIds.has(node.group)) throw new Error(`Unbekannte Gruppe bei ${node.id}: ${node.group}`);
+    if (!SHAPES[node.shape]) throw new Error(`Unbekannte Node-Form bei ${node.id}: ${node.shape}`);
+    node.label ||= node.id;
+    ids.add(node.id);
+  });
+
+  const edgeIds = new Set();
+  model.edges.forEach((edge, index) => {
+    edge.id = String(edge.id || `edge-${index + 1}`);
+    edge.source = String(edge.source || "");
+    edge.target = String(edge.target || "");
+    if (edgeIds.has(edge.id)) throw new Error(`Doppelte Edge-ID: ${edge.id}`);
+    edgeIds.add(edge.id);
+    if (!ids.has(edge.source) || !ids.has(edge.target)) throw new Error(`Unbekannte Edge-Referenz: ${edge.source} → ${edge.target}`);
+    if (!typeIds.has(edge.type)) throw new Error(`Unbekannter Beziehungstyp: ${edge.type}`);
+  });
+  return model;
+}
+
+function renderJsonEditor() {
+  sideEl.innerHTML = `
+    <div class="panel-head"><div><h2>JSON-Modell</h2><div class="sub">Direkter Zugriff auf Nodes, Gruppen und Beziehungen.</div></div></div>
+    <div class="field"><textarea id="jsonText" spellcheck="false"></textarea></div>
+    <div class="actions">
+      <button id="applyJson" class="primary">Übernehmen</button>
+      <button id="copyJson">Kopieren</button>
+      <button id="downloadJson">Download</button>
+      <button id="closeInspector" class="ghost">Schließen</button>
+    </div>`;
+  const textarea = document.getElementById("jsonText");
+  textarea.value = JSON.stringify(MODEL, null, 2);
+  document.getElementById("applyJson").addEventListener("click", () => {
+    try {
+      MODEL = validateModel(JSON.parse(textarea.value));
+      selected = null;
+      panelMode = "overview";
+      rebuild(false);
+      Graph.d3ReheatSimulation();
+      showStatus("JSON übernommen");
+    } catch (error) {
+      showStatus(error.message, false);
+    }
+  });
+  document.getElementById("copyJson").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(MODEL, null, 2));
+      showStatus("JSON kopiert");
+    } catch {
+      textarea.select();
+      document.execCommand("copy");
+      showStatus("JSON kopiert");
+    }
+  });
+  document.getElementById("downloadJson").addEventListener("click", downloadModel);
+  document.getElementById("closeInspector").addEventListener("click", closePanel);
+}
+
+function renderSide() {
+  if (panelMode === "add-node") return renderAddNode();
+  if (panelMode === "add-edge") return renderAddEdge();
+  if (panelMode === "json") return renderJsonEditor();
+  if (selected?.kind === "node") {
+    const node = MODEL.nodes.find(item => item.id === selected.id);
+    if (node) return renderNodeInspector(node);
+  }
+  if (selected?.kind === "edge") {
+    const edge = MODEL.edges.find(item => item.id === selected.id);
+    if (edge) return renderEdgeInspector(edge);
+  }
+  selected = null;
+  panelMode = "overview";
+  renderOverview();
+}
+
+function renderLegend() {
+  const groups = Object.entries(MODEL.groups).map(([id, style]) => `
+    <span class="legend-item"><span class="legend-dot" style="background:${style.color}"></span>${escapeHtml(style.label || id)}</span>`).join("");
+  const relations = Object.entries(MODEL.relation_types).map(([id, style]) => `
+    <span class="legend-item" style="color:${style.color}"><span class="legend-line ${style.directed === false ? "" : "directed"}"></span><span style="color:#c7d0dc">${escapeHtml(style.label || id)}</span></span>`).join("");
+  legendEl.innerHTML = `<h3>Gruppen</h3><div class="legend-wrap">${groups || "–"}</div><div class="divider"></div><h3>Beziehungen</h3><div class="legend-wrap">${relations || "–"}</div>`;
+}
+
+function openAddNode() {
+  selected = null;
+  panelMode = "add-node";
+  clearFloatingLabels();
+  renderSide();
+}
+
+function openAddEdge(defaults = {}) {
+  selected = null;
+  addEdgeDefaults = defaults;
+  panelMode = "add-edge";
+  clearFloatingLabels();
+  renderSide();
+}
+
+function closePanel() {
+  selected = null;
+  panelMode = "overview";
+  rebuild(true);
+}
+
+function downloadModel() {
+  const blob = new Blob([JSON.stringify(MODEL, null, 2)], { type:"application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${slugify(MODEL.meta.title || "graph")}.editor.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showStatus("JSON heruntergeladen");
+}
+
+document.getElementById("addNode").addEventListener("click", openAddNode);
+document.getElementById("addEdge").addEventListener("click", () => openAddEdge({}));
+document.getElementById("openJson").addEventListener("click", () => {
+  selected = null;
+  panelMode = "json";
+  clearFloatingLabels();
+  renderSide();
+});
+document.getElementById("importJson").addEventListener("click", () => document.getElementById("fileInput").click());
+document.getElementById("fileInput").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    MODEL = validateModel(JSON.parse(await file.text()));
+    selected = null;
+    panelMode = "overview";
+    rebuild(false);
+    Graph.d3ReheatSimulation();
+    showStatus("JSON importiert");
+  } catch (error) {
+    showStatus(error.message, false);
+  } finally {
+    event.target.value = "";
+  }
+});
+document.getElementById("fitGraph").addEventListener("click", () => Graph.zoomToFit(700, 75));
+document.getElementById("reheat").addEventListener("click", () => {
+  Graph.d3ReheatSimulation();
+  showStatus("Layout neu gestartet");
+});
+
+(function animate() {
+  const now = performance.now() / 1000;
+  nodeObjects.forEach((object, id) => {
+    const selectedNode = selected?.kind === "node" && selected.id === id;
+    const hovered = hoverNodeId === id;
+    const targetScale = hovered ? 1.17 : selectedNode ? 1.12 : 1;
+    const current = object.group.scale.x;
+    const next = current + (targetScale - current) * .18;
+    object.group.scale.setScalar(next);
+    object.outlineMaterial.color.set(hovered || selectedNode ? "#ffffff" : mix(groupStyle(MODEL.nodes.find(n => n.id === id)?.group).color, "#ffffff", .55));
+    if (hovered) {
+      object.material.opacity = 1;
+      object.outlineMaterial.opacity = 1;
+      object.spriteMaterial.opacity = 1;
+    } else {
+      object.material.opacity = object.baseMaterialOpacity;
+      object.outlineMaterial.opacity = object.baseOutlineOpacity;
+      object.spriteMaterial.opacity = object.baseSpriteOpacity;
+    }
+  });
+
+  if (floatingLabels.length) {
+    const data = Graph.graphData();
+    const edgeMap = new Map(data.links.map(edge => [edge.id, edge]));
+    floatingLabels.forEach(item => {
+      const edge = edgeMap.get(item.edgeId);
+      if (!edge || !edge.source || !edge.target || !Number.isFinite(edge.source.x) || !Number.isFinite(edge.target.x)) return;
+      item.sprite.position.set(
+        (edge.source.x + edge.target.x) / 2,
+        (edge.source.y + edge.target.y) / 2 + 3 + Math.sin(now * 1.4 + item.edgeId.length) * .3,
+        (edge.source.z + edge.target.z) / 2
+      );
+    });
+  }
+  requestAnimationFrame(animate);
+})();
+
+rebuild(false);
+Graph.cameraPosition({ z:300 });
+setTimeout(() => Graph.zoomToFit(800, 70), 700);
+</script>
+</body>
+</html>

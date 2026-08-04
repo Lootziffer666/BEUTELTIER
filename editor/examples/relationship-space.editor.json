@@ -1,0 +1,124 @@
+{
+  "meta": {
+    "title": "Beziehungsraum",
+    "subtitle": "Neutrales Beispiel: dieselben Objekte können über verschiedene Beziehungstypen verbunden sein"
+  },
+  "groups": {
+    "concept": { "label": "Konzept", "color": "#5b8def" },
+    "data": { "label": "Daten", "color": "#43b581" },
+    "rule": { "label": "Regel", "color": "#b47aea" },
+    "view": { "label": "Ansicht", "color": "#e3a438" },
+    "result": { "label": "Ergebnis", "color": "#e16b78" }
+  },
+  "relation_types": {
+    "depends": {
+      "label": "hängt ab von",
+      "color": "#8b7cf6",
+      "width": 1.8,
+      "particles": 2,
+      "directed": true
+    },
+    "transforms": {
+      "label": "transformiert",
+      "color": "#39b8c7",
+      "width": 2.2,
+      "particles": 3,
+      "directed": true
+    },
+    "describes": {
+      "label": "beschreibt",
+      "color": "#d7a93d",
+      "width": 1.4,
+      "particles": 0,
+      "directed": true
+    },
+    "related": {
+      "label": "steht in Beziehung zu",
+      "color": "#8793a3",
+      "width": 1.1,
+      "particles": 0,
+      "directed": false
+    }
+  },
+  "nodes": [
+    {
+      "id": "concept",
+      "label": "Konzept",
+      "description": "Eine abstrakte Idee oder ein fachlicher Gegenstand.",
+      "group": "concept",
+      "shape": "sphere"
+    },
+    {
+      "id": "data",
+      "label": "Daten",
+      "description": "Beobachtungen oder strukturierte Eingaben.",
+      "group": "data",
+      "shape": "cylinder"
+    },
+    {
+      "id": "rule",
+      "label": "Regel",
+      "description": "Eine Bedingung oder Transformation.",
+      "group": "rule",
+      "shape": "diamond"
+    },
+    {
+      "id": "view",
+      "label": "Ansicht",
+      "description": "Eine mögliche visuelle Projektion des Modells.",
+      "group": "view",
+      "shape": "box"
+    },
+    {
+      "id": "result",
+      "label": "Ergebnis",
+      "description": "Ein aus dem Beziehungsraum abgeleiteter Zustand.",
+      "group": "result",
+      "shape": "pill"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "source": "concept",
+      "target": "data",
+      "type": "describes",
+      "label": "ordnet Bedeutung zu"
+    },
+    {
+      "id": "edge-2",
+      "source": "rule",
+      "target": "data",
+      "type": "depends",
+      "label": "liest"
+    },
+    {
+      "id": "edge-3",
+      "source": "rule",
+      "target": "result",
+      "type": "transforms",
+      "label": "erzeugt"
+    },
+    {
+      "id": "edge-4",
+      "source": "view",
+      "target": "data",
+      "type": "depends",
+      "label": "visualisiert"
+    },
+    {
+      "id": "edge-5",
+      "source": "view",
+      "target": "concept",
+      "type": "related",
+      "label": "macht sichtbar"
+    },
+    {
+      "id": "edge-6",
+      "source": "view",
+      "target": "result",
+      "type": "describes",
+      "label": "zeigt"
+    }
+  ]
+}
