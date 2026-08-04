@@ -23,6 +23,25 @@ sichtbares senkrechtes Stück im Weg.
 Die flache Ansicht geht dabei nicht verloren: **Laufmodus** ist eine
 Kameraposition von oben, kein zweiter Renderer.
 
+Das Gelände ist dabei kein Drahtgitter: die Gebäude kommen aus dem amtlichen
+3D-Modell LoD2, und **Boden und Dächer tragen das Senkrechtluftbild** von
+Geobasis NRW — 10 cm aufgelöst, Stand 2025, ins Geländesystem entzerrt. Ein
+Luftbild zeigt keine Wände, Hallenböden und Decken; die werden im Browser
+prozedural erzeugt und in der App ausdrücklich als *erfunden* gekennzeichnet.
+Das texturierte 3D-Mesh derselben Behörde gäbe echte Fassaden her, wird aber
+nur in Paketen von 26 bis 147 GB ausgeliefert — für eine Offline-App keine
+Option.
+
+Und weil das Gelände echt ist, gibt es
+**Begehen** — die Ego-Perspektive, mitten im Gang zwischen den Ständen. Das ist
+keine Spielerei: eine Route ist eine Behauptung darüber, wie es vor Ort
+aussieht, und dies ist die einzige Ansicht, in der sich diese Behauptung
+prüfen lässt, ohne hinzufahren. Kollidiert wird gegen **dasselbe Gitter, auf
+dem geroutet wird** — was die Route nicht darf, darf hier auch niemand.
+Draußen, wo kein Gitter liegt, wird durchgelassen statt gesperrt: eine Karte,
+die den Nutzer am Hallentor festhält, wäre schlechter als eine, die ihn über
+den Boulevard laufen lässt.
+
 ## Was die Karte weiß — und was nicht
 
 Alles ist metrisch, nichts ist geraten, und wo es unsicher wird, steht es dran.

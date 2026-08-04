@@ -36,6 +36,7 @@ LOD2_DIR = ROOT / "data" / "raw" / "lod2"
 SITE = ROOT / "data" / "build" / "site.json"
 OUT_JSON = ROOT / "data" / "build" / "buildings.json"
 OUT_GLB = ROOT / "app" / "public" / "models" / "messe.glb"
+ORTHO_META = ROOT / "data" / "build" / "ortho.json"
 
 # Ausschnitt des Messegelaendes in UTM32. Grosszuegig genug fuer die Umgebung,
 # eng genug, um nicht halb Deutz mitzunehmen.
@@ -48,15 +49,26 @@ MIN_AREA_SQM = 60.0
 # Wie weit zwei Streckenlaengen auseinanderliegen duerfen, damit ein
 # Korrespondenzpaar als Kandidat zaehlt.
 SPAN_TOLERANCE_M = 25.0
+# Ab welchem Anteil der Pruefpunkte ein Gebaeude zu einer Halle gezaehlt wird.
+# Darunter ist es ein Nachbargebaeude, das der Umriss streift.
+MIN_BUILDING_SHARE = 0.10
 
 # Farben der Teilnetze. Zurueckhaltend -- die Karte lebt von den Staenden,
 # nicht vom Gebaeude.
+# Farbe *und* Textur je Flaechenart. Ein Senkrechtluftbild zeigt Boden und
+# Daecher -- fuer Waende gibt es keine Aufnahme, die bleiben prozedural.
+# Wo eine Textur liegt, ist die Grundfarbe weiss, damit das Bild nicht
+# eingefaerbt wird.
 COLOURS = {
     "wall": (0.62, 0.64, 0.68, 1.0),
-    "roof": (0.44, 0.47, 0.52, 1.0),
-    "ground": (0.30, 0.32, 0.36, 1.0),
+    "roof": (1.0, 1.0, 1.0, 1.0),
+    "ground": (0.72, 0.73, 0.75, 1.0),
     "closure": (0.62, 0.64, 0.68, 1.0),
 }
+# Nur das Dach. Das Senkrechtluftbild zeigt Daecher -- auf dem Hallenboden
+# waere es das Foto des Daches darueber, also schlicht das falsche Bild.
+# Boeden und Waende bekommen prozedurale Texturen in der App.
+TEXTURED = {"roof": "ortho"}
 
 
 def centroid(ring) -> tuple[float, float]:
@@ -242,6 +254,64 @@ def main() -> int:
         })
     records.sort(key=lambda r: -r["areaSqm"])
 
+    # --- Welches Gebaeude gehoert zu welcher Halle --------------------------
+    # Ueber Enthaltensein, nicht ueber Naehe: eine Halle gehoert in das
+    # Gebaeude, in dem ihre belegte Flaeche liegt. Mehrere Hallenebenen
+    # teilen sich dabei ein Gebaeude -- 10.1 und 10.2 stehen uebereinander.
+    halls_by_building: dict[str, list[tuple[str, float]]] = {}
+    hall_building: dict[str, dict] = {}
+    for hall in site["halls"]:
+        if hall.get("outdoor"):
+            continue
+        points = sample_points([(p[0], p[1]) for p in hall["footprint"]])
+        if not points:
+            continue
+        tally: dict[str, int] = {}
+        outside = 0
+        for point in points:
+            for record in records:
+                if inside(record["footprint"], point):
+                    tally[record["id"]] = tally.get(record["id"], 0) + 1
+                    break
+            else:
+                outside += 1
+        if not tally:
+            continue
+
+        # Eine Halle kann sich ueber mehrere Gebaeude erstrecken -- Halle 5
+        # tut das. Wer nur das groesste nimmt, bekommt eine belegte Flaeche,
+        # die groesser ist als "ihr" Gebaeude, und das ist Unsinn.
+        chosen = [(bid, count) for bid, count in tally.items()
+                  if count / len(points) >= MIN_BUILDING_SHARE]
+        if not chosen:
+            chosen = [max(tally.items(), key=lambda item: item[1])]
+        chosen.sort(key=lambda item: -item[1])
+        parts = [next(r for r in records if r["id"] == bid) for bid, _ in chosen]
+        covered_points = sum(count for _, count in chosen)
+
+        for record in parts:
+            halls_by_building.setdefault(record["id"], []).append(
+                (hall["key"], covered_points / len(points)))
+        hall_building[hall["key"]] = {
+            "buildingIds": [record["id"] for record in parts],
+            "coveragePct": round(100 * covered_points / len(points), 1),
+            "outsideAnyBuildingPct": round(100 * outside / len(points), 1),
+            "buildingAreaSqm": round(sum(record["areaSqm"] for record in parts), 1),
+            "buildingHeightM": max(record["heightM"] for record in parts),
+            "groundM": min(record["groundM"] for record in parts),
+            "occupiedAreaSqm": hall["area"]["extentAreaSqm"],
+            "officialAreaSqm": hall["area"]["officialAreaSqm"],
+        }
+
+    for record in records:
+        assigned = halls_by_building.get(record["id"])
+        if assigned:
+            record["hallKeys"] = [key for key, _ in sorted(assigned)]
+
+    named = sum(1 for r in records if r.get("hallKeys"))
+    print(f"  {len(hall_building)} Hallenebenen einem Gebaeude zugeordnet, "
+          f"{named} Gebaeude benannt")
+
     payload = {
         "schema": "beuteltier.buildings.v1",
         "source": {
@@ -255,6 +325,17 @@ def main() -> int:
                 "sharePct": round(share, 1),
                 "perHall": {k: {"inside": v[0], "samples": v[1]}
                             for k, v in sorted(per_hall.items())}},
+        # Der Umriss, mit dem geroutet wird, bleibt die *belegte* Flaeche.
+        # Hier steht daneben, wie gross das Gebaeude wirklich ist -- beides
+        # getrennt, damit niemand das eine fuer das andere haelt.
+        "hallBuildings": dict(sorted(hall_building.items())),
+        "note": [
+            "Der Gebaeudeumriss ersetzt den Routing-Umriss nicht. Wo gamescom",
+            "nur einen Teil einer Halle belegt, waere die uebrige Flaeche im",
+            "Wegenetz begehbar, obwohl sie waehrend der Messe abgetrennt sein",
+            "kann. Die Zahl steht trotzdem hier: sie sagt, wie viel vom",
+            "Gebaeude ueberhaupt bespielt wird.",
+        ],
         "buildings": records,
     }
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
@@ -263,7 +344,24 @@ def main() -> int:
     print(f"\n{len(records)} Gebaeude -> {OUT_JSON}")
 
     # --- Ausgabe: begehbares Netz -------------------------------------------
-    parts = {kind: gltf.Part(name=kind, colour=colour)
+    # Das Luftbild deckt einen bekannten Ausschnitt ab. Die UV-Koordinaten
+    # sind daraus reine Rechnung: keine Zuordnung von Hand, keine Naht.
+    ortho = (json.loads(ORTHO_META.read_text(encoding="utf-8"))
+             if ORTHO_META.exists() else None)
+    if ortho:
+        ox0, oy0, ox1, oy1 = ortho["extent"]
+        span_x = ox1 - ox0
+        span_y = oy1 - oy0
+
+        def planar_uv(point):
+            # Szenenpunkt ist (x, hoehe, -y); das Bild beginnt oben bei y1.
+            return ((point[0] - ox0) / span_x, (oy1 + point[2]) / span_y)
+    else:
+        planar_uv = None
+        print("  ! ortho.json fehlt -- Modell bleibt ohne Textur", file=sys.stderr)
+
+    parts = {kind: gltf.Part(name=kind, colour=colour,
+                             texture=(TEXTURED.get(kind) if ortho else None))
              for kind, colour in COLOURS.items()}
     skipped = 0
     for building in buildings:
@@ -280,8 +378,9 @@ def main() -> int:
                 continue
             scene = [(lambda p: (p[0], z - ground_level, -p[1]))(fit.inverse(x, y))
                      for x, y, z in points]
+            uv = planar_uv if part.texture else None
             for a, b, c in triangles:
-                part.add_triangle(scene[a], scene[b], scene[c])
+                part.add_triangle(scene[a], scene[b], scene[c], uv)
 
     OUT_GLB.parent.mkdir(parents=True, exist_ok=True)
     size = gltf.write_glb(
@@ -289,7 +388,9 @@ def main() -> int:
         generator="BEUTELTIER aus LoD2 (Geobasis NRW)",
         extras={"crsNote": "BEUTELTIER-Gelaendemeter, x rechts, y hoch, z sued",
                 "groundReferenceM": round(ground_level, 2),
-                "licence": "Datenlizenz Deutschland Zero 2.0"})
+                "licence": "Datenlizenz Deutschland Zero 2.0",
+                **({"ortho": ortho["image"], "orthoExtent": ortho["extent"]}
+                   if ortho else {})})
     triangles = sum(part.triangle_count for part in parts.values())
     print(f"{triangles} Dreiecke, {size / 1e6:.1f} MB -> {OUT_GLB}")
     if skipped:

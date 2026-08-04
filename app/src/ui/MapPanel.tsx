@@ -285,6 +285,14 @@ export function MapPanel(props: Props) {
           Die gezeichneten Hallenumrisse sind der <em>belegte Bereich</em>, nicht der
           Gebäudeumriss: wo gamescom nur einen Teil einer Halle nutzt, endet der Umriss dort.
         </p>
+        <p className="muted">
+          Die Gebäude selbst kommen aus dem amtlichen 3D-Modell LoD2 von Geobasis NRW.
+          Der Boden draußen und die Dächer tragen das <strong>Senkrechtluftbild</strong> von
+          2025, 10 cm aufgelöst — ein Foto des Geländes.{' '}
+          <strong>Wände, Hallenböden und Decken sind erfunden</strong>: ein Luftbild zeigt
+          sie nicht, und für sie gibt es keine freie Aufnahme. Sie werden aus Fugen,
+          Abnutzung und Rauschen erzeugt — plausibel, aber nicht gemessen.
+        </p>
       </section>
     </div>
   );

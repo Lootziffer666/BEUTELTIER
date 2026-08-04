@@ -17,10 +17,13 @@ import * as THREE from 'three';
 
 import type { Dataset } from '../data/load';
 import { siteCentre } from '../data/load';
+import type { Ortho } from '../data/load';
 import type { Route } from '../routing/route';
 import { mergePolygons, polygonCentre, toScene } from './geometry';
+import { EYE_HEIGHT_M } from './walk';
+import { floorTexture, orthoTexture, wallTexture } from './materials';
 
-export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus';
+export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
 export interface SceneProps {
   data: Dataset;
@@ -32,6 +35,8 @@ export interface SceneProps {
   preset: CameraPreset;
   focusHallKey: string | null;
   onSelectStand: (standId: string | null) => void;
+  /** Verlässt die Ego-Perspektive, wenn der Nutzer Escape drückt. */
+  onLeaveEgo?: () => void;
 }
 
 const COLOURS = {
@@ -52,15 +57,60 @@ const STAND_HEIGHT_M = 2.6;
 
 /** Das eingepasste LoD2-Modell der Koelnmesse, gebaut von tools/build_buildings.py. */
 const MODEL_URL = `${import.meta.env.BASE_URL}models/messe.glb`;
+/** Das entzerrte Senkrechtluftbild, gebaut von tools/build_ortho.py. */
+const ORTHO_URL = `${import.meta.env.BASE_URL}models/gelaende.jpg`;
 /** Wie durchsichtig die Gebäudehülle in der Übersicht ist. */
 const SHELL_OPACITY = 0.16;
+/** In der Ego-Perspektive ist die Wand eine Wand. */
+const SHELL_OPACITY_EGO = 0.92;
 
-function Ground({ extent }: { extent: number }) {
+/** Gehgeschwindigkeit auf einer vollen Messe -- kein Sprint. */
+const WALK_SPEED_M_PER_S = 1.6;
+const RUN_SPEED_M_PER_S = 4.2;
+
+/**
+ * Der Boden ist das Luftbild, nicht eine graue Fläche.
+ *
+ * Der Ausschnitt steht in `data/build/ortho.json` und wird beim Bauen in
+ * dieselben Geländemeter entzerrt wie alles andere — deshalb genügt hier ein
+ * achsparalleles Rechteck ohne jede Drehung.
+ */
+function Ground({
+  extent,
+  centre,
+  ortho: meta,
+}: {
+  extent: number;
+  centre: [number, number];
+  ortho: Ortho | null;
+}) {
+  const ortho = useMemo(() => (meta ? orthoTexture(ORTHO_URL) : null), [meta]);
+  if (!meta || !ortho) {
+    return (
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]} receiveShadow>
+        <planeGeometry args={[extent * 2.2, extent * 2.2]} />
+        <meshStandardMaterial color={COLOURS.ground} roughness={1} />
+      </mesh>
+    );
+  }
+  const extentM = meta.extent;
+  const width = extentM[2] - extentM[0];
+  const height = extentM[3] - extentM[1];
+  const midX = (extentM[0] + extentM[2]) / 2 - centre[0];
+  const midZ = -((extentM[1] + extentM[3]) / 2 - centre[1]);
+
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]} receiveShadow>
-      <planeGeometry args={[extent * 2.2, extent * 2.2]} />
-      <meshStandardMaterial color={COLOURS.ground} roughness={1} />
-    </mesh>
+    <group>
+      {/* Dahinter, damit der Horizont nicht abreisst. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.6, 0]} receiveShadow>
+        <planeGeometry args={[extent * 3, extent * 3]} />
+        <meshStandardMaterial color={COLOURS.ground} roughness={1} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[midX, -0.4, midZ]} receiveShadow>
+        <planeGeometry args={[width, height]} />
+        <meshStandardMaterial map={ortho} roughness={0.95} />
+      </mesh>
+    </group>
   );
 }
 
@@ -75,11 +125,17 @@ function Ground({ extent }: { extent: number }) {
 function Gelaende({
   centre,
   opacity,
+  interior,
 }: {
   centre: [number, number];
   opacity: number;
+  /** Steht der Betrachter im Gebäude? Dann ist das Dach eine Decke. */
+  interior: boolean;
 }) {
   const { scene } = useGLTF(MODEL_URL);
+  const ortho = useMemo(() => orthoTexture(ORTHO_URL), []);
+  const wall = useMemo(() => wallTexture(), []);
+  const floor = useMemo(() => floorTexture(), []);
 
   const model = useMemo(() => {
     const clone = scene.clone(true);
@@ -87,15 +143,41 @@ function Gelaende({
       if (!(node instanceof THREE.Mesh)) return;
       const source = node.material as THREE.MeshStandardMaterial;
       const material = source.clone();
+
+      // Welche Fläche welche Herkunft bekommt, steht im Modell selbst --
+      // build_buildings.py schreibt es beim Erzeugen hinein.
+      const kind = (source.name ?? '').toLowerCase();
+      const roof = (source.userData?.texture ?? '') === 'ortho';
+      if (roof && !interior) {
+        material.map = ortho;
+        material.color.setScalar(1);
+        material.roughness = 0.94;
+      } else if (roof) {
+        // Von innen ist das Dach eine Decke, und ein Luftbild wäre dort
+        // das Foto der Oberseite -- also das falsche Bild.
+        material.map = null;
+        material.color.set('#3a3d45');
+        material.roughness = 0.85;
+      } else if (kind === 'ground') {
+        material.map = floor;
+        material.color.setScalar(1);
+        material.roughness = 0.35;
+        material.metalness = 0.04;
+      } else {
+        material.map = wall;
+        material.roughness = 0.82;
+      }
+
       material.transparent = opacity < 0.99;
       material.opacity = opacity;
       material.depthWrite = opacity > 0.9;
       material.side = THREE.DoubleSide;
+      material.needsUpdate = true;
       node.material = material;
       node.receiveShadow = true;
     });
     return clone;
-  }, [scene, opacity]);
+  }, [scene, opacity, interior, ortho, wall, floor]);
 
   useEffect(
     () => () => {
@@ -366,6 +448,123 @@ function HallLabels({
   );
 }
 
+/**
+ * Ego-Perspektive: durch die Halle laufen statt auf sie zu schauen.
+ *
+ * Das ist keine Spielerei. Eine Route ist eine Behauptung darüber, wie es
+ * vor Ort aussieht — und diese Ansicht ist die einzige, in der sich diese
+ * Behauptung prüfen lässt, ohne hinzufahren. Wenn ein Gang zu schmal wirkt
+ * oder ein Ebenenwechsel ins Leere führt, sieht man es hier.
+ *
+ * Kollidiert wird gegen dasselbe Gitter, auf dem geroutet wird. Was die
+ * Route nicht darf, darf hier auch niemand.
+ */
+function WalkControls({
+  data,
+  centre,
+  active,
+  start,
+  onExit,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  active: boolean;
+  start: THREE.Vector3 | null;
+  onExit: () => void;
+}) {
+  const { camera, gl } = useThree();
+  const position = useRef({ x: 0, y: 0, z: 0 });
+  const look = useRef({ yaw: 0, pitch: 0 });
+  const keys = useRef(new Set<string>());
+  const locked = useRef(false);
+
+  // Startpunkt: die fokussierte Halle, sonst der erste begehbare Punkt.
+  useEffect(() => {
+    if (!active) return;
+    const site = start
+      ? { x: start.x + centre[0], y: centre[1] - start.z, z: start.y }
+      : null;
+    const footing = site && !data.walk.footingAt(site.x, site.y, site.z).blocked
+      ? { x: site.x, y: site.y, z: data.walk.footingAt(site.x, site.y, site.z).z }
+      : data.walk.spawn();
+    if (footing) position.current = footing;
+    look.current = { yaw: 0, pitch: 0 };
+  }, [active, start, data, centre]);
+
+  useEffect(() => {
+    if (!active) return;
+    const canvas = gl.domElement;
+
+    const request = () => {
+      if (!locked.current) void canvas.requestPointerLock?.();
+    };
+    const onLockChange = () => {
+      locked.current = document.pointerLockElement === canvas;
+      if (!locked.current) keys.current.clear();
+    };
+    const onMove = (event: MouseEvent) => {
+      if (!locked.current) return;
+      look.current.yaw -= event.movementX * 0.0022;
+      look.current.pitch = Math.max(
+        -1.2,
+        Math.min(1.2, look.current.pitch - event.movementY * 0.0022),
+      );
+    };
+    const onDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onExit();
+        return;
+      }
+      keys.current.add(event.key.toLowerCase());
+    };
+    const onUp = (event: KeyboardEvent) => keys.current.delete(event.key.toLowerCase());
+
+    canvas.addEventListener('click', request);
+    document.addEventListener('pointerlockchange', onLockChange);
+    document.addEventListener('mousemove', onMove);
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    return () => {
+      canvas.removeEventListener('click', request);
+      document.removeEventListener('pointerlockchange', onLockChange);
+      document.removeEventListener('mousemove', onMove);
+      window.removeEventListener('keydown', onDown);
+      window.removeEventListener('keyup', onUp);
+      if (document.pointerLockElement === canvas) document.exitPointerLock?.();
+      keys.current.clear();
+    };
+  }, [active, gl, onExit]);
+
+  useFrame((_, delta) => {
+    if (!active) return;
+    const pressed = keys.current;
+    const forward =
+      (pressed.has('w') || pressed.has('arrowup') ? 1 : 0) -
+      (pressed.has('s') || pressed.has('arrowdown') ? 1 : 0);
+    const strafe =
+      (pressed.has('d') || pressed.has('arrowright') ? 1 : 0) -
+      (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0);
+
+    if (forward || strafe) {
+      const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
+      const { yaw } = look.current;
+      // Karten-Y zeigt nach Norden, die Szene nach -Z. Deshalb hier und nicht
+      // erst beim Zeichnen umrechnen -- sonst läuft man seitwärts.
+      const dx = (Math.sin(-yaw) * forward + Math.cos(-yaw) * strafe) * speed;
+      const dy = (Math.cos(-yaw) * forward - Math.sin(-yaw) * strafe) * speed;
+      position.current = data.walk.move(position.current, dx, dy);
+    }
+
+    const { x, y, z } = position.current;
+    camera.position.set(x - centre[0], z + EYE_HEIGHT_M, -(y - centre[1]));
+    camera.rotation.set(0, 0, 0);
+    camera.rotateY(look.current.yaw);
+    camera.rotateX(look.current.pitch);
+  });
+
+  return null;
+}
+
 function CameraRig({
   preset,
   focus,
@@ -435,7 +634,7 @@ export function SiteScene(props: SceneProps) {
 
   return (
     <Canvas
-      camera={{ fov: 42, near: 1, far: extent * 6, position: [extent * 0.5, extent * 0.6, extent * 0.85] }}
+      camera={{ fov: preset === 'ego' ? 70 : 42, near: 0.15, far: extent * 6, position: [extent * 0.5, extent * 0.6, extent * 0.85] }}
       dpr={[1, 1.8]}
       onPointerMissed={() => props.onSelectStand(null)}
     >
@@ -445,11 +644,15 @@ export function SiteScene(props: SceneProps) {
       <directionalLight position={[extent * 0.4, extent * 0.8, extent * 0.3]} intensity={1.1} />
       <directionalLight position={[-extent * 0.5, extent * 0.4, -extent * 0.4]} intensity={0.35} />
 
-      <Ground extent={extent} />
+      <Ground extent={extent} centre={centre} ortho={data.ortho} />
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
           tragen sie weiterhin. Deshalb Suspense ohne Ersatzdarstellung. */}
       <Suspense fallback={null}>
-        <Gelaende centre={centre} opacity={SHELL_OPACITY} />
+        <Gelaende
+          centre={centre}
+          opacity={preset === 'ego' ? SHELL_OPACITY_EGO : SHELL_OPACITY}
+          interior={preset === 'ego'}
+        />
       </Suspense>
       <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
       <Stands
@@ -462,7 +665,17 @@ export function SiteScene(props: SceneProps) {
       />
       <RouteRibbon data={data} route={route} centre={centre} />
       <HallLabels data={data} centre={centre} upperOpacity={upperOpacity} />
-      <CameraRig preset={preset} focus={focus} extent={extent} />
+      {preset === 'ego' ? (
+        <WalkControls
+          data={data}
+          centre={centre}
+          active
+          start={focus}
+          onExit={() => props.onLeaveEgo?.()}
+        />
+      ) : (
+        <CameraRig preset={preset} focus={focus} extent={extent} />
+      )}
     </Canvas>
   );
 }

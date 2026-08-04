@@ -22,6 +22,7 @@ from beuteltier import building  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "data" / "build" / "site.json"
 GRAPH = ROOT / "data" / "build" / "graph.json"
+BUILDINGS = ROOT / "data" / "build" / "buildings.json"
 OUT_JSON = ROOT / "data" / "build" / "accuracy-report.json"
 OUT_MD = ROOT / "docs" / "accuracy-report.md"
 
@@ -184,6 +185,8 @@ def main() -> int:
 
     site = json.loads(SITE.read_text(encoding="utf-8"))
     graph = json.loads(GRAPH.read_text(encoding="utf-8")) if GRAPH.exists() else {"connectors": []}
+    lod2_report = (json.loads(BUILDINGS.read_text(encoding="utf-8"))
+                   if BUILDINGS.exists() else None)
     buildings = building.Buildings()
 
     halls = []
@@ -248,6 +251,16 @@ def main() -> int:
         "connectorSnapMedianM": round(statistics.median(snaps), 1) if snaps else None,
     }
 
+    # Die haerteste Pruefung der Hallenlage: liegt der belegte Bereich
+    # ueberhaupt im Gebaeude? Das ist eine geometrische Aussage und braucht
+    # keine offizielle Flaechenangabe als Vergleich.
+    if lod2_report:
+        outside = [entry["outsideAnyBuildingPct"]
+                   for entry in lod2_report["hallBuildings"].values()]
+        summary["buildingFitSharePct"] = lod2_report["fit"]["sharePct"]
+        summary["outsideAnyBuildingMeanPct"] = round(statistics.mean(outside), 1)
+        summary["outsideAnyBuildingMaxPct"] = round(max(outside), 1)
+
     OUT_JSON.write_text(json.dumps(
         {"schema": "beuteltier.accuracy.v1", "summary": summary,
          "halls": halls, "connectors": connectors},
@@ -271,7 +284,34 @@ def main() -> int:
                  f"{summary['areaDeviationMedianPct']} % im Median")
     lines.append(f"- Angenommene Geschossdecke: "
                  f"{summary['slabAssumptionM'][0]}–{summary['slabAssumptionM'][1]} m")
+    if lod2_report:
+        lines.append(f"- Einpassung ins amtliche Gebaeudemodell: "
+                     f"**{summary['buildingFitSharePct']} %** der Pruefpunkte "
+                     f"liegen im Gebaeude")
+        lines.append(f"- Belegte Flaeche ausserhalb jedes Gebaeudes: "
+                     f"{summary['outsideAnyBuildingMeanPct']} % im Mittel, "
+                     f"maximal {summary['outsideAnyBuildingMaxPct']} %")
     lines.append("")
+
+    if lod2_report:
+        lines.append("## Gegen das amtliche Gebaeudemodell")
+        lines.append("")
+        lines.append("Der Umriss, mit dem geroutet wird, ist der **belegte Bereich** --")
+        lines.append("nicht das Gebaeude. Diese Tabelle sagt, wie beides zueinander steht.")
+        lines.append("`ausserhalb` ist der Anteil der belegten Flaeche, der in keinem")
+        lines.append("Gebaeude liegt: die haerteste Pruefung der Hallenlage, weil sie ohne")
+        lines.append("offizielle Flaechenangabe auskommt.")
+        lines.append("")
+        lines.append("| Ebene | Gebaeude m² | belegt m² | belegt vom Gebaeude | ausserhalb | Gebaeudehoehe m | Teile |")
+        lines.append("|---|--:|--:|--:|--:|--:|--:|")
+        for key, entry in lod2_report["hallBuildings"].items():
+            share = 100 * entry["occupiedAreaSqm"] / entry["buildingAreaSqm"]
+            lines.append(
+                f"| {key} | {entry['buildingAreaSqm']:.0f} | "
+                f"{entry['occupiedAreaSqm']:.0f} | {share:.0f} % | "
+                f"{entry['outsideAnyBuildingPct']:.0f} % | "
+                f"{entry['buildingHeightM']:.1f} | {len(entry['buildingIds'])} |")
+        lines.append("")
 
     lines.append("## Hallenebenen")
     lines.append("")

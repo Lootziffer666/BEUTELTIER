@@ -16,6 +16,7 @@ from beuteltier import georef, hallplan  # noqa: E402
 from beuteltier.graph import Graph, Node  # noqa: E402
 
 BUILD = ROOT / "data" / "build"
+BUILDINGS_JSON = BUILD / "buildings.json"
 TECHGUIDE_PDF = ROOT / "data" / "raw" / "pdf" / "technische-richtlinien-2022.pdf"
 
 
@@ -662,3 +663,64 @@ class TestReferenceChoice:
         assert estimated, "es sollte geschaetzte Hallen geben"
         for hall in estimated:
             assert hall["placement"]["residualM"] < 15.0, hall["key"]
+
+
+@pytest.fixture(scope="module")
+def buildings_model() -> dict:
+    if not BUILDINGS_JSON.exists():
+        pytest.skip("buildings.json fehlt -- tools/fetch_lod2.py und build_buildings.py")
+    return json.loads(BUILDINGS_JSON.read_text(encoding="utf-8"))
+
+
+class TestBuildingModel:
+    """Das amtliche LoD2-Modell und seine Einpassung."""
+
+    def test_einpassung_ist_gemessen_und_gut(self, buildings_model):
+        fit = buildings_model["fit"]
+        assert fit["samples"] > 300
+        assert fit["sharePct"] >= 90, "Einpassung verschlechtert"
+        assert not fit["mirrored"]
+        # Jede eingemessene Halle muss deutlich ueber der Haelfte liegen.
+        for key, entry in fit["perHall"].items():
+            assert entry["inside"] / entry["samples"] > 0.8, key
+
+    def test_jede_halle_liegt_in_einem_gebaeude(self, buildings_model, site):
+        indoor = {h["key"] for h in site["halls"] if not h.get("outdoor")}
+        assigned = set(buildings_model["hallBuildings"])
+        assert indoor - assigned == set(), indoor - assigned
+        for key, entry in buildings_model["hallBuildings"].items():
+            assert entry["buildingIds"], key
+            assert entry["buildingAreaSqm"] > 1000, key
+
+    def test_halle_5_erstreckt_sich_ueber_mehrere_gebaeude(self, buildings_model):
+        """Ein Gebaeude je Halle waere zu einfach gedacht.
+
+        Halle 5 verteilt sich auf zwei LoD2-Gebaeude. Wer nur das groesste
+        nimmt, bekommt eine belegte Flaeche groesser als "ihr" Gebaeude --
+        171 Prozent, und das ist Unsinn.
+        """
+        entry = buildings_model["hallBuildings"]["5.1"]
+        assert len(entry["buildingIds"]) >= 2
+        assert entry["occupiedAreaSqm"] < entry["buildingAreaSqm"]
+
+    def test_weist_belegte_flaeche_ausserhalb_der_gebaeude_aus(self, buildings_model):
+        """Die haerteste Pruefung der Hallenlage -- ohne offizielle Flaeche.
+
+        Wo der belegte Bereich aus dem Gebaeude herausragt, stimmt entweder
+        die Lage nicht oder der Umriss. Beides gehoert ausgewiesen.
+        """
+        outside = {k: v["outsideAnyBuildingPct"]
+                   for k, v in buildings_model["hallBuildings"].items()}
+        assert outside
+        # Die eingemessenen Erdgeschosshallen sitzen gut.
+        for key in ("2.1", "3.2", "6.1", "8.1"):
+            assert outside[key] <= 2.0, (key, outside[key])
+        # Und die bekannten Ausreisser bleiben benannt, nicht versteckt.
+        assert outside["1.2"] > 10, "geschaetzte Lage, muss auffallen"
+        assert outside["10.2"] > 10, "Huelle ueberbrueckt die L-Kerbe"
+
+    def test_gebaeudemodell_nennt_seine_lizenz(self, buildings_model):
+        source = buildings_model["source"]
+        assert "Geobasis NRW" in source["provider"]
+        assert "Zero" in source["licence"]
+        assert "UTM32" in source["crs"]

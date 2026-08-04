@@ -13,6 +13,13 @@ import type { EdgeState } from './routing/graph';
 
 type Tab = 'karte' | 'epix' | 'funkwache' | 'register';
 
+const PRESET_LABELS: Record<CameraPreset, string> = {
+  uebersicht: 'Übersicht',
+  halle: 'Halle',
+  laufmodus: 'Laufmodus',
+  ego: 'Begehen',
+};
+
 const TABS: { id: Tab; label: string; hint: string }[] = [
   { id: 'karte', label: 'Karte', hint: 'Wege, Sperren, Beutezug' },
   { id: 'epix', label: 'Epix', hint: 'Quests und SteamGifts-Export' },
@@ -129,18 +136,26 @@ export default function App() {
           preset={preset}
           focusHallKey={focusHallKey}
           onSelectStand={setSelectedStandId}
+          onLeaveEgo={() => setPreset('uebersicht')}
         />
+
+        {preset === 'ego' && (
+          <p className="stage__hint">
+            Klicken zum Umsehen · <strong>W A S D</strong> laufen ·{' '}
+            <strong>Shift</strong> schneller · <strong>Esc</strong> zurück
+          </p>
+        )}
 
         <div className="stage__controls">
           <div className="segmented" role="group" aria-label="Kameraansicht">
-            {(['uebersicht', 'halle', 'laufmodus'] as CameraPreset[]).map((option) => (
+            {(['uebersicht', 'halle', 'laufmodus', 'ego'] as CameraPreset[]).map((option) => (
               <button
                 key={option}
                 type="button"
                 className={preset === option ? 'is-active' : ''}
                 onClick={() => setPreset(option)}
               >
-                {option === 'uebersicht' ? 'Übersicht' : option === 'halle' ? 'Halle' : 'Laufmodus'}
+                {PRESET_LABELS[option]}
               </button>
             ))}
           </div>

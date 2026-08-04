@@ -34,16 +34,21 @@ class Part:
     colour: tuple[float, float, float, float]
     positions: list[float] = field(default_factory=list)
     normals: list[float] = field(default_factory=list)
+    uvs: list[float] = field(default_factory=list)
     indices: list[int] = field(default_factory=list)
     metallic: float = 0.0
     roughness: float = 0.9
+    texture: str | None = None
 
-    def add_triangle(self, a, b, c) -> None:
+    def add_triangle(self, a, b, c, uv=None) -> None:
+        """``uv`` bekommt einen Szenenpunkt und liefert (u, v) im Bild."""
         base = len(self.positions) // 3
         normal = _normal(a, b, c)
         for point in (a, b, c):
             self.positions.extend(point)
             self.normals.extend(normal)
+            if uv is not None:
+                self.uvs.extend(uv(point))
         self.indices.extend((base, base + 1, base + 2))
 
     @property
@@ -65,7 +70,8 @@ def _pad(data: bytearray, alignment: int = 4, filler: int = 0) -> None:
 
 
 def write_glb(path: str | Path, parts: list[Part], *,
-              generator: str = "BEUTELTIER", extras: dict | None = None) -> int:
+              generator: str = "BEUTELTIER", extras: dict | None = None,
+              images: list[str] | None = None) -> int:
     """Schreibt die Teilnetze als GLB und gibt die Dateigroesse zurueck."""
     parts = [part for part in parts if part.triangle_count]
     if not parts:
@@ -86,6 +92,7 @@ def write_glb(path: str | Path, parts: list[Part], *,
         return len(buffer_views) - 1
 
     for part in parts:
+        has_uv = len(part.uvs) * 3 == len(part.positions) * 2
         position_bytes = struct.pack(f"<{len(part.positions)}f", *part.positions)
         normal_bytes = struct.pack(f"<{len(part.normals)}f", *part.normals)
         index_bytes = struct.pack(f"<{len(part.indices)}I", *part.indices)
@@ -107,25 +114,43 @@ def write_glb(path: str | Path, parts: list[Part], *,
                           "count": count, "type": "VEC3"})
         normal_accessor = len(accessors) - 1
 
+        uv_accessor = None
+        if has_uv:
+            uv_bytes = struct.pack(f"<{len(part.uvs)}f", *part.uvs)
+            uv_view = add_view(uv_bytes, ARRAY_BUFFER)
+            accessors.append({"bufferView": uv_view, "componentType": FLOAT,
+                              "count": count, "type": "VEC2"})
+            uv_accessor = len(accessors) - 1
+
         index_view = add_view(index_bytes, ELEMENT_ARRAY_BUFFER)
         accessors.append({"bufferView": index_view, "componentType": UNSIGNED_INT,
                           "count": len(part.indices), "type": "SCALAR"})
         index_accessor = len(accessors) - 1
 
+        pbr = {
+            "baseColorFactor": list(part.colour),
+            "metallicFactor": part.metallic,
+            "roughnessFactor": part.roughness,
+        }
+        # Die Textur wird nicht eingebettet: das Luftbild ist 3,6 MB und wird
+        # ohnehin als eigene Datei ausgeliefert. Der Name steht in den Extras,
+        # die App haengt es dort an -- so bleibt das GLB klein und die Textur
+        # einzeln austauschbar.
         materials.append({
             "name": part.name,
-            "pbrMetallicRoughness": {
-                "baseColorFactor": list(part.colour),
-                "metallicFactor": part.metallic,
-                "roughnessFactor": part.roughness,
-            },
+            "pbrMetallicRoughness": pbr,
             "doubleSided": True,
+            "extras": ({"texture": part.texture} if part.texture else {}),
         })
+        attributes = {"POSITION": position_accessor, "NORMAL": normal_accessor}
+        if uv_accessor is not None:
+            attributes["TEXCOORD_0"] = uv_accessor
         primitives.append({
-            "attributes": {"POSITION": position_accessor, "NORMAL": normal_accessor},
+            "attributes": attributes,
             "indices": index_accessor,
             "material": len(materials) - 1,
-            "extras": {"name": part.name},
+            "extras": {"name": part.name,
+                       **({"texture": part.texture} if part.texture else {})},
         })
 
     document = {

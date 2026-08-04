@@ -14,7 +14,10 @@
    2.0
   ],
   "connectorSnapMaxM": 373.6,
-  "connectorSnapMedianM": 58.9
+  "connectorSnapMedianM": 58.9,
+  "buildingFitSharePct": 95.6,
+  "outsideAnyBuildingMeanPct": 7.3,
+  "outsideAnyBuildingMaxPct": 23.6
  },
  "halls": [
   {
