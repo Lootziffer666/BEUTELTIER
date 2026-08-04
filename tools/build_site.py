@@ -222,21 +222,44 @@ def main() -> int:
                 "polygon": _round_points(transform.apply(x, y) for x, y in stand.polygon),
             })
 
-    # Durchgaenge und Aussenbereiche aus der Layout-Tabelle, ins Gelände gedreht.
-    notes = layout.get("notes") or []
+    # --- Durchgaenge aus der Layout-Tabelle ----------------------------------
+    # Die Tabelle lebt in ihrem eigenen Zeichenraum und braucht eine eigene
+    # Transformation -- die des Uebersichtsplans passt hier nicht. Gestuetzt
+    # wird wieder auf die exakt bekannten Hallen.
+    def outline_centre(coord) -> tuple[float, float]:
+        xs = [p[0] for p in coord]
+        ys = [p[1] for p in coord]
+        # Der Zeichenraum der Karte ist gegenueber dem Gelaende gespiegelt;
+        # ohne die Spiegelung liesse sich das nur als Drehung annaehern und der
+        # Restfehler bliebe fuenfmal so gross.
+        return (sum(xs) / len(xs), -sum(ys) / len(ys))
+
+    layout_reference = {key: outline_centre(entry["coord"])
+                        for key, entry in entries.items() if entry.get("coord")}
+    layout_supports = {key.split(".")[0]: centre
+                       for key, centre in site_centres.items() if key.endswith(".1")}
+    layout_params, layout_error, layout_cross, layout_n = georef.fit_reference_plan(
+        layout_reference, layout_supports)
+    print(f"  Layout-Tabelle auf Gelaende gepasst: {layout_n} Stuetzen, "
+          f"Restfehler {layout_error:.1f} m, kreuzvalidiert {layout_cross:.1f} m")
+
+    l_scale, l_rotation, l_tx, l_ty = layout_params
+    l_cos, l_sin = math.cos(l_rotation) * l_scale, math.sin(l_rotation) * l_scale
+
     connectors = []
-    for position, entry in enumerate(layout["entries"]):
-        key = str(entry["halle"])
+    for key, entry in entries.items():
         coord = entry.get("coord") or []
         if not coord:
             continue
         connectors.append({
             "key": key,
             "passage": bool(entry.get("pure")),
-            "note": notes[position] if position < len(notes) else "",
+            "note": entry.get("note") or "",
             "rotationDeg": entry.get("rot"),
+            "uncertaintyM": round(layout_cross, 1),
             "outline": _round_points(
-                (cos_r * x - sin_r * y + tx, sin_r * x + cos_r * y + ty) for x, y in coord),
+                (l_cos * x - l_sin * (-y) + l_tx, l_sin * x + l_cos * (-y) + l_ty)
+                for x, y in coord),
         })
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

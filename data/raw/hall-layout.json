@@ -4,56 +4,6 @@
   1172,
   903
  ],
- "notes": [
-  "zwischen 4 und 5",
-  "Durchgang Confex und H2",
-  "Durchgang Confex H1",
-  "Durchgang H1 H4",
-  "Durchgang C-H1 zu D24",
-  "Durchgang H1 H5",
-  "Durchgang P 10",
-  "Durchgang entlang ES",
-  "Confex https://koelnmesse.atlassian.net/issues/DMT-5601",
-  "Confex https://koelnmesse.atlassian.net/issues/DMT-5601",
-  "1",
-  "Durchgang zwischen Halle 1 und 6",
-  "8",
-  "9",
-  "/ CC-Nord",
-  "/ CC-Nord",
-  "Boulevard Nord",
-  "6",
-  "Durchgang halle 6 zu 7",
-  "Freiflaeche Halle 6 Nord",
-  "Freiflaeche Halle 7 Nord",
-  "7",
-  "7",
-  "Boulevarad Mitte",
-  "5",
-  "Passage 4-5",
-  "4",
-  "Passage 5-10",
-  "10",
-  "Durchgang Halle 10 zu 9",
-  "11",
-  "Passage 3-11",
-  "Passage 3-11",
-  "3",
-  "Durchgang Halle 3 zu 4",
-  "Passage 2-3",
-  "2",
-  "Passage 2-4",
-  "Durchgang Piazza zu Durchgang Halle 3 zu 4",
-  "Durchgang Piazza zu Passage 2",
-  "Durchgang Piazza zu Passage 6",
-  "Durchgang Piazza zu Boulevard",
-  "Piazza",
-  "Passage 10-11",
-  "Passage 10-11",
-  "Passage 4-5",
-  "CC-Ost",
-  "Eingang Nord"
- ],
  "entries": [
   {
    "halle": "PC2",
@@ -78,7 +28,8 @@
      417,
      544
     ]
-   ]
+   ],
+   "note": "Durchgang Confex und H2"
   },
   {
    "halle": "PC1",
@@ -103,7 +54,8 @@
      399,
      451
     ]
-   ]
+   ],
+   "note": "Durchgang Confex H1"
   },
   {
    "halle": "P14",
@@ -128,7 +80,8 @@
      415,
      419
     ]
-   ]
+   ],
+   "note": "Durchgang H1 H4"
   },
   {
    "halle": "PCD24",
@@ -153,7 +106,8 @@
      411,
      440
     ]
-   ]
+   ],
+   "note": "Durchgang C-H1 zu D24"
   },
   {
    "halle": "P15",
@@ -178,7 +132,8 @@
      415,
      338
     ]
-   ]
+   ],
+   "note": "Durchgang H1 H5"
   },
   {
    "halle": "P10",
@@ -203,7 +158,8 @@
      561,
      415
     ]
-   ]
+   ],
+   "note": "Durchgang P 10"
   },
   {
    "halle": "PES",
@@ -228,7 +184,8 @@
      546,
      555
     ]
-   ]
+   ],
+   "note": "Durchgang entlang ES"
   },
   {
    "halle": "C2",
@@ -260,7 +217,8 @@
      400,
      755
     ]
-   ]
+   ],
+   "note": "Confex https://koelnmesse.atlassian.net/issues/DMT-5601"
   },
   {
    "halle": "CF",
@@ -292,7 +250,8 @@
      400,
      755
     ]
-   ]
+   ],
+   "note": "Confex https://koelnmesse.atlassian.net/issues/DMT-5601"
   },
   {
    "halle": 1,
@@ -316,7 +275,8 @@
      400,
      650
     ]
-   ]
+   ],
+   "note": "1"
   },
   {
    "halle": "D16",
@@ -340,7 +300,8 @@
      437,
      550
     ]
-   ]
+   ],
+   "note": "Durchgang zwischen Halle 1 und 6"
   },
   {
    "halle": 8,
@@ -380,7 +341,8 @@
      505,
      325
     ]
-   ]
+   ],
+   "note": "8"
   },
   {
    "halle": "F8",
@@ -404,7 +366,8 @@
      620,
      313
     ]
-   ]
+   ],
+   "note": ""
   },
   {
    "halle": 9,
@@ -444,7 +407,8 @@
      585,
      540
     ]
-   ]
+   ],
+   "note": "9"
   },
   {
    "halle": "C5",
@@ -468,7 +432,8 @@
      585,
      420
     ]
-   ]
+   ],
+   "note": "/ CC-Nord"
   },
   {
    "halle": "M1",
@@ -492,7 +457,8 @@
      670,
      460
     ]
-   ]
+   ],
+   "note": "/ CC-Nord"
   },
   {
    "halle": "B",
@@ -524,7 +490,8 @@
      565,
      540
     ]
-   ]
+   ],
+   "note": "Boulevard Nord"
   },
   {
    "halle": 6,
@@ -564,7 +531,8 @@
      420,
      490
     ]
-   ]
+   ],
+   "note": "6"
   },
   {
    "halle": "D67",
@@ -588,7 +556,8 @@
      452,
      480
     ]
-   ]
+   ],
+   "note": "Durchgang halle 6 zu 7"
   },
   {
    "halle": "F2",
@@ -612,7 +581,8 @@
      452,
      480
     ]
-   ]
+   ],
+   "note": "Freiflaeche Halle 6 Nord"
   },
   {
    "halle": "F3",
@@ -636,7 +606,8 @@
      470,
      385
     ]
-   ]
+   ],
+   "note": "Freiflaeche Halle 7 Nord"
   },
   {
    "halle": 7,
@@ -676,7 +647,8 @@
      440,
      400
     ]
-   ]
+   ],
+   "note": "7"
   },
   {
    "halle": "D78",
@@ -700,7 +672,8 @@
      512,
      390
     ]
-   ]
+   ],
+   "note": "7"
   },
   {
    "halle": "B1",
@@ -724,7 +697,8 @@
      585,
      650
     ]
-   ]
+   ],
+   "note": "Boulevarad Mitte"
   },
   {
    "halle": 5,
@@ -748,7 +722,8 @@
      450,
      590
     ]
-   ]
+   ],
+   "note": "5"
   },
   {
    "halle": "P4",
@@ -808,7 +783,8 @@
      465,
      610
     ]
-   ]
+   ],
+   "note": "Passage 4-5"
   },
   {
    "halle": 4,
@@ -832,7 +808,8 @@
      450,
      650
     ]
-   ]
+   ],
+   "note": "4"
   },
   {
    "halle": "PA",
@@ -856,7 +833,8 @@
      585,
      580
     ]
-   ]
+   ],
+   "note": "Passage 5-10"
   },
   {
    "halle": 10,
@@ -880,7 +858,8 @@
      605,
      660
     ]
-   ]
+   ],
+   "note": "10"
   },
   {
    "halle": "D109",
@@ -904,7 +883,8 @@
      662,
      565
     ]
-   ]
+   ],
+   "note": "Durchgang Halle 10 zu 9"
   },
   {
    "halle": 11,
@@ -928,7 +908,8 @@
      600,
      775
     ]
-   ]
+   ],
+   "note": "11"
   },
   {
    "halle": "P2",
@@ -952,7 +933,8 @@
      570,
      725
     ]
-   ]
+   ],
+   "note": "Passage 3-11"
   },
   {
    "halle": "ES",
@@ -976,7 +958,8 @@
      575,
      795
     ]
-   ]
+   ],
+   "note": "Passage 3-11"
   },
   {
    "halle": 3,
@@ -1000,7 +983,8 @@
      520,
      775
     ]
-   ]
+   ],
+   "note": "3"
   },
   {
    "halle": "D34",
@@ -1024,7 +1008,8 @@
      537,
      705
     ]
-   ]
+   ],
+   "note": "Durchgang Halle 3 zu 4"
   },
   {
    "halle": "P9",
@@ -1048,7 +1033,8 @@
      500,
      775
     ]
-   ]
+   ],
+   "note": "Passage 2-3"
   },
   {
    "halle": 2,
@@ -1072,7 +1058,8 @@
      450,
      775
     ]
-   ]
+   ],
+   "note": "2"
   },
   {
    "halle": "P1",
@@ -1096,7 +1083,8 @@
      450,
      705
     ]
-   ]
+   ],
+   "note": "Passage 2-4"
   },
   {
    "halle": "D34B3",
@@ -1120,7 +1108,8 @@
      555,
      682
     ]
-   ]
+   ],
+   "note": "Durchgang Piazza zu Durchgang Halle 3 zu 4"
   },
   {
    "halle": "DP2B3",
@@ -1144,7 +1133,8 @@
      570,
      705
     ]
-   ]
+   ],
+   "note": "Durchgang Piazza zu Passage 2"
   },
   {
    "halle": "DP6B3",
@@ -1186,7 +1176,8 @@
      600,
      687
     ]
-   ]
+   ],
+   "note": "Durchgang Piazza zu Passage 6"
   },
   {
    "halle": "DB1B3",
@@ -1210,7 +1201,8 @@
      577,
      670
     ]
-   ]
+   ],
+   "note": "Durchgang Piazza zu Boulevard"
   },
   {
    "halle": "B3",
@@ -1234,7 +1226,8 @@
      555,
      700
     ]
-   ]
+   ],
+   "note": "Piazza"
   },
   {
    "halle": "P6",
@@ -1258,7 +1251,8 @@
      655,
      700
     ]
-   ]
+   ],
+   "note": "Passage 10-11"
   },
   {
    "halle": "P7",
@@ -1314,7 +1308,8 @@
      610,
      705
     ]
-   ]
+   ],
+   "note": "Passage 10-11"
   },
   {
    "halle": "P8",
@@ -1338,7 +1333,8 @@
      455,
      610
     ]
-   ]
+   ],
+   "note": "Passage 4-5"
   },
   {
    "halle": "C4",
@@ -1362,7 +1358,8 @@
      695,
      700
     ]
-   ]
+   ],
+   "note": "CC-Ost"
   },
   {
    "halle": "EINO",
@@ -1394,7 +1391,8 @@
      640,
      360
     ]
-   ]
+   ],
+   "note": "Eingang Nord"
   },
   {
    "halle": "F7",
@@ -1418,7 +1416,8 @@
      429,
      428
     ]
-   ]
+   ],
+   "note": ""
   }
  ]
 }

@@ -32,11 +32,11 @@ OUT_PATH = Path(__file__).resolve().parent.parent / "data" / "raw" / "hall-layou
 # Die Kommentare hinter den Eintraegen benennen die Durchgaenge im Klartext
 # ("// Durchgang Confex und H2") und sind fuer das Wegenetz zu wertvoll, um sie
 # beim Aufraeumen wegzuwerfen.
-TRAILING_COMMENT = re.compile(r"\}\s*,?\s*//([^\n]*)")
+TRAILING_COMMENT = re.compile(r"\A\s*,?\s*//([^\n]*)")
 
 
-def extract_array(html: str) -> tuple[str, list[str]]:
-    """Schneidet das ``hallen``-Array aus der Seite und sammelt die Kommentare."""
+def extract_array(html: str) -> str:
+    """Schneidet das ``hallen``-Array aus der Seite."""
     start = html.find("var hallen = [")
     if start < 0:
         raise ValueError("hallen-Array nicht gefunden")
@@ -50,20 +50,67 @@ def extract_array(html: str) -> tuple[str, list[str]]:
         elif char == "]":
             depth -= 1
             if depth == 0:
-                segment = html[open_bracket:position + 1]
-                notes = [m.group(1).strip() for m in TRAILING_COMMENT.finditer(segment)]
-                return segment, notes
+                return html[open_bracket:position + 1]
     raise ValueError("hallen-Array nicht geschlossen")
 
 
-def to_json(segment: str) -> list[dict]:
-    """Uebersetzt das JavaScript-Literal in JSON.
+def split_objects(segment: str) -> list[tuple[str, str]]:
+    """Zerlegt das Array in einzelne Objekte samt nachfolgendem Kommentar.
 
-    Auskommentierte Eintraege sind bewusst deaktiviert und fliegen mit den
-    Kommentaren raus. Danach bleiben nur noch JS-Eigenheiten: unquotierte
-    Schluessel, einfache Anfuehrungszeichen und Kommas vor der Klammer.
+    Die Zuordnung muss ueber die Position laufen, nicht ueber zwei getrennte
+    Listen: nicht jeder Eintrag traegt einen Kommentar, und auskommentierte
+    Eintraege verschieben sonst alles Nachfolgende.
     """
-    text = re.sub(r"/\*.*?\*/", "", segment, flags=re.S)
+    objects: list[tuple[str, str]] = []
+    depth = 0
+    start = None
+    in_block_comment = False
+
+    position = 0
+    while position < len(segment):
+        pair = segment[position:position + 2]
+        if in_block_comment:
+            if pair == "*/":
+                in_block_comment = False
+                position += 2
+                continue
+            position += 1
+            continue
+        if pair == "/*":
+            in_block_comment = True
+            position += 2
+            continue
+        if pair == "//" and depth == 0:
+            position = segment.find("\n", position)
+            if position < 0:
+                break
+            continue
+
+        char = segment[position]
+        if char == "{":
+            if depth == 0:
+                start = position
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0 and start is not None:
+                body = segment[start:position + 1]
+                match = TRAILING_COMMENT.match(segment[position + 1:])
+                objects.append((body, match.group(1).strip() if match else ""))
+                start = None
+        position += 1
+
+    return objects
+
+
+def to_json(body: str) -> dict:
+    """Uebersetzt ein JavaScript-Objektliteral in JSON.
+
+    Auskommentierte Zeilen sind bewusst deaktiviert und fliegen raus. Danach
+    bleiben nur noch JS-Eigenheiten: unquotierte Schluessel, einfache
+    Anfuehrungszeichen und Kommas vor der Klammer.
+    """
+    text = re.sub(r"/\*.*?\*/", "", body, flags=re.S)
     text = re.sub(r"//[^\n]*", "", text)
     text = re.sub(r"(?<![\"\w])(\w+)\s*:", r'"\1":', text)
     text = re.sub(r"\"\"(\w+)\"\":", r'"\1":', text)
@@ -85,14 +132,16 @@ def main() -> int:
     with urllib.request.urlopen(request, timeout=60) as response:
         html = response.read().decode("utf-8", errors="replace")
 
-    segment, notes = extract_array(html)
-    entries = to_json(segment)
+    entries = []
+    for body, note in split_objects(extract_array(html)):
+        entry = to_json(body)
+        entry["note"] = note
+        entries.append(entry)
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text(json.dumps({
         "source": PAGE_URL,
         "viewBox": [1172, 903],
-        "notes": notes,
         "entries": entries,
     }, ensure_ascii=False, indent=1), encoding="utf-8")
 
@@ -102,7 +151,7 @@ def main() -> int:
         kind = "Durchgang" if entry.get("pure") else "Halle    "
         print(f"  {kind} {str(entry.get('halle')):<7} rot={str(entry.get('rot')):>4} "
               f"dx={str(entry.get('dx')):>5} dy={str(entry.get('dy')):>5} "
-              f"pts={len(entry.get('coord') or [])}")
+              f"pts={len(entry.get('coord') or [])}  {entry.get('note') or ''}")
     return 0
 
 

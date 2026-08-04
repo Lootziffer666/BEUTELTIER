@@ -1,0 +1,27 @@
+{
+  "schema": "beuteltier.compounds.v1",
+  "note": [
+    "Compound-Staende sind raeumlich ein Block, auch wenn dort viele Studios zeigen.",
+    "Das PRD haelt das unter 5.7 fuer die Indie Arena Booth fest: ein Ziel statt",
+    "hundert Routingziele. Diese Datei ist kuratiert, weil die Zugehoerigkeit in",
+    "keiner Datenquelle steht -- die Ausstellerliste 2026 fuehrt die Indie Arena",
+    "Booth unter keinem Namen, und der Hallenplan kennt nur einzelne Standflaechen.",
+    "standCodes bleibt leer, solange die Flaechen nicht bestaetigt sind; die App",
+    "routet dann auf die Halle und weist die Unsicherheit aus."
+  ],
+  "compounds": [
+    {
+      "id": "compound:indie-arena-booth",
+      "name": "Indie Arena Booth",
+      "hallKey": "10.2",
+      "standCodes": [],
+      "confirmed": false,
+      "app": {
+        "android": "com.indiearenabooth.app",
+        "web": "https://indiearenabooth.de/"
+      },
+      "handover": "Die Suche fuehrt auf den Block. Ein einzelnes Studio uebergibt an die Indie Arena Booth App; fehlt sie, oeffnet der Play Store.",
+      "credit": "Indie Arena Booth - eigene App, wird angebunden statt ersetzt."
+    }
+  ]
+}
