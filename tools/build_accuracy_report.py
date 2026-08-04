@@ -38,7 +38,8 @@ def classify(hall: dict) -> str:
     return "geschaetzt"
 
 
-def write_survey(halls: list[dict], connectors: list[dict], summary: dict) -> None:
+def write_survey(halls: list[dict], connectors: list[dict], summary: dict,
+                 gaps: list[dict]) -> None:
     """Leitet aus dem verbleibenden Fehler ab, was vor Ort gemessen werden muss.
 
     Priorisiert wird nach dem, was die groesste Unsicherheit beseitigt -- nicht
@@ -96,16 +97,56 @@ def write_survey(halls: list[dict], connectors: list[dict], summary: dict) -> No
     if verticals:
         lines.append("## 3. Ebenenwechsel verorten")
         lines.append("")
-        lines.append("Aufzuege und Rolltreppen sitzen derzeit rechnerisch in der Hallenmitte,")
-        lines.append("weil ihre Standorte in keiner Quelle stehen. Gebraucht wird je Anlage:")
+        anchored = [c for c in verticals if c.get("positionSource", "").startswith("beobachtet")]
+        loose_v = [c for c in verticals if c not in anchored]
+        lines.append("Gebraucht wird je Anlage:")
         lines.append("")
         lines.append("- die **untere** Landung, benannt ueber den naechsten Standcode")
         lines.append("- die **obere** Landung, ebenso")
         lines.append("- bei Rolltreppen die **Richtung** und ob sie tageszeitabhaengig wechselt")
         lines.append("")
-        for connector in verticals:
-            connects = " ↔ ".join(connector["connects"]) if connector.get("connects") else "?"
-            lines.append(f"- **{connector['label'] or connector['id']}** ({connects})")
+        if loose_v:
+            lines.append("Diese sitzen noch rechnerisch in der Hallenmitte, weil ihr Standort")
+            lines.append("in keiner Quelle steht:")
+            lines.append("")
+            for connector in loose_v:
+                connects = " ↔ ".join(connector["connects"]) if connector.get("connects") else "?"
+                lines.append(f"- **{connector['label'] or connector['id']}** ({connects})")
+            lines.append("")
+        if anchored:
+            lines.append("Diese haengen an einer Beobachtung und einem verorteten Tor. Sie")
+            lines.append("brauchen keine Neuvermessung, sondern eine Bestaetigung:")
+            lines.append("")
+            for connector in anchored:
+                connects = " ↔ ".join(connector["connects"]) if connector.get("connects") else "?"
+                lines.append(f"- **{connector['label'] or connector['id']}** ({connects})")
+            lines.append("")
+
+    questions = {q["what"]: q for c in connectors for q in c.get("openQuestions", [])}
+    if questions:
+        lines.append("## 3b. Offene Fragen, die eine Antwort sofort aufloest")
+        lines.append("")
+        lines.append("Diese Punkte haengen an einer einzigen Angabe. Solange sie offen sind,")
+        lines.append("bleibt die betroffene Lage stehen, wie sie ist -- geraten wird nicht.")
+        lines.append("")
+        for question in questions.values():
+            lines.append(f"- **{question['what']}**")
+            lines.append(f"  - loest sich mit: {question['resolvesWith']}")
+            lines.append(f"  - Beobachtung: `{question['observation']}`")
+        lines.append("")
+
+    if gaps:
+        lines.append("## 3c. Anlagen, die es gibt, deren Lage aber fehlt")
+        lines.append("")
+        lines.append("Beschilderung vor Ort nennt mehr, als die Technischen Richtlinien")
+        lines.append("fuehren. Gebraucht wird je Anlage ein Foto, auf dem das Torschild und")
+        lines.append("ein benennbarer Punkt gleichzeitig zu sehen sind.")
+        lines.append("")
+        lines.append("| Halle | Anlage | Bekannt | Fehlt |")
+        lines.append("|---|---|---|---|")
+        for gap in gaps:
+            lines.append(f"| {gap['hallKey']} | {gap['kind']} {gap['designator']} | "
+                         f"{gap['known']} | {gap['missing']} |")
         lines.append("")
 
     lines.append("## 4. Betriebszustaende, die in keiner Quelle stehen")
@@ -181,6 +222,8 @@ def main() -> int:
             "connects": meta.get("connects"),
             "snapM": meta.get("snapM"),
             "uncertaintyM": meta.get("uncertaintyM"),
+            "positionSource": meta.get("positionSource") or meta.get("source"),
+            "openQuestions": meta.get("openQuestions") or [],
         })
 
     measured = [h for h in halls if h["placementSource"] == "procrustes"]
@@ -283,7 +326,7 @@ def main() -> int:
         lines.append("")
 
     OUT_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    write_survey(halls, connectors, summary)
+    write_survey(halls, connectors, summary, site.get("facilityGaps", []))
 
     print(f"{len(halls)} Hallenebenen, {len(connectors)} Verbindungen")
     print(f"Restfehler eingemessen: {summary['measuredResidualMeanM']} m "

@@ -35,12 +35,14 @@ verlaesst und wo man die andere betritt.
 
 ## 3. Ebenenwechsel verorten
 
-Aufzuege und Rolltreppen sitzen derzeit rechnerisch in der Hallenmitte,
-weil ihre Standorte in keiner Quelle stehen. Gebraucht wird je Anlage:
+Gebraucht wird je Anlage:
 
 - die **untere** Landung, benannt ueber den naechsten Standcode
 - die **obere** Landung, ebenso
 - bei Rolltreppen die **Richtung** und ob sie tageszeitabhaengig wechselt
+
+Diese sitzen noch rechnerisch in der Hallenmitte, weil ihr Standort
+in keiner Quelle steht:
 
 - **Aufzug 2.1 ↔ 2.2** (2.1 ↔ 2.2)
 - **Rolltreppe 2.1 ↔ 2.2 (West der Treppe)** (2.1 ↔ 2.2)
@@ -55,9 +57,35 @@ weil ihre Standorte in keiner Quelle stehen. Gebraucht wird je Anlage:
 - **Treppe 5.1 ↔ 5.2** (5.1 ↔ 5.2)
 - **Rolltreppe 5.1 ↔ 5.2 (Ost der Treppe)** (5.1 ↔ 5.2)
 - **Aufzug 10.1 ↔ 10.2** (10.1 ↔ 10.2)
+
+Diese haengen an einer Beobachtung und einem verorteten Tor. Sie
+brauchen keine Neuvermessung, sondern eine Bestaetigung:
+
 - **Rolltreppe 10.1 ↔ 10.2 (West der Treppe)** (10.1 ↔ 10.2)
 - **Treppe 10.1 ↔ 10.2** (10.1 ↔ 10.2)
 - **Rolltreppe 10.1 ↔ 10.2 (Ost der Treppe)** (10.1 ↔ 10.2)
+
+## 3b. Offene Fragen, die eine Antwort sofort aufloest
+
+Diese Punkte haengen an einer einzigen Angabe. Solange sie offen sind,
+bleibt die betroffene Lage stehen, wie sie ist -- geraten wird nicht.
+
+- **Ist das dieselbe Anlage wie an der Nordwestecke bei Tor P?**
+  - loest sich mit: Eine Angabe, ob es eine oder zwei Rolltreppenanlagen an Halle 10 gibt.
+  - Beobachtung: `rolltreppe-verbindet-10.1-und-10.2`
+
+## 3c. Anlagen, die es gibt, deren Lage aber fehlt
+
+Beschilderung vor Ort nennt mehr, als die Technischen Richtlinien
+fuehren. Gebraucht wird je Anlage ein Foto, auf dem das Torschild und
+ein benennbarer Punkt gleichzeitig zu sehen sind.
+
+| Halle | Anlage | Bekannt | Fehlt |
+|---|---|---|---|
+| 10.2 | gate R | existiert | Lage und Mass |
+| 10.2 | gate S | existiert | Lage und Mass |
+| 10.2 | gate U | existiert | Lage und Mass |
+| 9 | gate A | Seite: sued | Lage |
 
 ## 4. Betriebszustaende, die in keiner Quelle stehen
 
