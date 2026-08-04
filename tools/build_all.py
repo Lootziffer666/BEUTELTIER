@@ -19,7 +19,12 @@ ROOT = Path(__file__).resolve().parent.parent
 TOOLS = Path(__file__).resolve().parent
 
 STEPS = ["build_site.py", "build_graph.py", "build_registry.py",
-         "build_accuracy_report.py"]
+         "build_buildings.py", "build_accuracy_report.py"]
+
+# Schritte, die eine Quelle brauchen, die nicht im Repository liegt. Fehlt sie,
+# wird der Schritt uebersprungen statt den ganzen Bau abzubrechen -- die
+# LoD2-Kacheln sind 43 MB und werden mit tools/fetch_lod2.py geholt.
+OPTIONAL = {"build_buildings.py": ROOT / "data" / "raw" / "lod2"}
 
 # Untergrenzen, die nach jedem Lauf gelten muessen. Sie sind nicht willkuerlich,
 # sondern der Stand, der einmal erreicht war -- faellt etwas darunter, ist bei
@@ -41,6 +46,12 @@ EXPECTATIONS = {
 
 def main() -> int:
     for step in STEPS:
+        needed = OPTIONAL.get(step)
+        if needed is not None and not any(needed.glob("*.gml")):
+            print(f"\n=== {step} " + "=" * (60 - len(step)))
+            print(f"uebersprungen: {needed.relative_to(ROOT)} ist leer "
+                  f"(tools/fetch_lod2.py holt die Kacheln)")
+            continue
         print(f"\n=== {step} " + "=" * (60 - len(step)))
         result = subprocess.run([sys.executable, str(TOOLS / step)], cwd=ROOT)
         if result.returncode != 0:

@@ -1,0 +1,15 @@
+{
+  "title": "3D-Gebaeudemodell LoD2 (CityGML), Einzelkacheln",
+  "provider": "Geobasis NRW / Bezirksregierung Koeln",
+  "portal": "https://www.opengeodata.nrw.de/produkte/geobasis/3dg/lod2_gml/",
+  "viewer": "https://dz.nrw.de -- Digitaler Zwilling NRW",
+  "crs": "ETRS89 / UTM32N (EPSG:25832), Hoehen DHHN2016 NH",
+  "licence": "Datenlizenz Deutschland Zero 2.0 (dl-de/zero-2-0)",
+  "tiles": [
+    "LoD2_32_357_5645_1_NW.gml",
+    "LoD2_32_357_5646_1_NW.gml",
+    "LoD2_32_358_5645_1_NW.gml",
+    "LoD2_32_358_5646_1_NW.gml"
+  ],
+  "note": "Offene Geobasisdaten. Frei nutzbar, auch kommerziell, ohne Bedingungen. Die Quelle wird trotzdem genannt -- Leitprinzip 1."
+}

@@ -4,4 +4,10 @@ node_modules/
 app/dist/
 .venv/
 .DS_Store
-app/dist/
+
+# Die LoD2-Rohkacheln sind 43 MB CityGML und lassen sich jederzeit mit
+# tools/fetch_lod2.py neu holen -- sie sind offene Geobasisdaten mit stabiler
+# Adresse. Eingecheckt wird das Ergebnis: data/build/buildings.json und
+# app/public/models/messe.glb. Damit bleibt der Bau reproduzierbar, ohne das
+# Repository um ein Vielfaches seiner Groesse aufzublaehen.
+data/raw/lod2/*.gml

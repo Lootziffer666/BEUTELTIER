@@ -16,6 +16,7 @@ andere zusammengetragen haben. Diese Seite hält fest, wem was gehört.
 | **Koelnmesse — Hallendaten** | Fläche, lichte Höhe und Bodenbelastung je Halle | Validierung der Umrisse und Grundlage des Höhenmodells. Gepflegt in `data/curated/hall-metadata.json`. |
 | **Koelnmesse — Technische Richtlinien** | Verortete Aufzüge und Tore, lichte Höhen, örtliche Höhenbeschränkungen | Lage der Hallen ohne 2025er Belegung (±7 m, genauer als der Barrierefrei-Plan) und Standorte der Ebenenwechsel. |
 | **Koelnmesse — Werbeflächen-Kataloge**<br>gelände­weit sowie FIBO 2022/2024/2025 | Treppen und Rolltreppen: Stufenzahl, Breite, Steigung; die Regel „Jeder Aufgang verfügt über zwei Rolltreppen" | Die **einzige** Quelle im Projekt, die Rolltreppen belegt. Kein Kartenwerk führt sie. Gepflegt in `data/curated/vertical-access.json`, jede Angabe mit Wortlaut und Seitenzahl. |
+| **Geobasis NRW — 3D-Gebäudemodell LoD2**<br>`opengeodata.nrw.de`, Viewer: `dz.nrw.de` | Amtliche Gebäudegrundrisse mit gemessenen Höhen, in ETRS89/UTM32 | Das Gelände selbst: Wände, Dächer und Boden als Netz. Ersetzt die aus Standflächen abgeleiteten Umrisse und die aus Annahmen gerechneten Höhen. Lizenz: Datenlizenz Deutschland Zero 2.0 — frei nutzbar ohne Bedingungen; genannt wird sie trotzdem. |
 | **pc games / GamesWirtschaft — historische Hallenpläne** | Hallen-Innenleben früherer Jahre | Referenzmaterial für Eingänge, Rolltreppen und Treppen. Nicht in den Daten. |
 
 ## Aussteller

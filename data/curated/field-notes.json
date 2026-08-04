@@ -4,13 +4,49 @@
     "Beobachtungen vor Ort. Sie sind keine Messung und keine amtliche Angabe,",
     "aber sie sind belastbarer als eine Ableitung aus zwei Annahmen -- und sie",
     "koennen eine Ableitung widerlegen. Genau das ist hier passiert.",
-    "Herkunftsklasse: 'observed'. Keine Masse, keine Koordinaten, keine Fotos",
-    "im Repository. Was daraus in die Karte wandert, steht bei der jeweiligen",
-    "Beobachtung unter 'usedFor'."
+    "Herkunftsklasse: 'observed'. Keine Fotos im Repository. Was daraus in die",
+    "Karte wandert, steht bei der jeweiligen Beobachtung unter 'usedFor'."
   ],
+  "sourceKinds": {
+    "observation": "Vor Ort gesehen und beschrieben. Keine Messung.",
+    "video-screenshot": "Standbilder aus einem oeffentlich abrufbaren Video, vom Beobachter bestaetigt. Beweiskraft fuer Beschilderung und Wegefuehrung, nicht fuer Masse. Zeitstempel im Bild sind die Uhr des Aufnehmenden, keine Gehzeiten. Die Bilder liegen nicht im Repository.",
+    "official-plan": "Offizieller Gelaende- oder Hallenplan der Koelnmesse.",
+    "measured-in-3d-model": "Im Digitalen Zwilling NRW am amtlichen 3D-Gebaeudemodell abgegriffen. Belastbarer als ein Schrittmass, aber die Messung hat der Beobachter gesetzt, nicht die Vermessungsbehoerde."
+  },
   "observer": "Projektleitung BEUTELTIER, gamescom vor Ort",
   "recorded": "2026-08-04",
   "observations": [
+    {
+      "id": "masse-boulevard-und-freiflaeche",
+      "kind": "measured-in-3d-model",
+      "where": "Mittelboulevard und Freiflaeche an Halle 10",
+      "what": [
+        "Im Digitalen Zwilling NRW (dz.nrw.de) am amtlichen 3D-Modell",
+        "abgegriffen. Damit sind es keine Schrittmasse mehr."
+      ],
+      "usedFor": "Loest das frueher notierte Schrittmass von 15 m ab.",
+      "corrects": [
+        "Die Handskizze hatte Boulevard und Freiflaeche mit je 15 m",
+        "angegeben. Gemessen sind es je rund 20 m."
+      ],
+      "measurements": [
+        {"what": "Breite Mittelboulevard", "valueM": 20.2},
+        {"what": "Breite Freiflaeche zwischen Boulevard und Halle 10", "valueM": 20.2},
+        {"what": "Tuer bis Beginn der Auffahrt", "valueM": 45.7},
+        {"what": "Laenge der Auffahrt hinunter", "valueM": 96.5},
+        {"what": "Boulevard bis zum genannten Ausgang", "valueM": 195.0,
+         "precision": "ungefaehr"}
+      ]
+    },
+    {
+      "id": "halle5-ausgang-oben",
+      "where": "Halle 5, obere Ebene",
+      "what": [
+        "Aus Halle 5 kommt man auch oben ins Freie -- von dort aber nur in",
+        "den Boulevard, nicht weiter."
+      ],
+      "usedFor": "Betriebswissen zur Wegefuehrung; die obere Ebene ist keine Sackgasse, aber auch kein Durchgang nach draussen."
+    },
     {
       "id": "halle10-untergeschoss-freiflaeche",
       "where": "Nordwestlich von Halle 10, unter dem Deck von Halle 10.2",
@@ -304,8 +340,5 @@
         "Strasse, kein Durchgang."
       ]
     }
-  ],
-  "sourceKinds": {
-    "video-screenshot": "Standbilder aus einem oeffentlich abrufbaren Video (YouTube/GeekStreetTravels), vom Beobachter als zutreffend bestaetigt. Beweiskraft fuer Beschilderung und Wegefuehrung, nicht fuer Masse. Zeitstempel im Bild sind die Uhr des Aufnehmenden, keine Gehzeiten. Die Bilder liegen nicht im Repository."
-  }
+  ]
 }

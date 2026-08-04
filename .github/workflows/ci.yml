@@ -1,0 +1,86 @@
+name: BEUTELTIER
+
+# Der Bau laeuft hier vollstaendig durch -- einschliesslich des Schritts, der
+# 43 MB amtliche Gebaeudedaten holt. Die Kacheln liegen nicht im Repository;
+# sie kommen bei jedem Lauf frisch von Geobasis NRW und werden zwischen den
+# Laeufen gecacht.
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+jobs:
+  pipeline:
+    name: Datenaufbereitung
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Abhaengigkeiten
+        run: pip install -r requirements.txt
+
+      - name: LoD2-Kacheln aus dem Cache
+        id: lod2cache
+        uses: actions/cache@v4
+        with:
+          path: data/raw/lod2
+          key: lod2-messe-v1
+
+      - name: LoD2-Kacheln holen
+        if: steps.lod2cache.outputs.cache-hit != 'true'
+        run: python3 tools/fetch_lod2.py
+
+      - name: Gebaeudemodell einpassen und ausgeben
+        run: python3 tools/build_buildings.py
+
+      - name: Gesamtbau
+        run: python3 tools/build_all.py
+
+      - name: Tests der Aufbereitung
+        run: python3 -m pytest tools/tests -q
+
+      - name: Ergebnis sichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gelaendemodell
+          path: |
+            data/build/buildings.json
+            app/public/models/messe.glb
+            docs/accuracy-report.md
+            docs/field-survey.md
+          if-no-files-found: warn
+
+  app:
+    name: App
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Abhaengigkeiten
+        working-directory: app
+        run: npm ci
+
+      - name: Typen pruefen
+        working-directory: app
+        run: npx tsc --noEmit
+
+      - name: Tests
+        working-directory: app
+        run: npx vitest run
+
+      - name: Bau
+        working-directory: app
+        run: npm run build
