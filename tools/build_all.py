@@ -76,8 +76,10 @@ def main() -> int:
     app_data = ROOT / "app" / "public" / "data"
     if app_data.parent.exists():
         app_data.mkdir(parents=True, exist_ok=True)
-        for name in ("site.json", "graph.json", "registry.json"):
-            shutil.copyfile(ROOT / "data" / "build" / name, app_data / name)
+        for name in ("site.json", "graph.json", "registry.json", "buildings.json"):
+            source = ROOT / "data" / "build" / name
+            if source.exists():
+                shutil.copyfile(source, app_data / name)
         print(f"\nDatenstand nach {app_data} kopiert")
 
     print("\n=== Bericht " + "=" * 56)

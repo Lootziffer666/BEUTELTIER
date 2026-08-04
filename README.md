@@ -23,6 +23,16 @@ sichtbares senkrechtes Stück im Weg.
 Die flache Ansicht geht dabei nicht verloren: **Laufmodus** ist eine
 Kameraposition von oben, kein zweiter Renderer.
 
+Und weil das Gelände seit dem amtlichen 3D-Gebäudemodell echt ist, gibt es
+**Begehen** — die Ego-Perspektive, mitten im Gang zwischen den Ständen. Das ist
+keine Spielerei: eine Route ist eine Behauptung darüber, wie es vor Ort
+aussieht, und dies ist die einzige Ansicht, in der sich diese Behauptung
+prüfen lässt, ohne hinzufahren. Kollidiert wird gegen **dasselbe Gitter, auf
+dem geroutet wird** — was die Route nicht darf, darf hier auch niemand.
+Draußen, wo kein Gitter liegt, wird durchgelassen statt gesperrt: eine Karte,
+die den Nutzer am Hallentor festhält, wäre schlechter als eine, die ihn über
+den Boulevard laufen lässt.
+
 ## Was die Karte weiß — und was nicht
 
 Alles ist metrisch, nichts ist geraten, und wo es unsicher wird, steht es dran.

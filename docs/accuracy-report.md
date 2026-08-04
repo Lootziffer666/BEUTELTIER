@@ -8,6 +8,33 @@ die Zahlen kommen aus dem jeweils letzten Bau.
 - Lage der geschaetzten Hallen: **±7.0 m** (kreuzvalidiert)
 - Flaechenabweichung gegen die offiziellen Hallenflaechen: **9.1 %** im Mittel, 9.2 % im Median
 - Angenommene Geschossdecke: 1.5–2.0 m
+- Einpassung ins amtliche Gebaeudemodell: **95.6 %** der Pruefpunkte liegen im Gebaeude
+- Belegte Flaeche ausserhalb jedes Gebaeudes: 7.3 % im Mittel, maximal 23.6 %
+
+## Gegen das amtliche Gebaeudemodell
+
+Der Umriss, mit dem geroutet wird, ist der **belegte Bereich** --
+nicht das Gebaeude. Diese Tabelle sagt, wie beides zueinander steht.
+`ausserhalb` ist der Anteil der belegten Flaeche, der in keinem
+Gebaeude liegt: die haerteste Pruefung der Hallenlage, weil sie ohne
+offizielle Flaechenangabe auskommt.
+
+| Ebene | Gebaeude m² | belegt m² | belegt vom Gebaeude | ausserhalb | Gebaeudehoehe m | Teile |
+|---|--:|--:|--:|--:|--:|--:|
+| 1.2 | 11709 | 8939 | 76 % | 24 % | 24.9 | 1 |
+| 10.1 | 23443 | 22526 | 96 % | 8 % | 16.5 | 1 |
+| 10.2 | 23443 | 26605 | 113 % | 15 % | 16.5 | 1 |
+| 2.1 | 11347 | 9907 | 87 % | 0 % | 17.8 | 1 |
+| 2.2 | 11347 | 9856 | 87 % | 10 % | 17.8 | 1 |
+| 3.2 | 9750 | 8384 | 86 % | 0 % | 15.6 | 1 |
+| 4.1 | 15488 | 14756 | 95 % | 3 % | 19.0 | 1 |
+| 4.2 | 15488 | 14805 | 96 % | 3 % | 19.0 | 1 |
+| 5.1 | 13266 | 12134 | 91 % | 8 % | 25.5 | 2 |
+| 5.2 | 13266 | 13811 | 104 % | 16 % | 25.5 | 2 |
+| 6.1 | 22918 | 17960 | 78 % | 0 % | 16.3 | 1 |
+| 7.1 | 18239 | 14268 | 78 % | 7 % | 16.3 | 1 |
+| 8.1 | 17153 | 14178 | 83 % | 0 % | 22.3 | 1 |
+| 9.1 | 14140 | 11140 | 79 % | 8 % | 18.8 | 1 |
 
 ## Hallenebenen
 

@@ -7,6 +7,7 @@
  */
 
 import { RouteGraph, type CompactGraph } from '../routing/graph';
+import { WalkGrid } from '../scene/walk';
 import type { Registry, Site } from './types';
 
 const BASE = `${import.meta.env.BASE_URL}data`;
@@ -15,6 +16,8 @@ export interface Dataset {
   site: Site;
   registry: Registry;
   graph: RouteGraph;
+  /** Dasselbe Gitter, aber als Boden zum Draufstehen. */
+  walk: WalkGrid;
   standsById: Map<string, Site['stands'][number]>;
   hallsByKey: Map<string, Site['halls'][number]>;
   exhibitorsById: Map<string, Registry['exhibitors'][number]>;
@@ -37,6 +40,7 @@ export async function loadDataset(): Promise<Dataset> {
     site,
     registry,
     graph: RouteGraph.fromCompact(compact),
+    walk: WalkGrid.fromCompact(compact),
     standsById: new Map(site.stands.map((stand) => [stand.id, stand])),
     hallsByKey: new Map(site.halls.map((hall) => [hall.key, hall])),
     exhibitorsById: new Map(registry.exhibitors.map((one) => [one.id, one])),

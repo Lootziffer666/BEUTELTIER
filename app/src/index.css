@@ -42,6 +42,26 @@ body {
   min-width: 0;
 }
 
+.stage__hint {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(12, 14, 20, 0.88);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.82rem;
+  pointer-events: none;
+}
+
+.stage__hint strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .stage__controls {
   position: absolute;
   left: 12px;

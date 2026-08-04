@@ -48,6 +48,9 @@ MIN_AREA_SQM = 60.0
 # Wie weit zwei Streckenlaengen auseinanderliegen duerfen, damit ein
 # Korrespondenzpaar als Kandidat zaehlt.
 SPAN_TOLERANCE_M = 25.0
+# Ab welchem Anteil der Pruefpunkte ein Gebaeude zu einer Halle gezaehlt wird.
+# Darunter ist es ein Nachbargebaeude, das der Umriss streift.
+MIN_BUILDING_SHARE = 0.10
 
 # Farben der Teilnetze. Zurueckhaltend -- die Karte lebt von den Staenden,
 # nicht vom Gebaeude.
@@ -242,6 +245,64 @@ def main() -> int:
         })
     records.sort(key=lambda r: -r["areaSqm"])
 
+    # --- Welches Gebaeude gehoert zu welcher Halle --------------------------
+    # Ueber Enthaltensein, nicht ueber Naehe: eine Halle gehoert in das
+    # Gebaeude, in dem ihre belegte Flaeche liegt. Mehrere Hallenebenen
+    # teilen sich dabei ein Gebaeude -- 10.1 und 10.2 stehen uebereinander.
+    halls_by_building: dict[str, list[tuple[str, float]]] = {}
+    hall_building: dict[str, dict] = {}
+    for hall in site["halls"]:
+        if hall.get("outdoor"):
+            continue
+        points = sample_points([(p[0], p[1]) for p in hall["footprint"]])
+        if not points:
+            continue
+        tally: dict[str, int] = {}
+        outside = 0
+        for point in points:
+            for record in records:
+                if inside(record["footprint"], point):
+                    tally[record["id"]] = tally.get(record["id"], 0) + 1
+                    break
+            else:
+                outside += 1
+        if not tally:
+            continue
+
+        # Eine Halle kann sich ueber mehrere Gebaeude erstrecken -- Halle 5
+        # tut das. Wer nur das groesste nimmt, bekommt eine belegte Flaeche,
+        # die groesser ist als "ihr" Gebaeude, und das ist Unsinn.
+        chosen = [(bid, count) for bid, count in tally.items()
+                  if count / len(points) >= MIN_BUILDING_SHARE]
+        if not chosen:
+            chosen = [max(tally.items(), key=lambda item: item[1])]
+        chosen.sort(key=lambda item: -item[1])
+        parts = [next(r for r in records if r["id"] == bid) for bid, _ in chosen]
+        covered_points = sum(count for _, count in chosen)
+
+        for record in parts:
+            halls_by_building.setdefault(record["id"], []).append(
+                (hall["key"], covered_points / len(points)))
+        hall_building[hall["key"]] = {
+            "buildingIds": [record["id"] for record in parts],
+            "coveragePct": round(100 * covered_points / len(points), 1),
+            "outsideAnyBuildingPct": round(100 * outside / len(points), 1),
+            "buildingAreaSqm": round(sum(record["areaSqm"] for record in parts), 1),
+            "buildingHeightM": max(record["heightM"] for record in parts),
+            "groundM": min(record["groundM"] for record in parts),
+            "occupiedAreaSqm": hall["area"]["extentAreaSqm"],
+            "officialAreaSqm": hall["area"]["officialAreaSqm"],
+        }
+
+    for record in records:
+        assigned = halls_by_building.get(record["id"])
+        if assigned:
+            record["hallKeys"] = [key for key, _ in sorted(assigned)]
+
+    named = sum(1 for r in records if r.get("hallKeys"))
+    print(f"  {len(hall_building)} Hallenebenen einem Gebaeude zugeordnet, "
+          f"{named} Gebaeude benannt")
+
     payload = {
         "schema": "beuteltier.buildings.v1",
         "source": {
@@ -255,6 +316,17 @@ def main() -> int:
                 "sharePct": round(share, 1),
                 "perHall": {k: {"inside": v[0], "samples": v[1]}
                             for k, v in sorted(per_hall.items())}},
+        # Der Umriss, mit dem geroutet wird, bleibt die *belegte* Flaeche.
+        # Hier steht daneben, wie gross das Gebaeude wirklich ist -- beides
+        # getrennt, damit niemand das eine fuer das andere haelt.
+        "hallBuildings": dict(sorted(hall_building.items())),
+        "note": [
+            "Der Gebaeudeumriss ersetzt den Routing-Umriss nicht. Wo gamescom",
+            "nur einen Teil einer Halle belegt, waere die uebrige Flaeche im",
+            "Wegenetz begehbar, obwohl sie waehrend der Messe abgetrennt sein",
+            "kann. Die Zahl steht trotzdem hier: sie sagt, wie viel vom",
+            "Gebaeude ueberhaupt bespielt wird.",
+        ],
         "buildings": records,
     }
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)

@@ -19,8 +19,9 @@ import type { Dataset } from '../data/load';
 import { siteCentre } from '../data/load';
 import type { Route } from '../routing/route';
 import { mergePolygons, polygonCentre, toScene } from './geometry';
+import { EYE_HEIGHT_M } from './walk';
 
-export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus';
+export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
 export interface SceneProps {
   data: Dataset;
@@ -32,6 +33,8 @@ export interface SceneProps {
   preset: CameraPreset;
   focusHallKey: string | null;
   onSelectStand: (standId: string | null) => void;
+  /** Verlässt die Ego-Perspektive, wenn der Nutzer Escape drückt. */
+  onLeaveEgo?: () => void;
 }
 
 const COLOURS = {
@@ -54,6 +57,12 @@ const STAND_HEIGHT_M = 2.6;
 const MODEL_URL = `${import.meta.env.BASE_URL}models/messe.glb`;
 /** Wie durchsichtig die Gebäudehülle in der Übersicht ist. */
 const SHELL_OPACITY = 0.16;
+/** In der Ego-Perspektive ist die Wand eine Wand. */
+const SHELL_OPACITY_EGO = 0.92;
+
+/** Gehgeschwindigkeit auf einer vollen Messe -- kein Sprint. */
+const WALK_SPEED_M_PER_S = 1.6;
+const RUN_SPEED_M_PER_S = 4.2;
 
 function Ground({ extent }: { extent: number }) {
   return (
@@ -366,6 +375,123 @@ function HallLabels({
   );
 }
 
+/**
+ * Ego-Perspektive: durch die Halle laufen statt auf sie zu schauen.
+ *
+ * Das ist keine Spielerei. Eine Route ist eine Behauptung darüber, wie es
+ * vor Ort aussieht — und diese Ansicht ist die einzige, in der sich diese
+ * Behauptung prüfen lässt, ohne hinzufahren. Wenn ein Gang zu schmal wirkt
+ * oder ein Ebenenwechsel ins Leere führt, sieht man es hier.
+ *
+ * Kollidiert wird gegen dasselbe Gitter, auf dem geroutet wird. Was die
+ * Route nicht darf, darf hier auch niemand.
+ */
+function WalkControls({
+  data,
+  centre,
+  active,
+  start,
+  onExit,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  active: boolean;
+  start: THREE.Vector3 | null;
+  onExit: () => void;
+}) {
+  const { camera, gl } = useThree();
+  const position = useRef({ x: 0, y: 0, z: 0 });
+  const look = useRef({ yaw: 0, pitch: 0 });
+  const keys = useRef(new Set<string>());
+  const locked = useRef(false);
+
+  // Startpunkt: die fokussierte Halle, sonst der erste begehbare Punkt.
+  useEffect(() => {
+    if (!active) return;
+    const site = start
+      ? { x: start.x + centre[0], y: centre[1] - start.z, z: start.y }
+      : null;
+    const footing = site && !data.walk.footingAt(site.x, site.y, site.z).blocked
+      ? { x: site.x, y: site.y, z: data.walk.footingAt(site.x, site.y, site.z).z }
+      : data.walk.spawn();
+    if (footing) position.current = footing;
+    look.current = { yaw: 0, pitch: 0 };
+  }, [active, start, data, centre]);
+
+  useEffect(() => {
+    if (!active) return;
+    const canvas = gl.domElement;
+
+    const request = () => {
+      if (!locked.current) void canvas.requestPointerLock?.();
+    };
+    const onLockChange = () => {
+      locked.current = document.pointerLockElement === canvas;
+      if (!locked.current) keys.current.clear();
+    };
+    const onMove = (event: MouseEvent) => {
+      if (!locked.current) return;
+      look.current.yaw -= event.movementX * 0.0022;
+      look.current.pitch = Math.max(
+        -1.2,
+        Math.min(1.2, look.current.pitch - event.movementY * 0.0022),
+      );
+    };
+    const onDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onExit();
+        return;
+      }
+      keys.current.add(event.key.toLowerCase());
+    };
+    const onUp = (event: KeyboardEvent) => keys.current.delete(event.key.toLowerCase());
+
+    canvas.addEventListener('click', request);
+    document.addEventListener('pointerlockchange', onLockChange);
+    document.addEventListener('mousemove', onMove);
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    return () => {
+      canvas.removeEventListener('click', request);
+      document.removeEventListener('pointerlockchange', onLockChange);
+      document.removeEventListener('mousemove', onMove);
+      window.removeEventListener('keydown', onDown);
+      window.removeEventListener('keyup', onUp);
+      if (document.pointerLockElement === canvas) document.exitPointerLock?.();
+      keys.current.clear();
+    };
+  }, [active, gl, onExit]);
+
+  useFrame((_, delta) => {
+    if (!active) return;
+    const pressed = keys.current;
+    const forward =
+      (pressed.has('w') || pressed.has('arrowup') ? 1 : 0) -
+      (pressed.has('s') || pressed.has('arrowdown') ? 1 : 0);
+    const strafe =
+      (pressed.has('d') || pressed.has('arrowright') ? 1 : 0) -
+      (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0);
+
+    if (forward || strafe) {
+      const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
+      const { yaw } = look.current;
+      // Karten-Y zeigt nach Norden, die Szene nach -Z. Deshalb hier und nicht
+      // erst beim Zeichnen umrechnen -- sonst läuft man seitwärts.
+      const dx = (Math.sin(-yaw) * forward + Math.cos(-yaw) * strafe) * speed;
+      const dy = (Math.cos(-yaw) * forward - Math.sin(-yaw) * strafe) * speed;
+      position.current = data.walk.move(position.current, dx, dy);
+    }
+
+    const { x, y, z } = position.current;
+    camera.position.set(x - centre[0], z + EYE_HEIGHT_M, -(y - centre[1]));
+    camera.rotation.set(0, 0, 0);
+    camera.rotateY(look.current.yaw);
+    camera.rotateX(look.current.pitch);
+  });
+
+  return null;
+}
+
 function CameraRig({
   preset,
   focus,
@@ -435,7 +561,7 @@ export function SiteScene(props: SceneProps) {
 
   return (
     <Canvas
-      camera={{ fov: 42, near: 1, far: extent * 6, position: [extent * 0.5, extent * 0.6, extent * 0.85] }}
+      camera={{ fov: preset === 'ego' ? 70 : 42, near: 0.15, far: extent * 6, position: [extent * 0.5, extent * 0.6, extent * 0.85] }}
       dpr={[1, 1.8]}
       onPointerMissed={() => props.onSelectStand(null)}
     >
@@ -449,7 +575,10 @@ export function SiteScene(props: SceneProps) {
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
           tragen sie weiterhin. Deshalb Suspense ohne Ersatzdarstellung. */}
       <Suspense fallback={null}>
-        <Gelaende centre={centre} opacity={SHELL_OPACITY} />
+        <Gelaende
+          centre={centre}
+          opacity={preset === 'ego' ? SHELL_OPACITY_EGO : SHELL_OPACITY}
+        />
       </Suspense>
       <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
       <Stands
@@ -462,7 +591,17 @@ export function SiteScene(props: SceneProps) {
       />
       <RouteRibbon data={data} route={route} centre={centre} />
       <HallLabels data={data} centre={centre} upperOpacity={upperOpacity} />
-      <CameraRig preset={preset} focus={focus} extent={extent} />
+      {preset === 'ego' ? (
+        <WalkControls
+          data={data}
+          centre={centre}
+          active
+          start={focus}
+          onExit={() => props.onLeaveEgo?.()}
+        />
+      ) : (
+        <CameraRig preset={preset} focus={focus} extent={extent} />
+      )}
     </Canvas>
   );
 }
