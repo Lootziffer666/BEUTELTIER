@@ -84,20 +84,59 @@ nicht das Gebäude. Das erzeugte einen systematischen Fehler, siehe unten.
 
 Nur Ebene 1. Halle 3 und 11 waren 2025 nicht mit gamescom-Ständen belegt.
 
-### 3. Barrierefrei-Plan (Ersatzquelle für Lagen)
+### 3. Technische Richtlinien (bessere Ersatzquelle, neu erschlossen)
+
+| | |
+|---|---|
+| Schnappschuss | `data/raw/pdf/technische-richtlinien-2022.pdf` |
+| Einheit | Zeichnungseinheiten, Fit ergibt ≈ 1,84 m je Einheit |
+| Art | schematischer Übersichtsplan mit **verorteten Marken** |
+| Verwendung | Lage von 1.2 und 3.2, Aufzüge, Tore, lichte Höhen |
+| Unsicherheit | **7,0 m** kreuzvalidiert (Aufzugsplan), 14,1 m (Torplan) |
+
+Das Dokument ist überwiegend Recht und Logistik. Übersehen worden war, dass es
+drei Tabellen mit Bauangaben führt — und dazu **Pläne, auf denen jeder Aufzug
+und jedes Tor als Marke eingezeichnet ist** (`5.1F`, `10.2Q`, `11.1A`).
+
+Der Aufzugsplan passt sich mit **7,0 m** kreuzvalidiertem Fehler ins Gelände —
+fast viermal genauer als der Barrierefrei-Plan. Beide Pläne werden jetzt gegen
+die eingemessenen Hallen geprüft und der genauere genommen; das ist eine
+Messung, keine Geschmacksfrage.
+
+Daraus gewonnen:
+
+- **Halle 1.2 und 3.2: ±27 m → ±7 m**
+- **11 Aufzüge** offiziell verortet (2.1, 3.1, 5.1, 11.1) — die Ebenenwechsel
+  in 2.1↔2.2 und 5.1↔5.2 stehen damit nicht mehr rechnerisch in der Hallenmitte
+- **17 Tore** offiziell verortet, ±14,1 m
+- **Örtliche Höhenbeschränkung: 4,50 m unter Verteilerkanälen** — und zwar in
+  **sechs** Hallenebenen (4.1, 4.2, 5.1, 5.2, 10.1, 10.2), nicht nur in 10.2.
+  Dazu 10,80 m unter der Kanaltrennwand in Halle 1.1.
+
+#### Ein Widerspruch zwischen zwei offiziellen Quellen
+
+Für Halle 10 nennt die Flächentabelle **5,70 m** lichte Höhe, die Technischen
+Richtlinien **5,80 m** (10.1) und **5,85 m** (10.2). Beide sind offiziell. Der
+Widerspruch wird ausgewiesen und nicht aufgelöst — das Höhenmodell rechnet
+weiter mit der Flächentabelle, weil sie die neuere und einheitlichere Quelle
+ist, aber wer nachrechnet, findet die Abweichung dokumentiert.
+
+### 4. Barrierefrei-Plan (Ersatzquelle, jetzt zweite Wahl)
 
 | | |
 |---|---|
 | Schnappschuss | `data/raw/pdf/koelnmesse-barrierefrei.pdf` |
 | Einheit | Zeichnungseinheiten, Fit ergibt ≈ 2,93 m je Einheit |
 | Art | **schematisch** — Hallen als gleichförmige Blöcke |
-| Verwendung | Lage von 1.2 und 3.2 |
+| Verwendung | Aufzüge, WCs, Sanitätsstationen, Eingänge |
 | Unsicherheit | **27,0 m**, kreuzvalidiert gegen die 7 exakt bekannten Hallen |
+
+Für Hallenlagen inzwischen abgelöst durch die Technischen Richtlinien (7,0 m).
 
 Ebene 1 und 2 sind zwei getrennte Diagramme auf einer Seite und müssen einzeln
 gefittet werden.
 
-### 4. Layout-Tabelle der interaktiven Karte (nur Topologie)
+### 5. Layout-Tabelle der interaktiven Karte (nur Topologie)
 
 | | |
 |---|---|
@@ -114,7 +153,7 @@ Bestätigt: die `rot`-Werte stimmen mit den eingemessenen Drehungen überein
 (Halle 10: 90 gegen 89,96°; Halle 4: 0 gegen −0,00°). Deshalb wird `rot`
 verwendet, `dx`/`dy` und `coord`-Maßstab nicht.
 
-### 5. Offizielle Hallendaten (neu erschlossen)
+### 6. Offizielle Hallendaten
 
 | | |
 |---|---|
@@ -186,11 +225,14 @@ gekappt, der Datenwert bleibt 15,00 m.
 
 | Gegenstand | Unsicherheit | Bessere Quelle |
 |---|---|---|
-| Lage Halle 3.2 | ±27 m | drei Kontrollpunkte vor Ort |
-| Lage Halle 1.2 | ±27 m | drei Kontrollpunkte vor Ort |
-| Lage F2 / F8 / FB | ±27 m | Kontrollpunkte an den Hallenkanten |
+| Lage Halle 3.2 | ±7 m | drei Kontrollpunkte vor Ort |
+| Lage Halle 1.2 | ±7 m | drei Kontrollpunkte vor Ort |
+| Lage F2 / F8 / FB | ±25 m | Kontrollpunkte an den Hallenkanten |
 | Durchgangsanschlüsse | 5–372 m Anschlussweite | Messung der Portalmitten |
-| Ebenenwechsel | Lage synthetisch, Hallenmitte | Aufzugs- und Rolltreppenstandorte |
+| Ebenenwechsel 2.1↔2.2, 5.1↔5.2 | ±7 m, offiziell verortet | bestätigen |
+| Ebenenwechsel 4.1↔4.2, 10.1↔10.2 | Hallenmitte, `placeholder` | Aufzugsstandorte |
+| Rolltreppen | alle `placeholder` | Standorte und Richtungen |
+| Verlauf der Verteilerkanäle | 4,50 m gilt, Lage unbekannt | Hallenpläne |
 | Deckenstärke | ±0,25 m | Bauunterlagen |
 | Außenhüllen | nicht vermessen | Bauunterlagen |
 | Halle 11.3 | Höhe **bewusst offen** | Nutzung und Erreichbarkeit klären |

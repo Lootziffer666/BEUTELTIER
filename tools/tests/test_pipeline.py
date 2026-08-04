@@ -274,3 +274,77 @@ class TestOutlines:
     def test_jede_halle_sagt_woher_ihr_umriss_stammt(self, site):
         for hall in site["halls"]:
             assert hall["area"]["outlineSource"] in {"inhaltshuelle", "boundingbox"}
+
+
+class TestTechnicalGuidelines:
+    """Was die Technischen Richtlinien an belastbaren Bauangaben hergeben."""
+
+    def test_kennt_die_oertliche_hoehenbeschraenkung(self):
+        from beuteltier import techguide
+        # Die Fussnote steht an sechs Hallenebenen, nicht nur an 10.2.
+        for key in ("4.1", "4.2", "5.1", "5.2", "10.1", "10.2"):
+            restrictions = techguide.clearance_restrictions(key)
+            assert restrictions, key
+            assert restrictions[0]["clearHeightM"] == 4.50
+            assert restrictions[0]["source"] == "official"
+
+    def test_haelt_hallen_ohne_beschraenkung_frei(self):
+        from beuteltier import techguide
+        for key in ("2.1", "3.2", "6", "8"):
+            assert techguide.clearance_restrictions(key) == []
+
+    def test_beschraenkung_ist_niedriger_als_die_lichte_hoehe(self):
+        from beuteltier import techguide
+        for key in ("4.1", "5.1", "10.1", "10.2"):
+            nominal = techguide.clear_height(key)
+            restricted = techguide.clearance_restrictions(key)[0]["clearHeightM"]
+            assert restricted < nominal, key
+
+    def test_quellen_widersprechen_sich_bei_halle_10(self, buildings):
+        """Zwei offizielle Angaben, ein Widerspruch -- er wird nicht wegdefiniert."""
+        from beuteltier import techguide
+        from_areas, _ = buildings.clear_height("10.1")
+        from_guidelines = techguide.clear_height("10.1")
+        assert from_areas == 5.70
+        assert from_guidelines == 5.80
+        assert from_areas != from_guidelines
+
+    def test_verortet_aufzuege_und_tore(self, site):
+        facilities = site.get("facilities", [])
+        lifts = [f for f in facilities if f["kind"] == "elevator"]
+        gates = [f for f in facilities if f["kind"] == "gate"]
+        assert len(lifts) >= 11
+        assert len(gates) >= 17
+        for facility in facilities:
+            assert facility["source"] == "official"
+            assert facility["uncertaintyM"] > 0
+            assert len(facility["position"]) == 2
+
+    def test_aufzuege_liegen_bei_ihrer_halle(self, site):
+        halls = {h["key"]: h for h in site["halls"]}
+        for facility in site.get("facilities", []):
+            hall = halls.get(facility["hallKey"])
+            if hall is None:
+                continue
+            xs = [p[0] for p in hall["footprint"]]
+            ys = [p[1] for p in hall["footprint"]]
+            x, y = facility["position"]
+            # Grosszuegig: der Plan ist auf gut zehn Meter genau, und Tore
+            # sitzen naturgemaess an der Aussenkante.
+            assert min(xs) - 90 <= x <= max(xs) + 90, facility["id"]
+            assert min(ys) - 90 <= y <= max(ys) + 90, facility["id"]
+
+
+class TestReferenceChoice:
+    def test_nimmt_den_genaueren_uebersichtsplan(self, site):
+        """Der Ersatzplan wird gemessen gewaehlt, nicht gesetzt.
+
+        Der Barrierefrei-Plan lag bei 27 m, die Technischen Richtlinien bei 7 m.
+        Faellt der Wert wieder darueber, hat die Auswahl aufgehoert zu wirken.
+        """
+        estimated = [h for h in site["halls"]
+                     if h["placement"]["source"] == "geschaetzt"
+                     and not h["outdoor"]]
+        assert estimated, "es sollte geschaetzte Hallen geben"
+        for hall in estimated:
+            assert hall["placement"]["residualM"] < 15.0, hall["key"]

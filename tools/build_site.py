@@ -26,11 +26,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from beuteltier import accessibility, building, georef, hallplan, pdf_vector  # noqa: E402
+from beuteltier import (accessibility, building, georef, hallplan,  # noqa: E402
+                        pdf_vector, techguide)
 
 ROOT = Path(__file__).resolve().parent.parent
 SITEMAP_PDF = ROOT / "data" / "raw" / "pdf" / "gamescom-2025-hallenplan.pdf"
 ACCESS_PDF = ROOT / "data" / "raw" / "pdf" / "koelnmesse-barrierefrei.pdf"
+TECHGUIDE_PDF = ROOT / "data" / "raw" / "pdf" / "technische-richtlinien-2022.pdf"
 LAYOUT = ROOT / "data" / "raw" / "hall-layout.json"
 OUT = ROOT / "data" / "build" / "site.json"
 
@@ -109,12 +111,36 @@ def main() -> int:
         for key, transform in transforms.items() if transform.source == "procrustes"
     }
 
-    reference_runs = pdf_vector.read_text_ops(ACCESS_PDF)
-    reference = accessibility.reference_points(reference_runs, level=1)
-    params, fit_error, cross_error, supports = georef.fit_reference_plan(
-        reference, site_centres)
-    print(f"  Uebersichtsplan auf Gelaende gepasst: {supports} Stuetzen, "
-          f"Restfehler {fit_error:.1f} m, kreuzvalidiert {cross_error:.1f} m")
+    # Zwei schematische Uebersichtsplaene kommen als Ersatzquelle in Frage. Statt
+    # einen davon zu waehlen, werden beide gegen die eingemessenen Hallen
+    # geprueft und der genauere genommen -- das ist eine Messung, keine
+    # Geschmacksfrage.
+    candidates: list[tuple[str, dict, tuple, float, float, int]] = []
+
+    access_points = accessibility.reference_points(
+        pdf_vector.read_text_ops(ACCESS_PDF), level=1)
+    candidates.append(("Barrierefrei-Plan", access_points,
+                       *georef.fit_reference_plan(access_points, site_centres)))
+
+    # Die Technischen Richtlinien fuehren einen Aufzugsplan, dessen
+    # Hallenmarken sich ebenfalls einpassen lassen -- und der Aufzuege verortet.
+    _, techguide_halls = techguide.read_marks(TECHGUIDE_PDF, techguide.ELEVATOR_PAGE)
+    if len(set(techguide_halls) & set(k.split(".")[0] for k in site_centres)) >= 4:
+        base_centres = {key.split(".")[0]: value for key, value in site_centres.items()
+                        if key.endswith(".1")}
+        try:
+            candidates.append(("Technische Richtlinien", techguide_halls,
+                               *georef.fit_reference_plan(techguide_halls, base_centres)))
+        except ValueError:
+            pass
+
+    for name, _points, _params, fit, cross, count in candidates:
+        print(f"  {name}: {count} Stuetzen, Restfehler {fit:.1f} m, "
+              f"kreuzvalidiert {cross:.1f} m")
+
+    chosen = min(candidates, key=lambda entry: entry[4])
+    reference_name, reference, params, fit_error, cross_error, supports = chosen
+    print(f"  -> genommen wird der genauere: {reference_name} (±{cross_error:.1f} m)")
 
     scale, rotation, tx, ty = params
     cos_r, sin_r = math.cos(rotation) * scale, math.sin(rotation) * scale
@@ -125,7 +151,8 @@ def main() -> int:
 
         # Die Uebersicht beschriftet Ebene 1; eine Halle, die es nur im
         # Obergeschoss gibt, sitzt ueber ihrem Erdgeschoss-Pendant.
-        point = reference.get(key) or reference.get(f"{level.hall}.1")
+        point = (reference.get(key) or reference.get(f"{level.hall}.1")
+                 or reference.get(level.hall.split(".")[0]))
         if point is None:
             print(f"  ! {key}: keine Lage im Uebersichtsplan", file=sys.stderr)
             continue
@@ -266,6 +293,40 @@ def main() -> int:
                 "polygon": _round_points(transform.apply(x, y) for x, y in stand.polygon),
             })
 
+    # --- Aufzuege und Tore aus den Technischen Richtlinien --------------------
+    # Die Richtlinien fuehren beide mit Kennbuchstaben und zeichnen sie auf
+    # Uebersichtsplaenen ein. Damit stehen Aufzuege nicht mehr rechnerisch in
+    # der Hallenmitte, sondern dort, wo die Koelnmesse sie eintraegt.
+    facilities = []
+    for page, kind in ((techguide.ELEVATOR_PAGE, "elevator"), (techguide.GATE_PAGE, "gate")):
+        marks, plan_halls = techguide.read_marks(TECHGUIDE_PDF, page)
+        if not marks:
+            continue
+        base_centres = {key.split(".")[0]: value for key, value in site_centres.items()
+                        if key.endswith(".1")}
+        try:
+            plan_params, _plan_fit, plan_cross, plan_n = georef.fit_reference_plan(
+                plan_halls, base_centres)
+        except ValueError:
+            print(f"  ! {kind}: Plan laesst sich nicht einpassen", file=sys.stderr)
+            continue
+
+        p_scale, p_rot, p_tx, p_ty = plan_params
+        p_cos, p_sin = math.cos(p_rot) * p_scale, math.sin(p_rot) * p_scale
+        for mark in marks:
+            facilities.append({
+                "id": f"{kind}:{mark.id}",
+                "kind": kind,
+                "hallKey": mark.hall_key,
+                "designator": mark.designator,
+                "position": [round(p_cos * mark.x - p_sin * mark.y + p_tx, 2),
+                             round(p_sin * mark.x + p_cos * mark.y + p_ty, 2)],
+                "source": "official",
+                "uncertaintyM": round(plan_cross, 1),
+            })
+        print(f"  {kind}: {len(marks)} verortet, Plan auf ±{plan_cross:.1f} m "
+              f"({plan_n} Stuetzen)")
+
     # --- Durchgaenge aus der Layout-Tabelle ----------------------------------
     # Die Tabelle lebt in ihrem eigenen Zeichenraum und braucht eine eigene
     # Transformation -- die des Uebersichtsplans passt hier nicht. Gestuetzt
@@ -316,6 +377,7 @@ def main() -> int:
         "halls": halls,
         "stands": stands_out,
         "connectors": connectors,
+        "facilities": facilities,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     print()

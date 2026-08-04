@@ -228,14 +228,32 @@ def main() -> int:
     # --- Ebenenwechsel --------------------------------------------------------
     print("\nEbenenwechsel ...")
     verticals = 0
+    # Wo die Technischen Richtlinien einen Aufzug verorten, wird er dort
+    # angesetzt. Nur wo keiner verzeichnet ist, bleibt die Hallenmitte -- und
+    # das steht dann auch als Herkunft dran.
+    official_lifts: dict[str, list[dict]] = defaultdict(list)
+    for facility in site.get("facilities", []):
+        if facility["kind"] == "elevator":
+            official_lifts[facility["hallKey"]].append(facility)
+
     for lower_key, upper_key in VERTICAL_PAIRS:
         if lower_key not in halls or upper_key not in halls:
             continue
         lower, upper = halls[lower_key], halls[upper_key]
-        cx = sum(p[0] for p in lower["footprint"]) / len(lower["footprint"])
-        cy = sum(p[1] for p in lower["footprint"]) / len(lower["footprint"])
 
-        for kind, offset, confirmed in (("elevator", 0.0, True),
+        lifts = official_lifts.get(lower_key) or []
+        if lifts:
+            # Der erste verzeichnete Aufzug der Halle gibt die Stelle vor.
+            cx, cy = lifts[0]["position"]
+            lift_source = "official"
+            lift_uncertainty = lifts[0]["uncertaintyM"]
+        else:
+            cx = sum(p[0] for p in lower["footprint"]) / len(lower["footprint"])
+            cy = sum(p[1] for p in lower["footprint"]) / len(lower["footprint"])
+            lift_source = "placeholder"
+            lift_uncertainty = None
+
+        for kind, offset, confirmed in (("elevator", 0.0, lift_source == "official"),
                                         ("escalator", 18.0, False)):
             lower_hit = nearest_aisle(graph, cx + offset, cy, lower_key, PORTAL_SNAP_M)
             upper_hit = nearest_aisle(graph, cx + offset, cy, upper_key, PORTAL_SNAP_M)
@@ -251,7 +269,10 @@ def main() -> int:
                                 level=lower["level"],
                                 label=(f"{'Aufzug' if kind == 'elevator' else 'Rolltreppe'} "
                                        f"{lower_key} ↔ {upper_key}"),
-                                meta={"connects": [lower_key, upper_key]}))
+                                meta={"connects": [lower_key, upper_key],
+                                      "source": lift_source if kind == "elevator" else "placeholder",
+                                      **({"uncertaintyM": lift_uncertainty}
+                                         if kind == "elevator" and lift_uncertainty else {})}))
             graph.connect(lower_aisle, node_id, kind, state="offen")
             # Die eigentliche vertikale Kante traegt die Hoehendifferenz.
             graph.add_edge(Edge(
@@ -266,9 +287,10 @@ def main() -> int:
                        f"{lower_key} ↔ {upper_key}"),
             ))
             verticals += 1
+            origin = (lift_source if kind == "elevator" else "placeholder")
             print(f"  {lower_key} -> {upper_key} ueber "
-                  f"{'Aufzug' if kind == 'elevator' else 'Rolltreppe'}"
-                  f"{'' if confirmed else ' (unbestaetigt)'}")
+                  f"{'Aufzug' if kind == 'elevator' else 'Rolltreppe'} "
+                  f"[{origin}]{'' if confirmed else ' unbestaetigt'}")
 
     # --- Kompakt schreiben ----------------------------------------------------
     # Das Gangnetz ist ein regelmaessiges Raster; als 15.000 Einzelobjekte
