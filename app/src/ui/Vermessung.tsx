@@ -16,6 +16,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CameraSnapshot } from '../scene/survey';
+import type { LayoutPatch, WalkCell } from '../scene/walk';
 import { describeSnapshot, type Annotation } from '../scene/survey';
 
 interface VermessungProps {
@@ -36,6 +37,19 @@ interface VermessungProps {
   onExport: () => void;
   onCopy: () => void;
   onDeleteAnnotation: (id: string) => void;
+  layoutPatches: LayoutPatch[];
+  currentWalkCell: WalkCell | null;
+  onOpenCell: () => void;
+  onBlockCell: () => void;
+  onClearCell: () => void;
+  onExportLayout: () => void;
+  onCopyLayout: () => void;
+  onCopyAssistantPrompt: (note?: string) => void;
+  onApplyAssistantJson: (raw: string) => void;
+  measureStart: CameraSnapshot | null;
+  onSetMeasureStart: () => void;
+  onClearMeasureStart: () => void;
+  onApplyMeasuredCorridor: (distanceM: number, widthM: number) => void;
 }
 
 /** Bild aus Zwischenablage oder Drag&Drop lesen, als Object-URL. */
@@ -62,9 +76,26 @@ export function Vermessung({
   onExport,
   onCopy,
   onDeleteAnnotation,
+  layoutPatches,
+  currentWalkCell,
+  onOpenCell,
+  onBlockCell,
+  onClearCell,
+  onExportLayout,
+  onCopyLayout,
+  onCopyAssistantPrompt,
+  onApplyAssistantJson,
+  measureStart,
+  onSetMeasureStart,
+  onClearMeasureStart,
+  onApplyMeasuredCorridor,
 }: VermessungProps) {
   const [noteText, setNoteText] = useState('');
   const [showList, setShowList] = useState(false);
+  const [assistantJson, setAssistantJson] = useState('');
+  const [assistantError, setAssistantError] = useState<string | null>(null);
+  const [measuredDistance, setMeasuredDistance] = useState('');
+  const [corridorWidth, setCorridorWidth] = useState('2.4');
   const imgRef = useRef<HTMLImageElement>(null);
   const transform = useRef({ x: 0, y: 0, scale: 1 });
   const drag = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(
@@ -155,8 +186,89 @@ export function Vermessung({
           Referenzfoto <kbd>V</kbd>
         </button>
         <button type="button" onClick={() => setShowList((v) => !v)}>
-          Notizen ({annotations.length})
+          Notizen ({annotations.length}) / Layout ({layoutPatches.length})
         </button>
+      </div>
+
+      <div className="layout-editor">
+        <div>
+          <strong>Layout live korrigieren</strong>
+          <p className="muted">
+            {currentWalkCell
+              ? `${currentWalkCell.hallKey} · Zelle ${currentWalkCell.ix}/${currentWalkCell.iy} · ${currentWalkCell.blocked ? 'blockiert' : 'begehbar'}`
+              : 'Keine Rasterzelle unter der Kamera.'}
+          </p>
+        </div>
+        <div className="layout-editor__actions">
+          <button type="button" onClick={onOpenCell} disabled={!currentWalkCell}>
+            Durchgang öffnen
+          </button>
+          <button type="button" onClick={onBlockCell} disabled={!currentWalkCell}>
+            Wand/Sperre setzen
+          </button>
+          <button type="button" onClick={onClearCell} disabled={!currentWalkCell?.patched}>
+            Patch zurücknehmen
+          </button>
+          <button type="button" onClick={() => onCopyAssistantPrompt(noteText)}>
+            LLM-Auftrag kopieren
+          </button>
+        </div>
+
+        <details className="measure-editor">
+          <summary>Maßband: Strecke als Durchgang freigeben</summary>
+          <p className="muted">
+            {measureStart
+              ? `Start ${measureStart.hallKey ?? 'im Freien'} · x=${measureStart.x.toFixed(1)} y=${measureStart.y.toFixed(1)}`
+              : 'Bei Punkt A starten, dann rueberlaufen und Punkt B bestaetigen.'}
+          </p>
+          <div className="measure-editor__actions">
+            <button type="button" onClick={onSetMeasureStart} disabled={!currentWalkCell}>
+              Punkt A setzen
+            </button>
+            <button type="button" onClick={onClearMeasureStart} disabled={!measureStart}>
+              A loeschen
+            </button>
+          </div>
+          <label>
+            Echtes Maß A-B in m
+            <input value={measuredDistance} inputMode="decimal" onChange={(event) => setMeasuredDistance(event.target.value)} />
+          </label>
+          <label>
+            Freizugebende Breite in m
+            <input value={corridorWidth} inputMode="decimal" onChange={(event) => setCorridorWidth(event.target.value)} />
+          </label>
+          <button
+            type="button"
+            disabled={!measureStart || !currentWalkCell || Number(measuredDistance) <= 0 || Number(corridorWidth) <= 0}
+            onClick={() => onApplyMeasuredCorridor(Number(measuredDistance), Number(corridorWidth))}
+          >
+            Punkt B bestaetigen und sofort anwenden
+          </button>
+        </details>
+
+        <details className="layout-assistant">
+          <summary>LLM-JSON anwenden</summary>
+          <textarea
+            value={assistantJson}
+            placeholder='{"schema":"beuteltier.layout-assistant.v1","patches":[{"hallKey":"10.1","ix":12,"iy":8,"state":"open"}]}'
+            onChange={(event) => setAssistantJson(event.target.value)}
+          />
+          {assistantError && <p className="layout-assistant__error">{assistantError}</p>}
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                onApplyAssistantJson(assistantJson);
+                setAssistantJson('');
+                setAssistantError(null);
+              } catch (cause) {
+                setAssistantError(cause instanceof Error ? cause.message : 'LLM-JSON konnte nicht gelesen werden.');
+              }
+            }}
+          >
+            Vorschlag anwenden
+          </button>
+        </details>
       </div>
 
       {viewfinderOpen && (
@@ -249,14 +361,35 @@ export function Vermessung({
             <strong>{annotations.length} Notiz(en)</strong>
             <div>
               <button type="button" onClick={onCopy}>
-                In Zwischenablage
+                Notizen kopieren
               </button>
               <button type="button" onClick={onExport}>
-                Als JSON laden
+                Notizen laden
+              </button>
+              <button type="button" onClick={onCopyLayout}>
+                Layout kopieren
+              </button>
+              <button type="button" onClick={() => onCopyAssistantPrompt()}>
+                LLM-Auftrag
+              </button>
+              <button type="button" onClick={onExportLayout}>
+                Layout laden
               </button>
             </div>
           </div>
           {annotations.length === 0 && <p className="muted">Noch keine Notiz markiert.</p>}
+          {layoutPatches.length > 0 && (
+            <div className="layout-patches">
+              <strong>Aktive Layout-Patches</strong>
+              <ul>
+                {layoutPatches.map((patch) => (
+                  <li key={patch.id}>
+                    {patch.hallKey} · {patch.ix}/{patch.iy} · {patch.state === 'open' ? 'geöffnet' : 'blockiert'}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <ul>
             {annotations
               .slice()

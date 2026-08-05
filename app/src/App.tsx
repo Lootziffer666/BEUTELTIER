@@ -12,15 +12,22 @@ import { findRoute, planTour, type Route } from './routing/route';
 import type { EdgeState } from './routing/graph';
 import {
   downloadAnnotations,
+  downloadLayoutPatches,
   exportAnnotations,
+  exportLayoutPatches,
   loadAnnotations,
+  loadLayoutPatches,
   saveAnnotations,
+  saveLayoutPatches,
   type Annotation,
   type CameraSnapshot,
 } from './scene/survey';
+import { buildLayoutAssistantPrompt, parseLayoutAssistantPatches } from './scene/layoutAssistant';
+import type { LayoutPatch, LayoutPatchState } from './scene/walk';
 import { Vermessung } from './ui/Vermessung';
+import { ProceduralMesse } from './ui/ProceduralMesse';
 
-type Tab = 'karte' | 'epix' | 'funkwache' | 'register';
+type Tab = 'karte' | 'epix' | 'funkwache' | 'register' | 'messe';
 
 const PRESET_LABELS: Record<CameraPreset, string> = {
   uebersicht: 'Übersicht',
@@ -34,6 +41,7 @@ const TABS: { id: Tab; label: string; hint: string }[] = [
   { id: 'epix', label: 'Epix', hint: 'Quests und SteamGifts-Export' },
   { id: 'funkwache', label: 'Funkwache', hint: 'Meldungen aus Quellen' },
   { id: 'register', label: 'Register', hint: 'Aussteller und Stände' },
+  { id: 'messe', label: 'Messe-Lab', hint: 'Prozedurale Halle und Crowd' },
 ];
 
 export default function App() {
@@ -60,6 +68,9 @@ export default function App() {
   const [overlayOpacity, setOverlayOpacity] = useState(0.5);
   const [pendingMark, setPendingMark] = useState<CameraSnapshot | null>(null);
   const [annotations, setAnnotations] = useState<Annotation[]>(() => loadAnnotations());
+  const [layoutPatches, setLayoutPatches] = useState<LayoutPatch[]>(() => loadLayoutPatches());
+  const [cameraSnapshot, setCameraSnapshot] = useState<CameraSnapshot | null>(null);
+  const [measureStart, setMeasureStart] = useState<CameraSnapshot | null>(null);
 
   useEffect(() => {
     loadDataset()
@@ -68,7 +79,12 @@ export default function App() {
     store.edgeOverrides().then(setOverrides);
   }, []);
 
-  const search = useMemo(() => (data ? buildSearch(data) : null), [data]);
+  const patchedData = useMemo(() => {
+    if (!data) return null;
+    return { ...data, walk: data.walk.withLayoutPatches(layoutPatches) };
+  }, [data, layoutPatches]);
+
+  const search = useMemo(() => (patchedData ? buildSearch(patchedData) : null), [patchedData]);
 
   const routeOptions = useMemo(
     () => ({ stateOverrides: overrides, avoidUnconfirmed, stepFree }),
@@ -76,24 +92,24 @@ export default function App() {
   );
 
   const route: Route | null = useMemo(() => {
-    if (!data || !startStandId || !selectedStandId || startStandId === selectedStandId) return null;
+    if (!patchedData || !startStandId || !selectedStandId || startStandId === selectedStandId) return null;
     return findRoute(
-      data.graph,
-      data.graph.standNodeId(startStandId),
-      data.graph.standNodeId(selectedStandId),
+      patchedData.graph,
+      patchedData.graph.standNodeId(startStandId),
+      patchedData.graph.standNodeId(selectedStandId),
       routeOptions,
     );
-  }, [data, startStandId, selectedStandId, routeOptions]);
+  }, [patchedData, startStandId, selectedStandId, routeOptions]);
 
   const tour = useMemo(() => {
-    if (!data || !startStandId || tourStandIds.length === 0) return null;
+    if (!patchedData || !startStandId || tourStandIds.length === 0) return null;
     return planTour(
-      data.graph,
-      data.graph.standNodeId(startStandId),
-      tourStandIds.map((id) => data.graph.standNodeId(id)),
+      patchedData.graph,
+      patchedData.graph.standNodeId(startStandId),
+      tourStandIds.map((id) => patchedData.graph.standNodeId(id)),
       routeOptions,
     );
-  }, [data, startStandId, tourStandIds, routeOptions]);
+  }, [patchedData, startStandId, tourStandIds, routeOptions]);
 
   const setEdgeState = useCallback(async (edgeId: string, state: EdgeState) => {
     await store.setEdgeState(edgeId, state);
@@ -116,6 +132,10 @@ export default function App() {
   useEffect(() => {
     saveAnnotations(annotations);
   }, [annotations]);
+
+  useEffect(() => {
+    saveLayoutPatches(layoutPatches);
+  }, [layoutPatches]);
 
   // Der Vermessungsmodus gehört zur Ego-Perspektive -- verlässt man sie,
   // sollen No-Clip und ein offener Viewfinder nicht in der Übersicht hängen
@@ -182,7 +202,7 @@ export default function App() {
     );
   }
 
-  if (!data) {
+  if (!patchedData) {
     return (
       <div className="boot">
         <img src={`${import.meta.env.BASE_URL}brand/lootzy-head.png`} alt="" width={72} />
@@ -191,6 +211,62 @@ export default function App() {
       </div>
     );
   }
+
+  const editLayout = (state: LayoutPatchState) => {
+    if (!cameraSnapshot || !patchedData) return;
+    const patch = patchedData.walk.patchAt(
+      cameraSnapshot.x,
+      cameraSnapshot.y,
+      cameraSnapshot.z,
+      state,
+      state === 'open' ? 'Vor Ort als Durchgang freigemessen' : 'Vor Ort als Wand/Sperre freigemessen',
+    );
+    if (!patch) return;
+    setLayoutPatches((current) => [
+      ...current.filter((entry) => entry.id !== patch.id),
+      patch,
+    ]);
+  };
+
+  const mergeLayoutPatches = (patches: LayoutPatch[]) => {
+    setLayoutPatches((current) => {
+      const next = new Map(current.map((entry) => [entry.id, entry]));
+      patches.forEach((patch) => next.set(patch.id, patch));
+      return Array.from(next.values());
+    });
+  };
+
+  const copyLayoutAssistantPrompt = (note?: string) => {
+    const prompt = buildLayoutAssistantPrompt({
+      snapshot: cameraSnapshot,
+      currentCell: currentWalkCell,
+      existingPatches: layoutPatches,
+      note,
+    });
+    void navigator.clipboard.writeText(prompt);
+  };
+
+  const applyLayoutAssistantJson = (raw: string) => {
+    mergeLayoutPatches(parseLayoutAssistantPatches(raw));
+  };
+
+  const applyMeasuredCorridor = (distanceM: number, widthM: number) => {
+    if (!measureStart || !cameraSnapshot || !patchedData) return;
+    const drawnDistance = Math.hypot(cameraSnapshot.x - measureStart.x, cameraSnapshot.y - measureStart.y);
+    const note = `Messstrecke: ${distanceM.toFixed(2)} m echt, ${drawnDistance.toFixed(2)} m Karte, ${widthM.toFixed(2)} m breit`;
+    mergeLayoutPatches(patchedData.walk.patchesAlong(measureStart, cameraSnapshot, widthM, 'open', note));
+  };
+
+  const clearCurrentLayoutPatch = () => {
+    if (!cameraSnapshot || !patchedData) return;
+    const cell = patchedData.walk.cellAt(cameraSnapshot.x, cameraSnapshot.y, cameraSnapshot.z);
+    if (!cell) return;
+    setLayoutPatches((current) => current.filter((entry) => entry.id !== `${cell.hallKey}:${cell.ix}:${cell.iy}`));
+  };
+
+  const currentWalkCell = cameraSnapshot && patchedData
+    ? patchedData.walk.cellAt(cameraSnapshot.x, cameraSnapshot.y, cameraSnapshot.z)
+    : null;
 
   const routeStandIds = [
     ...(startStandId ? [startStandId] : []),
@@ -202,7 +278,7 @@ export default function App() {
     <div className="app">
       <div className="stage">
         <SiteScene
-          data={data}
+          data={patchedData}
           upperOpacity={upperOpacity}
           selectedStandId={selectedStandId}
           routeStandIds={routeStandIds}
@@ -218,6 +294,7 @@ export default function App() {
           onToggleFreeze={() => setFrozen((v) => !v)}
           onToggleViewfinder={() => setViewfinderOpen((v) => !v)}
           onMark={handleMark}
+          onCameraSnapshot={setCameraSnapshot}
         />
 
         {preset === 'ego' && !pendingMark && (
@@ -254,6 +331,19 @@ export default function App() {
             onCommitNote={commitNote}
             onCancelNote={cancelNote}
             annotations={annotations}
+            layoutPatches={layoutPatches}
+            currentWalkCell={currentWalkCell}
+            onOpenCell={() => editLayout('open')}
+            onBlockCell={() => editLayout('blocked')}
+            onClearCell={clearCurrentLayoutPatch}
+            onExportLayout={() => downloadLayoutPatches(layoutPatches)}
+            onCopyLayout={() => void navigator.clipboard.writeText(exportLayoutPatches(layoutPatches))}
+            onCopyAssistantPrompt={copyLayoutAssistantPrompt}
+            measureStart={measureStart}
+            onSetMeasureStart={() => { if (cameraSnapshot) setMeasureStart(cameraSnapshot); }}
+            onClearMeasureStart={() => setMeasureStart(null)}
+            onApplyMeasuredCorridor={applyMeasuredCorridor}
+            onApplyAssistantJson={applyLayoutAssistantJson}
             onExport={() => downloadAnnotations(annotations)}
             onCopy={() => void navigator.clipboard.writeText(exportAnnotations(annotations))}
             onDeleteAnnotation={deleteAnnotation}
@@ -317,7 +407,7 @@ export default function App() {
         <div className="panel__body">
           {tab === 'karte' && (
             <MapPanel
-              data={data}
+              data={patchedData}
               search={search}
               onPick={pickHit}
               selectedStandId={selectedStandId}
@@ -344,9 +434,10 @@ export default function App() {
           )}
           {tab === 'epix' && <EpixHub />}
           {tab === 'funkwache' && (
-            <Funkwache data={data} onGoToStand={setSelectedStandId} />
+            <Funkwache data={patchedData} onGoToStand={setSelectedStandId} />
           )}
-          {tab === 'register' && <RegistryPanel data={data} search={search} onPick={pickHit} />}
+          {tab === 'register' && <RegistryPanel data={patchedData} search={search} onPick={pickHit} />}
+          {tab === 'messe' && <ProceduralMesse />}
         </div>
       </aside>
     </div>
