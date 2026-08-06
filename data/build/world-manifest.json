@@ -1,0 +1,54 @@
+{
+  "schema": "beuteltier.world.v1",
+  "modelVersion": "2026.08.1",
+  "status": "migration",
+  "origin": [
+    358300.0,
+    5645800.0,
+    40.0
+  ],
+  "coordinateSystem": {
+    "sourceCrs": "EPSG:25832 + DHHN2016 NH",
+    "sceneX": "worldX - originX",
+    "sceneY": "worldZ - originZ",
+    "sceneZ": "-(worldY - originY)",
+    "units": "metre",
+    "handedness": "right"
+  },
+  "packages": [
+    {
+      "id": "messe",
+      "role": "render-world",
+      "status": "legacy",
+      "uri": "models/messe.glb",
+      "bytes": 2764812,
+      "available": true
+    }
+  ],
+  "data": {
+    "hallRegistrations": "data/hall-registrations.json",
+    "lod2Inventory": "data/lod2-inventory.json",
+    "worldOrigin": "data/world-origin.json",
+    "materialClasses": "data/material-classes.json"
+  },
+  "registrationSummary": {
+    "total": 17,
+    "draft": 17,
+    "registered": 0,
+    "withTargetFeatures": 14
+  },
+  "fallback": {
+    "orthophoto": true,
+    "uri": "models/gelaende.jpg",
+    "walkable": false
+  },
+  "runtimeDependencies": {
+    "networkRequired": false,
+    "realityMeshRequired": false
+  },
+  "notes": [
+    "Das bestehende Messe-GLB bleibt waehrend der Migration erhalten.",
+    "status=legacy kennzeichnet es ausdruecklich als noch nicht paketierte amtliche Welt.",
+    "Das Orthofoto ist niemals automatisch begehbar."
+  ]
+}
