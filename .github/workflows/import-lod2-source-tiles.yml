@@ -22,15 +22,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Discover, download and verify official LoD2 tiles
+      - name: Download and verify official LoD2 tiles
         shell: bash
         run: |
           set -euo pipefail
 
           destination="data/raw/lod2"
+          source_base="https://www.opengeodata.nrw.de/produkte/geobasis/3dg/lod2_gml/lod2_gml"
           mkdir -p "$destination"
-          workdir="$(mktemp -d)"
-          trap 'rm -rf "$workdir"' EXIT
 
           tiles=(
             "LoD2_32_357_5645_1_NW.gml"
@@ -46,98 +45,6 @@ jobs:
             ["LoD2_32_358_5646_1_NW.gml"]="1b3916dfcd0361816b940a85490cd430e5a789c5cbccace7b2ece3627893ac66"
           )
 
-          cat > "$workdir/discover.py" <<'PY'
-          from __future__ import annotations
-
-          import html.parser
-          import sys
-          import urllib.parse
-          import urllib.request
-          from collections import deque
-
-          target = sys.argv[1]
-          roots = [
-              "https://www.opengeodata.nrw.de/produkte/geobasis/3dg/lod2_gml/",
-              "https://www.opengeodata.nrw.de/produkte/geobasis/3dg/",
-          ]
-
-          class Links(html.parser.HTMLParser):
-              def __init__(self) -> None:
-                  super().__init__()
-                  self.hrefs: list[str] = []
-
-              def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-                  if tag.lower() != "a":
-                      return
-                  for key, value in attrs:
-                      if key.lower() == "href" and value:
-                          self.hrefs.append(value)
-
-          headers = {"User-Agent": "BEUTELTIER-LoD2-import/1.0"}
-          seen: set[str] = set()
-          queue: deque[tuple[str, str, int]] = deque((root, root, 0) for root in roots)
-          max_pages = 800
-
-          while queue and len(seen) < max_pages:
-              root, url, depth = queue.popleft()
-              url = urllib.parse.urldefrag(url)[0]
-              if url in seen:
-                  continue
-              seen.add(url)
-
-              parsed_root = urllib.parse.urlparse(root)
-              parsed = urllib.parse.urlparse(url)
-              if parsed.netloc != parsed_root.netloc or not parsed.path.startswith(parsed_root.path):
-                  continue
-
-              try:
-                  request = urllib.request.Request(url, headers=headers)
-                  with urllib.request.urlopen(request, timeout=25) as response:
-                      content_type = response.headers.get("Content-Type", "")
-                      body = response.read()
-              except Exception as exc:
-                  print(f"SKIP {url}: {exc}", file=sys.stderr)
-                  continue
-
-              if urllib.parse.unquote(parsed.path).endswith((target, target.removesuffix(".gml") + ".zip")):
-                  print(url)
-                  raise SystemExit(0)
-
-              if "html" not in content_type.lower() and not body.lstrip().startswith(b"<"):
-                  continue
-
-              parser = Links()
-              try:
-                  parser.feed(body.decode("utf-8", errors="replace"))
-              except Exception:
-                  continue
-
-              for href in parser.hrefs:
-                  absolute = urllib.parse.urljoin(url, href)
-                  absolute = urllib.parse.urldefrag(absolute)[0]
-                  decoded = urllib.parse.unquote(urllib.parse.urlparse(absolute).path)
-
-                  if decoded.endswith(target) or decoded.endswith(target.removesuffix(".gml") + ".zip"):
-                      print(absolute)
-                      raise SystemExit(0)
-
-                  if depth >= 8:
-                      continue
-
-                  child = urllib.parse.urlparse(absolute)
-                  if child.netloc != parsed_root.netloc or not child.path.startswith(parsed_root.path):
-                      continue
-
-                  basename = child.path.rstrip("/").rsplit("/", 1)[-1]
-                  looks_like_directory = absolute.endswith("/") or "." not in basename
-                  relevant = any(part in decoded.lower() for part in ("lod2", "gml", "32", "357", "358", "5645", "5646"))
-                  if looks_like_directory and relevant and absolute not in seen:
-                      queue.append((root, absolute, depth + 1))
-
-          print(f"No official URL found for {target} after scanning {len(seen)} pages", file=sys.stderr)
-          raise SystemExit(1)
-          PY
-
           for tile in "${tiles[@]}"; do
             target="$destination/$tile"
             expected="${expected_sha256[$tile]}"
@@ -147,37 +54,22 @@ jobs:
               continue
             fi
 
-            echo "Discovering official source URL for $tile"
-            source_url="$(python "$workdir/discover.py" "$tile")"
-            echo "Found: $source_url"
-
-            downloaded="$workdir/$(basename "$source_url")"
+            url="$source_base/$tile"
+            echo "Downloading $url"
             curl --fail --location --silent --show-error \
               --retry 3 --retry-delay 2 --connect-timeout 20 \
-              --output "$downloaded" "$source_url"
+              --output "$target.tmp" "$url"
 
-            candidate="$downloaded"
-            if [[ "$downloaded" == *.zip ]]; then
-              extract_dir="$workdir/extract-${tile%.gml}"
-              mkdir -p "$extract_dir"
-              unzip -q -o "$downloaded" -d "$extract_dir"
-              candidate="$(find "$extract_dir" -type f -name "$tile" -print -quit)"
-              if [[ -z "$candidate" ]]; then
-                echo "ZIP did not contain $tile: $source_url" >&2
-                exit 1
-              fi
-            fi
-
-            actual="$(sha256sum "$candidate" | awk '{print $1}')"
+            actual="$(sha256sum "$target.tmp" | awk '{print $1}')"
             if [[ "$actual" != "$expected" ]]; then
               echo "Checksum mismatch for $tile" >&2
-              echo "Source:   $source_url" >&2
               echo "Expected: $expected" >&2
               echo "Actual:   $actual" >&2
+              rm -f "$target.tmp"
               exit 1
             fi
 
-            cp "$candidate" "$target"
+            mv "$target.tmp" "$target"
             echo "Imported and verified: $tile"
           done
 
