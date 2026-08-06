@@ -299,21 +299,211 @@ function Gelaende({
   return <primitive object={model} position={[-centre[0], 0, centre[1]]} />;
 }
 
-function OfficialPackage({ uri }: { uri: string }) {
-  const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
-  return <primitive object={scene} />;
+/**
+ * Amtliche GLB-Materialnamen tragen ihre Fläche im Namen selbst:
+ * `<Feature-ID>|<Building|BuildingPart>|<roof|wall|ground|closure>|<Index>|<Materialklasse>`.
+ * Diese Herkunft steht im World-Package-Export (siehe data/world-packages.json,
+ * materialClasses je Paket) und ist damit die reale Quelle, nicht ein Rätselraten
+ * über Node-Namen -- die amtlichen GLBs benennen ihre Meshes generisch.
+ */
+type GlbSurfaceType = 'roof' | 'wall' | 'ground' | 'closure' | 'unknown';
+
+function parseGlbMaterialName(name: string): { surfaceType: GlbSurfaceType; materialClass: string } {
+  const parts = name.split('|');
+  const rawType = parts[2] ?? '';
+  const surfaceType: GlbSurfaceType =
+    rawType === 'roof' || rawType === 'wall' || rawType === 'ground' || rawType === 'closure'
+      ? rawType
+      : 'unknown';
+  return { surfaceType, materialClass: parts[4] ?? 'unknown' };
 }
 
-function OfficialWorld({ data, centre }: { data: Dataset; centre: [number, number] }) {
+/** Wie durchsichtig die amtliche Hallenschale je Kamera-Preset ist. */
+function coreShellOpacity(preset: CameraPreset): number {
+  switch (preset) {
+    case 'uebersicht':
+      return SHELL_OPACITY;
+    case 'halle':
+      return 0.35;
+    case 'laufmodus':
+      return 0.22;
+    case 'ego':
+      return SHELL_OPACITY_EGO;
+  }
+}
+
+/** Die Umgebung bleibt Hintergrund -- nie so deutlich wie die Koelnmesse selbst. */
+function surroundingsOpacity(preset: CameraPreset): number {
+  switch (preset) {
+    case 'uebersicht':
+      return 0.4;
+    case 'halle':
+      return 0.28;
+    case 'laufmodus':
+      return 0.32;
+    case 'ego':
+      return 0.15;
+  }
+}
+
+const SURROUNDINGS_COLOURS: Record<string, string> = {
+  concrete: '#6b7280',
+  brick: '#7a6a5d',
+  'technical-roof': '#565c62',
+};
+
+function OfficialPackage({
+  uri,
+  packageId,
+  preset,
+  surfaces,
+}: {
+  uri: string;
+  packageId: string;
+  preset: CameraPreset;
+  surfaces: Record<string, Surface>;
+}) {
+  const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
+  const isCore = packageId.startsWith('core/');
+  const interior = preset === 'ego';
+
+  const model = useMemo(() => {
+    // Originalszene klonen -- das von useGLTF gecachte Objekt bleibt unangetastet,
+    // sonst teilen sich alle Instanzen (und Presetwechsel) dieselben Materialien.
+    const clone = scene.clone(true);
+    const disposables: THREE.Material[] = [];
+
+    clone.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      const source = node.material as THREE.MeshStandardMaterial;
+      const { surfaceType, materialClass } = parseGlbMaterialName(source.name ?? '');
+      const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide });
+
+      if (isCore) {
+        if (surfaceType === 'roof') {
+          // Dach ist von aussen (Übersicht/Halle/Laufmodus) nur Umriss --
+          // erst von innen wird daraus eine Decke, die den Raum schliesst.
+          if (!interior) {
+            node.visible = false;
+            material.dispose();
+            return;
+          }
+          const surface = surfaces.ceiling;
+          material.map = surface.map;
+          material.normalMap = surface.normalMap;
+          material.roughnessMap = surface.roughnessMap;
+          material.color.set('#8d919a');
+          material.metalness = 0.45;
+          material.envMapIntensity = 0.6;
+        } else if (surfaceType === 'ground') {
+          const surface = surfaces.floor;
+          material.map = surface.map;
+          material.normalMap = surface.normalMap;
+          material.roughnessMap = surface.roughnessMap;
+          material.roughness = 0.32;
+          material.metalness = 0.12;
+          material.envMapIntensity = 1.5;
+        } else {
+          // wall, closure und unknown-Flächen der Hallenschale sind Fassade.
+          const surface = interior ? surfaces.interior : surfaces.facade;
+          material.map = surface.map;
+          material.normalMap = surface.normalMap;
+          material.roughnessMap = surface.roughnessMap;
+          material.emissiveMap = surface.emissiveMap ?? null;
+          material.emissive.set(interior ? '#7fa8cd' : '#101820');
+          material.emissiveIntensity = interior ? 1.1 : 0.35;
+          material.metalness = 0.18;
+          material.envMapIntensity = 1.1;
+        }
+
+        const opacity = coreShellOpacity(preset);
+        material.transparent = opacity < 0.99;
+        material.opacity = opacity;
+        material.depthWrite = opacity > 0.9;
+        node.castShadow = !interior;
+        node.receiveShadow = true;
+      } else {
+        // Umgebungsgebäude: matt, zurückhaltend, kein Blickfang und kein
+        // dominanter Schattenwurf -- die Koelnmesse bleibt der Vordergrund.
+        material.color.set(SURROUNDINGS_COLOURS[materialClass] ?? '#5f6670');
+        material.roughness = 0.94;
+        material.metalness = 0.05;
+        material.envMapIntensity = 0.35;
+
+        const opacity = surroundingsOpacity(preset);
+        material.transparent = opacity < 0.99;
+        material.opacity = opacity;
+        material.depthWrite = opacity > 0.9;
+        node.castShadow = false;
+        node.receiveShadow = true;
+      }
+
+      material.normalScale = new THREE.Vector2(1.1, 1.1);
+      node.material = material;
+      disposables.push(material);
+    });
+
+    (clone as unknown as { __disposables: THREE.Material[] }).__disposables = disposables;
+    return clone;
+  }, [scene, isCore, interior, preset, surfaces]);
+
+  useEffect(
+    () => () => {
+      (model as unknown as { __disposables: THREE.Material[] }).__disposables.forEach(
+        (material) => material.dispose(),
+      );
+    },
+    [model],
+  );
+
+  return <primitive object={model} />;
+}
+
+function OfficialWorld({
+  data,
+  centre,
+  preset,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  preset: CameraPreset;
+}) {
+  // Nur role: "render" -- das Kollisionspaket ist kein Renderpaket und darf
+  // nie sichtbar werden, unabhaengig von Preset oder Fokus.
   const packages = data.world?.manifest.packages.filter(
     (entry) => entry.available && entry.role === 'render',
   ) ?? [];
+
+  // Dieselben drei Flaechenarten wie im Gelaende-Renderer -- einmal erzeugt,
+  // von allen amtlichen Paketen geteilt, nicht pro Paket dupliziert.
+  const surfaces = useMemo<Record<string, Surface>>(
+    () => ({
+      facade: facadeSurface(false),
+      interior: facadeSurface(true),
+      floor: floorSurface(),
+      ceiling: ceilingSurface(),
+    }),
+    [],
+  );
+  useEffect(
+    () => () => Object.values(surfaces).forEach(disposeSurface),
+    [surfaces],
+  );
+
   if (!packages.length) return null;
   // GLBs verwenden echtes Three.js sceneZ. Die registrierten 2D-Inhalte
   // laufen noch durch toScene(), das ihre zweite Achse negiert.
   return (
     <group position={[-centre[0], 0, centre[1]]} scale={[1, 1, -1]}>
-      {packages.map((entry) => <OfficialPackage key={entry.id} uri={entry.uri} />)}
+      {packages.map((entry) => (
+        <OfficialPackage
+          key={entry.id}
+          uri={entry.uri}
+          packageId={entry.id}
+          preset={preset}
+          surfaces={surfaces}
+        />
+      ))}
     </group>
   );
 }
@@ -928,8 +1118,10 @@ export function SiteScene(props: SceneProps) {
       />
       <Beleuchtung extent={extent} interior={preset === 'ego'} />
 
-      <Ground extent={extent} centre={centre} ortho={registered ? null : data.ortho} />
-      {!registered && <Umgebung data={data} centre={centre} />}
+      {/* Das Orthofoto bleibt Bodenreferenz, solange kein amtlicher Boden aus
+          den Weltpaketen zur Verfügung steht -- auch im registrierten Modus. */}
+      <Ground extent={extent} centre={centre} ortho={data.ortho} />
+      <Umgebung data={data} centre={centre} />
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
           tragen sie weiterhin. Deshalb Suspense ohne Ersatzdarstellung. */}
       {!registered && (
@@ -943,7 +1135,7 @@ export function SiteScene(props: SceneProps) {
       )}
       {registered && (
         <Suspense fallback={null}>
-          <OfficialWorld data={data} centre={centre} />
+          <OfficialWorld data={data} centre={centre} preset={preset} />
         </Suspense>
       )}
       {(preset === 'halle' || preset === 'ego') && focusHallKey && (
