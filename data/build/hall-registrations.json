@@ -1,0 +1,557 @@
+{
+  "schema": "beuteltier.hall-registrations.v1",
+  "coordinatePlane": "sceneX/sceneZ",
+  "origin": [
+    358300.0,
+    5645800.0,
+    40.0
+  ],
+  "registrations": [
+    {
+      "hallKey": "1.2",
+      "targetFeatureIds": [
+        "DENW37AL2hU0008y"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 0.49,
+      "floorWorldZ": 40.49,
+      "anchors": [],
+      "residualM": 6.98,
+      "maxResidualM": 6.98,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "10.1",
+      "targetFeatureIds": [
+        "DENW37AL100064Zs"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 0.49,
+      "floorWorldZ": 40.49,
+      "anchors": [],
+      "residualM": 0.34,
+      "maxResidualM": 0.77,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "10.2",
+      "targetFeatureIds": [
+        "DENW37AL100064Zs"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 7.94,
+      "floorWorldZ": 47.94,
+      "anchors": [],
+      "residualM": 0.34,
+      "maxResidualM": 0.77,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "2.1",
+      "targetFeatureIds": [
+        "DENW37AL100064wf"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 0.49,
+      "floorWorldZ": 40.49,
+      "anchors": [],
+      "residualM": 0.18,
+      "maxResidualM": 0.44,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "2.2",
+      "targetFeatureIds": [
+        "DENW37AL100064wf"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 8.24,
+      "floorWorldZ": 48.24,
+      "anchors": [],
+      "residualM": 0.18,
+      "maxResidualM": 0.44,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "3.2",
+      "targetFeatureIds": [
+        "DENW37AL100064yw"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 6.99,
+      "floorWorldZ": 46.99,
+      "anchors": [],
+      "residualM": 6.98,
+      "maxResidualM": 6.98,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "4.1",
+      "targetFeatureIds": [
+        "DENW37AL10006612"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 0.49,
+      "floorWorldZ": 40.49,
+      "anchors": [],
+      "residualM": 0.0,
+      "maxResidualM": 0.0,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "4.2",
+      "targetFeatureIds": [
+        "DENW37AL10006612"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 8.09,
+      "floorWorldZ": 48.09,
+      "anchors": [],
+      "residualM": 0.0,
+      "maxResidualM": 0.0,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "5.1",
+      "targetFeatureIds": [
+        "DENW37AL100065RJ",
+        "DENW37AL1000644Q"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 0.49,
+      "floorWorldZ": 40.49,
+      "anchors": [],
+      "residualM": 0.94,
+      "maxResidualM": 1.46,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "5.2",
+      "targetFeatureIds": [
+        "DENW37AL100065RJ",
+        "DENW37AL1000644Q"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 8.09,
+      "floorWorldZ": 48.09,
+      "anchors": [],
+      "residualM": 0.94,
+      "maxResidualM": 1.46,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "6.1",
+      "targetFeatureIds": [
+        "DENW37AL100064lq"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 0.49,
+      "floorWorldZ": 40.49,
+      "anchors": [],
+      "residualM": 0.04,
+      "maxResidualM": 0.05,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "7.1",
+      "targetFeatureIds": [
+        "DENW37AL1000660R"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 0.49,
+      "floorWorldZ": 40.49,
+      "anchors": [],
+      "residualM": 0.0,
+      "maxResidualM": 0.0,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "8.1",
+      "targetFeatureIds": [
+        "DENW37AL100063oN"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 0.49,
+      "floorWorldZ": 40.49,
+      "anchors": [],
+      "residualM": 0.64,
+      "maxResidualM": 1.06,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "9.1",
+      "targetFeatureIds": [
+        "DENW37AL100065KW"
+      ],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 0.49,
+      "floorWorldZ": 40.49,
+      "anchors": [],
+      "residualM": 0.0,
+      "maxResidualM": 0.0,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "F2",
+      "targetFeatureIds": [],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 0.49,
+      "floorWorldZ": 40.49,
+      "anchors": [],
+      "residualM": 25.0,
+      "maxResidualM": 25.0,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "F8",
+      "targetFeatureIds": [],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 0.49,
+      "floorWorldZ": 40.49,
+      "anchors": [],
+      "residualM": 25.0,
+      "maxResidualM": 25.0,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    },
+    {
+      "hallKey": "FB",
+      "targetFeatureIds": [],
+      "transform": {
+        "rotationDeg": -31.0126,
+        "scale": 1.0,
+        "translation": [
+          -1207.587,
+          204.865
+        ],
+        "mirroredSceneZ": true,
+        "matrix2D": [
+          0.8570540172,
+          0.5152265634,
+          0.5152265634,
+          -0.8570540172
+        ]
+      },
+      "floorZ": 0.49,
+      "floorWorldZ": 40.49,
+      "anchors": [],
+      "residualM": 25.0,
+      "maxResidualM": 25.0,
+      "status": "draft",
+      "source": "legacy-global-fit",
+      "notes": [
+        "Noch keine unabhaengigen amtlichen Anker dieser Hallenebene.",
+        "Portale wurden nicht als Registrierungsanker verwendet."
+      ]
+    }
+  ],
+  "counts": {
+    "total": 17,
+    "draft": 17,
+    "registered": 0,
+    "withTargetFeatures": 14
+  }
+}
