@@ -1,0 +1,8 @@
+{
+  "title": "3D-Gebaeudemodell LoD2, Scene Layer Package Teil 16",
+  "provider": "Geobasis NRW / Bezirksregierung Koeln",
+  "url": "https://www.opengeodata.nrw.de/produkte/geobasis/3dg/lod2_slpk/lod2_slpk/LOD2_NRW_Teil16.slpk",
+  "crs": "ETRS89 / UTM32N (EPSG:25832)",
+  "licence": "Datenlizenz Deutschland Zero 2.0 (dl-de/zero-2-0)",
+  "usage": "Inspektions-Spike; wegen fehlender Bildtexturen nicht als Materialquelle uebernommen"
+}

@@ -37,9 +37,10 @@ NATIVE_RES_M = 0.1
 # Kacheln zusammen 400 Megapixel.
 DECODE_REDUCE = 2
 
-# Kantenlaenge der Ausgabe. 4096 auf gut 1300 m sind rund 32 cm je Bildpunkt --
-# sichtbar scharf beim Begehen, ohne die App mit einem Riesenbild zu belasten.
-OUT_SIZE = 4096
+# Kantenlaenge der Ausgabe. 5120 auf gut 1300 m sind rund 25 cm je Bildpunkt.
+# Das nutzt mehr von den 10-cm-Quelldaten als die bisherige 4096er-Ausgabe,
+# bleibt als progressive JPEG aber deutlich kleiner als eine native Textur.
+OUT_SIZE = 5120
 MARGIN_M = 120.0
 JPEG_QUALITY = 82
 
