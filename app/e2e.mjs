@@ -177,6 +177,14 @@ check('Register nennt die Indie Arena Booth', /Indie Arena Booth/.test(registerT
 check('Register weist fehlende Lagen aus', /Ohne Lage|11\.1/.test(registerText));
 await page.screenshot({ path: `${OUT}/app-8-register.png` });
 
+// --- Amtliche Welt / Migration -------------------------------------------
+await page.getByRole('button', { name: 'Diagnose' }).click();
+await page.getByRole('heading', { name: 'Migration läuft' }).waitFor({ timeout: 10000 });
+const diagnosticText = await page.innerText('.panel__body');
+check('Weltdiagnose zeigt LoD2 und Begehbarkeit', /LOD2-INVENTAR/.test(diagnosticText) && /BEGEHBARKEIT/.test(diagnosticText));
+check('Ungeprüfte Portale bleiben erkennbar', /davon 0 baulich geprüft/.test(diagnosticText));
+await page.screenshot({ path: `${OUT}/app-9-diagnose.png` });
+
 check('keine Fehler in der Konsole', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();
