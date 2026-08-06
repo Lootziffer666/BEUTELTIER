@@ -44,8 +44,8 @@
       "materialClasses": {
         "concrete": 92
       },
-      "status": "development",
-      "available": false
+      "status": "local",
+      "available": true
     },
     {
       "id": "core/messe",
@@ -60,8 +60,8 @@
         "hall-metal-light": 350,
         "concrete": 92
       },
-      "status": "development",
-      "available": false
+      "status": "local",
+      "available": true
     },
     {
       "id": "surroundings/east",
@@ -76,8 +76,8 @@
         "technical-roof": 1691,
         "brick": 593
       },
-      "status": "development",
-      "available": false
+      "status": "local",
+      "available": true
     },
     {
       "id": "surroundings/north",
@@ -92,8 +92,8 @@
         "technical-roof": 639,
         "brick": 79
       },
-      "status": "development",
-      "available": false
+      "status": "local",
+      "available": true
     },
     {
       "id": "surroundings/south",
@@ -108,8 +108,8 @@
         "technical-roof": 526,
         "brick": 6
       },
-      "status": "development",
-      "available": false
+      "status": "local",
+      "available": true
     },
     {
       "id": "surroundings/west",
@@ -123,8 +123,8 @@
         "concrete": 1430,
         "technical-roof": 275
       },
-      "status": "development",
-      "available": false
+      "status": "local",
+      "available": true
     }
   ],
   "data": {
