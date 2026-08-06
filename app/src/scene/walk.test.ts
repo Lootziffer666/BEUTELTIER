@@ -110,6 +110,18 @@ describe('WalkGrid', () => {
     expect(secure.footingAt(1, 1).blocked).toBe(false);
   });
 
+  it('fragt ein gedrehtes amtliches WalkGrid in dessen Zellbasis ab', () => {
+    const rotated = grid('amtlich', 4.5, 1, ['..', '.#']);
+    const affine = WalkGrid.fromCompact({
+      gridM: 2,
+      grids: [{ ...rotated, origin: [100, 200], cellBasisX: [0, 2], cellBasisY: [-2, 0] }],
+      standLinks: [], connectors: [], schema: 'registered',
+    } as unknown as CompactGraph);
+    expect(affine.footingAt(99, 201, 4).blocked).toBe(false);
+    expect(affine.footingAt(97, 203, 4).blocked).toBe(true);
+    expect(affine.spawn('amtlich')).toEqual({ x: 99, y: 201, z: 4.5 });
+  });
+
   it('haelt vor dem Stand an', () => {
     const from = { x: 5, y: 1, z: 0 };
     const to = walk.move(from, 0, 4);

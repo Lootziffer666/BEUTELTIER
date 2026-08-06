@@ -97,6 +97,8 @@ def main() -> int:
                      "surface-classification.json", "visibility-analysis.json",
                      "collision-surfaces.json",
                      "registered-layout.json",
+                     "registered-graph.json",
+                     "registered-site.json",
                      "hall-registrations.json", "site.json",
                      "world-manifest.json",
                      "material-classes.json",

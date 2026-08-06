@@ -179,6 +179,17 @@ class TestHallRegistrations:
         assert product["policy"]["portalsAreRegistrationAnchors"] is False
         assert all(not portal["usedAsRegistrationAnchor"] for portal in product["portalEnds"])
         assert all(hall["walkGrid"]["cellBasisX"] != [0, 0] for hall in product["halls"])
+        graph = json.loads((BUILD / "registered-graph.json").read_text(encoding="utf-8"))
+        assert graph["schema"] == "beuteltier.registered-graph.v1"
+        assert len(graph["grids"]) == 17
+        assert all("cellBasisX" in grid and "cellBasisY" in grid for grid in graph["grids"])
+        assert all(math.hypot(*grid["cellBasisX"]) == pytest.approx(graph["gridM"], abs=0.002)
+                   for grid in graph["grids"])
+        registered_site = json.loads((BUILD / "registered-site.json").read_text(encoding="utf-8"))
+        assert len(registered_site["stands"]) == 1027
+        assert registered_site["registration"]["status"] == "constrained"
+        assert registered_site["connectors"] == []
+        assert registered_site["registration"]["connectorsOmitted"] > 0
 
     def test_floorz_ist_nhn_offset_und_keine_null_fallbackhoehe(self, site):
         from build_hall_registrations import build_product

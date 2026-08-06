@@ -20,6 +20,8 @@ SITE = ROOT / "data/build/site.json"
 GRAPH = ROOT / "data/build/graph.json"
 REGISTRATIONS = ROOT / "data/build/hall-registrations.json"
 OUTPUT = ROOT / "data/build/registered-layout.json"
+GRAPH_OUTPUT = ROOT / "data/build/registered-graph.json"
+SITE_OUTPUT = ROOT / "data/build/registered-site.json"
 
 
 def rounded(point) -> list[float]:
@@ -106,6 +108,57 @@ def build() -> dict:
                    "relativeHallContentScale": 1.0},
     }
     OUTPUT.write_text(json.dumps(product, indent=2) + "\n")
+    registered_grids = []
+    for hall in halls:
+        source = grids[hall["hallKey"]]
+        target = hall["walkGrid"]
+        registered_grids.append({
+            "key": hall["hallKey"], "origin": target["origin"],
+            "cellBasisX": target["cellBasisX"], "cellBasisY": target["cellBasisY"],
+            "z": target["floorZ"], "level": source["level"],
+            "cols": target["cols"], "rows": target["rows"], "walkable": target["walkable"],
+        })
+    registered_connectors = []
+    portal_by_id = {portal["id"]: portal for portal in portal_ends}
+    for connector in graph["connectors"]:
+        transformed = portal_by_id[connector["id"]]["ends"]
+        registered_connectors.append({
+            **connector,
+            "x": round(sum(end["position"][0] for end in transformed) / len(transformed), 3),
+            "y": round(sum(end["position"][1] for end in transformed) / len(transformed), 3),
+            "z": round(sum(end["floorZ"] for end in transformed) / len(transformed), 3),
+        })
+    registered_graph = {
+        **graph, "schema": "beuteltier.registered-graph.v1",
+        "grids": registered_grids, "connectors": registered_connectors,
+        "coordinatePlane": "sceneX/sceneZ", "origin": registration_product["origin"],
+    }
+    GRAPH_OUTPUT.write_text(json.dumps(registered_graph, indent=2) + "\n")
+    hall_by_key = {hall["hallKey"]: hall for hall in halls}
+    registered_site = {**site, "schema": "beuteltier.registered-site.v1"}
+    registered_site["halls"] = [{
+        **hall,
+        "footprint": hall_by_key[hall["key"]]["footprint"],
+        "blocks": [[rounded(transform_point(tuple(point), registrations[hall["key"]]["transform"]))
+                    for point in block] for block in hall["blocks"]],
+        "baseY": registrations[hall["key"]]["floorZ"],
+    } for hall in site["halls"]]
+    registered_site["stands"] = [{
+        **stand,
+        "polygon": next(item["polygon"] for item in hall_by_key[stand["hallKey"]]["stands"]
+                        if item["id"] == stand["id"]),
+        "baseY": registrations[stand["hallKey"]]["floorZ"],
+    } for stand in site["stands"]]
+    facility_positions = {item["id"]: item["position"] for hall in halls
+                          for item in hall["facilities"]}
+    registered_site["facilities"] = [{**facility, "position": facility_positions.get(facility["id"], facility["position"])}
+                                     for facility in site["facilities"]]
+    registered_site["connectors"] = []
+    registered_site["registration"] = {
+        "status": "constrained", "connectorsOmitted": len(site["connectors"]),
+        "reason": "Verbindungsumrisse besitzen noch keine eindeutige Hallenzuordnung.",
+    }
+    SITE_OUTPUT.write_text(json.dumps(registered_site, indent=2) + "\n")
     return product
 
 

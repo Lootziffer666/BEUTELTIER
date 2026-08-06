@@ -139,7 +139,9 @@
     "surfaceClassification": "data/surface-classification.json",
     "visibilityAnalysis": "data/visibility-analysis.json",
     "collisionSurfaces": "data/collision-surfaces.json",
-    "registeredLayout": "data/registered-layout.json"
+    "registeredLayout": "data/registered-layout.json",
+    "registeredGraph": "data/registered-graph.json",
+    "registeredSite": "data/registered-site.json"
   },
   "registrationSummary": {
     "total": 17,

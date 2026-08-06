@@ -75,6 +75,8 @@ def build_product(origin: dict, registrations: dict) -> dict:
             "visibilityAnalysis": "data/visibility-analysis.json",
             "collisionSurfaces": "data/collision-surfaces.json",
             "registeredLayout": "data/registered-layout.json",
+            "registeredGraph": "data/registered-graph.json",
+            "registeredSite": "data/registered-site.json",
         },
         "registrationSummary": registrations["counts"],
         "fallback": {
