@@ -56,6 +56,7 @@ export default function App() {
   const [preset, setPreset] = useState<CameraPreset>('uebersicht');
   const [selectedStandId, setSelectedStandId] = useState<string | null>(null);
   const [focusHallKey, setFocusHallKey] = useState<string | null>(null);
+  const [stagingObjectCount, setStagingObjectCount] = useState(0);
 
   const [startStandId, setStartStandId] = useState<string | null>(null);
   const [tourStandIds, setTourStandIds] = useState<string[]>([]);
@@ -298,13 +299,15 @@ export default function App() {
           onToggleViewfinder={() => setViewfinderOpen((v) => !v)}
           onMark={handleMark}
           onCameraSnapshot={setCameraSnapshot}
+          onStagingObjectCount={setStagingObjectCount}
         />
 
         <ProceduralStagingNotice
           visible={
             tab === 'karte' &&
             Boolean(focusHallKey) &&
-            (preset === 'halle' || preset === 'ego')
+            (preset === 'halle' || preset === 'ego') &&
+            stagingObjectCount > 0
           }
         />
 

@@ -62,6 +62,9 @@ export interface SceneProps {
   /** Aktueller Kamerazustand wird an den Aufrufer gereicht, keine Beschreibung nötig. */
   onMark?: (snapshot: CameraSnapshot) => void;
   onCameraSnapshot?: (snapshot: CameraSnapshot) => void;
+  /** Meldet die Zahl tatsächlich erzeugter ProceduralStaging-Objekte --
+   * bestimmt, ob der Inszenierungs-Hinweis angezeigt werden darf. */
+  onStagingObjectCount?: (count: number) => void;
 }
 
 const COLOURS = {
@@ -381,8 +384,8 @@ function OfficialPackage({
 
       if (isCore) {
         if (surfaceType === 'roof') {
-          // Dach ist von aussen (Übersicht/Halle/Laufmodus) nur Umriss --
-          // erst von innen wird daraus eine Decke, die den Raum schliesst.
+          // Dach ist in Übersicht/Halle/Laufmodus unsichtbar -- echtes
+          // visible=false, nicht nur transparent, damit es nie im Weg steht.
           if (!interior) {
             node.visible = false;
             material.dispose();
@@ -403,8 +406,34 @@ function OfficialPackage({
           material.roughness = 0.32;
           material.metalness = 0.12;
           material.envMapIntensity = 1.5;
+        } else if (surfaceType === 'closure') {
+          // ClosureSurface: LoD2-Platzhalter, der eine im Datensatz nicht
+          // erfasste Öffnung schließt, damit der Baukörper wasserdicht
+          // bleibt -- keine reale Wand oder Fassade. Sichtbar gerendert
+          // (auch transparent) verdeckt sie beliebig große Teile des
+          // Innenraums, ohne irgendeine echte Fläche darzustellen.
+          // DEBUG (temporär): Herkunft und Ausdehnung protokollieren, bevor
+          // ausgeblendet wird.
+          node.geometry.computeBoundingBox();
+          // eslint-disable-next-line no-console
+          console.log('[OfficialWorld][DEBUG] closure ausgeblendet ' + JSON.stringify({
+            packageId,
+            meshName: node.name || '(unbenannt)',
+            materialName: source.name,
+            surfaceType,
+            materialClass,
+            boundingBox: node.geometry.boundingBox
+              ? {
+                  min: node.geometry.boundingBox.min.toArray(),
+                  max: node.geometry.boundingBox.max.toArray(),
+                }
+              : null,
+          }));
+          node.visible = false;
+          material.dispose();
+          return;
         } else {
-          // wall, closure und unknown-Flächen der Hallenschale sind Fassade.
+          // wall und unknown-Flächen der Hallenschale sind Fassade.
           const surface = interior ? surfaces.interior : surfaces.facade;
           material.map = surface.map;
           material.normalMap = surface.normalMap;
@@ -420,6 +449,9 @@ function OfficialPackage({
         material.transparent = opacity < 0.99;
         material.opacity = opacity;
         material.depthWrite = opacity > 0.9;
+        // Transparente Hülle darf die Inszenierung nicht im Depth Buffer
+        // verdecken -- vor allen anderen (Standard renderOrder 0) zeichnen.
+        node.renderOrder = material.transparent ? -10 : 0;
         node.castShadow = !interior;
         node.receiveShadow = true;
       } else {
@@ -434,6 +466,7 @@ function OfficialPackage({
         material.transparent = opacity < 0.99;
         material.opacity = opacity;
         material.depthWrite = opacity > 0.9;
+        node.renderOrder = material.transparent ? -10 : 0;
         node.castShadow = false;
         node.receiveShadow = true;
       }
@@ -1151,6 +1184,7 @@ export function SiteScene(props: SceneProps) {
           centre={centre}
           preset={preset}
           focusHallKey={focusHallKey}
+          onObjectCount={props.onStagingObjectCount}
         />
       )}
       {/* Hallenkörper und Schilder sind Hilfsmittel der Übersicht. Auf
