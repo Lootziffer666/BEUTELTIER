@@ -133,8 +133,10 @@ export function ProceduralStaging({
     });
 
     // DEBUG (temporär, siehe Diagnoseanfrage): sichtbare Zusammenfassung.
+    // JSON.stringify statt Objekt-Log, damit Playwright/DevTools nicht auf
+    // "Array(N)" kürzen.
     // eslint-disable-next-line no-console
-    console.log('[ProceduralStaging][DEBUG] Generatorobjekte', {
+    console.log('[ProceduralStaging][DEBUG] Generatorobjekte ' + JSON.stringify({
       hallKey: focusHallKey,
       angefragteStageSpecs: specs.length,
       erfolgreicheGeneratorobjekte: objects.length,
@@ -143,7 +145,7 @@ export function ProceduralStaging({
         id: object.id,
         position: object.root.position.toArray(),
       })),
-    });
+    }));
 
     const plan = prepareStageRenderPlan(objects);
 
