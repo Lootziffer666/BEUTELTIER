@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+"""Transformiert alle hallenabhaengigen Inhalte gemeinsam in die amtliche Szene.
+
+Das Produkt ersetzt noch nicht den Legacy-Laufzeitgraphen. Es ist die
+maschinenlesbare, messbare Uebergabeschicht fuer Staende, WalkGrid, Anlagen,
+Labels und Portal-Endpunkte; kein Portal wird dabei als Registrierungsanker
+verwendet.
+"""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from build_hall_registrations import ROOT, transform_point  # noqa: E402
+
+SITE = ROOT / "data/build/site.json"
+GRAPH = ROOT / "data/build/graph.json"
+REGISTRATIONS = ROOT / "data/build/hall-registrations.json"
+OUTPUT = ROOT / "data/build/registered-layout.json"
+
+
+def rounded(point) -> list[float]:
+    return [round(point[0], 3), round(point[1], 3)]
+
+
+def build() -> dict:
+    site = json.loads(SITE.read_text())
+    graph = json.loads(GRAPH.read_text())
+    registration_product = json.loads(REGISTRATIONS.read_text())
+    registrations = {item["hallKey"]: item for item in registration_product["registrations"]}
+    grids = {grid["key"]: grid for grid in graph["grids"]}
+
+    halls = []
+    for hall in site["halls"]:
+        key = hall["key"]
+        registration = registrations[key]
+        transform = registration["transform"]
+        hall_stands = [stand for stand in site["stands"] if stand["hallKey"] == key]
+        facilities = [facility for facility in site["facilities"] if facility["hallKey"] == key]
+        grid = grids.get(key)
+        transformed_grid = None
+        if grid:
+            origin = transform_point(tuple(grid["origin"]), transform)
+            x_step = transform_point((grid["origin"][0] + graph["gridM"], grid["origin"][1]), transform)
+            y_step = transform_point((grid["origin"][0], grid["origin"][1] + graph["gridM"]), transform)
+            transformed_grid = {
+                "origin": rounded(origin),
+                "cellBasisX": rounded((x_step[0] - origin[0], x_step[1] - origin[1])),
+                "cellBasisY": rounded((y_step[0] - origin[0], y_step[1] - origin[1])),
+                "cols": grid["cols"], "rows": grid["rows"],
+                "walkable": grid["walkable"], "floorZ": registration["floorZ"],
+            }
+        halls.append({
+            "hallKey": key,
+            "status": registration["status"],
+            "targetFeatureIds": registration["targetFeatureIds"],
+            "floorZ": registration["floorZ"],
+            "footprint": [rounded(transform_point(tuple(point), transform)) for point in hall["footprint"]],
+            "label": rounded(transform_point((
+                sum(p[0] for p in hall["footprint"]) / len(hall["footprint"]),
+                sum(p[1] for p in hall["footprint"]) / len(hall["footprint"]),
+            ), transform)),
+            "stands": [{
+                "id": stand["id"],
+                "polygon": [rounded(transform_point(tuple(point), transform))
+                            for point in stand["polygon"]],
+            } for stand in hall_stands],
+            "walkGrid": transformed_grid,
+            "facilities": [{
+                "id": facility["id"], "kind": facility["kind"],
+                "position": rounded(transform_point(tuple(facility["position"]), transform)),
+            } for facility in facilities],
+        })
+
+    portal_ends = []
+    for connector in graph["connectors"]:
+        ends = []
+        for end in connector["ends"]:
+            hall_key = end["hallKey"]
+            grid = grids[hall_key]
+            ix, iy = end["cell"]
+            point = (grid["origin"][0] + (ix + 0.5) * graph["gridM"],
+                     grid["origin"][1] + (iy + 0.5) * graph["gridM"])
+            ends.append({"hallKey": hall_key,
+                         "position": rounded(transform_point(point, registrations[hall_key]["transform"])),
+                         "floorZ": registrations[hall_key]["floorZ"]})
+        portal_ends.append({"id": connector["id"], "kind": connector["kind"], "ends": ends,
+                            "usedAsRegistrationAnchor": False})
+
+    product = {
+        "schema": "beuteltier.registered-layout.v1",
+        "coordinatePlane": "sceneX/sceneZ",
+        "origin": registration_product["origin"],
+        "halls": halls,
+        "portalEnds": portal_ends,
+        "counts": {
+            "halls": len(halls), "stands": sum(len(hall["stands"]) for hall in halls),
+            "walkGrids": sum(hall["walkGrid"] is not None for hall in halls),
+            "facilities": sum(len(hall["facilities"]) for hall in halls),
+            "portalEnds": sum(len(portal["ends"]) for portal in portal_ends),
+        },
+        "policy": {"portalsAreRegistrationAnchors": False,
+                   "relativeHallContentScale": 1.0},
+    }
+    OUTPUT.write_text(json.dumps(product, indent=2) + "\n")
+    return product
+
+
+def main() -> int:
+    product = build()
+    print(f"{product['counts']} -> {OUTPUT.relative_to(ROOT)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

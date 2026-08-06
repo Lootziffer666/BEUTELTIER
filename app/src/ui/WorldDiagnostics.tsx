@@ -17,7 +17,13 @@ export function WorldDiagnostics({ world }: { world: Diagnostics | null }) {
     return <p className="notice">Dieser Offline-Datenstand enthält noch kein Weltmanifest.</p>;
   }
 
-  const { manifest, walkableSurfaces, portals, officialDiagnostic, worldPackages } = world;
+  const {
+    manifest, walkableSurfaces, portals, officialDiagnostic, worldPackages,
+    visibilityAnalysis, surfaceClassification,
+    collisionSurfaces,
+    hallRegistrations,
+    registeredLayout,
+  } = world;
   const registrations = manifest.registrationSummary;
   return (
     <section aria-label="Weltdiagnose">
@@ -27,11 +33,69 @@ export function WorldDiagnostics({ world }: { world: Diagnostics | null }) {
         <div className="figures">
           <span><strong>{registrations.registered}/{registrations.total}</strong> registriert</span>
           <span><strong>{registrations.withTargetFeatures}</strong> mit Zielfeatures</span>
-          <span><strong>{registrations.draft}</strong> Entwürfe</span>
+          <span><strong>{registrations.constrained ?? 0}</strong> grundrissgebunden</span>
+          <span><strong>{registrations.draft}</strong> offen</span>
         </div>
         <p className="muted">
           Ursprung: {manifest.origin.map((value) => value.toFixed(1)).join(' / ')} m
         </p>
+      </div>
+
+      <div className="card">
+        <div className="card__eyebrow">HALLENWEISE REGISTRIERUNG</div>
+        <div className="figures">
+          <span><strong>{registeredLayout?.counts.stands ?? 0}</strong> Stände transformiert</span>
+          <span><strong>{registeredLayout?.counts.walkGrids ?? 0}</strong> WalkGrids</span>
+          <span><strong>{registeredLayout?.counts.portalEnds ?? 0}</strong> Portal-Endpunkte</span>
+        </div>
+        <ul className="diag-features">
+          {(hallRegistrations?.registrations ?? []).map((entry) => (
+            <li key={entry.hallKey}>
+              <strong>{entry.hallKey} · {entry.status}</strong>
+              {entry.constraint ? (
+                <>
+                  <span>Abdeckung {entry.constraint.coverageBeforePct.toFixed(1)} → {entry.constraint.coverageAfterPct.toFixed(1)} %</span>
+                  <span>Verschiebung {entry.constraint.shiftM.toFixed(2)} m · {entry.constraint.samples} Prüfproben</span>
+                </>
+              ) : <span>Keine amtlichen Zielfeatures für eine Grundrissbindung</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="card">
+        <div className="card__eyebrow">AMTLICHE HÖHENKOLLISION</div>
+        <div className="figures">
+          <span><strong>{collisionSurfaces?.counts.triangles ?? 0}</strong> Dreiecke</span>
+          <span><strong>{collisionSurfaces?.counts.approvedWalkable ?? 0}</strong> freigegeben</span>
+        </div>
+        <p className="muted">
+          Höhenbereich: {collisionSurfaces?.heightRange?.join(' bis ') ?? '–'} m · rohe LoD2-Flächen{' '}
+          {collisionSurfaces?.policy.rawLod2Walkable ? 'begehbar' : 'gesperrt'}
+        </p>
+      </div>
+
+      <div className="card">
+        <div className="card__eyebrow">SICHTBARKEIT UND MATERIAL</div>
+        <div className="figures">
+          {Object.entries(visibilityAnalysis?.counts ?? {}).map(([name, count]) => (
+            <span key={name}><strong>{count}</strong> {name}</span>
+          ))}
+        </div>
+        <p className="muted">
+          Methode: {visibilityAnalysis?.method ?? 'nicht gebaut'} · Verdeckung:{' '}
+          {visibilityAnalysis?.occlusionTested ? 'geprüft' : 'noch nicht geprüft'}
+        </p>
+        <div className="figures">
+          {Object.entries(surfaceClassification?.materialAssignments ?? {}).map(([name, count]) => (
+            <span key={name}><strong>{count}</strong> {name}</span>
+          ))}
+        </div>
+        {(visibilityAnalysis?.missingSemanticSamples.length ?? 0) > 0 && (
+          <p className="notice">
+            Fehlende Sichtproben: {visibilityAnalysis?.missingSemanticSamples.join(', ')}
+          </p>
+        )}
       </div>
 
       <div className="card">

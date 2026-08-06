@@ -71,6 +71,10 @@ def build_product(origin: dict, registrations: dict) -> dict:
             "portals": "data/portals.json",
             "officialWorldDiagnostic": "data/official-world-diagnostic.json",
             "worldPackages": "data/world-packages.json",
+            "surfaceClassification": "data/surface-classification.json",
+            "visibilityAnalysis": "data/visibility-analysis.json",
+            "collisionSurfaces": "data/collision-surfaces.json",
+            "registeredLayout": "data/registered-layout.json",
         },
         "registrationSummary": registrations["counts"],
         "fallback": {

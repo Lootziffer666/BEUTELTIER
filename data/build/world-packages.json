@@ -13,7 +13,10 @@
       "features": 35,
       "primitives": 92,
       "triangles": 422,
-      "bytes": 116240
+      "bytes": 121760,
+      "materialClasses": {
+        "concrete": 92
+      }
     },
     {
       "id": "core/messe",
@@ -22,7 +25,12 @@
       "features": 35,
       "primitives": 490,
       "triangles": 1482,
-      "bytes": 544556
+      "bytes": 580180,
+      "materialClasses": {
+        "technical-roof": 48,
+        "hall-metal-light": 350,
+        "concrete": 92
+      }
     },
     {
       "id": "surroundings/east",
@@ -31,7 +39,12 @@
       "features": 268,
       "primitives": 7160,
       "triangles": 12456,
-      "bytes": 7079920
+      "bytes": 7527944,
+      "materialClasses": {
+        "concrete": 4876,
+        "technical-roof": 1691,
+        "brick": 593
+      }
     },
     {
       "id": "surroundings/north",
@@ -40,7 +53,12 @@
       "features": 202,
       "primitives": 3501,
       "triangles": 7386,
-      "bytes": 3586296
+      "bytes": 3804188,
+      "materialClasses": {
+        "concrete": 2783,
+        "technical-roof": 639,
+        "brick": 79
+      }
     },
     {
       "id": "surroundings/south",
@@ -49,7 +67,12 @@
       "features": 167,
       "primitives": 3181,
       "triangles": 7161,
-      "bytes": 3317608
+      "bytes": 3515272,
+      "materialClasses": {
+        "concrete": 2649,
+        "technical-roof": 526,
+        "brick": 6
+      }
     },
     {
       "id": "surroundings/west",
@@ -58,7 +81,11 @@
       "features": 89,
       "primitives": 1705,
       "triangles": 4052,
-      "bytes": 1793704
+      "bytes": 1899580,
+      "materialClasses": {
+        "concrete": 1430,
+        "technical-roof": 275
+      }
     }
   ],
   "coreTargetFeatureIds": [

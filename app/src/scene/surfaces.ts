@@ -39,6 +39,18 @@ export interface FlatSurface {
   priority?: number;
 }
 
+export interface TriangleSurface {
+  id: string;
+  /** Drei Punkte in der Laufebene: [x, y, z/Hoehe]. */
+  triangle: readonly [
+    readonly [number, number, number],
+    readonly [number, number, number],
+    readonly [number, number, number],
+  ];
+  blocked: boolean;
+  priority?: number;
+}
+
 function inside(polygon: FlatSurface['polygon'], x: number, y: number): boolean {
   let hit = false;
   for (let index = 0; index < polygon.length; index += 1) {
@@ -66,5 +78,37 @@ export class FlatSurfaceProvider implements SurfaceProvider {
       Math.abs(candidate.z - preferZ) < Math.abs(best.z - preferZ) ? candidate : best,
     );
     return { z: surface.z, blocked: surface.blocked, surfaceId: surface.id };
+  }
+}
+
+function triangleHeight(surface: TriangleSurface, x: number, y: number): number | null {
+  const [a, b, c] = surface.triangle;
+  const denominator = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
+  if (Math.abs(denominator) < 1e-9) return null;
+  const wa = ((b[1] - c[1]) * (x - c[0]) + (c[0] - b[0]) * (y - c[1])) / denominator;
+  const wb = ((c[1] - a[1]) * (x - c[0]) + (a[0] - c[0]) * (y - c[1])) / denominator;
+  const wc = 1 - wa - wb;
+  if (wa < -1e-7 || wb < -1e-7 || wc < -1e-7) return null;
+  return wa * a[2] + wb * b[2] + wc * c[2];
+}
+
+/** Höhenprovider für geglättete Rampen, Treppen und Terrain-Dreiecke. */
+export class TriangleSurfaceProvider implements SurfaceProvider {
+  private readonly surfaces: readonly TriangleSurface[];
+
+  constructor(surfaces: readonly TriangleSurface[]) {
+    this.surfaces = [...surfaces].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+  }
+
+  footingAt(x: number, y: number, preferZ: number): SurfaceFooting {
+    const candidates = this.surfaces.flatMap((surface) => {
+      const z = triangleHeight(surface, x, y);
+      return z === null ? [] : [{ surface, z }];
+    });
+    if (!candidates.length) return BLOCKED_FOOTING;
+    const candidate = candidates.reduce((best, current) =>
+      Math.abs(current.z - preferZ) < Math.abs(best.z - preferZ) ? current : best,
+    );
+    return { z: candidate.z, blocked: candidate.surface.blocked, surfaceId: candidate.surface.id };
   }
 }

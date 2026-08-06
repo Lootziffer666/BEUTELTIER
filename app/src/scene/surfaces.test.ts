@@ -1,12 +1,31 @@
 import { describe, expect, it } from 'vitest';
 
-import { FlatSurfaceProvider, PrioritySurfaceProvider } from './surfaces';
+import { FlatSurfaceProvider, PrioritySurfaceProvider, TriangleSurfaceProvider } from './surfaces';
 
 const square = (id: string, z: number, blocked = false) => ({
   id,
   z,
   blocked,
   polygon: [[0, 0], [10, 0], [10, 10], [0, 10]] as const,
+});
+
+describe('TriangleSurfaceProvider', () => {
+  it('interpoliert die Hoehe einer Rampe baryzentrisch', () => {
+    const provider = new TriangleSurfaceProvider([{
+      id: 'ramp-a', blocked: false,
+      triangle: [[0, 0, 0], [10, 0, 10], [0, 10, 0]],
+    }]);
+    expect(provider.footingAt(5, 2, 0)).toEqual({ z: 5, blocked: false, surfaceId: 'ramp-a' });
+  });
+
+  it('waehlt bei Bruecke und Boden die naechste Hoehe', () => {
+    const provider = new TriangleSurfaceProvider([
+      { id: 'ground', blocked: false, triangle: [[0, 0, 0], [10, 0, 0], [0, 10, 0]] },
+      { id: 'bridge', blocked: false, triangle: [[0, 0, 8], [10, 0, 8], [0, 10, 8]] },
+    ]);
+    expect(provider.footingAt(2, 2, 7).surfaceId).toBe('bridge');
+    expect(provider.footingAt(2, 2, 1).surfaceId).toBe('ground');
+  });
 });
 
 describe('SurfaceProvider', () => {
