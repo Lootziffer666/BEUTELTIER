@@ -53,7 +53,37 @@ await page.screenshot({ path: `${OUT}/staging-1-halle-fokus.png` });
 const egoButton = page.getByRole('button', { name: 'Begehen' });
 await egoButton.waitFor({ state: 'visible', timeout: 10000 });
 await egoButton.evaluate((element) => element.click());
-await page.waitForTimeout(2000);
+await page.waitForTimeout(1500);
+
+// Der Spawn kann dicht an einer Wand liegen -- No-Clip an, ein Stück
+// aufsteigen und zurückweichen, damit die Halle samt Inszenierung im Bild ist.
+const canvas = page.locator('canvas');
+const canvasBounds = await canvas.boundingBox();
+if (canvasBounds) {
+  await page.mouse.click(
+    canvasBounds.x + canvasBounds.width / 2,
+    canvasBounds.y + canvasBounds.height / 2,
+  );
+  await page.waitForTimeout(300);
+}
+await page.keyboard.press('n');
+await page.waitForTimeout(200);
+await page.mouse.move(
+  (canvasBounds?.x ?? 0) + (canvasBounds?.width ?? 0) / 2,
+  (canvasBounds?.y ?? 0) + (canvasBounds?.height ?? 0) / 2,
+);
+await page.mouse.move(
+  (canvasBounds?.x ?? 0) + (canvasBounds?.width ?? 0) / 2 - 220,
+  (canvasBounds?.y ?? 0) + (canvasBounds?.height ?? 0) / 2 - 120,
+  { steps: 12 },
+);
+await page.keyboard.down('s');
+await page.keyboard.down(' ');
+await page.waitForTimeout(2600);
+await page.keyboard.up('s');
+await page.keyboard.up(' ');
+await page.waitForTimeout(500);
+
 check('Ego-Perspektive in Halle 10.1 aktiv', true);
 await page.screenshot({ path: `${OUT}/staging-2-halle-ego.png` });
 
