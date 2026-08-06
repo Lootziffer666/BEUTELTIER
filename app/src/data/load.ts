@@ -36,6 +36,14 @@ export interface WorldManifest {
   modelVersion: string;
   status: 'migration' | 'ready';
   origin: [number, number, number];
+  packages: Array<{
+    id: string;
+    role: string;
+    status: string;
+    uri: string;
+    available: boolean;
+    bytes: number | null;
+  }>;
   data: Record<string, string>;
   registrationSummary: {
     total: number;

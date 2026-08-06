@@ -1,0 +1,75 @@
+name: Amtliche-Weltpakete
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: official-world-assets-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-world:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Amtliche LoD2-Kacheln laden
+        run: python3 tools/fetch_lod2.py
+
+      - name: Lokale Weltpakete bauen
+        run: |
+          rm -rf app/public/models/world
+          python3 tools/build_world_packages.py \
+            --output app/public/models/world \
+            --report data/build/world-packages.json
+          python3 tools/build_world_manifest.py
+          cp data/build/world-packages.json app/public/data/world-packages.json
+          cp data/build/world-manifest.json app/public/data/world-manifest.json
+
+      - name: Paketgrenzen pruefen
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('data/build/world-packages.json').read_text())
+          assert report['skippedSurfaces'] == 0
+          assert any(item['id'] == 'core/messe' for item in report['packages'])
+          assert any(item['role'] == 'collision' for item in report['packages'])
+          for package in report['packages']:
+              path = Path('app/public') / package['uri']
+              assert path.exists() and path.stat().st_size == package['bytes'], path
+          print(f"{len(report['packages'])} Weltpakete vollständig")
+          PY
+
+      - name: PWA mit lokalen Paketen bauen
+        working-directory: app
+        run: |
+          npm ci
+          npm run build
+
+      - name: Installierbare Offline-PWA sichern
+        uses: actions/upload-artifact@v4
+        with:
+          name: beuteltier-official-world-${{ github.sha }}
+          path: app/dist
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Paketbericht sichern
+        uses: actions/upload-artifact@v4
+        with:
+          name: beuteltier-world-report-${{ github.sha }}
+          path: |
+            data/build/world-packages.json
+            data/build/world-manifest.json
+          if-no-files-found: error

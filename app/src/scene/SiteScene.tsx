@@ -298,6 +298,25 @@ function Gelaende({
   return <primitive object={model} position={[-centre[0], 0, centre[1]]} />;
 }
 
+function OfficialPackage({ uri }: { uri: string }) {
+  const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
+  return <primitive object={scene} />;
+}
+
+function OfficialWorld({ data, centre }: { data: Dataset; centre: [number, number] }) {
+  const packages = data.world?.manifest.packages.filter(
+    (entry) => entry.available && entry.role === 'render',
+  ) ?? [];
+  if (!packages.length) return null;
+  // GLBs verwenden echtes Three.js sceneZ. Die registrierten 2D-Inhalte
+  // laufen noch durch toScene(), das ihre zweite Achse negiert.
+  return (
+    <group position={[-centre[0], 0, centre[1]]} scale={[1, 1, -1]}>
+      {packages.map((entry) => <OfficialPackage key={entry.id} uri={entry.uri} />)}
+    </group>
+  );
+}
+
 function Halls({
   data,
   centre,
@@ -919,6 +938,11 @@ export function SiteScene(props: SceneProps) {
             opacity={preset === 'ego' ? SHELL_OPACITY_EGO : SHELL_OPACITY}
             interior={preset === 'ego'}
           />
+        </Suspense>
+      )}
+      {registered && (
+        <Suspense fallback={null}>
+          <OfficialWorld data={data} centre={centre} />
         </Suspense>
       )}
       {/* Hallenkörper und Schilder sind Hilfsmittel der Übersicht. Auf

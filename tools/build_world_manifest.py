@@ -43,7 +43,11 @@ def planned_world_packages() -> list[dict]:
     if not report_path.exists():
         return []
     report = json.loads(report_path.read_text())
-    return [{**package, "status": "development", "available": False}
+    return [{**package,
+             "status": "local" if (PUBLIC / package["uri"]).exists() else "development",
+             "available": (PUBLIC / package["uri"]).exists(),
+             "bytes": ((PUBLIC / package["uri"]).stat().st_size
+                       if (PUBLIC / package["uri"]).exists() else package["bytes"])}
             for package in report["packages"]]
 
 
