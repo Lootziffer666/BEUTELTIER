@@ -682,6 +682,13 @@ function Stands({
           roughness={0.82}
           metalness={0.04}
           envMapIntensity={0.7}
+          // Der Standkörper ist ein Platzhaltervolumen für die Standfläche,
+          // keine Wand -- auf Augenhöhe muss die prozedurale Inszenierung
+          // darin sichtbar bleiben, statt in einer massiven Farbbox zu
+          // verschwinden.
+          transparent={interior}
+          opacity={interior ? 0.5 : 1}
+          depthWrite={!interior}
         />
       </mesh>
       {upperOpacity > 0.02 && (
