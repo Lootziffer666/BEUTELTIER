@@ -165,6 +165,39 @@ class TestMaterialClasses:
             assert 0 <= material["windowRatio"] <= 1
 
 
+class TestWalkableProducts:
+    def test_flaechen_erfinden_keine_piazza_oder_boulevard(self, site):
+        from build_walkable_surfaces import build_product
+
+        registrations = json.loads(
+            (BUILD / "hall-registrations.json").read_text(encoding="utf-8")
+        )
+        product = build_product(site, registrations)
+        assert len(product["surfaces"]) == len(site["halls"])
+        assert product["outsidePolicy"]["unknownBlocked"] is True
+        assert product["outsidePolicy"]["orthophotoWalkable"] is False
+        assert "piazza-not-surveyed" in product["gaps"]
+        assert all(item["walkability"] == "walkgrid-controlled"
+                   for item in product["surfaces"])
+
+    def test_portale_bleiben_ungeprueft_und_keine_anker(self, graph_data):
+        from build_portals import build_product
+
+        registrations = json.loads(
+            (BUILD / "hall-registrations.json").read_text(encoding="utf-8")
+        )
+        product = build_product(graph_data, registrations)
+        assert product["counts"]["total"] >= 19
+        assert product["counts"]["verifiedPhysical"] == 0
+        assert all(item["physical"] is None for item in product["portals"])
+        assert all(item["registrationAnchor"] is False for item in product["portals"])
+        known_surfaces = {f"surface:hall:{item['hallKey']}"
+                          for item in registrations["registrations"]}
+        assert all(item["fromSurface"] in known_surfaces and
+                   item["toSurface"] in known_surfaces
+                   for item in product["portals"])
+
+
 class TestSite:
     def test_jede_halle_traegt_ihre_herkunft(self, site):
         for hall in site["halls"]:

@@ -22,9 +22,10 @@ STEPS = ["build_world_origin.py",
          "build_site.py", "build_graph.py", "build_registry.py",
          "build_lod2_inventory.py",
          "build_buildings.py", "build_hall_registrations.py",
-         "build_world_manifest.py",
          "build_material_classes.py",
+         "build_walkable_surfaces.py", "build_portals.py",
          "build_footprints.py", "build_surroundings.py",
+         "build_world_manifest.py",
          "audit_hallplans.py", "build_ortho.py", "build_accuracy_report.py"]
 
 # Schritte, die eine Quelle brauchen, die nicht im Repository liegt. Fehlt sie,
@@ -91,6 +92,7 @@ def main() -> int:
                      "hall-registrations.json", "site.json",
                      "world-manifest.json",
                      "material-classes.json",
+                     "walkable-surfaces.json", "portals.json",
                      "graph.json", "registry.json", "buildings.json",
                      "footprints.json", "surroundings.json", "ortho.json"):
             source = ROOT / "data" / "build" / name

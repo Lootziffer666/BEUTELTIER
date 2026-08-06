@@ -41,6 +41,8 @@ def build_product(origin: dict, registrations: dict) -> dict:
             "lod2Inventory": "data/lod2-inventory.json",
             "worldOrigin": "data/world-origin.json",
             "materialClasses": "data/material-classes.json",
+            "walkableSurfaces": "data/walkable-surfaces.json",
+            "portals": "data/portals.json",
         },
         "registrationSummary": registrations["counts"],
         "fallback": {
