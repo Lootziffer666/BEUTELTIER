@@ -1,0 +1,133 @@
+{
+  "schema": "beuteltier.world.v1",
+  "modelVersion": "2026.08.1",
+  "status": "migration",
+  "origin": [
+    358300.0,
+    5645800.0,
+    40.0
+  ],
+  "coordinateSystem": {
+    "sourceCrs": "EPSG:25832 + DHHN2016 NH",
+    "sceneX": "worldX - originX",
+    "sceneY": "worldZ - originZ",
+    "sceneZ": "-(worldY - originY)",
+    "units": "metre",
+    "handedness": "right"
+  },
+  "packages": [
+    {
+      "id": "messe",
+      "role": "render-world",
+      "status": "legacy",
+      "uri": "models/messe.glb",
+      "bytes": 2764812,
+      "available": true
+    },
+    {
+      "id": "official-world-diagnostic",
+      "role": "diagnostic-world",
+      "status": "development",
+      "uri": "models/world/diagnostic/official-world-diagnostic.glb",
+      "bytes": 16431312,
+      "available": false,
+      "reportAvailable": true
+    },
+    {
+      "id": "collision/core",
+      "uri": "models/world/collision/core.glb",
+      "role": "collision",
+      "features": 35,
+      "primitives": 92,
+      "triangles": 422,
+      "bytes": 116240,
+      "status": "development",
+      "available": false
+    },
+    {
+      "id": "core/messe",
+      "uri": "models/world/core/messe.glb",
+      "role": "render",
+      "features": 35,
+      "primitives": 490,
+      "triangles": 1482,
+      "bytes": 544556,
+      "status": "development",
+      "available": false
+    },
+    {
+      "id": "surroundings/east",
+      "uri": "models/world/surroundings/east.glb",
+      "role": "render",
+      "features": 268,
+      "primitives": 7160,
+      "triangles": 12456,
+      "bytes": 7079920,
+      "status": "development",
+      "available": false
+    },
+    {
+      "id": "surroundings/north",
+      "uri": "models/world/surroundings/north.glb",
+      "role": "render",
+      "features": 202,
+      "primitives": 3501,
+      "triangles": 7386,
+      "bytes": 3586296,
+      "status": "development",
+      "available": false
+    },
+    {
+      "id": "surroundings/south",
+      "uri": "models/world/surroundings/south.glb",
+      "role": "render",
+      "features": 167,
+      "primitives": 3181,
+      "triangles": 7161,
+      "bytes": 3317608,
+      "status": "development",
+      "available": false
+    },
+    {
+      "id": "surroundings/west",
+      "uri": "models/world/surroundings/west.glb",
+      "role": "render",
+      "features": 89,
+      "primitives": 1705,
+      "triangles": 4052,
+      "bytes": 1793704,
+      "status": "development",
+      "available": false
+    }
+  ],
+  "data": {
+    "hallRegistrations": "data/hall-registrations.json",
+    "lod2Inventory": "data/lod2-inventory.json",
+    "worldOrigin": "data/world-origin.json",
+    "materialClasses": "data/material-classes.json",
+    "walkableSurfaces": "data/walkable-surfaces.json",
+    "portals": "data/portals.json",
+    "officialWorldDiagnostic": "data/official-world-diagnostic.json",
+    "worldPackages": "data/world-packages.json"
+  },
+  "registrationSummary": {
+    "total": 17,
+    "draft": 17,
+    "registered": 0,
+    "withTargetFeatures": 14
+  },
+  "fallback": {
+    "orthophoto": true,
+    "uri": "models/gelaende.jpg",
+    "walkable": false
+  },
+  "runtimeDependencies": {
+    "networkRequired": false,
+    "realityMeshRequired": false
+  },
+  "notes": [
+    "Das bestehende Messe-GLB bleibt waehrend der Migration erhalten.",
+    "status=legacy kennzeichnet es ausdruecklich als noch nicht paketierte amtliche Welt.",
+    "Das Orthofoto ist niemals automatisch begehbar."
+  ]
+}
