@@ -48,9 +48,17 @@ await page.waitForTimeout(300);
 await page.keyboard.press('n'); // No-Clip
 await page.waitForTimeout(200);
 
-// Spawn (Hallenzentrum) ~73m in -X vom Staging-Cluster entfernt (siehe
-// Konsole der vorigen Diagnoseläufe). Bei yaw=0 bewegt 'a' (strafe) in -X.
-console.log('Fliege ~73m Richtung Staging-Cluster ...');
+// Erst deutlich ueber Hallenhoehe (5.7m) steigen, damit No-Clip-Flug nicht
+// blind in eine Wand oder Stand-Box laeuft (genau das ist beim ersten
+// Versuch passiert -- Kamera blieb in einer Flaeche stecken).
+console.log('Steige ueber Hallenhoehe ...');
+await page.keyboard.down(' ');
+await page.waitForTimeout(8500); // ~20m bei FLY_SPEED_M_PER_S=2.4
+await page.keyboard.up(' ');
+await page.waitForTimeout(300);
+
+// Jetzt seitlich zum Staging-Cluster (~73m in -X, siehe Konsole).
+console.log('Fliege ~73m seitlich Richtung Staging-Cluster ...');
 await page.keyboard.down('a');
 await page.keyboard.down('Shift');
 await page.waitForTimeout(18000);
@@ -58,18 +66,16 @@ await page.keyboard.up('a');
 await page.keyboard.up('Shift');
 await page.waitForTimeout(500);
 
-// Etwas absenken/umsehen, um den Boden-nahen Bereich zu erfassen.
+// Gerade nach unten blicken -- klare Draufsicht ohne Kollisionsrisiko.
 await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
-await page.mouse.move(bounds.x + bounds.width / 2 + 40, bounds.y + bounds.height / 2 + 150, { steps: 10 });
+await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2 + 320, { steps: 14 });
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/flyto-1-cluster.png` });
 
-// Eine weitere Ansicht: Aufsteigen fuer Ueberblick ueber den Cluster.
-await page.keyboard.down(' ');
-await page.waitForTimeout(1500);
-await page.keyboard.up(' ');
-await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2 + 150);
-await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2 + 280, { steps: 10 });
+// Ein Stueck absenken fuer eine naehere, aber immer noch freie Ansicht.
+await page.keyboard.down('Control');
+await page.waitForTimeout(4000);
+await page.keyboard.up('Control');
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/flyto-2-cluster-oben.png` });
 
