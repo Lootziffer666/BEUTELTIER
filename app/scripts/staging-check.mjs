@@ -72,16 +72,16 @@ await page.mouse.move(
   (canvasBounds?.x ?? 0) + (canvasBounds?.width ?? 0) / 2,
   (canvasBounds?.y ?? 0) + (canvasBounds?.height ?? 0) / 2,
 );
+// Leicht nach oben blicken, aber flach genug, um die Halle von innen zu
+// sehen statt darüber hinauszufliegen.
 await page.mouse.move(
-  (canvasBounds?.x ?? 0) + (canvasBounds?.width ?? 0) / 2 - 220,
-  (canvasBounds?.y ?? 0) + (canvasBounds?.height ?? 0) / 2 - 120,
+  (canvasBounds?.x ?? 0) + (canvasBounds?.width ?? 0) / 2 - 260,
+  (canvasBounds?.y ?? 0) + (canvasBounds?.height ?? 0) / 2 - 35,
   { steps: 12 },
 );
 await page.keyboard.down('s');
-await page.keyboard.down(' ');
-await page.waitForTimeout(2600);
+await page.waitForTimeout(3200);
 await page.keyboard.up('s');
-await page.keyboard.up(' ');
 await page.waitForTimeout(500);
 
 check('Ego-Perspektive in Halle 10.1 aktiv', true);
