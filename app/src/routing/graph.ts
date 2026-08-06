@@ -60,7 +60,7 @@ export interface GraphEdge {
   label?: string;
 }
 
-interface CompactGrid {
+export interface CompactGrid {
   key: string;
   origin: [number, number];
   z: number;
@@ -68,6 +68,9 @@ interface CompactGrid {
   cols: number;
   rows: number;
   walkable: string;
+  /** Gedrehte Zellachsen im amtlichen Szenenraum; fehlen im Legacy-Graph. */
+  cellBasisX?: [number, number];
+  cellBasisY?: [number, number];
 }
 
 interface CompactEnd {
@@ -120,6 +123,12 @@ export class RouteGraph {
     const grid = compact.gridM;
 
     for (const hall of compact.grids) {
+      const basisX = hall.cellBasisX ?? [grid, 0];
+      const basisY = hall.cellBasisY ?? [0, grid];
+      const cellPoint = (ix: number, iy: number) => ({
+        x: hall.origin[0] + ix * basisX[0] + iy * basisY[0],
+        y: hall.origin[1] + ix * basisX[1] + iy * basisY[1],
+      });
       const bits = decodeBits(hall.walkable);
       const isSet = (ix: number, iy: number) => {
         if (ix < 0 || iy < 0 || ix >= hall.cols || iy >= hall.rows) return false;
@@ -130,10 +139,11 @@ export class RouteGraph {
       for (let iy = 0; iy < hall.rows; iy += 1) {
         for (let ix = 0; ix < hall.cols; ix += 1) {
           if (!isSet(ix, iy)) continue;
+          const point = cellPoint(ix, iy);
           graph.addNode({
             id: aisleId(hall.key, ix, iy),
-            x: hall.origin[0] + ix * grid,
-            y: hall.origin[1] + iy * grid,
+            x: point.x,
+            y: point.y,
             z: hall.z,
             kind: 'aisle',
             hallKey: hall.key,

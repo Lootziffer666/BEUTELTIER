@@ -99,6 +99,7 @@ export function StandCard({ data, standId, startStandId, onSetStart, inTour, onT
       <div className="row">
         <button
           type="button"
+          data-testid="set-route-start"
           className={startStandId === standId ? 'is-active' : ''}
           onClick={() => onSetStart(startStandId === standId ? null : standId)}
         >

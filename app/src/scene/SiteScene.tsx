@@ -298,6 +298,25 @@ function Gelaende({
   return <primitive object={model} position={[-centre[0], 0, centre[1]]} />;
 }
 
+function OfficialPackage({ uri }: { uri: string }) {
+  const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
+  return <primitive object={scene} />;
+}
+
+function OfficialWorld({ data, centre }: { data: Dataset; centre: [number, number] }) {
+  const packages = data.world?.manifest.packages.filter(
+    (entry) => entry.available && entry.role === 'render',
+  ) ?? [];
+  if (!packages.length) return null;
+  // GLBs verwenden echtes Three.js sceneZ. Die registrierten 2D-Inhalte
+  // laufen noch durch toScene(), das ihre zweite Achse negiert.
+  return (
+    <group position={[-centre[0], 0, centre[1]]} scale={[1, 1, -1]}>
+      {packages.map((entry) => <OfficialPackage key={entry.id} uri={entry.uri} />)}
+    </group>
+  );
+}
+
 function Halls({
   data,
   centre,
@@ -866,6 +885,7 @@ function CameraRig({
 export function SiteScene(props: SceneProps) {
   const { data, upperOpacity, route, preset, focusHallKey } = props;
   const centre = useMemo(() => siteCentre(data.site), [data.site]);
+  const registered = data.spatialMode === 'registered';
 
   const extent = useMemo(() => {
     const points = data.site.halls.flatMap((hall) => hall.footprint);
@@ -907,17 +927,24 @@ export function SiteScene(props: SceneProps) {
       />
       <Beleuchtung extent={extent} interior={preset === 'ego'} />
 
-      <Ground extent={extent} centre={centre} ortho={data.ortho} />
-      <Umgebung data={data} centre={centre} />
+      <Ground extent={extent} centre={centre} ortho={registered ? null : data.ortho} />
+      {!registered && <Umgebung data={data} centre={centre} />}
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
           tragen sie weiterhin. Deshalb Suspense ohne Ersatzdarstellung. */}
-      <Suspense fallback={null}>
-        <Gelaende
-          centre={centre}
-          opacity={preset === 'ego' ? SHELL_OPACITY_EGO : SHELL_OPACITY}
-          interior={preset === 'ego'}
-        />
-      </Suspense>
+      {!registered && (
+        <Suspense fallback={null}>
+          <Gelaende
+            centre={centre}
+            opacity={preset === 'ego' ? SHELL_OPACITY_EGO : SHELL_OPACITY}
+            interior={preset === 'ego'}
+          />
+        </Suspense>
+      )}
+      {registered && (
+        <Suspense fallback={null}>
+          <OfficialWorld data={data} centre={centre} />
+        </Suspense>
+      )}
       {/* Hallenkörper und Schilder sind Hilfsmittel der Übersicht. Auf
           Augenhöhe stehen sie als farbiger Schleier vor der Nase und legen
           sich über genau das, was man sehen will -- dort sind die Wände des

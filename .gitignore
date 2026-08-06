@@ -24,3 +24,8 @@ data/raw/slpk/*.slpk
 # Rohdownloads. Der Messe-Ausschnitt und der Audit sind kleine JSON-Dateien.
 data/raw/alkis/*.gpkg
 data/raw/alkis/*.zip
+
+# Reproduzierbares, grosses Entwicklungsmodell. Der Builder und seine
+# maschinenlesbaren GLB-Extras werden eingecheckt, nicht das Binaerprodukt.
+data/build/official-world-diagnostic.glb
+data/build/world-packages/**/*.glb

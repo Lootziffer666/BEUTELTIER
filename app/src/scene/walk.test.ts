@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { WalkGrid } from './walk';
+import { PrioritySurfaceProvider } from './surfaces';
 import type { CompactGraph } from '../routing/graph';
 
 /** Baut ein Gitter aus einer Zeichnung: '.' begehbar, '#' gesperrt. */
@@ -92,6 +93,33 @@ describe('WalkGrid', () => {
     const outside = walk.footingAt(500, 500);
     expect(outside.hallKey).toBeNull();
     expect(outside.blocked).toBe(false);
+    expect(outside.surfaceId).toBe('legacy-open-outside');
+  });
+
+  it('kann den unsicheren Außenfallback bereits vollständig sperren', () => {
+    const secure = WalkGrid.fromCompact({
+      gridM: 2,
+      grids: [grid('1.1', 0, 1, HALLE)],
+      standLinks: [],
+      connectors: [],
+      schema: 'test',
+    } as unknown as CompactGraph, new PrioritySurfaceProvider([]));
+    expect(secure.footingAt(500, 500)).toEqual({
+      z: 0, blocked: true, hallKey: null, surfaceId: null,
+    });
+    expect(secure.footingAt(1, 1).blocked).toBe(false);
+  });
+
+  it('fragt ein gedrehtes amtliches WalkGrid in dessen Zellbasis ab', () => {
+    const rotated = grid('amtlich', 4.5, 1, ['..', '.#']);
+    const affine = WalkGrid.fromCompact({
+      gridM: 2,
+      grids: [{ ...rotated, origin: [100, 200], cellBasisX: [0, 2], cellBasisY: [-2, 0] }],
+      standLinks: [], connectors: [], schema: 'registered',
+    } as unknown as CompactGraph);
+    expect(affine.footingAt(99, 201, 4).blocked).toBe(false);
+    expect(affine.footingAt(97, 203, 4).blocked).toBe(true);
+    expect(affine.spawn('amtlich')).toEqual({ x: 99, y: 201, z: 4.5 });
   });
 
   it('haelt vor dem Stand an', () => {

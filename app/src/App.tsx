@@ -26,8 +26,9 @@ import { buildLayoutAssistantPrompt, parseLayoutAssistantPatches } from './scene
 import type { LayoutPatch, LayoutPatchState } from './scene/walk';
 import { Vermessung } from './ui/Vermessung';
 import { ProceduralMesse } from './ui/ProceduralMesse';
+import { WorldDiagnostics } from './ui/WorldDiagnostics';
 
-type Tab = 'karte' | 'epix' | 'funkwache' | 'register' | 'messe';
+type Tab = 'karte' | 'epix' | 'funkwache' | 'register' | 'diagnose' | 'messe';
 
 const PRESET_LABELS: Record<CameraPreset, string> = {
   uebersicht: 'Übersicht',
@@ -41,6 +42,7 @@ const TABS: { id: Tab; label: string; hint: string }[] = [
   { id: 'epix', label: 'Epix', hint: 'Quests und SteamGifts-Export' },
   { id: 'funkwache', label: 'Funkwache', hint: 'Meldungen aus Quellen' },
   { id: 'register', label: 'Register', hint: 'Aussteller und Stände' },
+  { id: 'diagnose', label: 'Diagnose', hint: 'Amtliche Welt und Begehbarkeit' },
   { id: 'messe', label: 'Messe-Lab', hint: 'Prozedurale Halle und Crowd' },
 ];
 
@@ -432,6 +434,7 @@ export default function App() {
               onStepFree={setStepFree}
             />
           )}
+          {tab === 'diagnose' && <WorldDiagnostics world={patchedData.world} spatialMode={patchedData.spatialMode} />}
           {tab === 'epix' && <EpixHub />}
           {tab === 'funkwache' && (
             <Funkwache data={patchedData} onGoToStand={setSelectedStandId} />
