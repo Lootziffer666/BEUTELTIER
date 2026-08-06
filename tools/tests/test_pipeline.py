@@ -72,6 +72,24 @@ class TestGeoref:
             georef.solve_similarity([(1.0, 1.0)] * 4, [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0), (3.0, 0.0)])
 
 
+class TestWorldOrigin:
+    def test_achsenabbildung_und_inverse(self):
+        from build_world_origin import scene_to_world, world_to_scene
+
+        world = (358_312.5, 5_645_780.0, 47.25)
+        assert world_to_scene(world) == pytest.approx((12.5, 7.25, 20.0))
+        assert scene_to_world(world_to_scene(world)) == pytest.approx(world)
+
+    def test_relative_abstaende_bleiben_erhalten(self):
+        from build_world_origin import world_to_scene
+
+        first = (358_250.0, 5_645_700.0, 42.0)
+        second = (358_310.0, 5_645_780.0, 58.0)
+        assert math.dist(world_to_scene(first), world_to_scene(second)) == pytest.approx(
+            math.dist(first, second)
+        )
+
+
 class TestSite:
     def test_jede_halle_traegt_ihre_herkunft(self, site):
         for hall in site["halls"]:

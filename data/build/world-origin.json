@@ -1,0 +1,20 @@
+{
+  "schema": "beuteltier.world-origin.v1",
+  "sourceCrs": "EPSG:25832 + DHHN2016 NH",
+  "axisConvention": {
+    "sceneX": "worldX - originX",
+    "sceneY": "worldZ - originZ",
+    "sceneZ": "-(worldY - originY)",
+    "units": "metre",
+    "handedness": "right"
+  },
+  "origin": [
+    358300.0,
+    5645800.0,
+    40.0
+  ],
+  "selection": {
+    "method": "fixed-rounded-point-near-koelnmesse-core",
+    "note": "Numerischer Offset, keine Bodenhoehe. Darf bei weiteren Kacheln nicht automatisch neu zentriert werden."
+  }
+}
