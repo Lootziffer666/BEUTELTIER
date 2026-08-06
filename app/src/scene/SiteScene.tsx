@@ -34,6 +34,7 @@ import { Beleuchtung } from './lighting';
 import { Deckenleuchten } from './interior';
 import { Vertikalverbindungen } from './vertical';
 import type { CameraSnapshot } from './survey';
+import { ProceduralStaging } from './ProceduralStaging';
 
 export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
@@ -61,6 +62,9 @@ export interface SceneProps {
   /** Aktueller Kamerazustand wird an den Aufrufer gereicht, keine Beschreibung nötig. */
   onMark?: (snapshot: CameraSnapshot) => void;
   onCameraSnapshot?: (snapshot: CameraSnapshot) => void;
+  /** Meldet die Zahl tatsächlich erzeugter ProceduralStaging-Objekte --
+   * bestimmt, ob der Inszenierungs-Hinweis angezeigt werden darf. */
+  onStagingObjectCount?: (count: number) => void;
 }
 
 const COLOURS = {
@@ -298,21 +302,241 @@ function Gelaende({
   return <primitive object={model} position={[-centre[0], 0, centre[1]]} />;
 }
 
-function OfficialPackage({ uri }: { uri: string }) {
-  const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
-  return <primitive object={scene} />;
+/**
+ * Amtliche GLB-Materialnamen tragen ihre Fläche im Namen selbst:
+ * `<Feature-ID>|<Building|BuildingPart>|<roof|wall|ground|closure>|<Index>|<Materialklasse>`.
+ * Diese Herkunft steht im World-Package-Export (siehe data/world-packages.json,
+ * materialClasses je Paket) und ist damit die reale Quelle, nicht ein Rätselraten
+ * über Node-Namen -- die amtlichen GLBs benennen ihre Meshes generisch.
+ */
+type GlbSurfaceType = 'roof' | 'wall' | 'ground' | 'closure' | 'unknown';
+
+function parseGlbMaterialName(name: string): { surfaceType: GlbSurfaceType; materialClass: string } {
+  const parts = name.split('|');
+  const rawType = parts[2] ?? '';
+  const surfaceType: GlbSurfaceType =
+    rawType === 'roof' || rawType === 'wall' || rawType === 'ground' || rawType === 'closure'
+      ? rawType
+      : 'unknown';
+  return { surfaceType, materialClass: parts[4] ?? 'unknown' };
 }
 
-function OfficialWorld({ data, centre }: { data: Dataset; centre: [number, number] }) {
+/** Wie durchsichtig die amtliche Hallenschale je Kamera-Preset ist. */
+function coreShellOpacity(preset: CameraPreset): number {
+  switch (preset) {
+    case 'uebersicht':
+      return SHELL_OPACITY;
+    case 'halle':
+      return 0.35;
+    case 'laufmodus':
+      return 0.22;
+    case 'ego':
+      return SHELL_OPACITY_EGO;
+  }
+}
+
+/** Die Umgebung bleibt Hintergrund -- nie so deutlich wie die Koelnmesse selbst. */
+function surroundingsOpacity(preset: CameraPreset): number {
+  switch (preset) {
+    case 'uebersicht':
+      return 0.4;
+    case 'halle':
+      return 0.28;
+    case 'laufmodus':
+      return 0.32;
+    case 'ego':
+      return 0.15;
+  }
+}
+
+const SURROUNDINGS_COLOURS: Record<string, string> = {
+  concrete: '#6b7280',
+  brick: '#7a6a5d',
+  'technical-roof': '#565c62',
+};
+
+function OfficialPackage({
+  uri,
+  packageId,
+  preset,
+  surfaces,
+}: {
+  uri: string;
+  packageId: string;
+  preset: CameraPreset;
+  surfaces: Record<string, Surface>;
+}) {
+  const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
+  const isCore = packageId.startsWith('core/');
+  const interior = preset === 'ego';
+
+  const model = useMemo(() => {
+    // Originalszene klonen -- das von useGLTF gecachte Objekt bleibt unangetastet,
+    // sonst teilen sich alle Instanzen (und Presetwechsel) dieselben Materialien.
+    const clone = scene.clone(true);
+    const disposables: THREE.Material[] = [];
+
+    clone.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      const source = node.material as THREE.MeshStandardMaterial;
+      const { surfaceType, materialClass } = parseGlbMaterialName(source.name ?? '');
+      const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide });
+
+      if (isCore) {
+        if (surfaceType === 'roof') {
+          // Dach ist in Übersicht/Halle/Laufmodus unsichtbar -- echtes
+          // visible=false, nicht nur transparent, damit es nie im Weg steht.
+          if (!interior) {
+            node.visible = false;
+            material.dispose();
+            return;
+          }
+          const surface = surfaces.ceiling;
+          material.map = surface.map;
+          material.normalMap = surface.normalMap;
+          material.roughnessMap = surface.roughnessMap;
+          material.color.set('#8d919a');
+          material.metalness = 0.45;
+          material.envMapIntensity = 0.6;
+        } else if (surfaceType === 'ground') {
+          const surface = surfaces.floor;
+          material.map = surface.map;
+          material.normalMap = surface.normalMap;
+          material.roughnessMap = surface.roughnessMap;
+          material.roughness = 0.32;
+          material.metalness = 0.12;
+          material.envMapIntensity = 1.5;
+        } else if (surfaceType === 'closure') {
+          // ClosureSurface: LoD2-Platzhalter, der eine im Datensatz nicht
+          // erfasste Öffnung schließt, damit der Baukörper wasserdicht
+          // bleibt -- keine reale Wand oder Fassade. Sichtbar gerendert
+          // (auch transparent) verdeckt sie beliebig große Teile des
+          // Innenraums, ohne irgendeine echte Fläche darzustellen.
+          // DEBUG (temporär): Herkunft und Ausdehnung protokollieren, bevor
+          // ausgeblendet wird.
+          node.geometry.computeBoundingBox();
+          // eslint-disable-next-line no-console
+          console.log('[OfficialWorld][DEBUG] closure ausgeblendet ' + JSON.stringify({
+            packageId,
+            meshName: node.name || '(unbenannt)',
+            materialName: source.name,
+            surfaceType,
+            materialClass,
+            boundingBox: node.geometry.boundingBox
+              ? {
+                  min: node.geometry.boundingBox.min.toArray(),
+                  max: node.geometry.boundingBox.max.toArray(),
+                }
+              : null,
+          }));
+          node.visible = false;
+          material.dispose();
+          return;
+        } else {
+          // wall und unknown-Flächen der Hallenschale sind Fassade.
+          const surface = interior ? surfaces.interior : surfaces.facade;
+          material.map = surface.map;
+          material.normalMap = surface.normalMap;
+          material.roughnessMap = surface.roughnessMap;
+          material.emissiveMap = surface.emissiveMap ?? null;
+          material.emissive.set(interior ? '#7fa8cd' : '#101820');
+          material.emissiveIntensity = interior ? 1.1 : 0.35;
+          material.metalness = 0.18;
+          material.envMapIntensity = 1.1;
+        }
+
+        const opacity = coreShellOpacity(preset);
+        material.transparent = opacity < 0.99;
+        material.opacity = opacity;
+        material.depthWrite = opacity > 0.9;
+        // Transparente Hülle darf die Inszenierung nicht im Depth Buffer
+        // verdecken -- vor allen anderen (Standard renderOrder 0) zeichnen.
+        node.renderOrder = material.transparent ? -10 : 0;
+        node.castShadow = !interior;
+        node.receiveShadow = true;
+      } else {
+        // Umgebungsgebäude: matt, zurückhaltend, kein Blickfang und kein
+        // dominanter Schattenwurf -- die Koelnmesse bleibt der Vordergrund.
+        material.color.set(SURROUNDINGS_COLOURS[materialClass] ?? '#5f6670');
+        material.roughness = 0.94;
+        material.metalness = 0.05;
+        material.envMapIntensity = 0.35;
+
+        const opacity = surroundingsOpacity(preset);
+        material.transparent = opacity < 0.99;
+        material.opacity = opacity;
+        material.depthWrite = opacity > 0.9;
+        node.renderOrder = material.transparent ? -10 : 0;
+        node.castShadow = false;
+        node.receiveShadow = true;
+      }
+
+      material.normalScale = new THREE.Vector2(1.1, 1.1);
+      node.material = material;
+      disposables.push(material);
+    });
+
+    (clone as unknown as { __disposables: THREE.Material[] }).__disposables = disposables;
+    return clone;
+  }, [scene, isCore, interior, preset, surfaces]);
+
+  useEffect(
+    () => () => {
+      (model as unknown as { __disposables: THREE.Material[] }).__disposables.forEach(
+        (material) => material.dispose(),
+      );
+    },
+    [model],
+  );
+
+  return <primitive object={model} />;
+}
+
+function OfficialWorld({
+  data,
+  centre,
+  preset,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  preset: CameraPreset;
+}) {
+  // Nur role: "render" -- das Kollisionspaket ist kein Renderpaket und darf
+  // nie sichtbar werden, unabhaengig von Preset oder Fokus.
   const packages = data.world?.manifest.packages.filter(
     (entry) => entry.available && entry.role === 'render',
   ) ?? [];
+
+  // Dieselben drei Flaechenarten wie im Gelaende-Renderer -- einmal erzeugt,
+  // von allen amtlichen Paketen geteilt, nicht pro Paket dupliziert.
+  const surfaces = useMemo<Record<string, Surface>>(
+    () => ({
+      facade: facadeSurface(false),
+      interior: facadeSurface(true),
+      floor: floorSurface(),
+      ceiling: ceilingSurface(),
+    }),
+    [],
+  );
+  useEffect(
+    () => () => Object.values(surfaces).forEach(disposeSurface),
+    [surfaces],
+  );
+
   if (!packages.length) return null;
   // GLBs verwenden echtes Three.js sceneZ. Die registrierten 2D-Inhalte
   // laufen noch durch toScene(), das ihre zweite Achse negiert.
   return (
     <group position={[-centre[0], 0, centre[1]]} scale={[1, 1, -1]}>
-      {packages.map((entry) => <OfficialPackage key={entry.id} uri={entry.uri} />)}
+      {packages.map((entry) => (
+        <OfficialPackage
+          key={entry.id}
+          uri={entry.uri}
+          packageId={entry.id}
+          preset={preset}
+          surfaces={surfaces}
+        />
+      ))}
     </group>
   );
 }
@@ -377,6 +601,10 @@ function Halls({
   );
 }
 
+/** Höhe der Standfläche, wenn sie in der fokussierten Halle nur noch als
+ * Bodenkontur dient statt als massiver Platzhalterkörper. */
+const STAND_FLOOR_HEIGHT_M = 0.04;
+
 function Stands({
   data,
   centre,
@@ -384,6 +612,7 @@ function Stands({
   selectedStandId,
   routeStandIds,
   interior,
+  reduceHallKey,
   onSelectStand,
 }: {
   data: Dataset;
@@ -393,6 +622,9 @@ function Stands({
   routeStandIds: string[];
   /** Steht der Betrachter mitten drin? Dann gelten andere Regeln. */
   interior: boolean;
+  /** Halle, deren Standkörper auf eine Bodenkontur reduziert werden -- die
+   * fokussierte Halle in Halle/Ego, sonst null (Übersicht bleibt unverändert). */
+  reduceHallKey: string | null;
   onSelectStand: (standId: string | null) => void;
 }) {
   const surface = useMemo(() => standSurface(), []);
@@ -408,31 +640,45 @@ function Stands({
       const hall = data.hallsByKey.get(stand.hallKey);
       return !hall || hall.placement.source !== 'geschaetzt';
     });
-    const build = (level: 'lower' | 'upper') =>
+    // Die fokussierte Halle bekommt eine flache Bodenkontur statt eines
+    // massiven Platzhalterkörpers -- der verdeckt sonst jede Inszenierung
+    // vollständig, egal wie transparent er ist.
+    const reduced = reduceHallKey ? shown.filter((stand) => stand.hallKey === reduceHallKey) : [];
+    const full = reduceHallKey ? shown.filter((stand) => stand.hallKey !== reduceHallKey) : shown;
+
+    const build = (items: typeof shown, level: 'lower' | 'upper', height: number) =>
       mergePolygons(
-        shown
+        items
           .filter((stand) => (level === 'lower' ? stand.level <= 1 : stand.level > 1))
           .map((stand) => ({
             id: stand.id,
             polygon: stand.polygon,
             baseY: stand.baseY + 0.05,
-            height: STAND_HEIGHT_M,
+            height,
           })),
         centre,
       );
-    return { lower: build('lower'), upper: build('upper') };
-  }, [data, centre, interior]);
+
+    return {
+      fullLower: build(full, 'lower', STAND_HEIGHT_M),
+      fullUpper: build(full, 'upper', STAND_HEIGHT_M),
+      reducedLower: build(reduced, 'lower', STAND_FLOOR_HEIGHT_M),
+      reducedUpper: build(reduced, 'upper', STAND_FLOOR_HEIGHT_M),
+    };
+  }, [data, centre, interior, reduceHallKey]);
 
   useEffect(
     () => () => {
-      merged.lower.geometry.dispose();
-      merged.upper.geometry.dispose();
+      merged.fullLower.geometry.dispose();
+      merged.fullUpper.geometry.dispose();
+      merged.reducedLower.geometry.dispose();
+      merged.reducedUpper.geometry.dispose();
     },
     [merged],
   );
 
   /** Belegte Stände heben sich ab -- ein leerer Stand ist kein Ziel. */
-  const paint = (group: typeof merged.lower, level: 'lower' | 'upper') => {
+  const paint = (group: typeof merged.fullLower, level: 'lower' | 'upper') => {
     const geometry = group.geometry;
     const count = geometry.getAttribute('position').count;
     const colours = new Float32Array(count * 3);
@@ -456,16 +702,24 @@ function Stands({
     return geometry;
   };
 
-  const lowerGeometry = useMemo(
-    () => paint(merged.lower, 'lower'),
+  const fullLowerGeometry = useMemo(
+    () => paint(merged.fullLower, 'lower'),
     [merged, selectedStandId, routeStandIds, data],
   );
-  const upperGeometry = useMemo(
-    () => paint(merged.upper, 'upper'),
+  const fullUpperGeometry = useMemo(
+    () => paint(merged.fullUpper, 'upper'),
+    [merged, selectedStandId, routeStandIds, data],
+  );
+  const reducedLowerGeometry = useMemo(
+    () => paint(merged.reducedLower, 'lower'),
+    [merged, selectedStandId, routeStandIds, data],
+  );
+  const reducedUpperGeometry = useMemo(
+    () => paint(merged.reducedUpper, 'upper'),
     [merged, selectedStandId, routeStandIds, data],
   );
 
-  const pick = (group: typeof merged.lower) => (faceIndex: number | null | undefined) => {
+  const pick = (group: typeof merged.fullLower) => (faceIndex: number | null | undefined) => {
     if (faceIndex === null || faceIndex === undefined) return;
     const vertex = faceIndex * 3;
     const hit = group.ranges.find(
@@ -477,10 +731,57 @@ function Stands({
   return (
     <group>
       <mesh
-        geometry={lowerGeometry}
+        geometry={fullLowerGeometry}
         onClick={(event) => {
           event.stopPropagation();
-          pick(merged.lower)(event.faceIndex);
+          pick(merged.fullLower)(event.faceIndex);
+        }}
+      >
+        <meshStandardMaterial
+          vertexColors
+          map={surface.map}
+          normalMap={surface.normalMap}
+          roughnessMap={surface.roughnessMap}
+          roughness={0.82}
+          metalness={0.04}
+          envMapIntensity={0.7}
+          // Andere Hallen als die fokussierte bleiben vereinfachte Körper --
+          // in Ego zurückhaltend transparent, sie stehen nicht im Weg.
+          transparent={interior}
+          opacity={interior ? 0.5 : 1}
+          depthWrite={!interior}
+        />
+      </mesh>
+      {upperOpacity > 0.02 && (
+        <mesh
+          geometry={fullUpperGeometry}
+          onClick={(event) => {
+            event.stopPropagation();
+            pick(merged.fullUpper)(event.faceIndex);
+          }}
+        >
+          <meshStandardMaterial
+            vertexColors
+            map={surface.map}
+            normalMap={surface.normalMap}
+            roughnessMap={surface.roughnessMap}
+            roughness={0.82}
+            metalness={0.04}
+            envMapIntensity={0.7}
+            transparent={upperOpacity < 0.99}
+            opacity={upperOpacity}
+          />
+        </mesh>
+      )}
+      {/* Fokussierte Halle: keine massiven Platzhalterkörper mehr, nur eine
+          flache, undurchsichtige Bodenkontur -- Fläche bleibt farblich
+          zuordenbar (belegt/Route/ausgewählt) und anklickbar, verdeckt aber
+          nichts mehr, das darüber steht. */}
+      <mesh
+        geometry={reducedLowerGeometry}
+        onClick={(event) => {
+          event.stopPropagation();
+          pick(merged.reducedLower)(event.faceIndex);
         }}
       >
         <meshStandardMaterial
@@ -495,10 +796,10 @@ function Stands({
       </mesh>
       {upperOpacity > 0.02 && (
         <mesh
-          geometry={upperGeometry}
+          geometry={reducedUpperGeometry}
           onClick={(event) => {
             event.stopPropagation();
-            pick(merged.upper)(event.faceIndex);
+            pick(merged.reducedUpper)(event.faceIndex);
           }}
         >
           <meshStandardMaterial
@@ -927,8 +1228,10 @@ export function SiteScene(props: SceneProps) {
       />
       <Beleuchtung extent={extent} interior={preset === 'ego'} />
 
-      <Ground extent={extent} centre={centre} ortho={registered ? null : data.ortho} />
-      {!registered && <Umgebung data={data} centre={centre} />}
+      {/* Das Orthofoto bleibt Bodenreferenz, solange kein amtlicher Boden aus
+          den Weltpaketen zur Verfügung steht -- auch im registrierten Modus. */}
+      <Ground extent={extent} centre={centre} ortho={data.ortho} />
+      <Umgebung data={data} centre={centre} />
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
           tragen sie weiterhin. Deshalb Suspense ohne Ersatzdarstellung. */}
       {!registered && (
@@ -942,8 +1245,17 @@ export function SiteScene(props: SceneProps) {
       )}
       {registered && (
         <Suspense fallback={null}>
-          <OfficialWorld data={data} centre={centre} />
+          <OfficialWorld data={data} centre={centre} preset={preset} />
         </Suspense>
+      )}
+      {(preset === 'halle' || preset === 'ego') && focusHallKey && (
+        <ProceduralStaging
+          data={data}
+          centre={centre}
+          preset={preset}
+          focusHallKey={focusHallKey}
+          onObjectCount={props.onStagingObjectCount}
+        />
       )}
       {/* Hallenkörper und Schilder sind Hilfsmittel der Übersicht. Auf
           Augenhöhe stehen sie als farbiger Schleier vor der Nase und legen
@@ -959,6 +1271,7 @@ export function SiteScene(props: SceneProps) {
         selectedStandId={props.selectedStandId}
         routeStandIds={props.routeStandIds}
         interior={preset === 'ego'}
+        reduceHallKey={(preset === 'halle' || preset === 'ego') ? focusHallKey : null}
         onSelectStand={props.onSelectStand}
       />
       <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
