@@ -866,6 +866,7 @@ function CameraRig({
 export function SiteScene(props: SceneProps) {
   const { data, upperOpacity, route, preset, focusHallKey } = props;
   const centre = useMemo(() => siteCentre(data.site), [data.site]);
+  const registered = data.spatialMode === 'registered';
 
   const extent = useMemo(() => {
     const points = data.site.halls.flatMap((hall) => hall.footprint);
@@ -907,17 +908,19 @@ export function SiteScene(props: SceneProps) {
       />
       <Beleuchtung extent={extent} interior={preset === 'ego'} />
 
-      <Ground extent={extent} centre={centre} ortho={data.ortho} />
-      <Umgebung data={data} centre={centre} />
+      <Ground extent={extent} centre={centre} ortho={registered ? null : data.ortho} />
+      {!registered && <Umgebung data={data} centre={centre} />}
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
           tragen sie weiterhin. Deshalb Suspense ohne Ersatzdarstellung. */}
-      <Suspense fallback={null}>
-        <Gelaende
-          centre={centre}
-          opacity={preset === 'ego' ? SHELL_OPACITY_EGO : SHELL_OPACITY}
-          interior={preset === 'ego'}
-        />
-      </Suspense>
+      {!registered && (
+        <Suspense fallback={null}>
+          <Gelaende
+            centre={centre}
+            opacity={preset === 'ego' ? SHELL_OPACITY_EGO : SHELL_OPACITY}
+            interior={preset === 'ego'}
+          />
+        </Suspense>
+      )}
       {/* Hallenkörper und Schilder sind Hilfsmittel der Übersicht. Auf
           Augenhöhe stehen sie als farbiger Schleier vor der Nase und legen
           sich über genau das, was man sehen will -- dort sind die Wände des

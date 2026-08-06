@@ -1,0 +1,29 @@
+{
+  "schema": "beuteltier.official-diagnostic.v1",
+  "origin": [
+    358300.0,
+    5645800.0,
+    40.0
+  ],
+  "boundsWorld": [
+    357700.0,
+    5645200.0,
+    358900.0,
+    5646500.0
+  ],
+  "features": {
+    "Building": 667,
+    "BuildingPart": 413
+  },
+  "surfaces": {
+    "wall": 9156,
+    "roof": 3179,
+    "ground": 2567,
+    "closure": 1135
+  },
+  "primitives": 16037,
+  "triangles": 32537,
+  "skippedSurfaces": 0,
+  "registrationTransformApplied": false,
+  "bytes": 16431312
+}

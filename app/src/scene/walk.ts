@@ -13,6 +13,7 @@
  */
 
 import type { CompactGraph } from '../routing/graph';
+import type { SurfaceProvider } from './surfaces';
 
 /** Augenhöhe über dem Boden. */
 export const EYE_HEIGHT_M = 1.7;
@@ -26,6 +27,22 @@ interface Layer {
   z: number;
   level: number;
   bits: Uint8Array;
+  basisX: [number, number];
+  basisY: [number, number];
+}
+
+function gridCoordinates(layer: Layer, x: number, y: number): [number, number] {
+  const dx = x - layer.originX;
+  const dy = y - layer.originY;
+  const [ax, ay] = layer.basisX;
+  const [bx, by] = layer.basisY;
+  const determinant = ax * by - ay * bx;
+  return [(dx * by - dy * bx) / determinant, (dy * ax - dx * ay) / determinant];
+}
+
+function gridPoint(layer: Layer, ix: number, iy: number): [number, number] {
+  return [layer.originX + ix * layer.basisX[0] + iy * layer.basisY[0],
+    layer.originY + ix * layer.basisX[1] + iy * layer.basisY[1]];
 }
 
 export type LayoutPatchState = 'open' | 'blocked';
@@ -58,10 +75,14 @@ export interface Footing {
   blocked: boolean;
   /** Schlüssel der Hallenebene, oder null im Freien. */
   hallKey: string | null;
+  /** Explizite Außen-/Übergangsfläche; Hallen verwenden weiterhin hallKey. */
+  surfaceId: string | null;
 }
 
-/** Draußen, ohne Gitter — freie Bewegung auf Höhe null. */
-const OPEN: Footing = { z: 0, blocked: false, hallKey: null };
+/** Übergangshilfe, bis reale Piazza-/Boulevardpolygone ausgeliefert werden. */
+export const LEGACY_OPEN_OUTSIDE: SurfaceProvider = {
+  footingAt: () => ({ z: 0, blocked: false, surfaceId: 'legacy-open-outside' }),
+};
 
 function decodeBits(base64: string): Uint8Array {
   const binary = atob(base64);
@@ -74,14 +95,21 @@ export class WalkGrid {
   private readonly gridM: number;
   private readonly layers: Layer[];
   private readonly patches: Map<string, LayoutPatch>;
+  private readonly outside: SurfaceProvider;
 
-  constructor(gridM: number, layers: Layer[], patches: LayoutPatch[] = []) {
+  constructor(
+    gridM: number,
+    layers: Layer[],
+    patches: LayoutPatch[] = [],
+    outside: SurfaceProvider = LEGACY_OPEN_OUTSIDE,
+  ) {
     this.gridM = gridM;
     this.layers = layers;
     this.patches = new Map(patches.map((patch) => [patch.id, patch]));
+    this.outside = outside;
   }
 
-  static fromCompact(compact: CompactGraph): WalkGrid {
+  static fromCompact(compact: CompactGraph, outside?: SurfaceProvider): WalkGrid {
     const layers = compact.grids.map((grid) => ({
       key: grid.key,
       originX: grid.origin[0],
@@ -91,12 +119,14 @@ export class WalkGrid {
       z: grid.z,
       level: grid.level,
       bits: decodeBits(grid.walkable),
+      basisX: grid.cellBasisX ?? [compact.gridM, 0],
+      basisY: grid.cellBasisY ?? [0, compact.gridM],
     }));
-    return new WalkGrid(compact.gridM, layers);
+    return new WalkGrid(compact.gridM, layers, [], outside);
   }
 
   withLayoutPatches(patches: LayoutPatch[]): WalkGrid {
-    return new WalkGrid(this.gridM, this.layers, patches);
+    return new WalkGrid(this.gridM, this.layers, patches, this.outside);
   }
 
   layoutPatches(): LayoutPatch[] {
@@ -114,8 +144,9 @@ export class WalkGrid {
   }
 
   private cell(layer: Layer, x: number, y: number): boolean | null {
-    const ix = Math.floor((x - layer.originX) / this.gridM);
-    const iy = Math.floor((y - layer.originY) / this.gridM);
+    const coordinates = gridCoordinates(layer, x, y);
+    const ix = Math.floor(coordinates[0]);
+    const iy = Math.floor(coordinates[1]);
     if (ix < 0 || iy < 0 || ix >= layer.cols || iy >= layer.rows) return null;
     const position = iy * layer.cols + ix;
     const original = (layer.bits[position >> 3] & (1 << (position & 7))) !== 0;
@@ -126,20 +157,22 @@ export class WalkGrid {
     let best: WalkCell | null = null;
     let bestGap = Infinity;
     for (const layer of this.layers) {
-      const ix = Math.floor((x - layer.originX) / this.gridM);
-      const iy = Math.floor((y - layer.originY) / this.gridM);
+      const coordinates = gridCoordinates(layer, x, y);
+      const ix = Math.floor(coordinates[0]);
+      const iy = Math.floor(coordinates[1]);
       if (ix < 0 || iy < 0 || ix >= layer.cols || iy >= layer.rows) continue;
       const position = iy * layer.cols + ix;
       const original = (layer.bits[position >> 3] & (1 << (position & 7))) !== 0;
       const patched = this.patchedCell(layer, ix, iy, original);
       const gap = Math.abs(layer.z - preferZ);
       if (best === null || gap < bestGap) {
+        const point = gridPoint(layer, ix + 0.5, iy + 0.5);
         best = {
           hallKey: layer.key,
           ix,
           iy,
-          x: layer.originX + (ix + 0.5) * this.gridM,
-          y: layer.originY + (iy + 0.5) * this.gridM,
+          x: point[0],
+          y: point[1],
           z: layer.z,
           blocked: !patched.walkable,
           patched: patched.patch,
@@ -186,9 +219,12 @@ export class WalkGrid {
       const y = from.y + (to.y - from.y) * t;
       const centre = this.cellAt(x, y, from.z);
       if (!centre) continue;
+      const layer = this.layers.find((entry) => entry.key === centre.hallKey);
+      if (!layer) continue;
       for (let dy = -radius; dy <= radius; dy += 1) {
         for (let dx = -radius; dx <= radius; dx += 1) {
-          const cell = this.cellAt(centre.x + dx * this.gridM, centre.y + dy * this.gridM, from.z);
+          const point = gridPoint(layer, centre.ix + dx + 0.5, centre.iy + dy + 0.5);
+          const cell = this.cellAt(point[0], point[1], from.z);
           if (!cell || cell.hallKey !== centre.hallKey) continue;
           cells.set(`${cell.hallKey}:${cell.ix}:${cell.iy}`, cell);
         }
@@ -220,11 +256,13 @@ export class WalkGrid {
         gap < bestGap - 0.5 ||
         (Math.abs(gap - bestGap) <= 0.5 && walkable && best.blocked);
       if (better) {
-        best = { z: layer.z, blocked: !walkable, hallKey: layer.key };
+        best = { z: layer.z, blocked: !walkable, hallKey: layer.key, surfaceId: null };
         bestGap = gap;
       }
     }
-    return best ?? OPEN;
+    if (best) return best;
+    const outside = this.outside.footingAt(x, y, preferZ);
+    return { ...outside, hallKey: null };
   }
 
   /**
@@ -252,9 +290,10 @@ export class WalkGrid {
         }
       }
       if (best) {
+        const point = gridPoint(layer, best.ix + 0.5, best.iy + 0.5);
         return {
-          x: layer.originX + (best.ix + 0.5) * this.gridM,
-          y: layer.originY + (best.iy + 0.5) * this.gridM,
+          x: point[0],
+          y: point[1],
           z: layer.z,
         };
       }
