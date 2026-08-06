@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 TOOLS = Path(__file__).resolve().parent
 
 STEPS = ["build_site.py", "build_graph.py", "build_registry.py",
+         "build_lod2_inventory.py",
          "build_buildings.py", "build_footprints.py", "build_surroundings.py",
          "audit_hallplans.py", "build_ortho.py", "build_accuracy_report.py"]
 
@@ -26,6 +27,7 @@ STEPS = ["build_site.py", "build_graph.py", "build_registry.py",
 # wird der Schritt uebersprungen statt den ganzen Bau abzubrechen -- die
 # LoD2-Kacheln sind 43 MB und werden mit tools/fetch_lod2.py geholt.
 OPTIONAL = {"build_buildings.py": (ROOT / "data/raw/lod2", "*.gml"),
+            "build_lod2_inventory.py": (ROOT / "data/raw/lod2", "*.gml"),
             "build_footprints.py": (ROOT / "data/raw/alkis", "*.gpkg"),
             "build_surroundings.py": (ROOT / "data/raw/osm", "koelnmesse.json"),
             "build_ortho.py": (ROOT / "data/raw/dop", "*.jp2")}

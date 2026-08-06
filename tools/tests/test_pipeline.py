@@ -89,6 +89,29 @@ class TestSite:
 
 
 class TestOpenDataGeometry:
+    def test_lod2_inventory_zaehlt_features_und_flaechen(self, tmp_path):
+        from build_lod2_inventory import build_inventory
+        fixture = tmp_path / "tile.gml"
+        fixture.write_text("""<core:CityModel
+          xmlns:core=\"http://www.opengis.net/citygml/1.0\"
+          xmlns:bldg=\"http://www.opengis.net/citygml/building/1.0\"
+          xmlns:gml=\"http://www.opengis.net/gml\">
+          <core:cityObjectMember><bldg:Building gml:id=\"b1\">
+            <bldg:boundedBy><bldg:WallSurface><bldg:lod2MultiSurface>
+              <gml:MultiSurface><gml:surfaceMember><gml:Polygon gml:id=\"p1\" />
+              </gml:surfaceMember></gml:MultiSurface>
+            </bldg:lod2MultiSurface></bldg:WallSurface></bldg:boundedBy>
+            <bldg:consistsOfBuildingPart><bldg:BuildingPart gml:id=\"bp1\" />
+            </bldg:consistsOfBuildingPart>
+          </bldg:Building></core:cityObjectMember>
+        </core:CityModel>""", encoding="utf-8")
+
+        inventory = build_inventory([fixture])
+
+        assert inventory["totals"]["features"] == {"Building": 1, "BuildingPart": 1}
+        assert inventory["totals"]["surfaces"] == {"WallSurface": 1}
+        assert inventory["totals"]["polygonsBySurface"] == {"WallSurface": 1}
+
     def test_liest_geopackage_polygon(self):
         import struct
         ring = [(0., 0.), (2., 0.), (2., 1.), (0., 0.)]
