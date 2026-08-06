@@ -19,13 +19,16 @@ ROOT = Path(__file__).resolve().parent.parent
 TOOLS = Path(__file__).resolve().parent
 
 STEPS = ["build_site.py", "build_graph.py", "build_registry.py",
-         "build_buildings.py", "build_ortho.py", "build_accuracy_report.py"]
+         "build_buildings.py", "build_footprints.py", "build_surroundings.py",
+         "audit_hallplans.py", "build_ortho.py", "build_accuracy_report.py"]
 
 # Schritte, die eine Quelle brauchen, die nicht im Repository liegt. Fehlt sie,
 # wird der Schritt uebersprungen statt den ganzen Bau abzubrechen -- die
 # LoD2-Kacheln sind 43 MB und werden mit tools/fetch_lod2.py geholt.
-OPTIONAL = {"build_buildings.py": ROOT / "data" / "raw" / "lod2",
-            "build_ortho.py": ROOT / "data" / "raw" / "dop"}
+OPTIONAL = {"build_buildings.py": (ROOT / "data/raw/lod2", "*.gml"),
+            "build_footprints.py": (ROOT / "data/raw/alkis", "*.gpkg"),
+            "build_surroundings.py": (ROOT / "data/raw/osm", "koelnmesse.json"),
+            "build_ortho.py": (ROOT / "data/raw/dop", "*.jp2")}
 
 # Untergrenzen, die nach jedem Lauf gelten muessen. Sie sind nicht willkuerlich,
 # sondern der Stand, der einmal erreicht war -- faellt etwas darunter, ist bei
@@ -47,8 +50,9 @@ EXPECTATIONS = {
 
 def main() -> int:
     for step in STEPS:
-        needed = OPTIONAL.get(step)
-        if needed is not None and not any(needed.iterdir() if needed.exists() else []):
+        requirement = OPTIONAL.get(step)
+        needed = requirement[0] if requirement else None
+        if requirement is not None and not any(needed.glob(requirement[1])):
             print(f"\n=== {step} " + "=" * (60 - len(step)))
             print(f"uebersprungen: {needed.relative_to(ROOT)} ist leer "
                   f"(erst die passende tools/fetch_*.py laufen lassen)")
@@ -78,7 +82,7 @@ def main() -> int:
     if app_data.parent.exists():
         app_data.mkdir(parents=True, exist_ok=True)
         for name in ("site.json", "graph.json", "registry.json",
-                     "buildings.json", "ortho.json"):
+                     "buildings.json", "footprints.json", "surroundings.json", "ortho.json"):
             source = ROOT / "data" / "build" / name
             if source.exists():
                 shutil.copyfile(source, app_data / name)

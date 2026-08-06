@@ -44,8 +44,10 @@ BOUNDS = (357700.0, 5645200.0, 358900.0, 5646500.0)
 
 # Ab welcher Grundflaeche ein Gebaeude als Halle in Frage kommt.
 HALL_AREA_SQM = 2500.0
-# Kleinstes Gebaeude, das ueberhaupt uebernommen wird.
-MIN_AREA_SQM = 60.0
+# Kleinstes Gebaeude, das ueberhaupt uebernommen wird. Zwei Quadratmeter
+# entfernen Nullflaechen und schmale Digitalisierungsartefakte, ohne reale
+# Pförtnerhaeuser, Technikbauten und andere Nebengebaeude zu verschlucken.
+MIN_AREA_SQM = 2.0
 # Wie weit zwei Streckenlaengen auseinanderliegen duerfen, damit ein
 # Korrespondenzpaar als Kandidat zaehlt.
 SPAN_TOLERANCE_M = 25.0
