@@ -52,10 +52,10 @@ await page.waitForTimeout(200);
 // Konsole der vorigen Diagnoseläufe). Bei yaw=0 bewegt 'a' (strafe) in -X.
 console.log('Fliege ~73m Richtung Staging-Cluster ...');
 await page.keyboard.down('a');
-await page.keyboard.down('shift');
+await page.keyboard.down('Shift');
 await page.waitForTimeout(18000);
 await page.keyboard.up('a');
-await page.keyboard.up('shift');
+await page.keyboard.up('Shift');
 await page.waitForTimeout(500);
 
 // Etwas absenken/umsehen, um den Boden-nahen Bereich zu erfassen.
