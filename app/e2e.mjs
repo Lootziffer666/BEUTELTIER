@@ -9,11 +9,14 @@
  *   PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node e2e.mjs
  */
 import { chromium } from 'playwright';
+import { mkdir } from 'node:fs/promises';
 
 const BASE = process.env.BEUTELTIER_URL ?? 'http://localhost:4173/';
 const OUT = process.env.BEUTELTIER_SHOTS ?? '.';
 const CHROME =
-  process.env.BEUTELTIER_CHROME ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+  process.env.BEUTELTIER_CHROME;
+
+await mkdir(OUT, { recursive: true });
 
 const results = [];
 function check(name, ok, detail = '') {
@@ -22,7 +25,7 @@ function check(name, ok, detail = '') {
 }
 
 const browser = await chromium.launch({
-  executablePath: CHROME,
+  ...(CHROME ? { executablePath: CHROME } : {}),
   args: ['--no-sandbox', '--use-gl=swiftshader', '--enable-unsafe-swiftshader'],
 });
 const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
@@ -37,6 +40,7 @@ await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.waitForSelector('canvas', { timeout: 30000 });
 await page.waitForTimeout(3500);
 check('Gelände wird gerendert', true);
+await page.screenshot({ path: `${OUT}/app-1-gelaende.png` });
 
 // --- Meldung einlesen und automatisch zuordnen ----------------------------
 await page.getByRole('button', { name: 'Funkwache' }).click();
