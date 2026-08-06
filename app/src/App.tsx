@@ -27,6 +27,7 @@ import type { LayoutPatch, LayoutPatchState } from './scene/walk';
 import { Vermessung } from './ui/Vermessung';
 import { ProceduralMesse } from './ui/ProceduralMesse';
 import { WorldDiagnostics } from './ui/WorldDiagnostics';
+import { ProceduralStagingNotice } from './scene/ProceduralStagingNotice';
 
 type Tab = 'karte' | 'epix' | 'funkwache' | 'register' | 'diagnose' | 'messe';
 
@@ -297,6 +298,14 @@ export default function App() {
           onToggleViewfinder={() => setViewfinderOpen((v) => !v)}
           onMark={handleMark}
           onCameraSnapshot={setCameraSnapshot}
+        />
+
+        <ProceduralStagingNotice
+          visible={
+            tab === 'karte' &&
+            Boolean(focusHallKey) &&
+            (preset === 'halle' || preset === 'ego')
+          }
         />
 
         {preset === 'ego' && !pendingMark && (

@@ -34,6 +34,7 @@ import { Beleuchtung } from './lighting';
 import { Deckenleuchten } from './interior';
 import { Vertikalverbindungen } from './vertical';
 import type { CameraSnapshot } from './survey';
+import { ProceduralStaging } from './ProceduralStaging';
 
 export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
@@ -944,6 +945,14 @@ export function SiteScene(props: SceneProps) {
         <Suspense fallback={null}>
           <OfficialWorld data={data} centre={centre} />
         </Suspense>
+      )}
+      {(preset === 'halle' || preset === 'ego') && focusHallKey && (
+        <ProceduralStaging
+          data={data}
+          centre={centre}
+          preset={preset}
+          focusHallKey={focusHallKey}
+        />
       )}
       {/* Hallenkörper und Schilder sind Hilfsmittel der Übersicht. Auf
           Augenhöhe stehen sie als farbiger Schleier vor der Nase und legen
