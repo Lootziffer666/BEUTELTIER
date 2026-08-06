@@ -8,48 +8,48 @@
       "kind": "hall-level",
       "boundary": [
         [
-          -498.104,
-          88.693
+          -507.66,
+          83.24
         ],
         [
-          -448.849,
-          118.245
+          -458.405,
+          112.792
         ],
         [
-          -438.3,
-          115.252
+          -447.856,
+          109.799
         ],
         [
-          -371.063,
-          3.407
+          -380.619,
+          -2.046
         ],
         [
-          -373.369,
-          -7.314
+          -382.925,
+          -12.767
         ],
         [
-          -412.642,
-          -30.993
+          -422.198,
+          -36.446
         ],
         [
-          -431.113,
-          -6.732
+          -440.669,
+          -12.185
         ],
         [
-          -466.55,
-          39.814
+          -476.106,
+          34.361
         ],
         [
-          -501.683,
-          85.97
+          -511.239,
+          80.517
         ]
       ],
       "floorZ": 0.49,
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:10.1",
@@ -57,72 +57,72 @@
       "kind": "hall-level",
       "boundary": [
         [
-          -121.051,
-          322.328
+          -123.741,
+          309.335
         ],
         [
-          -110.938,
-          316.18
+          -113.628,
+          303.187
         ],
         [
-          -106.222,
-          310.276
+          -108.912,
+          297.283
         ],
         [
-          -99.612,
-          300.271
+          -102.302,
+          287.278
         ],
         [
-          -91.885,
-          287.437
+          -94.575,
+          274.444
         ],
         [
-          -36.421,
-          194.359
+          -39.111,
+          181.366
         ],
         [
-          -32.895,
-          186.573
+          -35.585,
+          173.58
         ],
         [
-          -33.223,
-          173.552
+          -35.913,
+          160.559
         ],
         [
-          -49.476,
-          163.77
+          -52.166,
+          150.777
         ],
         [
-          -138.269,
-          110.881
+          -140.959,
+          97.888
         ],
         [
-          -148.489,
-          126.872
+          -151.179,
+          113.879
         ],
         [
-          -178.794,
-          176.234
+          -181.484,
+          163.241
         ],
         [
-          -180.597,
-          179.234
+          -183.287,
+          166.241
         ],
         [
-          -218.29,
-          242.788
+          -220.98,
+          229.795
         ],
         [
-          -225.848,
-          259.223
+          -228.538,
+          246.23
         ]
       ],
       "floorZ": 0.49,
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:10.2",
@@ -130,72 +130,72 @@
       "kind": "hall-level",
       "boundary": [
         [
-          -156.037,
-          308.227
+          -161.516,
+          297.932
         ],
         [
-          -119.579,
-          323.178
+          -125.058,
+          312.883
         ],
         [
-          -111.179,
-          316.0
+          -116.658,
+          305.705
         ],
         [
-          -106.455,
-          310.101
+          -111.934,
+          299.806
         ],
         [
-          -100.111,
-          300.519
+          -105.59,
+          290.224
         ],
         [
-          -25.928,
-          177.332
+          -31.407,
+          167.037
         ],
         [
-          -131.313,
-          104.55
+          -136.792,
+          94.255
         ],
         [
-          -137.727,
-          100.683
+          -143.206,
+          90.388
         ],
         [
-          -150.029,
-          102.377
+          -155.508,
+          92.082
         ],
         [
-          -204.667,
-          171.508
+          -210.146,
+          161.213
         ],
         [
-          -215.231,
-          189.041
+          -220.71,
+          178.746
         ],
         [
-          -220.757,
-          225.309
+          -226.236,
+          215.014
         ],
         [
-          -220.181,
-          262.607
+          -225.66,
+          252.312
         ],
         [
-          -192.994,
-          285.391
+          -198.473,
+          275.096
         ],
         [
-          -168.87,
-          300.5
+          -174.349,
+          290.205
         ]
       ],
       "floorZ": 7.94,
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:2.1",
@@ -235,8 +235,8 @@
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:2.2",
@@ -244,44 +244,44 @@
       "kind": "hall-level",
       "boundary": [
         [
-          -467.329,
-          342.045
+          -461.671,
+          344.279
         ],
         [
-          -438.771,
-          303.895
+          -433.113,
+          306.129
         ],
         [
-          -399.179,
-          237.492
+          -393.521,
+          239.726
         ],
         [
-          -462.589,
-          199.676
+          -456.931,
+          201.91
         ],
         [
-          -475.748,
-          205.184
+          -470.09,
+          207.418
         ],
         [
-          -491.074,
-          230.892
+          -485.416,
+          233.126
         ],
         [
-          -528.767,
-          304.831
+          -523.109,
+          307.065
         ],
         [
-          -489.607,
-          328.757
+          -483.949,
+          330.991
         ]
       ],
       "floorZ": 8.24,
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:3.2",
@@ -313,8 +313,8 @@
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:4.1",
@@ -322,44 +322,44 @@
       "kind": "hall-level",
       "boundary": [
         [
-          -398.899,
-          100.854
+          -403.184,
+          98.278
         ],
         [
-          -412.897,
-          125.11
+          -417.182,
+          122.534
         ],
         [
-          -420.12,
-          148.77
+          -424.405,
+          146.194
         ],
         [
-          -271.85,
-          237.904
+          -276.135,
+          235.328
         ],
         [
-          -266.44,
-          228.905
+          -270.725,
+          226.329
         ],
         [
-          -230.201,
-          166.682
+          -234.486,
+          164.106
         ],
         [
-          -280.938,
-          135.598
+          -285.223,
+          133.022
         ],
         [
-          -382.927,
-          74.286
+          -387.212,
+          71.71
         ]
       ],
       "floorZ": 0.49,
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:4.2",
@@ -367,40 +367,40 @@
       "kind": "hall-level",
       "boundary": [
         [
-          -400.635,
-          104.478
+          -404.92,
+          101.902
         ],
         [
-          -425.323,
-          145.643
+          -429.608,
+          143.067
         ],
         [
-          -273.196,
-          237.096
+          -277.481,
+          234.52
         ],
         [
-          -234.814,
-          176.16
+          -239.099,
+          173.584
         ],
         [
-          -229.146,
-          166.733
+          -233.431,
+          164.157
         ],
         [
-          -382.559,
-          74.507
+          -386.844,
+          71.931
         ],
         [
-          -398.574,
-          101.05
+          -402.859,
+          98.474
         ]
       ],
       "floorZ": 8.09,
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:5.1",
@@ -408,28 +408,28 @@
       "kind": "hall-level",
       "boundary": [
         [
-          -369.088,
-          54.486
+          -376.801,
+          49.849
         ],
         [
-          -218.766,
-          143.896
+          -226.479,
+          139.259
         ],
         [
-          -183.294,
-          84.269
+          -191.007,
+          79.632
         ],
         [
-          -333.621,
-          -5.133
+          -341.334,
+          -9.77
         ]
       ],
       "floorZ": 0.49,
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:5.2",
@@ -437,40 +437,40 @@
       "kind": "hall-level",
       "boundary": [
         [
-          -369.108,
-          54.52
+          -370.48,
+          54.862
         ],
         [
-          -219.207,
-          143.678
+          -220.579,
+          144.02
         ],
         [
-          -189.319,
-          94.369
+          -190.691,
+          94.711
         ],
         [
-          -183.323,
-          84.298
+          -184.695,
+          84.64
         ],
         [
-          -190.019,
-          64.965
+          -191.391,
+          65.307
         ],
         [
-          -260.139,
-          23.267
+          -261.511,
+          23.609
         ],
         [
-          -333.65,
-          -5.104
+          -335.022,
+          -4.762
         ]
       ],
       "floorZ": 8.09,
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:6.1",
@@ -506,8 +506,8 @@
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:7.1",
@@ -515,36 +515,36 @@
       "kind": "hall-level",
       "boundary": [
         [
-          -241.572,
-          -174.438
+          -242.429,
+          -174.953
         ],
         [
-          -92.873,
-          -85.046
+          -93.73,
+          -85.561
         ],
         [
-          -51.313,
-          -152.238
+          -52.17,
+          -152.753
         ],
         [
-          -49.767,
-          -154.81
+          -50.624,
+          -155.325
         ],
         [
-          -198.466,
-          -244.201
+          -199.323,
+          -244.716
         ],
         [
-          -200.354,
-          -243.003
+          -201.211,
+          -243.518
         ]
       ],
       "floorZ": 0.49,
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:8.1",
@@ -552,36 +552,36 @@
       "kind": "hall-level",
       "boundary": [
         [
-          -115.398,
-          -239.862
+          -125.254,
+          -245.787
         ],
         [
-          32.6,
-          -150.332
+          22.744,
+          -156.257
         ],
         [
-          74.224,
-          -217.205
+          64.368,
+          -223.13
         ],
         [
-          75.765,
-          -219.767
+          65.909,
+          -225.692
         ],
         [
-          -72.238,
-          -309.289
+          -82.094,
+          -315.214
         ],
         [
-          -78.243,
-          -301.278
+          -88.099,
+          -307.203
         ]
       ],
       "floorZ": 0.49,
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:9.1",
@@ -589,32 +589,32 @@
       "kind": "hall-level",
       "boundary": [
         [
-          -86.681,
-          -6.066
+          -95.635,
+          -13.491
         ],
         [
-          -119.227,
-          49.043
+          -128.181,
+          41.618
         ],
         [
-          23.044,
-          134.571
+          14.09,
+          127.146
         ],
         [
-          57.564,
-          77.148
+          48.61,
+          69.723
         ],
         [
-          -85.135,
-          -8.637
+          -94.089,
+          -16.062
         ]
       ],
       "floorZ": 0.49,
       "walkability": "walkgrid-controlled",
       "defaultBlocked": true,
       "collision": "walkgrid",
-      "status": "draft",
-      "source": "legacy-global-fit"
+      "status": "constrained",
+      "source": "official-footprint-containment"
     },
     {
       "id": "surface:hall:F2",

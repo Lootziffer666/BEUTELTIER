@@ -137,7 +137,7 @@ class TestWorldOrigin:
 
 
 class TestHallRegistrations:
-    def test_jede_hallenebene_bleibt_explizit_draft(self, site):
+    def test_jede_hallenebene_bleibt_ehrlich_unregistriert(self, site):
         from build_hall_registrations import build_product
 
         buildings = json.loads(BUILDINGS_JSON.read_text(encoding="utf-8"))
@@ -148,8 +148,14 @@ class TestHallRegistrations:
         assert {item["hallKey"] for item in registrations} == {
             hall["key"] for hall in site["halls"]
         }
-        assert all(item["status"] == "draft" and item["anchors"] == []
+        assert product["counts"]["constrained"] == 14
+        assert product["counts"]["registered"] == 0
+        assert all(item["status"] in {"draft", "constrained"} and item["anchors"] == []
                    for item in registrations)
+        constrained = [item["constraint"] for item in registrations if item["constraint"]]
+        assert all(item["coverageAfterPct"] >= item["coverageBeforePct"]
+                   for item in constrained)
+        assert all(item["searchRadiusM"] == 30 for item in constrained)
 
     def test_draft_transform_erhaelt_relative_distanzen(self):
         from build_hall_registrations import draft_transform, transform_point
@@ -162,6 +168,17 @@ class TestHallRegistrations:
         assert math.dist(transform_point(first, transform),
                          transform_point(second, transform)) == pytest.approx(50.0)
         assert transform["mirroredSceneZ"] is True
+
+    def test_registered_layout_transformiert_alle_abhaengigkeiten_gemeinsam(self):
+        product = json.loads((BUILD / "registered-layout.json").read_text(encoding="utf-8"))
+        assert product["counts"] == {
+            "halls": 17, "stands": 1027, "walkGrids": 17,
+            "facilities": 28, "portalEnds": 76,
+        }
+        assert product["policy"]["relativeHallContentScale"] == 1.0
+        assert product["policy"]["portalsAreRegistrationAnchors"] is False
+        assert all(not portal["usedAsRegistrationAnchor"] for portal in product["portalEnds"])
+        assert all(hall["walkGrid"]["cellBasisX"] != [0, 0] for hall in product["halls"])
 
     def test_floorz_ist_nhn_offset_und_keine_null_fallbackhoehe(self, site):
         from build_hall_registrations import build_product

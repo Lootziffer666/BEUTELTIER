@@ -138,12 +138,14 @@
     "worldPackages": "data/world-packages.json",
     "surfaceClassification": "data/surface-classification.json",
     "visibilityAnalysis": "data/visibility-analysis.json",
-    "collisionSurfaces": "data/collision-surfaces.json"
+    "collisionSurfaces": "data/collision-surfaces.json",
+    "registeredLayout": "data/registered-layout.json"
   },
   "registrationSummary": {
     "total": 17,
-    "draft": 17,
+    "draft": 3,
     "registered": 0,
+    "constrained": 14,
     "withTargetFeatures": 14
   },
   "fallback": {

@@ -42,6 +42,7 @@ export interface WorldManifest {
     draft: number;
     registered: number;
     withTargetFeatures: number;
+    constrained?: number;
   };
   fallback: { orthophoto: boolean; uri: string; walkable: boolean };
 }
@@ -137,6 +138,34 @@ export interface WorldDiagnostics {
       heightQueryAllowed: boolean;
     };
   } | null;
+  hallRegistrations: {
+    registrations: Array<{
+      hallKey: string;
+      status: 'draft' | 'constrained' | 'registered';
+      source: string;
+      residualM: number | null;
+      constraint: {
+        coverageBeforePct: number;
+        coverageAfterPct: number;
+        shiftM: number;
+        samples: number;
+      } | null;
+    }>;
+  } | null;
+  registeredLayout: {
+    schema: string;
+    counts: {
+      halls: number;
+      stands: number;
+      walkGrids: number;
+      facilities: number;
+      portalEnds: number;
+    };
+    policy: {
+      portalsAreRegistrationAnchors: boolean;
+      relativeHallContentScale: number;
+    };
+  } | null;
 }
 
 export interface Dataset {
@@ -170,7 +199,7 @@ export async function loadDataset(): Promise<Dataset> {
   ]);
 
   // Ohne Luftbild bleibt die Karte benutzbar -- sie ist dann nur grau.
-  const [ortho, surroundings, footprints, manifest, walkableSurfaces, portals, lod2Inventory, officialDiagnostic, worldPackages, visibilityAnalysis, surfaceClassification, collisionSurfaces] = await Promise.all([
+  const [ortho, surroundings, footprints, manifest, walkableSurfaces, portals, lod2Inventory, officialDiagnostic, worldPackages, visibilityAnalysis, surfaceClassification, collisionSurfaces, hallRegistrations, registeredLayout] = await Promise.all([
     fetchJson<Ortho>('ortho.json').catch(() => null),
     fetchJson<Surroundings>('surroundings.json').catch(() => null),
     fetchJson<Footprints>('footprints.json').catch(() => null),
@@ -183,6 +212,8 @@ export async function loadDataset(): Promise<Dataset> {
     fetchJson<WorldDiagnostics['visibilityAnalysis']>('visibility-analysis.json').catch(() => null),
     fetchJson<WorldDiagnostics['surfaceClassification']>('surface-classification.json').catch(() => null),
     fetchJson<WorldDiagnostics['collisionSurfaces']>('collision-surfaces.json').catch(() => null),
+    fetchJson<WorldDiagnostics['hallRegistrations']>('hall-registrations.json').catch(() => null),
+    fetchJson<WorldDiagnostics['registeredLayout']>('registered-layout.json').catch(() => null),
   ]);
 
   return {
@@ -195,7 +226,8 @@ export async function loadDataset(): Promise<Dataset> {
     footprints,
     world: manifest ? {
       manifest, walkableSurfaces, portals, lod2Inventory, officialDiagnostic,
-      worldPackages, visibilityAnalysis, surfaceClassification, collisionSurfaces,
+      worldPackages, visibilityAnalysis, surfaceClassification, collisionSurfaces, hallRegistrations,
+      registeredLayout,
     } : null,
     standsById: new Map(site.stands.map((stand) => [stand.id, stand])),
     hallsByKey: new Map(site.halls.map((hall) => [hall.key, hall])),

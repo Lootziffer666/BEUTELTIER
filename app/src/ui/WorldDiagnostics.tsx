@@ -21,6 +21,8 @@ export function WorldDiagnostics({ world }: { world: Diagnostics | null }) {
     manifest, walkableSurfaces, portals, officialDiagnostic, worldPackages,
     visibilityAnalysis, surfaceClassification,
     collisionSurfaces,
+    hallRegistrations,
+    registeredLayout,
   } = world;
   const registrations = manifest.registrationSummary;
   return (
@@ -31,11 +33,34 @@ export function WorldDiagnostics({ world }: { world: Diagnostics | null }) {
         <div className="figures">
           <span><strong>{registrations.registered}/{registrations.total}</strong> registriert</span>
           <span><strong>{registrations.withTargetFeatures}</strong> mit Zielfeatures</span>
-          <span><strong>{registrations.draft}</strong> Entwürfe</span>
+          <span><strong>{registrations.constrained ?? 0}</strong> grundrissgebunden</span>
+          <span><strong>{registrations.draft}</strong> offen</span>
         </div>
         <p className="muted">
           Ursprung: {manifest.origin.map((value) => value.toFixed(1)).join(' / ')} m
         </p>
+      </div>
+
+      <div className="card">
+        <div className="card__eyebrow">HALLENWEISE REGISTRIERUNG</div>
+        <div className="figures">
+          <span><strong>{registeredLayout?.counts.stands ?? 0}</strong> Stände transformiert</span>
+          <span><strong>{registeredLayout?.counts.walkGrids ?? 0}</strong> WalkGrids</span>
+          <span><strong>{registeredLayout?.counts.portalEnds ?? 0}</strong> Portal-Endpunkte</span>
+        </div>
+        <ul className="diag-features">
+          {(hallRegistrations?.registrations ?? []).map((entry) => (
+            <li key={entry.hallKey}>
+              <strong>{entry.hallKey} · {entry.status}</strong>
+              {entry.constraint ? (
+                <>
+                  <span>Abdeckung {entry.constraint.coverageBeforePct.toFixed(1)} → {entry.constraint.coverageAfterPct.toFixed(1)} %</span>
+                  <span>Verschiebung {entry.constraint.shiftM.toFixed(2)} m · {entry.constraint.samples} Prüfproben</span>
+                </>
+              ) : <span>Keine amtlichen Zielfeatures für eine Grundrissbindung</span>}
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="card">
