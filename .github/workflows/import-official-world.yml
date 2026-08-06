@@ -1,0 +1,93 @@
+name: Import official world artifacts (one-shot)
+
+on:
+  push:
+    paths:
+      - .github/workflows/import-official-world.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  import-world:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Erfolgreiches Weltartefakt laden
+        uses: actions/download-artifact@v4
+        with:
+          name: beuteltier-official-world-6c387f994445a9ccad2ca3143f4da2c8111be707
+          path: /tmp/beuteltier-official-world
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31114704167
+
+      - name: Sechs Weltpakete und Manifeste übernehmen
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p app/public/models/world/collision
+          mkdir -p app/public/models/world/core
+          mkdir -p app/public/models/world/surroundings
+
+          cp /tmp/beuteltier-official-world/models/world/collision/core.glb app/public/models/world/collision/core.glb
+          cp /tmp/beuteltier-official-world/models/world/core/messe.glb app/public/models/world/core/messe.glb
+          cp /tmp/beuteltier-official-world/models/world/surroundings/east.glb app/public/models/world/surroundings/east.glb
+          cp /tmp/beuteltier-official-world/models/world/surroundings/north.glb app/public/models/world/surroundings/north.glb
+          cp /tmp/beuteltier-official-world/models/world/surroundings/south.glb app/public/models/world/surroundings/south.glb
+          cp /tmp/beuteltier-official-world/models/world/surroundings/west.glb app/public/models/world/surroundings/west.glb
+
+          cp /tmp/beuteltier-official-world/data/world-manifest.json app/public/data/world-manifest.json
+          cp /tmp/beuteltier-official-world/data/world-packages.json app/public/data/world-packages.json
+          cp /tmp/beuteltier-official-world/data/world-manifest.json data/build/world-manifest.json
+          cp /tmp/beuteltier-official-world/data/world-packages.json data/build/world-packages.json
+
+      - name: Artefakte strukturell prüfen
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import struct
+          from pathlib import Path
+
+          root = Path('app/public')
+          manifest = json.loads((root / 'data/world-manifest.json').read_text())
+          packages = [entry for entry in manifest['packages'] if entry.get('role') in {'render', 'collision'}]
+          assert len(packages) == 6, len(packages)
+          assert all(entry.get('available') is True for entry in packages)
+
+          for entry in packages:
+              path = root / entry['uri']
+              data = path.read_bytes()
+              magic, version, declared_length = struct.unpack_from('<4sII', data, 0)
+              assert magic == b'glTF', path
+              assert version == 2, path
+              assert declared_length == len(data), path
+              assert len(data) == entry['bytes'], (path, len(data), entry['bytes'])
+
+          print('6 gültige GLB-2.0-Pakete geprüft.')
+          PY
+
+      - name: Weltpakete atomar nach main schreiben
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/import-official-world.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all \
+            app/public/models/world \
+            app/public/data/world-manifest.json \
+            app/public/data/world-packages.json \
+            data/build/world-manifest.json \
+            data/build/world-packages.json \
+            .github/workflows/import-official-world.yml
+
+          git diff --cached --stat
+          git diff --cached --quiet && { echo 'Keine Änderungen gefunden.'; exit 1; }
+          git commit -m "feat: amtliche Weltpakete ins Offline-PWA übernehmen"
+          git push
