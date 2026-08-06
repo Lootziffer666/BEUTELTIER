@@ -1,0 +1,28 @@
+{
+  "schema": "beuteltier.slpk-spike.v1",
+  "file": "LOD2_NRW_Teil16.slpk",
+  "fileBytes": 242364284,
+  "layerName": "LOD2_NRW_Teil16",
+  "i3sVersion": "1.10",
+  "crs": 25832,
+  "extent": {
+    "xmin": 353266.12995750457,
+    "ymin": 5602865.145028823,
+    "xmax": 361105.3240107321,
+    "ymax": 5700028.538976336,
+    "zmin": 12.369999070959246,
+    "zmax": 415.23300000600665
+  },
+  "archiveEntries": 19912,
+  "entrySuffixes": {
+    "(none)": 1,
+    "gz": 19910,
+    "json": 1
+  },
+  "sharedResources": 1243,
+  "textureImageReferences": 0,
+  "texturedMaterials": 0,
+  "imageFiles": false,
+  "decision": "reject-as-material-source",
+  "finding": "Das SLPK enthaelt I3S-Geometrie, Attribute und Vertexfarben, aber keine Bilddateien oder Bildreferenzen in Materialien. Gegenueber CityGML plus Orthofoto entsteht daher keine zusaetzliche Fototextur."
+}

@@ -5,6 +5,83 @@ Stand: 04.08.2026 · Ausgangspunkt: Tag `stand-vor-genauigkeitsarbeit`
 Dieses Dokument beantwortet für jede räumliche Quelle: was steht drin, in
 welchen Einheiten, wie wird sie verwendet, und wie weit darf man ihr trauen.
 
+## LoD2 CityGML und SLPK
+
+| | CityGML | SLPK/I3S-Spike |
+|---|---|---|
+| Herkunft | Geobasis NRW, vier 1-km-Kacheln | Geobasis NRW, Produktionsblock Teil 16 |
+| Einheit / CRS | Meter, EPSG:25832; Höhen DHHN2016 NH | Meter, EPSG:25832 |
+| Verwendung | Baukörper, Grundrisse, Höhen und Dachformen | geprüft, nicht als zweite Materialquelle übernommen |
+| Lizenz | Datenlizenz Deutschland Zero 2.0 | Datenlizenz Deutschland Zero 2.0 |
+
+CityGML bleibt die maßgebliche 3D-Quelle. Grundrisse ab **2 m²** werden
+übernommen; die frühere Grenze von 60 m² entfernte nicht nur Artefakte, sondern
+reale kleine Nebenbauten. Die Grenze ist weiterhin rein technisch und sagt
+nichts über die Gebäudefunktion aus.
+
+Der SLPK-Spike wurde am realen, 242.364.284 Byte großen Paket
+`LOD2_NRW_Teil16.slpk` durchgeführt. Dessen Extent (E 353.266–361.105) enthält
+die Koelnmesse. Die reproduzierbare Inspektion fand 19.912 Archiveinträge und
+1.243 I3S-`sharedResource`-Dateien, aber **keine Bilddatei, keine referenzierte
+Textur und kein texturiertes Material**. Das Paket liefert I3S-Geometrie,
+Attribute und Vertexfarben, jedoch keine Fassaden- oder Dachfototexturen.
+Darum wäre ein eigener I3S-Parser lediglich ein zweiter Weg zu derselben
+Geometrie; er wird bewusst nicht gebaut. Der maschinenlesbare Befund steht in
+`data/raw/slpk/inspection.json`, Herkunft und Lizenz in `QUELLE.json`.
+
+## Digitale Orthophotos
+
+| | |
+|---|---|
+| Herkunft | Digitale Orthophotos 2025, Geobasis NRW |
+| Quellauflösung | 0,10 m/Pixel |
+| Verwendung | entzerrte Dach- und Geländetextur; niemals als Wandbild |
+| Lizenz | Datenlizenz Deutschland Zero 2.0 |
+
+Die bisherige Webtextur mit 4.096 Pixeln nutzte auf dem etwa 1,3-km-Ausschnitt
+nur rund 32 cm/Pixel. Die Ausgabe wird nun mit 5.120 Pixeln (rund 25 cm/Pixel)
+erzeugt. Das bleibt deutlich unter der nativen Datenmenge, erhält aber mehr
+Details; progressive JPEG-Ausgabe und Qualitätsstufe bleiben unverändert.
+
+## ALKIS-Grundrisse
+
+| | |
+|---|---|
+| Herkunft | Grundrissdaten vereinfacht, Stadt Köln, Stand Januar 2026 |
+| Format / CRS | GeoPackage (SQLite), EPSG:25832 |
+| Verwendung | Kreuzkontrolle der LoD2-Grundrisse und markierte Lückenfüller |
+| Lizenz | Datenlizenz Deutschland Zero 2.0 |
+
+Der Bauschritt liest GeoPackage-Header und WKB direkt mit Python-Bordmitteln.
+Im Messeausschnitt liegen 537 ALKIS-Grundrisse. 407 werden am Schwerpunkt von
+einem LoD2-Grundriss abgedeckt; **130** bleiben als mögliche LoD2-Lücken
+markiert und werden flach als Katasterumriss gezeigt. Die fehlende Höhe wird
+nicht erfunden. Der Schwerpunkt-Test ist ein Audit-Indikator, kein Beweis für
+geometrische Gleichheit; Überhänge und geteilte Baukörper können abweichen.
+
+## OpenStreetMap
+
+| | |
+|---|---|
+| Herkunft | OpenStreetMap-Mitwirkende, Overpass-Schnappschuss |
+| Quellkoordinaten | WGS84; beim Bau nach UTM32 und mit dem gemessenen LoD2-Fit transformiert |
+| Verwendung | Straßen, Fußwege, POIs und benannte Eingänge im Umfeld |
+| Lizenz | ODbL 1.0; Attribution wird im Build-Datensatz mitgeführt |
+
+OSM ersetzt keine amtlichen Gebäudekörper. Es ergänzt ausschließlich die
+Informationen, die LoD2 und ALKIS nicht liefern. Der eingecheckte Snapshot
+enthält echte OSM-Elemente; der Abruf findet nicht zur Laufzeit statt.
+
+## PDF-Hallenplan-Abgleich
+
+`tools/audit_hallplans.py` vergleicht Hallenbezeichnungen aus Gamescom-Plan
+und Technischen Richtlinien mit den 17 Hallenplan-Snapshots sowie den bereits
+gebauten Aufzügen und Ebenenverbindungen. Alle 17 modellierten Bereiche haben
+einen Snapshot. Der Gesamtplan erwähnt zusätzlich nicht für die gamescom
+modellierte Ebenen (unter anderem 2.3, 4.3 und 7.2); sie werden nicht als
+vermeintliche Messebereiche importiert. 16 amtlich verortete Lastenaufzüge und
+die vorhandenen Ebenenverbindungen bleiben mit ihrer Unsicherheit sichtbar.
+
 ---
 
 ## Der wichtigste Befund vorab

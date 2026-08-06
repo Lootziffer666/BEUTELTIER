@@ -20,6 +20,17 @@ export interface Ortho {
   metresPerPixel: number;
 }
 
+export interface Surroundings {
+  attribution: string;
+  roads: Array<{ id: number; kind: string; name: string | null; points: [number, number][] }>;
+  markers: Array<{ id: number; kind: string; name: string | null; point: [number, number] }>;
+}
+
+export interface Footprints {
+  gapsWithoutLod2: number;
+  footprints: Array<{ id: string; lod2Covered: boolean; footprint: [number, number][] }>;
+}
+
 export interface Dataset {
   site: Site;
   registry: Registry;
@@ -28,6 +39,8 @@ export interface Dataset {
   walk: WalkGrid;
   /** Ausdehnung des entzerrten Luftbilds, oder null ohne Luftbild. */
   ortho: Ortho | null;
+  surroundings: Surroundings | null;
+  footprints: Footprints | null;
   standsById: Map<string, Site['stands'][number]>;
   hallsByKey: Map<string, Site['halls'][number]>;
   exhibitorsById: Map<string, Registry['exhibitors'][number]>;
@@ -47,7 +60,11 @@ export async function loadDataset(): Promise<Dataset> {
   ]);
 
   // Ohne Luftbild bleibt die Karte benutzbar -- sie ist dann nur grau.
-  const ortho = await fetchJson<Ortho>('ortho.json').catch(() => null);
+  const [ortho, surroundings, footprints] = await Promise.all([
+    fetchJson<Ortho>('ortho.json').catch(() => null),
+    fetchJson<Surroundings>('surroundings.json').catch(() => null),
+    fetchJson<Footprints>('footprints.json').catch(() => null),
+  ]);
 
   return {
     site,
@@ -55,6 +72,8 @@ export async function loadDataset(): Promise<Dataset> {
     graph: RouteGraph.fromCompact(compact),
     walk: WalkGrid.fromCompact(compact),
     ortho,
+    surroundings,
+    footprints,
     standsById: new Map(site.stands.map((stand) => [stand.id, stand])),
     hallsByKey: new Map(site.halls.map((hall) => [hall.key, hall])),
     exhibitorsById: new Map(registry.exhibitors.map((one) => [one.id, one])),

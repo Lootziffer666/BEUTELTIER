@@ -1,0 +1,8 @@
+{
+  "title": "OpenStreetMap-Ausschnitt Koelnmesse",
+  "provider": "OpenStreetMap-Mitwirkende",
+  "url": "https://www.openstreetmap.org/copyright",
+  "retrieval": "2026-08-06T09:52:21Z",
+  "licence": "Open Data Commons Open Database License (ODbL) 1.0",
+  "query": "[out:json][timeout:120];(\nway[highway](50.932,6.965,50.954,7.005);node[amenity](50.932,6.965,50.954,7.005);node[entrance](50.932,6.965,50.954,7.005);\nnode[shop](50.932,6.965,50.954,7.005);node[tourism](50.932,6.965,50.954,7.005););out body;>;out skel qt;"
+}

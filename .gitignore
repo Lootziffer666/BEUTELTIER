@@ -15,3 +15,12 @@ data/raw/lod2/*.gml
 # Ebenso die Orthophotos: 87 MB JPEG2000, aus denen eine 3,6-MB-Textur wird.
 # Die Textur liegt im Repository, das Rohmaterial nicht.
 data/raw/dop/*.jp2
+
+# Der SLPK-Spike ist ein reproduzierbarer Abruf von rund 240 MB. Eingecheckt
+# werden Herkunft und Inspektionsbericht, nicht das redundante Scene-Paket.
+data/raw/slpk/*.slpk
+
+# Kreisweites ALKIS-GPKG (537 MB) und Liefer-ZIP bleiben reproduzierbare
+# Rohdownloads. Der Messe-Ausschnitt und der Audit sind kleine JSON-Dateien.
+data/raw/alkis/*.gpkg
+data/raw/alkis/*.zip

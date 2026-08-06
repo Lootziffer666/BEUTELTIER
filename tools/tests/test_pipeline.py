@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 from beuteltier import exhibitors as ex  # noqa: E402
 from beuteltier import georef, hallplan  # noqa: E402
 from beuteltier.graph import Graph, Node  # noqa: E402
+from beuteltier.gpkg import envelope, polygons  # noqa: E402
 
 BUILD = ROOT / "data" / "build"
 BUILDINGS_JSON = BUILD / "buildings.json"
@@ -85,6 +86,47 @@ class TestSite:
         assert len(measured) >= 8
         for hall in measured:
             assert hall["placement"]["residualM"] <= 1.0, hall["key"]
+
+
+class TestOpenDataGeometry:
+    def test_lod2_inventory_zaehlt_features_und_flaechen(self, tmp_path):
+        from build_lod2_inventory import build_inventory
+        fixture = tmp_path / "tile.gml"
+        fixture.write_text("""<core:CityModel
+          xmlns:core=\"http://www.opengis.net/citygml/1.0\"
+          xmlns:bldg=\"http://www.opengis.net/citygml/building/1.0\"
+          xmlns:gml=\"http://www.opengis.net/gml\">
+          <core:cityObjectMember><bldg:Building gml:id=\"b1\">
+            <bldg:boundedBy><bldg:WallSurface><bldg:lod2MultiSurface>
+              <gml:MultiSurface><gml:surfaceMember><gml:Polygon gml:id=\"p1\" />
+              </gml:surfaceMember></gml:MultiSurface>
+            </bldg:lod2MultiSurface></bldg:WallSurface></bldg:boundedBy>
+            <bldg:consistsOfBuildingPart><bldg:BuildingPart gml:id=\"bp1\" />
+            </bldg:consistsOfBuildingPart>
+          </bldg:Building></core:cityObjectMember>
+        </core:CityModel>""", encoding="utf-8")
+
+        inventory = build_inventory([fixture])
+
+        assert inventory["totals"]["features"] == {"Building": 1, "BuildingPart": 1}
+        assert inventory["totals"]["surfaces"] == {"WallSurface": 1}
+        assert inventory["totals"]["polygonsBySurface"] == {"WallSurface": 1}
+
+    def test_liest_geopackage_polygon(self):
+        import struct
+        ring = [(0., 0.), (2., 0.), (2., 1.), (0., 0.)]
+        header = b"GP\x00\x03" + struct.pack("<i4d", 25832, 0., 2., 0., 1.)
+        wkb = b"\x01" + struct.pack("<III", 3, 1, len(ring)) + b"".join(
+            struct.pack("<dd", *point) for point in ring)
+        blob = header + wkb
+        assert envelope(blob) == (0., 0., 2., 1.)
+        assert polygons(blob) == [ring]
+
+    def test_wgs84_nach_utm32_fuer_koelnmesse(self):
+        from build_surroundings import utm32
+        east, north = utm32(50.944, 6.983)
+        assert east == pytest.approx(358_304, abs=2)
+        assert north == pytest.approx(5_645_535, abs=2)
 
     def test_staende_liegen_in_ihrer_halle(self, site):
         halls = {hall["key"]: hall for hall in site["halls"]}
