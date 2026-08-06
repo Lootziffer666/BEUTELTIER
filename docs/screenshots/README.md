@@ -6,8 +6,13 @@ dieses Verzeichnis. Die Bilddateien werden ausschließlich in GitHub Actions
 erzeugt und von dessen Bot eingecheckt; lokale Änderungen enthalten daher
 keine neu erzeugten Binärdateien.
 
-Der Workflow kann manuell gestartet werden und läuft außerdem bei Änderungen
-an der App. Sein Bot-Commit löst keinen weiteren Screenshot-Lauf aus.
+Der Workflow wird ausschließlich manuell über `workflow_dispatch` gestartet.
+Dadurch erzeugen normale App-Commits weder kostspielige Browserläufe noch
+ungeplante Bot-Commits.
+
+Die ersten drei Aufnahmen zeigen das Gelände aus reproduzierbar gedrehten und
+gezoomten Nordost-, Südost- und Westperspektiven. Die weiteren Bilder halten
+die Stationen des Browser-Akzeptanzablaufs fest.
 
 Jeder Lauf lädt die PNG-Dateien zusätzlich als Workflow-Artefakt hoch. Sind
 die Bildinhalte gegenüber dem Repository unverändert, ist der Commit-Schritt

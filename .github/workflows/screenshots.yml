@@ -2,11 +2,6 @@ name: Viewer-Screenshots
 
 on:
   workflow_dispatch:
-  push:
-    branches: ['**']
-    paths:
-      - 'app/**'
-      - '.github/workflows/screenshots.yml'
 
 permissions:
   contents: write
@@ -17,8 +12,6 @@ concurrency:
 
 jobs:
   screenshots:
-    # Der eigene Commit enthaelt nur Bilder und darf keinen zweiten Lauf starten.
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -73,7 +66,10 @@ jobs:
         working-directory: app
         env:
           BEUTELTIER_SHOTS: ../docs/screenshots
-        run: npm run e2e
+        run: |
+          # Keine alten PNGs als Ergebnis eines abgebrochenen Laufs ausgeben.
+          rm -f ../docs/screenshots/*.png
+          npm run e2e
 
       - name: Screenshots als Workflow-Artefakt sichern
         if: always()
@@ -86,7 +82,8 @@ jobs:
       - name: Screenshots ins Repository uebernehmen
         if: always()
         run: |
-          git add docs/screenshots/*.png
+          # Auch nicht mehr erzeugte bzw. umbenannte Ansichten entfernen.
+          git add --all docs/screenshots
           if git diff --cached --quiet; then
             echo 'Screenshots sind unveraendert; deshalb ist kein neuer Commit notwendig.'
             exit 0
