@@ -13,6 +13,7 @@
  */
 
 import type { CompactGraph } from '../routing/graph';
+import type { SurfaceProvider } from './surfaces';
 
 /** Augenhöhe über dem Boden. */
 export const EYE_HEIGHT_M = 1.7;
@@ -58,10 +59,14 @@ export interface Footing {
   blocked: boolean;
   /** Schlüssel der Hallenebene, oder null im Freien. */
   hallKey: string | null;
+  /** Explizite Außen-/Übergangsfläche; Hallen verwenden weiterhin hallKey. */
+  surfaceId: string | null;
 }
 
-/** Draußen, ohne Gitter — freie Bewegung auf Höhe null. */
-const OPEN: Footing = { z: 0, blocked: false, hallKey: null };
+/** Übergangshilfe, bis reale Piazza-/Boulevardpolygone ausgeliefert werden. */
+export const LEGACY_OPEN_OUTSIDE: SurfaceProvider = {
+  footingAt: () => ({ z: 0, blocked: false, surfaceId: 'legacy-open-outside' }),
+};
 
 function decodeBits(base64: string): Uint8Array {
   const binary = atob(base64);
@@ -74,14 +79,21 @@ export class WalkGrid {
   private readonly gridM: number;
   private readonly layers: Layer[];
   private readonly patches: Map<string, LayoutPatch>;
+  private readonly outside: SurfaceProvider;
 
-  constructor(gridM: number, layers: Layer[], patches: LayoutPatch[] = []) {
+  constructor(
+    gridM: number,
+    layers: Layer[],
+    patches: LayoutPatch[] = [],
+    outside: SurfaceProvider = LEGACY_OPEN_OUTSIDE,
+  ) {
     this.gridM = gridM;
     this.layers = layers;
     this.patches = new Map(patches.map((patch) => [patch.id, patch]));
+    this.outside = outside;
   }
 
-  static fromCompact(compact: CompactGraph): WalkGrid {
+  static fromCompact(compact: CompactGraph, outside?: SurfaceProvider): WalkGrid {
     const layers = compact.grids.map((grid) => ({
       key: grid.key,
       originX: grid.origin[0],
@@ -92,11 +104,11 @@ export class WalkGrid {
       level: grid.level,
       bits: decodeBits(grid.walkable),
     }));
-    return new WalkGrid(compact.gridM, layers);
+    return new WalkGrid(compact.gridM, layers, [], outside);
   }
 
   withLayoutPatches(patches: LayoutPatch[]): WalkGrid {
-    return new WalkGrid(this.gridM, this.layers, patches);
+    return new WalkGrid(this.gridM, this.layers, patches, this.outside);
   }
 
   layoutPatches(): LayoutPatch[] {
@@ -220,11 +232,13 @@ export class WalkGrid {
         gap < bestGap - 0.5 ||
         (Math.abs(gap - bestGap) <= 0.5 && walkable && best.blocked);
       if (better) {
-        best = { z: layer.z, blocked: !walkable, hallKey: layer.key };
+        best = { z: layer.z, blocked: !walkable, hallKey: layer.key, surfaceId: null };
         bestGap = gap;
       }
     }
-    return best ?? OPEN;
+    if (best) return best;
+    const outside = this.outside.footingAt(x, y, preferZ);
+    return { ...outside, hallKey: null };
   }
 
   /**

@@ -31,6 +31,61 @@ export interface Footprints {
   footprints: Array<{ id: string; lod2Covered: boolean; footprint: [number, number][] }>;
 }
 
+export interface WorldManifest {
+  schema: 'beuteltier.world.v1';
+  modelVersion: string;
+  status: 'migration' | 'ready';
+  origin: [number, number, number];
+  data: Record<string, string>;
+  registrationSummary: {
+    total: number;
+    draft: number;
+    registered: number;
+    withTargetFeatures: number;
+  };
+  fallback: { orthophoto: boolean; uri: string; walkable: boolean };
+}
+
+export interface WorldDiagnostics {
+  manifest: WorldManifest;
+  walkableSurfaces: {
+    schema: string;
+    outsidePolicy: {
+      unknownBlocked: boolean;
+      orthophotoWalkable: boolean;
+      terrainWalkableByDefault: boolean;
+      legacyFallbackStillActive: boolean;
+    };
+    gaps: string[];
+  } | null;
+  portals: {
+    schema: string;
+    counts: { total: number; verifiedPhysical: number; draft: number };
+  } | null;
+  lod2Inventory: {
+    schema: string;
+    totals: {
+      features: Record<string, number>;
+      surfaces: Record<string, number>;
+      polygonsBySurface: Record<string, number>;
+      trianglesEstimated: number;
+      diagnosticReasons: Record<string, number>;
+    };
+    problemFeatures: Array<{
+      file: string;
+      featureId: string;
+      featureClass: string;
+      function: string | null;
+      zMin: number | null;
+      zMax: number | null;
+      surfaces: Record<string, number>;
+      polygons: number;
+      triangleEstimate: number;
+      reasons: string[];
+    }>;
+  } | null;
+}
+
 export interface Dataset {
   site: Site;
   registry: Registry;
@@ -41,6 +96,8 @@ export interface Dataset {
   ortho: Ortho | null;
   surroundings: Surroundings | null;
   footprints: Footprints | null;
+  /** Migrations-/Diagnosedaten; fehlen in älteren Offline-Snapshots erlaubt. */
+  world: WorldDiagnostics | null;
   standsById: Map<string, Site['stands'][number]>;
   hallsByKey: Map<string, Site['halls'][number]>;
   exhibitorsById: Map<string, Registry['exhibitors'][number]>;
@@ -60,10 +117,14 @@ export async function loadDataset(): Promise<Dataset> {
   ]);
 
   // Ohne Luftbild bleibt die Karte benutzbar -- sie ist dann nur grau.
-  const [ortho, surroundings, footprints] = await Promise.all([
+  const [ortho, surroundings, footprints, manifest, walkableSurfaces, portals, lod2Inventory] = await Promise.all([
     fetchJson<Ortho>('ortho.json').catch(() => null),
     fetchJson<Surroundings>('surroundings.json').catch(() => null),
     fetchJson<Footprints>('footprints.json').catch(() => null),
+    fetchJson<WorldManifest>('world-manifest.json').catch(() => null),
+    fetchJson<WorldDiagnostics['walkableSurfaces']>('walkable-surfaces.json').catch(() => null),
+    fetchJson<WorldDiagnostics['portals']>('portals.json').catch(() => null),
+    fetchJson<WorldDiagnostics['lod2Inventory']>('lod2-inventory.json').catch(() => null),
   ]);
 
   return {
@@ -74,6 +135,7 @@ export async function loadDataset(): Promise<Dataset> {
     ortho,
     surroundings,
     footprints,
+    world: manifest ? { manifest, walkableSurfaces, portals, lod2Inventory } : null,
     standsById: new Map(site.stands.map((stand) => [stand.id, stand])),
     hallsByKey: new Map(site.halls.map((hall) => [hall.key, hall])),
     exhibitorsById: new Map(registry.exhibitors.map((one) => [one.id, one])),
