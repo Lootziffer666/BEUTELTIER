@@ -70,7 +70,6 @@ jobs:
 
       - name: Screenshots aufnehmen und Ablauf pruefen
         id: acceptance
-        continue-on-error: true
         working-directory: app
         env:
           BEUTELTIER_SHOTS: ../docs/screenshots
@@ -89,7 +88,7 @@ jobs:
         run: |
           git add docs/screenshots/*.png
           if git diff --cached --quiet; then
-            echo 'Screenshots sind unveraendert.'
+            echo 'Screenshots sind unveraendert; deshalb ist kein neuer Commit notwendig.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
@@ -97,6 +96,20 @@ jobs:
           git commit -m 'docs: Viewer-Screenshots aktualisieren'
           git push
 
-      - name: Fehlgeschlagenen Akzeptanzlauf melden
-        if: steps.acceptance.outcome != 'success'
-        run: exit 1
+      - name: Screenshot-Zusammenfassung
+        if: always()
+        run: |
+          {
+            echo '## Viewer-Screenshots'
+            echo
+            echo "Akzeptanzlauf: **${{ steps.acceptance.outcome }}**"
+            echo
+            echo '| Datei | Größe | SHA-256 |'
+            echo '|---|---:|---|'
+            for file in docs/screenshots/*.png; do
+              [ -f "$file" ] || continue
+              size=$(stat --format='%s' "$file")
+              digest=$(sha256sum "$file" | cut -d' ' -f1)
+              echo "| \`$file\` | $size B | \`$digest\` |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
