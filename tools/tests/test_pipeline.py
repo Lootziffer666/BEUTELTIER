@@ -72,6 +72,24 @@ class TestGeoref:
             georef.solve_similarity([(1.0, 1.0)] * 4, [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0), (3.0, 0.0)])
 
 
+class TestWorldOrigin:
+    def test_achsenabbildung_und_inverse(self):
+        from build_world_origin import scene_to_world, world_to_scene
+
+        world = (358_312.5, 5_645_780.0, 47.25)
+        assert world_to_scene(world) == pytest.approx((12.5, 7.25, 20.0))
+        assert scene_to_world(world_to_scene(world)) == pytest.approx(world)
+
+    def test_relative_abstaende_bleiben_erhalten(self):
+        from build_world_origin import world_to_scene
+
+        first = (358_250.0, 5_645_700.0, 42.0)
+        second = (358_310.0, 5_645_780.0, 58.0)
+        assert math.dist(world_to_scene(first), world_to_scene(second)) == pytest.approx(
+            math.dist(first, second)
+        )
+
+
 class TestSite:
     def test_jede_halle_traegt_ihre_herkunft(self, site):
         for hall in site["halls"]:
@@ -98,7 +116,11 @@ class TestOpenDataGeometry:
           xmlns:gml=\"http://www.opengis.net/gml\">
           <core:cityObjectMember><bldg:Building gml:id=\"b1\">
             <bldg:boundedBy><bldg:WallSurface><bldg:lod2MultiSurface>
-              <gml:MultiSurface><gml:surfaceMember><gml:Polygon gml:id=\"p1\" />
+              <gml:MultiSurface><gml:surfaceMember><gml:Polygon gml:id=\"p1\">
+                <gml:exterior><gml:LinearRing><gml:posList>
+                  0 0 40 10 0 40 10 0 50 0 0 50 0 0 40
+                </gml:posList></gml:LinearRing></gml:exterior>
+              </gml:Polygon>
               </gml:surfaceMember></gml:MultiSurface>
             </bldg:lod2MultiSurface></bldg:WallSurface></bldg:boundedBy>
             <bldg:consistsOfBuildingPart><bldg:BuildingPart gml:id=\"bp1\" />
@@ -111,6 +133,68 @@ class TestOpenDataGeometry:
         assert inventory["totals"]["features"] == {"Building": 1, "BuildingPart": 1}
         assert inventory["totals"]["surfaces"] == {"WallSurface": 1}
         assert inventory["totals"]["polygonsBySurface"] == {"WallSurface": 1}
+        assert inventory["totals"]["trianglesEstimated"] == 2
+        assert inventory["files"][0]["zRange"] == [40.0, 50.0]
+        assert inventory["totals"]["diagnosticReasons"] == {
+            "no-ground-surface": 1,
+            "no-semantic-surfaces": 1,
+        }
+        assert inventory["problemFeatures"][0]["featureId"] == "bp1"
+        assert inventory["problemFeatures"][0]["featureClass"] == "BuildingPart"
+
+    def test_inventar_meldet_entartete_geometrie(self, tmp_path):
+        from build_lod2_inventory import build_inventory
+        fixture = tmp_path / "broken.gml"
+        fixture.write_text("""<core:CityModel
+          xmlns:core=\"http://www.opengis.net/citygml/1.0\"
+          xmlns:bldg=\"http://www.opengis.net/citygml/building/1.0\"
+          xmlns:gml=\"http://www.opengis.net/gml\">
+          <core:cityObjectMember><bldg:Building>
+            <bldg:boundedBy><bldg:ClosureSurface><gml:Polygon>
+              <gml:exterior><gml:LinearRing><gml:posList>0 0 40 0 0 40</gml:posList>
+              </gml:LinearRing></gml:exterior>
+            </gml:Polygon></bldg:ClosureSurface></bldg:boundedBy>
+          </bldg:Building></core:cityObjectMember>
+        </core:CityModel>""", encoding="utf-8")
+
+        feature = build_inventory([fixture])["problemFeatures"][0]
+        assert feature["featureId"] is None
+        assert feature["triangleEstimate"] == 0
+        assert feature["reasons"] == [
+            "missing-feature-id", "no-ground-surface",
+            "closure-without-ground", "degenerate-ring",
+        ]
+
+    def test_lod2_reader_haelt_buildingpart_getrennt(self, tmp_path):
+        from beuteltier.lod2 import read_features
+        fixture = tmp_path / "parts.gml"
+        fixture.write_text("""<core:CityModel
+          xmlns:core=\"http://www.opengis.net/citygml/1.0\"
+          xmlns:bldg=\"http://www.opengis.net/citygml/building/1.0\"
+          xmlns:gml=\"http://www.opengis.net/gml\">
+          <core:cityObjectMember><bldg:Building gml:id=\"parent\">
+            <bldg:consistsOfBuildingPart><bldg:BuildingPart gml:id=\"bridge\">
+              <bldg:function>bridge-test</bldg:function>
+              <bldg:boundedBy><bldg:ClosureSurface><gml:Polygon>
+                <gml:exterior><gml:LinearRing><gml:posList>
+                  0 0 45 5 0 45 5 5 45 0 0 45
+                </gml:posList></gml:LinearRing></gml:exterior>
+              </gml:Polygon></bldg:ClosureSurface></bldg:boundedBy>
+            </bldg:BuildingPart></bldg:consistsOfBuildingPart>
+          </bldg:Building></core:cityObjectMember>
+        </core:CityModel>""", encoding="utf-8")
+
+        features = {item.id: item for item in read_features(fixture)}
+        parent, part = features["parent"], features["bridge"]
+        assert (parent.id, parent.feature_class, parent.surfaces) == (
+            "parent", "Building", [],
+        )
+        assert (part.id, part.feature_class, part.parent_id) == (
+            "bridge", "BuildingPart", "parent",
+        )
+        assert part.function == "bridge-test"
+        assert [surface.kind for surface in part.surfaces] == ["closure"]
+        assert part.ground == []
 
     def test_liest_geopackage_polygon(self):
         import struct

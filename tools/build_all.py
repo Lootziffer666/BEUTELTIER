@@ -18,7 +18,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = Path(__file__).resolve().parent
 
-STEPS = ["build_site.py", "build_graph.py", "build_registry.py",
+STEPS = ["build_world_origin.py",
+         "build_site.py", "build_graph.py", "build_registry.py",
          "build_lod2_inventory.py",
          "build_buildings.py", "build_footprints.py", "build_surroundings.py",
          "audit_hallplans.py", "build_ortho.py", "build_accuracy_report.py"]
@@ -83,8 +84,9 @@ def main() -> int:
     app_data = ROOT / "app" / "public" / "data"
     if app_data.parent.exists():
         app_data.mkdir(parents=True, exist_ok=True)
-        for name in ("site.json", "graph.json", "registry.json",
-                     "buildings.json", "footprints.json", "surroundings.json", "ortho.json"):
+        for name in ("world-origin.json", "lod2-inventory.json", "site.json",
+                     "graph.json", "registry.json", "buildings.json",
+                     "footprints.json", "surroundings.json", "ortho.json"):
             source = ROOT / "data" / "build" / name
             if source.exists():
                 shutil.copyfile(source, app_data / name)
