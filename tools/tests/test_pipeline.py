@@ -15,10 +15,16 @@ from beuteltier import exhibitors as ex  # noqa: E402
 from beuteltier import georef, hallplan  # noqa: E402
 from beuteltier.graph import Graph, Node  # noqa: E402
 from beuteltier.gpkg import envelope, polygons  # noqa: E402
+from build_official_diagnostic import to_scene  # noqa: E402
 
 BUILD = ROOT / "data" / "build"
 BUILDINGS_JSON = BUILD / "buildings.json"
 TECHGUIDE_PDF = ROOT / "data" / "raw" / "pdf" / "technische-richtlinien-2022.pdf"
+
+
+def test_official_diagnostic_uses_master_coordinate_axes():
+    origin = (358300.0, 5645800.0, 40.0)
+    assert to_scene((358312.5, 5645792.0, 47.25), origin) == (12.5, 7.25, 8.0)
 
 
 @pytest.fixture(scope="module")
