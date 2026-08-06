@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 LOD2 = ROOT / "data/raw/lod2"
 ORIGIN = ROOT / "data/build/world-origin.json"
 DEFAULT_OUT = ROOT / "data/build/official-world-diagnostic.glb"
+DEFAULT_REPORT = ROOT / "data/build/official-world-diagnostic.json"
 BOUNDS = (357700.0, 5645200.0, 358900.0, 5646500.0)
 COLOURS = {
     "ground": (0.25, 0.72, 0.42, 1.0),
@@ -36,7 +37,7 @@ def to_scene(point: lod2.Point3, origin: tuple[float, float, float]):
     return (x - origin[0], z - origin[2], -(y - origin[1]))
 
 
-def build(output: Path, bounds=BOUNDS) -> dict:
+def build(output: Path, bounds=BOUNDS, report: Path | None = None) -> dict:
     origin_data = json.loads(ORIGIN.read_text(encoding="utf-8"))
     origin = tuple(origin_data["origin"])
     features = []
@@ -84,14 +85,18 @@ def build(output: Path, bounds=BOUNDS) -> dict:
         generator="BEUTELTIER amtliches LoD2-Diagnosemodell",
         extras=summary,
     )
+    if report is not None:
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     return summary
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     args = parser.parse_args()
-    summary = build(args.output)
+    summary = build(args.output, report=args.report)
     print(json.dumps(summary, indent=2))
     print(f"-> {args.output}")
     return 0

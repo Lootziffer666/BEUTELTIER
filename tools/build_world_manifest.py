@@ -23,6 +23,30 @@ def local_asset(path: str, role: str, status: str = "legacy") -> dict:
     }
 
 
+def diagnostic_asset() -> dict:
+    report_path = ROOT / "data/build/official-world-diagnostic.json"
+    report = json.loads(report_path.read_text()) if report_path.exists() else None
+    return {
+        "id": "official-world-diagnostic",
+        "role": "diagnostic-world",
+        "status": "development",
+        "uri": "models/world/diagnostic/official-world-diagnostic.glb",
+        "bytes": report.get("bytes") if report else None,
+        # Das Entwicklungs-GLB wird absichtlich nicht ins PWA-Paket kopiert.
+        "available": False,
+        "reportAvailable": report is not None,
+    }
+
+
+def planned_world_packages() -> list[dict]:
+    report_path = ROOT / "data/build/world-packages.json"
+    if not report_path.exists():
+        return []
+    report = json.loads(report_path.read_text())
+    return [{**package, "status": "development", "available": False}
+            for package in report["packages"]]
+
+
 def build_product(origin: dict, registrations: dict) -> dict:
     return {
         "schema": "beuteltier.world.v1",
@@ -35,6 +59,8 @@ def build_product(origin: dict, registrations: dict) -> dict:
         },
         "packages": [
             local_asset("models/messe.glb", "render-world"),
+            diagnostic_asset(),
+            *planned_world_packages(),
         ],
         "data": {
             "hallRegistrations": "data/hall-registrations.json",
@@ -43,6 +69,8 @@ def build_product(origin: dict, registrations: dict) -> dict:
             "materialClasses": "data/material-classes.json",
             "walkableSurfaces": "data/walkable-surfaces.json",
             "portals": "data/portals.json",
+            "officialWorldDiagnostic": "data/official-world-diagnostic.json",
+            "worldPackages": "data/world-packages.json",
         },
         "registrationSummary": registrations["counts"],
         "fallback": {

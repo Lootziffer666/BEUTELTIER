@@ -1,0 +1,84 @@
+{
+  "schema": "beuteltier.world-packages.v1",
+  "origin": [
+    358300.0,
+    5645800.0,
+    40.0
+  ],
+  "packages": [
+    {
+      "id": "collision/core",
+      "uri": "models/world/collision/core.glb",
+      "role": "collision",
+      "features": 35,
+      "primitives": 92,
+      "triangles": 422,
+      "bytes": 116240
+    },
+    {
+      "id": "core/messe",
+      "uri": "models/world/core/messe.glb",
+      "role": "render",
+      "features": 35,
+      "primitives": 490,
+      "triangles": 1482,
+      "bytes": 544556
+    },
+    {
+      "id": "surroundings/east",
+      "uri": "models/world/surroundings/east.glb",
+      "role": "render",
+      "features": 268,
+      "primitives": 7160,
+      "triangles": 12456,
+      "bytes": 7079920
+    },
+    {
+      "id": "surroundings/north",
+      "uri": "models/world/surroundings/north.glb",
+      "role": "render",
+      "features": 202,
+      "primitives": 3501,
+      "triangles": 7386,
+      "bytes": 3586296
+    },
+    {
+      "id": "surroundings/south",
+      "uri": "models/world/surroundings/south.glb",
+      "role": "render",
+      "features": 167,
+      "primitives": 3181,
+      "triangles": 7161,
+      "bytes": 3317608
+    },
+    {
+      "id": "surroundings/west",
+      "uri": "models/world/surroundings/west.glb",
+      "role": "render",
+      "features": 89,
+      "primitives": 1705,
+      "triangles": 4052,
+      "bytes": 1793704
+    }
+  ],
+  "coreTargetFeatureIds": [
+    "DENW37AL100063oN",
+    "DENW37AL1000644Q",
+    "DENW37AL100064Zs",
+    "DENW37AL100064lq",
+    "DENW37AL100064wf",
+    "DENW37AL100064yw",
+    "DENW37AL100065KW",
+    "DENW37AL100065RJ",
+    "DENW37AL1000660R",
+    "DENW37AL10006612",
+    "DENW37AL2hU0008y"
+  ],
+  "skippedSurfaces": 0,
+  "distantStatus": "data-gap",
+  "notes": [
+    "Keine Hallenplan-Transformation auf Render- oder Kollisionsgeometrie.",
+    "Collision/core enthaelt nur amtliche Ground- und ClosureSurface-Geometrie.",
+    "Eine Fernkulisse wird erst mit einem groesseren amtlichen Ausschnitt erzeugt."
+  ]
+}

@@ -17,7 +17,7 @@ export function WorldDiagnostics({ world }: { world: Diagnostics | null }) {
     return <p className="notice">Dieser Offline-Datenstand enthält noch kein Weltmanifest.</p>;
   }
 
-  const { manifest, walkableSurfaces, portals } = world;
+  const { manifest, walkableSurfaces, portals, officialDiagnostic, worldPackages } = world;
   const registrations = manifest.registrationSummary;
   return (
     <section aria-label="Weltdiagnose">
@@ -32,6 +32,43 @@ export function WorldDiagnostics({ world }: { world: Diagnostics | null }) {
         <p className="muted">
           Ursprung: {manifest.origin.map((value) => value.toFixed(1)).join(' / ')} m
         </p>
+      </div>
+
+      <div className="card">
+        <div className="card__eyebrow">WELTPAKETE</div>
+        <h2>{worldPackages?.packages.length ?? 0} lokale Pakete geplant</h2>
+        <ul className="diag-features">
+          {(worldPackages?.packages ?? []).map((entry) => (
+            <li key={entry.id}>
+              <strong>{entry.id}</strong>
+              <span>{entry.role} · {entry.features} Features · {entry.primitives} Flächen</span>
+              <span>{entry.triangles.toLocaleString('de-DE')} Dreiecke · {(entry.bytes / 1_000_000).toFixed(2)} MB</span>
+            </li>
+          ))}
+        </ul>
+        {worldPackages?.distantStatus === 'data-gap' && (
+          <p className="notice">Fernkulisse offen: Der amtliche Ausschnitt reicht noch nicht für Zone C.</p>
+        )}
+      </div>
+
+      <div className="card">
+        <div className="card__eyebrow">AMTLICHES DIAGNOSEMODELL</div>
+        <h2>{officialDiagnostic ? 'Reproduzierbar gebaut' : 'Noch nicht gebaut'}</h2>
+        {officialDiagnostic && (
+          <>
+            <div className="figures">
+              <span><strong>{officialDiagnostic.primitives.toLocaleString('de-DE')}</strong> Flächen</span>
+              <span><strong>{officialDiagnostic.triangles.toLocaleString('de-DE')}</strong> Dreiecke</span>
+              <span><strong>{(officialDiagnostic.bytes / 1_000_000).toFixed(1)} MB</strong> Entwicklung</span>
+            </div>
+            <p className="muted">
+              {officialDiagnostic.registrationTransformApplied
+                ? 'Hallenplan-Transformation angewendet'
+                : 'Direkt aus UTM/NHN · keine Hallenplan-Transformation'}
+              {' · '}{officialDiagnostic.skippedSurfaces} Flächen verworfen
+            </p>
+          </>
+        )}
       </div>
 
       <div className="card">

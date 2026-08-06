@@ -16,6 +16,8 @@ from beuteltier import georef, hallplan  # noqa: E402
 from beuteltier.graph import Graph, Node  # noqa: E402
 from beuteltier.gpkg import envelope, polygons  # noqa: E402
 from build_official_diagnostic import to_scene  # noqa: E402
+from build_world_packages import surroundings_zone  # noqa: E402
+from beuteltier.lod2 import Building, Surface  # noqa: E402
 
 BUILD = ROOT / "data" / "build"
 BUILDINGS_JSON = BUILD / "buildings.json"
@@ -25,6 +27,16 @@ TECHGUIDE_PDF = ROOT / "data" / "raw" / "pdf" / "technische-richtlinien-2022.pdf
 def test_official_diagnostic_uses_master_coordinate_axes():
     origin = (358300.0, 5645800.0, 40.0)
     assert to_scene((358312.5, 5645792.0, 47.25), origin) == (12.5, 7.25, 8.0)
+
+
+def test_world_package_zone_uses_official_position():
+    origin = (358300.0, 5645800.0, 40.0)
+    east = Building("east", surfaces=[Surface("ground", [
+        (358500.0, 5645800.0, 40.0),
+        (358510.0, 5645800.0, 40.0),
+        (358500.0, 5645810.0, 40.0),
+    ])])
+    assert surroundings_zone(east, origin) == "east"
 
 
 @pytest.fixture(scope="module")
@@ -154,6 +166,11 @@ class TestWorldManifest:
         uris = [item["uri"] for item in manifest["packages"]]
         uris += list(manifest["data"].values())
         assert all("://" not in uri and not uri.startswith("/") for uri in uris)
+        diagnostic = next(item for item in manifest["packages"]
+                          if item["id"] == "official-world-diagnostic")
+        assert diagnostic["status"] == "development"
+        assert diagnostic["available"] is False
+        assert manifest["data"]["officialWorldDiagnostic"].endswith(".json")
 
 
 class TestMaterialClasses:

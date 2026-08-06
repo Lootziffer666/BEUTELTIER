@@ -84,6 +84,28 @@ export interface WorldDiagnostics {
       reasons: string[];
     }>;
   } | null;
+  officialDiagnostic: {
+    schema: string;
+    features: Record<string, number>;
+    surfaces: Record<string, number>;
+    primitives: number;
+    triangles: number;
+    skippedSurfaces: number;
+    registrationTransformApplied: boolean;
+    bytes: number;
+  } | null;
+  worldPackages: {
+    schema: string;
+    packages: Array<{
+      id: string;
+      role: 'render' | 'collision';
+      features: number;
+      primitives: number;
+      triangles: number;
+      bytes: number;
+    }>;
+    distantStatus: string;
+  } | null;
 }
 
 export interface Dataset {
@@ -117,7 +139,7 @@ export async function loadDataset(): Promise<Dataset> {
   ]);
 
   // Ohne Luftbild bleibt die Karte benutzbar -- sie ist dann nur grau.
-  const [ortho, surroundings, footprints, manifest, walkableSurfaces, portals, lod2Inventory] = await Promise.all([
+  const [ortho, surroundings, footprints, manifest, walkableSurfaces, portals, lod2Inventory, officialDiagnostic, worldPackages] = await Promise.all([
     fetchJson<Ortho>('ortho.json').catch(() => null),
     fetchJson<Surroundings>('surroundings.json').catch(() => null),
     fetchJson<Footprints>('footprints.json').catch(() => null),
@@ -125,6 +147,8 @@ export async function loadDataset(): Promise<Dataset> {
     fetchJson<WorldDiagnostics['walkableSurfaces']>('walkable-surfaces.json').catch(() => null),
     fetchJson<WorldDiagnostics['portals']>('portals.json').catch(() => null),
     fetchJson<WorldDiagnostics['lod2Inventory']>('lod2-inventory.json').catch(() => null),
+    fetchJson<WorldDiagnostics['officialDiagnostic']>('official-world-diagnostic.json').catch(() => null),
+    fetchJson<WorldDiagnostics['worldPackages']>('world-packages.json').catch(() => null),
   ]);
 
   return {
@@ -135,7 +159,7 @@ export async function loadDataset(): Promise<Dataset> {
     ortho,
     surroundings,
     footprints,
-    world: manifest ? { manifest, walkableSurfaces, portals, lod2Inventory } : null,
+    world: manifest ? { manifest, walkableSurfaces, portals, lod2Inventory, officialDiagnostic, worldPackages } : null,
     standsById: new Map(site.stands.map((stand) => [stand.id, stand])),
     hallsByKey: new Map(site.halls.map((hall) => [hall.key, hall])),
     exhibitorsById: new Map(registry.exhibitors.map((one) => [one.id, one])),

@@ -89,6 +89,8 @@ def main() -> int:
     if app_data.parent.exists():
         app_data.mkdir(parents=True, exist_ok=True)
         for name in ("world-origin.json", "lod2-inventory.json",
+                     "official-world-diagnostic.json",
+                     "world-packages.json",
                      "hall-registrations.json", "site.json",
                      "world-manifest.json",
                      "material-classes.json",
