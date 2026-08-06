@@ -298,21 +298,140 @@ function Gelaende({
   return <primitive object={model} position={[-centre[0], 0, centre[1]]} />;
 }
 
-function OfficialPackage({ uri }: { uri: string }) {
+function OfficialPackage({
+  uri,
+  packageId,
+  opacity,
+  interior,
+}: {
+  uri: string;
+  packageId: string;
+  opacity: number;
+  interior: boolean;
+}) {
   const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
-  return <primitive object={scene} />;
+
+  const surfaces = useMemo<Record<string, Surface>>(
+    () => ({
+      facade: facadeSurface(false),
+      interior: facadeSurface(true),
+      floor: floorSurface(),
+      ceiling: ceilingSurface(),
+    }),
+    [],
+  );
+  useEffect(
+    () => () => Object.values(surfaces).forEach(disposeSurface),
+    [surfaces],
+  );
+
+  const isSurroundings = packageId.startsWith('surroundings');
+  const model = useMemo(() => {
+    // Geometrien und Materialien müssen unabhängig sein
+    const clone = scene.clone(true);
+    const materialsToDispose: THREE.Material[] = [];
+
+    clone.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      const source = node.material as THREE.MeshStandardMaterial;
+      const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide });
+
+      // Erbe Texturen und Basis-Eigenschaften aus den GLBs
+      if (source.map) material.map = source.map;
+      if (source.normalMap) material.normalMap = source.normalMap;
+      if (source.roughnessMap) material.roughnessMap = source.roughnessMap;
+      material.color.copy(source.color);
+      material.roughness = source.roughness;
+      material.metalness = source.metalness;
+
+      // Für Umgebungsgebäude: matter und weniger prominent
+      if (isSurroundings) {
+        material.roughness = Math.max(material.roughness, 0.85);
+        material.metalness = Math.min(material.metalness, 0.15);
+      }
+
+      material.normalScale = new THREE.Vector2(1.1, 1.1);
+      material.transparent = opacity < 0.99;
+      material.opacity = opacity;
+      material.depthWrite = opacity > 0.9;
+      node.material = material;
+      node.castShadow = !interior && !isSurroundings;
+      node.receiveShadow = true;
+      materialsToDispose.push(material);
+    });
+
+    // Speichere die erzeugten Materialien für Cleanup
+    (clone as any).__materials = materialsToDispose;
+    return clone;
+  }, [scene, opacity, interior, isSurroundings, surfaces]);
+
+  useEffect(
+    () => () => {
+      if (model && (model as any).__materials) {
+        const materials = (model as any).__materials as THREE.Material[];
+        materials.forEach((m) => m.dispose());
+      }
+    },
+    [model],
+  );
+
+  return <primitive object={model} />;
 }
 
-function OfficialWorld({ data, centre }: { data: Dataset; centre: [number, number] }) {
+function OfficialWorld({
+  data,
+  centre,
+  preset,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  preset: CameraPreset;
+}) {
   const packages = data.world?.manifest.packages.filter(
     (entry) => entry.available && entry.role === 'render',
   ) ?? [];
   if (!packages.length) return null;
-  // GLBs verwenden echtes Three.js sceneZ. Die registrierten 2D-Inhalte
-  // laufen noch durch toScene(), das ihre zweite Achse negiert.
+
+  // Opazitätsprofile je Preset
+  const getOpacity = (packageId: string) => {
+    const isSurroundings = packageId.startsWith('surroundings');
+    if (!isSurroundings) {
+      // Kernmesse
+      switch (preset) {
+        case 'uebersicht':
+        case 'laufmodus':
+          return 0.18;
+        case 'halle':
+          return 0.35;
+        case 'ego':
+          return 0.92;
+      }
+    } else {
+      // Umgebung
+      switch (preset) {
+        case 'uebersicht':
+          return 0.35;
+        case 'halle':
+          return 0.25;
+        case 'laufmodus':
+          return 0.3;
+        case 'ego':
+          return 0.15;
+      }
+    }
+  };
+
   return (
     <group position={[-centre[0], 0, centre[1]]} scale={[1, 1, -1]}>
-      {packages.map((entry) => <OfficialPackage key={entry.id} uri={entry.uri} />)}
+      {packages.map((entry) => (
+        <OfficialPackage
+          key={entry.id}
+          uri={entry.uri}
+          packageId={entry.id}
+          opacity={getOpacity(entry.id)}
+          interior={preset === 'ego'}
+        />
+      ))}
     </group>
   );
 }
@@ -942,7 +1061,7 @@ export function SiteScene(props: SceneProps) {
       )}
       {registered && (
         <Suspense fallback={null}>
-          <OfficialWorld data={data} centre={centre} />
+          <OfficialWorld data={data} centre={centre} preset={preset} />
         </Suspense>
       )}
       {/* Hallenkörper und Schilder sind Hilfsmittel der Übersicht. Auf
