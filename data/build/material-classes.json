@@ -1,0 +1,122 @@
+{
+  "schema": "beuteltier.material-classes.v1",
+  "units": "metre",
+  "mobileProfile": {
+    "maxTextureSize": 1024,
+    "normalMaps": "critical-only",
+    "roughnessMaps": "atlas",
+    "shaderVariation": "vertex-or-baked"
+  },
+  "classes": [
+    {
+      "class": "glass-facade",
+      "baseColor": "#638696",
+      "roughness": 0.18,
+      "metalness": 0.05,
+      "panelWidthM": 1.5,
+      "panelHeightM": 3.2,
+      "windowRatio": 0.82,
+      "textureScale": "metric"
+    },
+    {
+      "class": "hall-metal-light",
+      "baseColor": "#b8bab8",
+      "roughness": 0.72,
+      "metalness": 0.18,
+      "panelWidthM": 1.25,
+      "panelHeightM": 3.0,
+      "windowRatio": 0.12,
+      "textureScale": "metric"
+    },
+    {
+      "class": "hall-metal-dark",
+      "baseColor": "#555b60",
+      "roughness": 0.66,
+      "metalness": 0.24,
+      "panelWidthM": 1.2,
+      "panelHeightM": 3.0,
+      "windowRatio": 0.1,
+      "textureScale": "metric"
+    },
+    {
+      "class": "hall-raster-vertical",
+      "baseColor": "#aeb1b0",
+      "roughness": 0.74,
+      "metalness": 0.16,
+      "panelWidthM": 1.0,
+      "panelHeightM": 4.0,
+      "windowRatio": 0.18,
+      "textureScale": "metric"
+    },
+    {
+      "class": "hall-raster-horizontal",
+      "baseColor": "#9fa4a6",
+      "roughness": 0.7,
+      "metalness": 0.14,
+      "panelWidthM": 4.0,
+      "panelHeightM": 1.1,
+      "windowRatio": 0.2,
+      "textureScale": "metric"
+    },
+    {
+      "class": "concrete",
+      "baseColor": "#aaa7a0",
+      "roughness": 0.92,
+      "metalness": 0.02,
+      "panelWidthM": 3.0,
+      "panelHeightM": 2.5,
+      "windowRatio": 0.04,
+      "textureScale": "metric"
+    },
+    {
+      "class": "brick",
+      "baseColor": "#8f6758",
+      "roughness": 0.88,
+      "metalness": 0.01,
+      "panelWidthM": 0.24,
+      "panelHeightM": 0.075,
+      "windowRatio": 0.16,
+      "textureScale": "metric"
+    },
+    {
+      "class": "technical-roof",
+      "baseColor": "#777d7b",
+      "roughness": 0.82,
+      "metalness": 0.12,
+      "panelWidthM": 2.0,
+      "panelHeightM": 2.0,
+      "windowRatio": 0.02,
+      "textureScale": "metric"
+    },
+    {
+      "class": "asphalt",
+      "baseColor": "#454747",
+      "roughness": 0.94,
+      "metalness": 0.0,
+      "panelWidthM": 4.0,
+      "panelHeightM": 4.0,
+      "windowRatio": 0.0,
+      "textureScale": "metric"
+    },
+    {
+      "class": "paving",
+      "baseColor": "#99958c",
+      "roughness": 0.9,
+      "metalness": 0.0,
+      "panelWidthM": 0.4,
+      "panelHeightM": 0.4,
+      "windowRatio": 0.0,
+      "textureScale": "metric"
+    },
+    {
+      "class": "green-space",
+      "baseColor": "#65775a",
+      "roughness": 1.0,
+      "metalness": 0.0,
+      "panelWidthM": 1.5,
+      "panelHeightM": 1.5,
+      "windowRatio": 0.0,
+      "textureScale": "metric"
+    }
+  ]
+}

@@ -150,6 +150,21 @@ class TestWorldManifest:
         assert all("://" not in uri and not uri.startswith("/") for uri in uris)
 
 
+class TestMaterialClasses:
+    def test_materialien_sind_metrisch_und_mobil_begrenzt(self):
+        from build_material_classes import build_product
+
+        product = build_product()
+        assert len(product["classes"]) >= 10
+        assert product["mobileProfile"]["maxTextureSize"] <= 1024
+        assert len({item["baseColor"] for item in product["classes"]}) > 5
+        for material in product["classes"]:
+            assert material["textureScale"] == "metric"
+            assert material["panelWidthM"] > 0
+            assert material["panelHeightM"] > 0
+            assert 0 <= material["windowRatio"] <= 1
+
+
 class TestSite:
     def test_jede_halle_traegt_ihre_herkunft(self, site):
         for hall in site["halls"]:

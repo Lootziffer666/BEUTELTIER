@@ -28,7 +28,8 @@
   "data": {
     "hallRegistrations": "data/hall-registrations.json",
     "lod2Inventory": "data/lod2-inventory.json",
-    "worldOrigin": "data/world-origin.json"
+    "worldOrigin": "data/world-origin.json",
+    "materialClasses": "data/material-classes.json"
   },
   "registrationSummary": {
     "total": 17,
