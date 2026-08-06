@@ -1,0 +1,7 @@
+{
+  "title": "Grundrissdaten vereinfacht (GeoPackage), Koeln",
+  "provider": "Geobasis NRW / Bezirksregierung Koeln",
+  "url": "https://www.opengeodata.nrw.de/produkte/geobasis/lk/akt/gru_vereinfacht_gpkg/gru_vereinf_05315000_Köln_EPSG25832_GeoPackage.zip",
+  "crs": "ETRS89 / UTM32N (EPSG:25832)",
+  "licence": "Datenlizenz Deutschland Zero 2.0 (dl-de/zero-2-0)"
+}

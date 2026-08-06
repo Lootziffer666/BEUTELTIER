@@ -138,6 +138,58 @@ function Ground({
   );
 }
 
+/** OSM-Wege/POIs und nur die von LoD2 nicht abgedeckten ALKIS-Nebenbauten. */
+function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] }) {
+  const roads = useMemo(() => {
+    const positions: number[] = [];
+    for (const road of data.surroundings?.roads ?? []) {
+      for (let index = 1; index < road.points.length; index += 1) {
+        for (const point of [road.points[index - 1], road.points[index]]) {
+          positions.push(point[0] - centre[0], -0.24, -(point[1] - centre[1]));
+        }
+      }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    return geometry;
+  }, [data.surroundings, centre]);
+  const markers = useMemo(() => {
+    const positions = (data.surroundings?.markers ?? []).flatMap(({ point }) =>
+      [point[0] - centre[0], 0.15, -(point[1] - centre[1])]);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    return geometry;
+  }, [data.surroundings, centre]);
+  const gaps = useMemo(() => (data.footprints?.footprints ?? [])
+    .filter((one) => !one.lod2Covered)
+    .map((one) => {
+      const shape = new THREE.Shape(one.footprint.map(([x, y]) =>
+        new THREE.Vector2(x - centre[0], -(y - centre[1]))));
+      return { id: one.id, geometry: new THREE.ShapeGeometry(shape) };
+    }), [data.footprints, centre]);
+  useEffect(() => () => {
+    roads.dispose();
+    markers.dispose();
+    gaps.forEach(({ geometry }) => geometry.dispose());
+  }, [roads, markers, gaps]);
+  if (!data.surroundings && !data.footprints) return null;
+  return (
+    <group>
+      <lineSegments geometry={roads}>
+        <lineBasicMaterial color="#d9d4c3" transparent opacity={0.9} />
+      </lineSegments>
+      <points geometry={markers}>
+        <pointsMaterial color="#ffca52" size={2.2} sizeAttenuation />
+      </points>
+      {gaps.map(({ id, geometry }) => (
+        <mesh key={id} geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.18, 0]}>
+          <meshStandardMaterial color="#68737c" roughness={0.95} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 /**
  * Das amtliche Gebäudemodell als Gelände.
  *
@@ -856,6 +908,7 @@ export function SiteScene(props: SceneProps) {
       <Beleuchtung extent={extent} interior={preset === 'ego'} />
 
       <Ground extent={extent} centre={centre} ortho={data.ortho} />
+      <Umgebung data={data} centre={centre} />
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
           tragen sie weiterhin. Deshalb Suspense ohne Ersatzdarstellung. */}
       <Suspense fallback={null}>
