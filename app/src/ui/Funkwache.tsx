@@ -132,7 +132,11 @@ export function Funkwache({ data, onGoToStand }: Props) {
                 </p>
 
                 {report.standId && (
-                  <button type="button" onClick={() => onGoToStand(report.standId!)}>
+                  <button
+                    type="button"
+                    data-testid="report-route"
+                    onClick={() => onGoToStand(report.standId!)}
+                  >
                     Route zu {report.standId.replace(':', ' · ')}
                   </button>
                 )}
