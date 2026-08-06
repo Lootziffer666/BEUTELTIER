@@ -90,6 +90,81 @@ class TestWorldOrigin:
         )
 
 
+class TestHallRegistrations:
+    def test_jede_hallenebene_bleibt_explizit_draft(self, site):
+        from build_hall_registrations import build_product
+
+        buildings = json.loads(BUILDINGS_JSON.read_text(encoding="utf-8"))
+        origin = json.loads((BUILD / "world-origin.json").read_text(encoding="utf-8"))
+        product = build_product(site, buildings, origin)
+        registrations = product["registrations"]
+        assert len(registrations) == len(site["halls"])
+        assert {item["hallKey"] for item in registrations} == {
+            hall["key"] for hall in site["halls"]
+        }
+        assert all(item["status"] == "draft" and item["anchors"] == []
+                   for item in registrations)
+
+    def test_draft_transform_erhaelt_relative_distanzen(self):
+        from build_hall_registrations import draft_transform, transform_point
+
+        transform = draft_transform({
+            "rotationDeg": -31.0126,
+            "translation": [357092.413, 5645595.135],
+        }, [358300.0, 5645800.0, 40.0])
+        first, second = (100.0, 200.0), (130.0, 240.0)
+        assert math.dist(transform_point(first, transform),
+                         transform_point(second, transform)) == pytest.approx(50.0)
+        assert transform["mirroredSceneZ"] is True
+
+    def test_floorz_ist_nhn_offset_und_keine_null_fallbackhoehe(self, site):
+        from build_hall_registrations import build_product
+
+        buildings = json.loads(BUILDINGS_JSON.read_text(encoding="utf-8"))
+        origin = json.loads((BUILD / "world-origin.json").read_text(encoding="utf-8"))
+        product = build_product(site, buildings, origin)
+        levels = {item["hallKey"]: item for item in product["registrations"]}
+        assert levels["10.1"]["floorZ"] == pytest.approx(0.49)
+        assert levels["10.2"]["floorZ"] == pytest.approx(7.94)
+
+
+class TestWorldManifest:
+    def test_manifest_bleibt_lokal_und_markiert_migration(self):
+        from build_world_manifest import build_product
+
+        origin = json.loads((BUILD / "world-origin.json").read_text(encoding="utf-8"))
+        registrations = json.loads(
+            (BUILD / "hall-registrations.json").read_text(encoding="utf-8")
+        )
+        manifest = build_product(origin, registrations)
+        assert manifest["schema"] == "beuteltier.world.v1"
+        assert manifest["status"] == "migration"
+        assert manifest["fallback"]["orthophoto"] is True
+        assert manifest["fallback"]["walkable"] is False
+        assert manifest["runtimeDependencies"] == {
+            "networkRequired": False,
+            "realityMeshRequired": False,
+        }
+        uris = [item["uri"] for item in manifest["packages"]]
+        uris += list(manifest["data"].values())
+        assert all("://" not in uri and not uri.startswith("/") for uri in uris)
+
+
+class TestMaterialClasses:
+    def test_materialien_sind_metrisch_und_mobil_begrenzt(self):
+        from build_material_classes import build_product
+
+        product = build_product()
+        assert len(product["classes"]) >= 10
+        assert product["mobileProfile"]["maxTextureSize"] <= 1024
+        assert len({item["baseColor"] for item in product["classes"]}) > 5
+        for material in product["classes"]:
+            assert material["textureScale"] == "metric"
+            assert material["panelWidthM"] > 0
+            assert material["panelHeightM"] > 0
+            assert 0 <= material["windowRatio"] <= 1
+
+
 class TestSite:
     def test_jede_halle_traegt_ihre_herkunft(self, site):
         for hall in site["halls"]:
@@ -116,7 +191,11 @@ class TestOpenDataGeometry:
           xmlns:gml=\"http://www.opengis.net/gml\">
           <core:cityObjectMember><bldg:Building gml:id=\"b1\">
             <bldg:boundedBy><bldg:WallSurface><bldg:lod2MultiSurface>
-              <gml:MultiSurface><gml:surfaceMember><gml:Polygon gml:id=\"p1\" />
+              <gml:MultiSurface><gml:surfaceMember><gml:Polygon gml:id=\"p1\">
+                <gml:exterior><gml:LinearRing><gml:posList>
+                  0 0 40 10 0 40 10 0 50 0 0 50 0 0 40
+                </gml:posList></gml:LinearRing></gml:exterior>
+              </gml:Polygon>
               </gml:surfaceMember></gml:MultiSurface>
             </bldg:lod2MultiSurface></bldg:WallSurface></bldg:boundedBy>
             <bldg:consistsOfBuildingPart><bldg:BuildingPart gml:id=\"bp1\" />
@@ -129,6 +208,68 @@ class TestOpenDataGeometry:
         assert inventory["totals"]["features"] == {"Building": 1, "BuildingPart": 1}
         assert inventory["totals"]["surfaces"] == {"WallSurface": 1}
         assert inventory["totals"]["polygonsBySurface"] == {"WallSurface": 1}
+        assert inventory["totals"]["trianglesEstimated"] == 2
+        assert inventory["files"][0]["zRange"] == [40.0, 50.0]
+        assert inventory["totals"]["diagnosticReasons"] == {
+            "no-ground-surface": 1,
+            "no-semantic-surfaces": 1,
+        }
+        assert inventory["problemFeatures"][0]["featureId"] == "bp1"
+        assert inventory["problemFeatures"][0]["featureClass"] == "BuildingPart"
+
+    def test_inventar_meldet_entartete_geometrie(self, tmp_path):
+        from build_lod2_inventory import build_inventory
+        fixture = tmp_path / "broken.gml"
+        fixture.write_text("""<core:CityModel
+          xmlns:core=\"http://www.opengis.net/citygml/1.0\"
+          xmlns:bldg=\"http://www.opengis.net/citygml/building/1.0\"
+          xmlns:gml=\"http://www.opengis.net/gml\">
+          <core:cityObjectMember><bldg:Building>
+            <bldg:boundedBy><bldg:ClosureSurface><gml:Polygon>
+              <gml:exterior><gml:LinearRing><gml:posList>0 0 40 0 0 40</gml:posList>
+              </gml:LinearRing></gml:exterior>
+            </gml:Polygon></bldg:ClosureSurface></bldg:boundedBy>
+          </bldg:Building></core:cityObjectMember>
+        </core:CityModel>""", encoding="utf-8")
+
+        feature = build_inventory([fixture])["problemFeatures"][0]
+        assert feature["featureId"] is None
+        assert feature["triangleEstimate"] == 0
+        assert feature["reasons"] == [
+            "missing-feature-id", "no-ground-surface",
+            "closure-without-ground", "degenerate-ring",
+        ]
+
+    def test_lod2_reader_haelt_buildingpart_getrennt(self, tmp_path):
+        from beuteltier.lod2 import read_features
+        fixture = tmp_path / "parts.gml"
+        fixture.write_text("""<core:CityModel
+          xmlns:core=\"http://www.opengis.net/citygml/1.0\"
+          xmlns:bldg=\"http://www.opengis.net/citygml/building/1.0\"
+          xmlns:gml=\"http://www.opengis.net/gml\">
+          <core:cityObjectMember><bldg:Building gml:id=\"parent\">
+            <bldg:consistsOfBuildingPart><bldg:BuildingPart gml:id=\"bridge\">
+              <bldg:function>bridge-test</bldg:function>
+              <bldg:boundedBy><bldg:ClosureSurface><gml:Polygon>
+                <gml:exterior><gml:LinearRing><gml:posList>
+                  0 0 45 5 0 45 5 5 45 0 0 45
+                </gml:posList></gml:LinearRing></gml:exterior>
+              </gml:Polygon></bldg:ClosureSurface></bldg:boundedBy>
+            </bldg:BuildingPart></bldg:consistsOfBuildingPart>
+          </bldg:Building></core:cityObjectMember>
+        </core:CityModel>""", encoding="utf-8")
+
+        features = {item.id: item for item in read_features(fixture)}
+        parent, part = features["parent"], features["bridge"]
+        assert (parent.id, parent.feature_class, parent.surfaces) == (
+            "parent", "Building", [],
+        )
+        assert (part.id, part.feature_class, part.parent_id) == (
+            "bridge", "BuildingPart", "parent",
+        )
+        assert part.function == "bridge-test"
+        assert [surface.kind for surface in part.surfaces] == ["closure"]
+        assert part.ground == []
 
     def test_liest_geopackage_polygon(self):
         import struct
