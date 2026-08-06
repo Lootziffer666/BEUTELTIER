@@ -21,7 +21,9 @@ TOOLS = Path(__file__).resolve().parent
 STEPS = ["build_world_origin.py",
          "build_site.py", "build_graph.py", "build_registry.py",
          "build_lod2_inventory.py",
-         "build_buildings.py", "build_footprints.py", "build_surroundings.py",
+         "build_buildings.py", "build_hall_registrations.py",
+         "build_world_manifest.py",
+         "build_footprints.py", "build_surroundings.py",
          "audit_hallplans.py", "build_ortho.py", "build_accuracy_report.py"]
 
 # Schritte, die eine Quelle brauchen, die nicht im Repository liegt. Fehlt sie,
@@ -84,7 +86,9 @@ def main() -> int:
     app_data = ROOT / "app" / "public" / "data"
     if app_data.parent.exists():
         app_data.mkdir(parents=True, exist_ok=True)
-        for name in ("world-origin.json", "lod2-inventory.json", "site.json",
+        for name in ("world-origin.json", "lod2-inventory.json",
+                     "hall-registrations.json", "site.json",
+                     "world-manifest.json",
                      "graph.json", "registry.json", "buildings.json",
                      "footprints.json", "surroundings.json", "ortho.json"):
             source = ROOT / "data" / "build" / name

@@ -90,6 +90,66 @@ class TestWorldOrigin:
         )
 
 
+class TestHallRegistrations:
+    def test_jede_hallenebene_bleibt_explizit_draft(self, site):
+        from build_hall_registrations import build_product
+
+        buildings = json.loads(BUILDINGS_JSON.read_text(encoding="utf-8"))
+        origin = json.loads((BUILD / "world-origin.json").read_text(encoding="utf-8"))
+        product = build_product(site, buildings, origin)
+        registrations = product["registrations"]
+        assert len(registrations) == len(site["halls"])
+        assert {item["hallKey"] for item in registrations} == {
+            hall["key"] for hall in site["halls"]
+        }
+        assert all(item["status"] == "draft" and item["anchors"] == []
+                   for item in registrations)
+
+    def test_draft_transform_erhaelt_relative_distanzen(self):
+        from build_hall_registrations import draft_transform, transform_point
+
+        transform = draft_transform({
+            "rotationDeg": -31.0126,
+            "translation": [357092.413, 5645595.135],
+        }, [358300.0, 5645800.0, 40.0])
+        first, second = (100.0, 200.0), (130.0, 240.0)
+        assert math.dist(transform_point(first, transform),
+                         transform_point(second, transform)) == pytest.approx(50.0)
+        assert transform["mirroredSceneZ"] is True
+
+    def test_floorz_ist_nhn_offset_und_keine_null_fallbackhoehe(self, site):
+        from build_hall_registrations import build_product
+
+        buildings = json.loads(BUILDINGS_JSON.read_text(encoding="utf-8"))
+        origin = json.loads((BUILD / "world-origin.json").read_text(encoding="utf-8"))
+        product = build_product(site, buildings, origin)
+        levels = {item["hallKey"]: item for item in product["registrations"]}
+        assert levels["10.1"]["floorZ"] == pytest.approx(0.49)
+        assert levels["10.2"]["floorZ"] == pytest.approx(7.94)
+
+
+class TestWorldManifest:
+    def test_manifest_bleibt_lokal_und_markiert_migration(self):
+        from build_world_manifest import build_product
+
+        origin = json.loads((BUILD / "world-origin.json").read_text(encoding="utf-8"))
+        registrations = json.loads(
+            (BUILD / "hall-registrations.json").read_text(encoding="utf-8")
+        )
+        manifest = build_product(origin, registrations)
+        assert manifest["schema"] == "beuteltier.world.v1"
+        assert manifest["status"] == "migration"
+        assert manifest["fallback"]["orthophoto"] is True
+        assert manifest["fallback"]["walkable"] is False
+        assert manifest["runtimeDependencies"] == {
+            "networkRequired": False,
+            "realityMeshRequired": False,
+        }
+        uris = [item["uri"] for item in manifest["packages"]]
+        uris += list(manifest["data"].values())
+        assert all("://" not in uri and not uri.startswith("/") for uri in uris)
+
+
 class TestSite:
     def test_jede_halle_traegt_ihre_herkunft(self, site):
         for hall in site["halls"]:
