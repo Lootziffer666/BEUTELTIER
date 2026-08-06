@@ -1,0 +1,766 @@
+{
+  "schema": "beuteltier.walkable-surfaces.v1",
+  "coordinatePlane": "sceneX/sceneZ",
+  "surfaces": [
+    {
+      "id": "surface:hall:1.2",
+      "hallKey": "1.2",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -498.104,
+          88.693
+        ],
+        [
+          -448.849,
+          118.245
+        ],
+        [
+          -438.3,
+          115.252
+        ],
+        [
+          -371.063,
+          3.407
+        ],
+        [
+          -373.369,
+          -7.314
+        ],
+        [
+          -412.642,
+          -30.993
+        ],
+        [
+          -431.113,
+          -6.732
+        ],
+        [
+          -466.55,
+          39.814
+        ],
+        [
+          -501.683,
+          85.97
+        ]
+      ],
+      "floorZ": 0.49,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:10.1",
+      "hallKey": "10.1",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -121.051,
+          322.328
+        ],
+        [
+          -110.938,
+          316.18
+        ],
+        [
+          -106.222,
+          310.276
+        ],
+        [
+          -99.612,
+          300.271
+        ],
+        [
+          -91.885,
+          287.437
+        ],
+        [
+          -36.421,
+          194.359
+        ],
+        [
+          -32.895,
+          186.573
+        ],
+        [
+          -33.223,
+          173.552
+        ],
+        [
+          -49.476,
+          163.77
+        ],
+        [
+          -138.269,
+          110.881
+        ],
+        [
+          -148.489,
+          126.872
+        ],
+        [
+          -178.794,
+          176.234
+        ],
+        [
+          -180.597,
+          179.234
+        ],
+        [
+          -218.29,
+          242.788
+        ],
+        [
+          -225.848,
+          259.223
+        ]
+      ],
+      "floorZ": 0.49,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:10.2",
+      "hallKey": "10.2",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -156.037,
+          308.227
+        ],
+        [
+          -119.579,
+          323.178
+        ],
+        [
+          -111.179,
+          316.0
+        ],
+        [
+          -106.455,
+          310.101
+        ],
+        [
+          -100.111,
+          300.519
+        ],
+        [
+          -25.928,
+          177.332
+        ],
+        [
+          -131.313,
+          104.55
+        ],
+        [
+          -137.727,
+          100.683
+        ],
+        [
+          -150.029,
+          102.377
+        ],
+        [
+          -204.667,
+          171.508
+        ],
+        [
+          -215.231,
+          189.041
+        ],
+        [
+          -220.757,
+          225.309
+        ],
+        [
+          -220.181,
+          262.607
+        ],
+        [
+          -192.994,
+          285.391
+        ],
+        [
+          -168.87,
+          300.5
+        ]
+      ],
+      "floorZ": 7.94,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:2.1",
+      "hallKey": "2.1",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -460.015,
+          353.209
+        ],
+        [
+          -429.506,
+          312.744
+        ],
+        [
+          -391.432,
+          248.905
+        ],
+        [
+          -454.847,
+          211.098
+        ],
+        [
+          -468.719,
+          216.841
+        ],
+        [
+          -484.054,
+          242.544
+        ],
+        [
+          -521.712,
+          316.423
+        ]
+      ],
+      "floorZ": 0.49,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:2.2",
+      "hallKey": "2.2",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -467.329,
+          342.045
+        ],
+        [
+          -438.771,
+          303.895
+        ],
+        [
+          -399.179,
+          237.492
+        ],
+        [
+          -462.589,
+          199.676
+        ],
+        [
+          -475.748,
+          205.184
+        ],
+        [
+          -491.074,
+          230.892
+        ],
+        [
+          -528.767,
+          304.831
+        ],
+        [
+          -489.607,
+          328.757
+        ]
+      ],
+      "floorZ": 8.24,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:3.2",
+      "hallKey": "3.2",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -379.378,
+          392.607
+        ],
+        [
+          -318.066,
+          290.618
+        ],
+        [
+          -378.06,
+          254.552
+        ],
+        [
+          -390.853,
+          274.864
+        ],
+        [
+          -439.8,
+          356.284
+        ]
+      ],
+      "floorZ": 6.99,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:4.1",
+      "hallKey": "4.1",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -398.899,
+          100.854
+        ],
+        [
+          -412.897,
+          125.11
+        ],
+        [
+          -420.12,
+          148.77
+        ],
+        [
+          -271.85,
+          237.904
+        ],
+        [
+          -266.44,
+          228.905
+        ],
+        [
+          -230.201,
+          166.682
+        ],
+        [
+          -280.938,
+          135.598
+        ],
+        [
+          -382.927,
+          74.286
+        ]
+      ],
+      "floorZ": 0.49,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:4.2",
+      "hallKey": "4.2",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -400.635,
+          104.478
+        ],
+        [
+          -425.323,
+          145.643
+        ],
+        [
+          -273.196,
+          237.096
+        ],
+        [
+          -234.814,
+          176.16
+        ],
+        [
+          -229.146,
+          166.733
+        ],
+        [
+          -382.559,
+          74.507
+        ],
+        [
+          -398.574,
+          101.05
+        ]
+      ],
+      "floorZ": 8.09,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:5.1",
+      "hallKey": "5.1",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -369.088,
+          54.486
+        ],
+        [
+          -218.766,
+          143.896
+        ],
+        [
+          -183.294,
+          84.269
+        ],
+        [
+          -333.621,
+          -5.133
+        ]
+      ],
+      "floorZ": 0.49,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:5.2",
+      "hallKey": "5.2",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -369.108,
+          54.52
+        ],
+        [
+          -219.207,
+          143.678
+        ],
+        [
+          -189.319,
+          94.369
+        ],
+        [
+          -183.323,
+          84.298
+        ],
+        [
+          -190.019,
+          64.965
+        ],
+        [
+          -260.139,
+          23.267
+        ],
+        [
+          -333.65,
+          -5.104
+        ]
+      ],
+      "floorZ": 8.09,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:6.1",
+      "hallKey": "6.1",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -345.943,
+          -89.385
+        ],
+        [
+          -333.618,
+          -80.774
+        ],
+        [
+          -159.348,
+          24.387
+        ],
+        [
+          -117.658,
+          -42.75
+        ],
+        [
+          -116.112,
+          -45.321
+        ],
+        [
+          -304.088,
+          -158.757
+        ]
+      ],
+      "floorZ": 0.49,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:7.1",
+      "hallKey": "7.1",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -241.572,
+          -174.438
+        ],
+        [
+          -92.873,
+          -85.046
+        ],
+        [
+          -51.313,
+          -152.238
+        ],
+        [
+          -49.767,
+          -154.81
+        ],
+        [
+          -198.466,
+          -244.201
+        ],
+        [
+          -200.354,
+          -243.003
+        ]
+      ],
+      "floorZ": 0.49,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:8.1",
+      "hallKey": "8.1",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -115.398,
+          -239.862
+        ],
+        [
+          32.6,
+          -150.332
+        ],
+        [
+          74.224,
+          -217.205
+        ],
+        [
+          75.765,
+          -219.767
+        ],
+        [
+          -72.238,
+          -309.289
+        ],
+        [
+          -78.243,
+          -301.278
+        ]
+      ],
+      "floorZ": 0.49,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:9.1",
+      "hallKey": "9.1",
+      "kind": "hall-level",
+      "boundary": [
+        [
+          -86.681,
+          -6.066
+        ],
+        [
+          -119.227,
+          49.043
+        ],
+        [
+          23.044,
+          134.571
+        ],
+        [
+          57.564,
+          77.148
+        ],
+        [
+          -85.135,
+          -8.637
+        ]
+      ],
+      "floorZ": 0.49,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "legacy-global-fit"
+    },
+    {
+      "id": "surface:hall:F2",
+      "hallKey": "F2",
+      "kind": "event-outdoor",
+      "boundary": [
+        [
+          -264.944,
+          -164.324
+        ],
+        [
+          -148.503,
+          -94.056
+        ],
+        [
+          -131.982,
+          -84.661
+        ],
+        [
+          -115.723,
+          -105.807
+        ],
+        [
+          -111.584,
+          -112.653
+        ],
+        [
+          -244.293,
+          -192.736
+        ],
+        [
+          -263.913,
+          -166.038
+        ]
+      ],
+      "floorZ": 0.49,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "event-layout"
+    },
+    {
+      "id": "surface:hall:F8",
+      "hallKey": "F8",
+      "kind": "event-outdoor",
+      "boundary": [
+        [
+          -58.301,
+          -330.221
+        ],
+        [
+          61.062,
+          -258.021
+        ],
+        [
+          105.221,
+          -273.735
+        ],
+        [
+          115.32,
+          -290.417
+        ],
+        [
+          92.731,
+          -336.456
+        ],
+        [
+          79.527,
+          -361.966
+        ],
+        [
+          55.072,
+          -378.523
+        ],
+        [
+          47.369,
+          -383.177
+        ],
+        [
+          -36.019,
+          -347.722
+        ],
+        [
+          -54.935,
+          -335.781
+        ]
+      ],
+      "floorZ": 0.49,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "event-layout"
+    },
+    {
+      "id": "surface:hall:FB",
+      "hallKey": "FB",
+      "kind": "event-outdoor",
+      "boundary": [
+        [
+          -304.852,
+          -33.541
+        ],
+        [
+          -211.427,
+          22.027
+        ],
+        [
+          -170.429,
+          44.352
+        ],
+        [
+          -164.395,
+          34.199
+        ],
+        [
+          -149.686,
+          -0.013
+        ],
+        [
+          -218.446,
+          -40.905
+        ],
+        [
+          -297.441,
+          -46.004
+        ]
+      ],
+      "floorZ": 0.49,
+      "walkability": "walkgrid-controlled",
+      "defaultBlocked": true,
+      "collision": "walkgrid",
+      "status": "draft",
+      "source": "event-layout"
+    }
+  ],
+  "outsidePolicy": {
+    "unknownBlocked": true,
+    "orthophotoWalkable": false,
+    "terrainWalkableByDefault": false,
+    "legacyFallbackStillActive": true
+  },
+  "gaps": [
+    "piazza-not-surveyed",
+    "boulevard-not-surveyed",
+    "outdoor-transitions-not-surveyed"
+  ]
+}
