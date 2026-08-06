@@ -14,6 +14,19 @@ interface PreparedStage {
   singles: THREE.Object3D[];
 }
 
+// DEBUG (temporär, siehe Diagnoseanfrage): geteilte Geometrie/Material für
+// den grellen Marker -- eine Instanz für alle Roots, kein Pro-Objekt-Leck.
+const DEBUG_MARKER_GEOMETRY = new THREE.SphereGeometry(0.3);
+const DEBUG_MARKER_MATERIAL = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+
+function addDebugMarker(root: THREE.Group): void {
+  const helper = new THREE.Mesh(DEBUG_MARKER_GEOMETRY, DEBUG_MARKER_MATERIAL);
+  helper.position.y = 1;
+  helper.userData.noBatch = true;
+  helper.userData.debugMarker = true;
+  root.add(helper);
+}
+
 function disposePlan(plan: PreparedStage): void {
   plan.objects.forEach((object) => object.dispose());
   plan.batches.length = 0;
@@ -105,7 +118,11 @@ export function ProceduralStaging({
 
     const objects = specs.flatMap((spec) => {
       try {
-        return [createGeneratedStageObject(spec)];
+        const object = createGeneratedStageObject(spec);
+        // DEBUG (temporär): grelle Markierung, damit sichtbar ist, ob
+        // überhaupt ein Root an der erwarteten Position landet.
+        addDebugMarker(object.root);
+        return [object];
       } catch (cause) {
         console.warn(
           `[ProceduralStaging] ${spec.generator} konnte nicht erzeugt werden`,
@@ -115,7 +132,27 @@ export function ProceduralStaging({
       }
     });
 
+    // DEBUG (temporär, siehe Diagnoseanfrage): sichtbare Zusammenfassung.
+    // eslint-disable-next-line no-console
+    console.log('[ProceduralStaging][DEBUG] Generatorobjekte', {
+      hallKey: focusHallKey,
+      angefragteStageSpecs: specs.length,
+      erfolgreicheGeneratorobjekte: objects.length,
+      fehlgeschlagen: specs.length - objects.length,
+      rootPositionen: objects.map((object) => ({
+        id: object.id,
+        position: object.root.position.toArray(),
+      })),
+    });
+
     const plan = prepareStageRenderPlan(objects);
+
+    // eslint-disable-next-line no-console
+    console.log('[ProceduralStaging][DEBUG] Renderplan', {
+      hallKey: focusHallKey,
+      batches: plan.batches.length,
+      singles: plan.singles.length,
+    });
 
     return {
       objects,
