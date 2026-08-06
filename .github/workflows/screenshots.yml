@@ -1,0 +1,115 @@
+name: Viewer-Screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['**']
+    paths:
+      - 'app/**'
+      - '.github/workflows/screenshots.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    # Der eigene Commit enthaelt nur Bilder und darf keinen zweiten Lauf starten.
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: App und Chromium installieren
+        working-directory: app
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: App bauen
+        working-directory: app
+        run: npm run build
+
+      - name: Vorschau starten
+        working-directory: app
+        run: |
+          nohup npm run preview > /tmp/beuteltier-preview.log 2>&1 &
+          echo $! > /tmp/beuteltier-preview.pid
+
+      - name: Vorschau abwarten
+        run: |
+          for attempt in {1..120}; do
+            if curl --fail --silent --show-error --max-time 5 \
+              http://127.0.0.1:4173/ >/dev/null; then
+              echo "Vorschau ist nach ${attempt}s erreichbar."
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/beuteltier-preview.pid)" 2>/dev/null; then
+              echo "Vorschauprozess wurde vorzeitig beendet."
+              break
+            fi
+            sleep 1
+          done
+          echo '=== /tmp/beuteltier-preview.log (letzte 200 Zeilen) ==='
+          tail -n 200 /tmp/beuteltier-preview.log || true
+          echo '=== Ende des Preview-Logs ==='
+          echo '=== Listener auf Port 4173 ==='
+          ss --listening --tcp --processes | grep ':4173' || true
+          exit 1
+
+      - name: Screenshots aufnehmen und Ablauf pruefen
+        id: acceptance
+        working-directory: app
+        env:
+          BEUTELTIER_SHOTS: ../docs/screenshots
+        run: npm run e2e
+
+      - name: Screenshots als Workflow-Artefakt sichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: viewer-screenshots-${{ github.sha }}
+          path: docs/screenshots/*.png
+          if-no-files-found: error
+
+      - name: Screenshots ins Repository uebernehmen
+        if: always()
+        run: |
+          git add docs/screenshots/*.png
+          if git diff --cached --quiet; then
+            echo 'Screenshots sind unveraendert; deshalb ist kein neuer Commit notwendig.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'docs: Viewer-Screenshots aktualisieren'
+          git push
+
+      - name: Screenshot-Zusammenfassung
+        if: always()
+        run: |
+          {
+            echo '## Viewer-Screenshots'
+            echo
+            echo "Akzeptanzlauf: **${{ steps.acceptance.outcome }}**"
+            echo
+            echo '| Datei | Größe | SHA-256 |'
+            echo '|---|---:|---|'
+            for file in docs/screenshots/*.png; do
+              [ -f "$file" ] || continue
+              size=$(stat --format='%s' "$file")
+              digest=$(sha256sum "$file" | cut -d' ' -f1)
+              echo "| \`$file\` | $size B | \`$digest\` |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
