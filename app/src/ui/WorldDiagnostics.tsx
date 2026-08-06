@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 
 import type { WorldDiagnostics as Diagnostics } from '../data/load';
 
-export function WorldDiagnostics({ world }: { world: Diagnostics | null }) {
+export function WorldDiagnostics({ world, spatialMode }: { world: Diagnostics | null; spatialMode: 'legacy' | 'registered' }) {
   const inventory = world?.lod2Inventory;
   const featureClasses = Object.entries(inventory?.totals.features ?? {});
   const [featureFilter, setFeatureFilter] = useState('all');
@@ -30,6 +30,9 @@ export function WorldDiagnostics({ world }: { world: Diagnostics | null }) {
       <div className="card">
         <div className="card__eyebrow">AMTLICHE WELT · {manifest.modelVersion}</div>
         <h2>{manifest.status === 'ready' ? 'Freigegeben' : 'Migration läuft'}</h2>
+        <p className={spatialMode === 'registered' ? 'notice notice--success' : 'notice'}>
+          Laufzeit-Koordinaten: {spatialMode === 'registered' ? 'amtlich registriert' : 'Legacy-Planraum'}
+        </p>
         <div className="figures">
           <span><strong>{registrations.registered}/{registrations.total}</strong> registriert</span>
           <span><strong>{registrations.withTargetFeatures}</strong> mit Zielfeatures</span>

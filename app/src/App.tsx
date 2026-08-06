@@ -434,7 +434,7 @@ export default function App() {
               onStepFree={setStepFree}
             />
           )}
-          {tab === 'diagnose' && <WorldDiagnostics world={patchedData.world} />}
+          {tab === 'diagnose' && <WorldDiagnostics world={patchedData.world} spatialMode={patchedData.spatialMode} />}
           {tab === 'epix' && <EpixHub />}
           {tab === 'funkwache' && (
             <Funkwache data={patchedData} onGoToStand={setSelectedStandId} />

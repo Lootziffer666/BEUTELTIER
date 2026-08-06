@@ -182,6 +182,7 @@ await page.getByRole('button', { name: 'Diagnose' }).click();
 await page.getByRole('heading', { name: 'Migration läuft' }).waitFor({ timeout: 10000 });
 const diagnosticText = await page.innerText('.panel__body');
 check('Weltdiagnose zeigt LoD2 und Begehbarkeit', /LOD2-INVENTAR/.test(diagnosticText) && /BEGEHBARKEIT/.test(diagnosticText));
+check('Viewer nutzt registrierte Laufzeitkoordinaten', /Laufzeit-Koordinaten: amtlich registriert/.test(diagnosticText));
 check('Ungeprüfte Portale bleiben erkennbar', /davon 0 baulich geprüft/.test(diagnosticText));
 await page.screenshot({ path: `${OUT}/app-9-diagnose.png` });
 

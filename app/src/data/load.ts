@@ -180,6 +180,8 @@ export interface Dataset {
   footprints: Footprints | null;
   /** Migrations-/Diagnosedaten; fehlen in älteren Offline-Snapshots erlaubt. */
   world: WorldDiagnostics | null;
+  /** registered = Halleninhalte und Routing liegen im lokalen amtlichen Raum. */
+  spatialMode: 'legacy' | 'registered';
   standsById: Map<string, Site['stands'][number]>;
   hallsByKey: Map<string, Site['halls'][number]>;
   exhibitorsById: Map<string, Registry['exhibitors'][number]>;
@@ -192,11 +194,16 @@ async function fetchJson<T>(name: string): Promise<T> {
 }
 
 export async function loadDataset(): Promise<Dataset> {
-  const [site, registry, compact] = await Promise.all([
+  const [legacySite, registry, legacyCompact, registeredSite, registeredCompact] = await Promise.all([
     fetchJson<Site>('site.json'),
     fetchJson<Registry>('registry.json'),
     fetchJson<CompactGraph>('graph.json'),
+    fetchJson<Site>('registered-site.json').catch(() => null),
+    fetchJson<CompactGraph>('registered-graph.json').catch(() => null),
   ]);
+  const site = registeredSite ?? legacySite;
+  const compact = registeredSite && registeredCompact ? registeredCompact : legacyCompact;
+  const spatialMode = registeredSite && registeredCompact ? 'registered' : 'legacy';
 
   // Ohne Luftbild bleibt die Karte benutzbar -- sie ist dann nur grau.
   const [ortho, surroundings, footprints, manifest, walkableSurfaces, portals, lod2Inventory, officialDiagnostic, worldPackages, visibilityAnalysis, surfaceClassification, collisionSurfaces, hallRegistrations, registeredLayout] = await Promise.all([
@@ -229,6 +236,7 @@ export async function loadDataset(): Promise<Dataset> {
       worldPackages, visibilityAnalysis, surfaceClassification, collisionSurfaces, hallRegistrations,
       registeredLayout,
     } : null,
+    spatialMode,
     standsById: new Map(site.stands.map((stand) => [stand.id, stand])),
     hallsByKey: new Map(site.halls.map((hall) => [hall.key, hall])),
     exhibitorsById: new Map(registry.exhibitors.map((one) => [one.id, one])),
