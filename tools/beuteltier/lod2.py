@@ -59,6 +59,8 @@ class Building:
     roof_type: str | None = None
     measured_height: float | None = None
     ground_height: float | None = None
+    feature_class: str = "Building"
+    parent_id: str | None = None
 
     @property
     def ground(self) -> list[Surface]:
@@ -178,6 +180,69 @@ def read_buildings(path: str | Path,
             building.ground_height = min(p[2] for s in ground for p in s.ring)
         buildings.append(building)
     return buildings
+
+
+def read_features(path: str | Path,
+                  bounds: tuple[float, float, float, float] | None = None
+                  ) -> list[Building]:
+    """Liest Buildings und BuildingParts als getrennte amtliche Features.
+
+    Im Gegensatz zum historischen :func:`read_buildings` werden Flaechen
+    eines BuildingPart nicht seinem Eltern-Building zugeschlagen. Damit
+    bleiben Feature-ID, Klasse und auch Teile ohne GroundSurface fuer
+    Diagnose und spaetere Paketierung erhalten.
+    """
+    feature_tags = {f"{BLDG}Building": "Building",
+                    f"{BLDG}BuildingPart": "BuildingPart"}
+    features: list[Building] = []
+    open_ids: list[str] = []
+    context = ET.iterparse(str(path), events=("start", "end"))
+    _, root = next(context)
+
+    for event, element in context:
+        feature_class = feature_tags.get(element.tag)
+        if event == "start" and feature_class:
+            open_ids.append(element.get(f"{GML}id", ""))
+            continue
+        if event != "end" or not feature_class:
+            continue
+
+        feature = Building(
+            id=element.get(f"{GML}id", ""),
+            feature_class=feature_class,
+            parent_id=open_ids[-2] if len(open_ids) > 1 else None,
+        )
+        feature.surfaces = _surfaces_of(element)
+        feature.function = element.findtext(f"{BLDG}function")
+        measured = element.findtext(f"{BLDG}measuredHeight")
+        if measured:
+            try:
+                feature.measured_height = float(measured)
+            except ValueError:
+                pass
+        for attribute in element.iter(f"{GEN}stringAttribute"):
+            if attribute.get("name") == "Dachform":
+                feature.roof_type = attribute.findtext(f"{GEN}value")
+
+        open_ids.pop()
+        # Parts werden sofort geloescht. Beim spaeteren Abschluss des Elterns
+        # kann _surfaces_of deshalb nur dessen eigene Flaechen sehen.
+        element.clear()
+        if feature_class == "Building":
+            root.clear()
+
+        if not feature.surfaces:
+            features.append(feature)
+            continue
+        if bounds is not None:
+            minx, miny, maxx, maxy = feature.bounds()
+            if maxx < bounds[0] or minx > bounds[2] or maxy < bounds[1] or miny > bounds[3]:
+                continue
+        if feature.ground:
+            feature.ground_height = min(p[2] for surface in feature.ground
+                                        for p in surface.ring)
+        features.append(feature)
+    return features
 
 
 def triangulate(ring: list[Point3], holes: list[list[Point3]] | None = None

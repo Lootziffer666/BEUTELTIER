@@ -1,0 +1,88 @@
+name: Viewer-Screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['**']
+    paths:
+      - 'app/**'
+      - '.github/workflows/screenshots.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    # Der eigene Commit enthaelt nur Bilder und darf keinen zweiten Lauf starten.
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: App und Chromium installieren
+        working-directory: app
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: App bauen
+        working-directory: app
+        run: npm run build
+
+      - name: Vorschau starten
+        working-directory: app
+        run: npm run preview -- --host 127.0.0.1 > /tmp/beuteltier-preview.log 2>&1 &
+
+      - name: Vorschau abwarten
+        run: |
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/beuteltier-preview.log
+          exit 1
+
+      - name: Screenshots aufnehmen und Ablauf pruefen
+        id: acceptance
+        continue-on-error: true
+        working-directory: app
+        env:
+          BEUTELTIER_SHOTS: ../docs/screenshots
+        run: npm run e2e
+
+      - name: Screenshots als Workflow-Artefakt sichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: viewer-screenshots-${{ github.sha }}
+          path: docs/screenshots/*.png
+          if-no-files-found: error
+
+      - name: Screenshots ins Repository uebernehmen
+        if: always()
+        run: |
+          git add docs/screenshots/*.png
+          if git diff --cached --quiet; then
+            echo 'Screenshots sind unveraendert.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'docs: Viewer-Screenshots aktualisieren'
+          git push
+
+      - name: Fehlgeschlagenen Akzeptanzlauf melden
+        if: steps.acceptance.outcome != 'success'
+        run: exit 1

@@ -9,11 +9,14 @@
  *   PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node e2e.mjs
  */
 import { chromium } from 'playwright';
+import { mkdir } from 'node:fs/promises';
 
 const BASE = process.env.BEUTELTIER_URL ?? 'http://localhost:4173/';
 const OUT = process.env.BEUTELTIER_SHOTS ?? '.';
 const CHROME =
-  process.env.BEUTELTIER_CHROME ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+  process.env.BEUTELTIER_CHROME;
+
+await mkdir(OUT, { recursive: true });
 
 const results = [];
 function check(name, ok, detail = '') {
@@ -21,8 +24,15 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? 'OK  ' : 'FEHL'} ${name}${detail ? ` — ${detail}` : ''}`);
 }
 
+async function clickDom(locator) {
+  await locator.waitFor({ state: 'visible', timeout: 10000 });
+  // React ersetzt einige Schaltflächen unmittelbar nach dem Zustandswechsel.
+  // Ein DOM-Klick wartet nicht auf die Stabilität des danach entfernten Nodes.
+  await locator.evaluate((element) => element.click());
+}
+
 const browser = await chromium.launch({
-  executablePath: CHROME,
+  ...(CHROME ? { executablePath: CHROME } : {}),
   args: ['--no-sandbox', '--use-gl=swiftshader', '--enable-unsafe-swiftshader'],
 });
 const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
@@ -37,6 +47,7 @@ await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.waitForSelector('canvas', { timeout: 30000 });
 await page.waitForTimeout(3500);
 check('Gelände wird gerendert', true);
+await page.screenshot({ path: `${OUT}/app-1-gelaende.png` });
 
 // --- Meldung einlesen und automatisch zuordnen ----------------------------
 await page.getByRole('button', { name: 'Funkwache' }).click();
@@ -47,19 +58,19 @@ await page
       'AOC International Halle 8.1 C060 Sticker am Stand',
   );
 await page.getByRole('button', { name: 'Einlesen' }).click();
-await page.locator('.report').first().waitFor({ timeout: 10000 }).catch(() => undefined);
+await page.getByTestId('report-route').first().waitFor({ timeout: 10000 });
 
 const noticeText = (await page.locator('.notice').first().textContent()) ?? '';
 check('Meldungen eingelesen und zugeordnet', /\d+ Meldungen/.test(noticeText), noticeText.trim());
 
-const routeButtons = page.locator('.report button', { hasText: /^Route zu / });
+const routeButtons = page.getByTestId('report-route');
 const assigned = await routeButtons.count();
 check('mindestens eine Meldung hat einen Stand', assigned > 0, `${assigned} zugeordnet`);
 await page.screenshot({ path: `${OUT}/app-2-funkwache.png` });
 
 // --- Von der Meldung auf die Karte ----------------------------------------
 if (assigned > 0) {
-  await routeButtons.first().click();
+  await clickDom(routeButtons.first());
   await page.waitForTimeout(400);
 }
 
@@ -71,15 +82,15 @@ await page.locator('input.search').fill('10.2 E030');
 await page.waitForTimeout(500);
 const hit = page.locator('.hits button').first();
 check('Suche liefert Treffer', (await page.locator('.hits button').count()) > 0);
-await hit.click();
+await clickDom(hit);
 await page.waitForTimeout(400);
-await page.getByRole('button', { name: 'Als Start setzen' }).click();
+await clickDom(page.getByTestId('set-route-start'));
 await page.waitForTimeout(300);
 
 // Ziel neu wählen, damit Start und Ziel verschieden sind.
 await page.locator('input.search').fill('CRYTEK');
 await page.waitForTimeout(500);
-await page.locator('.hits button').first().click();
+await clickDom(page.locator('.hits button').first());
 await page.waitForTimeout(900);
 
 const figures = page.locator('.card', { hasText: 'ROUTE' }).locator('.figures strong');
