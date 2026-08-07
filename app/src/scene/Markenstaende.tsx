@@ -186,7 +186,10 @@ function fassadensatz(marke: Marke, wiederholungen: number): Fassadensatz {
     map: farbe,
     emissiveMap: leucht,
     emissive: new THREE.Color('#ffffff'),
-    emissiveIntensity: 0.85,
+    // Zurückhaltend: seit die Halle eigene Lichtquellen hat, ist das
+    // Selbstleuchten nur noch für Leuchtband und Schriftzug zuständig und
+    // nicht mehr der Ersatz für fehlendes Licht.
+    emissiveIntensity: 0.3,
     roughness: 0.55,
     metalness: 0.05,
   });
@@ -206,7 +209,7 @@ function fassadensatz(marke: Marke, wiederholungen: number): Fassadensatz {
     map: bannerFarbe,
     emissiveMap: bannerLeucht,
     emissive: new THREE.Color('#ffffff'),
-    emissiveIntensity: 1.1,
+    emissiveIntensity: 0.7,
     roughness: 0.6,
     side: THREE.DoubleSide,
   });

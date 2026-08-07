@@ -36,6 +36,50 @@ export function extrudePolygon(
   return geometry;
 }
 
+/**
+ * Legt Texturkoordinaten auf eine Geometrie, die keine hat.
+ *
+ * Das amtliche Weltmodell bringt Positionen und Normalen mit, aber keine UVs —
+ * es ist aus Gebäudeumringen gerechnet, nicht modelliert. Ohne UVs tastet
+ * jeder Punkt denselben Texel ab, und dann bleibt auch die beste Karte eine
+ * Farbfläche. Genau daran lag es, dass die Halle von innen wie eine graue
+ * Kiste aussah.
+ *
+ * Projiziert wird nach der dominanten Normalenrichtung, in Metern: eine
+ * Kachel ist überall gleich gross, egal wie gross die Fläche ist.
+ */
+export function projiziereUV(geometry: THREE.BufferGeometry, tileM: number): void {
+  const position = geometry.getAttribute('position');
+  const normal = geometry.getAttribute('normal');
+  if (!position || !normal) return;
+
+  const uvs = new Float32Array(position.count * 2);
+  for (let i = 0; i < position.count; i += 1) {
+    const px = position.getX(i);
+    const py = position.getY(i);
+    const pz = position.getZ(i);
+    const nx = Math.abs(normal.getX(i));
+    const ny = Math.abs(normal.getY(i));
+    const nz = Math.abs(normal.getZ(i));
+
+    let u: number;
+    let v: number;
+    if (ny >= nx && ny >= nz) {
+      u = px / tileM;
+      v = pz / tileM;
+    } else if (nx >= nz) {
+      u = pz / tileM;
+      v = py / tileM;
+    } else {
+      u = px / tileM;
+      v = py / tileM;
+    }
+    uvs[i * 2] = u;
+    uvs[i * 2 + 1] = v;
+  }
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+}
+
 export function polygonCentre(points: Placement2D[]): [number, number] {
   const sum = points.reduce<[number, number]>(
     (acc, point) => [acc[0] + point[0], acc[1] + point[1]],

@@ -19,19 +19,22 @@ import type { Dataset } from '../data/load';
 import { siteCentre } from '../data/load';
 import type { Ortho } from '../data/load';
 import type { Route } from '../routing/route';
-import { mergePolygons, polygonCentre, toScene } from './geometry';
+import { mergePolygons, polygonCentre, projiziereUV, toScene } from './geometry';
 import { EYE_HEIGHT_M } from './walk';
 import {
   ceilingSurface,
   disposeSurface,
   facadeSurface,
   floorSurface,
+  hallenbodenSurface,
+  hallendeckeSurface,
   orthoTexture,
   standSurface,
+  WELT_KACHEL_M,
   type Surface,
 } from './materials';
 import { Beleuchtung } from './lighting';
-import { Deckenleuchten } from './interior';
+import { Deckenleuchten, Hallenhuelle, Hallenlicht } from './interior';
 import { Markenstaende } from './Markenstaende';
 import { MARKEN_STAND_IDS } from './marken';
 import { Vertikalverbindungen } from './vertical';
@@ -305,12 +308,133 @@ function Gelaende({
   return <primitive object={model} position={[-centre[0], 0, centre[1]]} />;
 }
 
-function OfficialPackage({ uri }: { uri: string }) {
-  const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
-  return <primitive object={scene} />;
+/**
+ * Welcher Bauteil eine Fläche des amtlichen Modells ist.
+ *
+ * Es steht im Materialnamen, den build_buildings.py schreibt:
+ * `UUID|<Building|BuildingPart>|<teil>|<index>|<klasse>`. Beide Schreibweisen
+ * kommen im Modell vor -- ein Gebäude ohne Gebäudeteile heisst `Building`,
+ * eines mit heisst `BuildingPart`. Wer nur eine davon kennt, lässt knapp ein
+ * Drittel der Flächen unbehandelt stehen; genau daran blieb der Hallenboden
+ * eine graue Fläche ohne Textur.
+ */
+function bauteil(name: string): 'roof' | 'ground' | 'wall' | null {
+  const parts = (name ?? '').split('|');
+  if (parts.length < 3) return null;
+  if (parts[1] !== 'Building' && parts[1] !== 'BuildingPart') return null;
+  if (parts[2] === 'roof') return 'roof';
+  if (parts[2] === 'ground') return 'ground';
+  return 'wall';
 }
 
-function OfficialWorld({ data, centre }: { data: Dataset; centre: [number, number] }) {
+/**
+ * Fertig behandelte Weltmodelle, nach Datei und Blickrichtung.
+ *
+ * Das Modell hat 490 Flächen; es bei jedem Rendern neu zu klonen kostet
+ * spürbar und bringt nichts, denn das Ergebnis hängt nur an zwei Dingen --
+ * welche Datei und ob man drinnen oder draussen steht. Zwei Einträge je
+ * Datei, den Rest der Sitzung wiederverwendet.
+ */
+const weltCache = new Map<string, THREE.Object3D>();
+
+/**
+ * Die Oberflächen des Weltmodells, ebenfalls je Blickrichtung einmal.
+ *
+ * Sie hängen an den zwischengespeicherten Modellen; würden sie beim
+ * Aushängen der Szene freigegeben, zeigte das nächste Betreten der Halle
+ * leere Texturen. Zwei Sätze Leinwandtexturen für die ganze Sitzung.
+ */
+const weltFlaechenCache = new Map<string, { boden: Surface; decke: Surface; wand: Surface }>();
+
+function weltFlaechen(interior: boolean) {
+  const schluessel = String(interior);
+  let satz = weltFlaechenCache.get(schluessel);
+  if (!satz) {
+    satz = {
+      boden: hallenbodenSurface(),
+      decke: hallendeckeSurface(),
+      wand: facadeSurface(interior),
+    };
+    weltFlaechenCache.set(schluessel, satz);
+  }
+  return satz;
+}
+
+function OfficialPackage({
+  uri,
+  interior,
+  surfaces,
+  behandeln,
+}: {
+  uri: string;
+  interior: boolean;
+  surfaces: { boden: Surface; decke: Surface; wand: Surface } | null;
+  /** Nur der Hallenkern wird umgebaut; die Umgebung bleibt, wie sie kommt. */
+  behandeln: boolean;
+}) {
+  const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
+
+  const model = useMemo(() => {
+    // Von aussen bleibt das Weltmodell, wie es geliefert wird -- die Übersicht
+    // ist eine Karte und soll sich nicht ändern, weil der Innenraum besser
+    // aussieht. Umgebaut wird nur, was man von drinnen sieht.
+    if (!behandeln || !surfaces || !interior) return scene;
+    const schluessel = `${uri}|${interior}`;
+    const fertig = weltCache.get(schluessel);
+    if (fertig) return fertig;
+
+    const clone = scene.clone(true);
+    clone.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      const quelle = node.material as THREE.MeshStandardMaterial;
+      const teil = bauteil(quelle.name);
+      if (!teil) return;
+
+      const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide });
+      // Von innen ist das Dach die Decke und der Boden der Hallenboden. Von
+      // aussen bleibt beides, wie das Geländemodell es meint.
+      // Innen tragen Boden und Decke ein anderes Höhendatum als die
+      // begehbare Ebene -- die Bodenplatte des Modells läge über dem Kopf
+      // des Besuchers. Drinnen kommen beide deshalb aus `Hallenhuelle`,
+      // und die Flächen des Modells bleiben aus.
+      // Boden und Decke tragen im Modell ein anderes Höhendatum als die
+      // begehbare Ebene -- seine Bodenplatte läge über dem Kopf des
+      // Besuchers. Drinnen kommen beide deshalb aus `Hallenhuelle`.
+      if (teil !== 'wall') {
+        node.visible = false;
+        return;
+      }
+      projiziereUV(node.geometry, WELT_KACHEL_M.wand);
+      material.map = surfaces.wand.map;
+      material.normalMap = surfaces.wand.normalMap;
+      material.roughnessMap = surfaces.wand.roughnessMap;
+      material.color.copy(quelle.color ?? new THREE.Color('#ffffff'));
+      material.metalness = 0.18;
+      material.envMapIntensity = 0.9;
+      material.normalScale = new THREE.Vector2(1.0, 1.0);
+      node.material = material;
+      node.receiveShadow = true;
+      node.castShadow = false;
+    });
+
+    weltCache.set(schluessel, clone);
+    return clone;
+  }, [scene, interior, surfaces, behandeln, uri]);
+
+  return <primitive object={model} />;
+}
+
+function OfficialWorld({
+  data,
+  centre,
+  interior,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  interior: boolean;
+}) {
+  const surfaces = weltFlaechen(interior);
+
   const packages = data.world?.manifest.packages.filter(
     (entry) => entry.available && entry.role === 'render',
   ) ?? [];
@@ -319,7 +443,15 @@ function OfficialWorld({ data, centre }: { data: Dataset; centre: [number, numbe
   // laufen noch durch toScene(), das ihre zweite Achse negiert.
   return (
     <group position={[-centre[0], 0, centre[1]]} scale={[1, 1, -1]}>
-      {packages.map((entry) => <OfficialPackage key={entry.id} uri={entry.uri} />)}
+      {packages.map((entry) => (
+        <OfficialPackage
+          key={entry.id}
+          uri={entry.uri}
+          interior={interior}
+          surfaces={surfaces}
+          behandeln={entry.id.startsWith('core/')}
+        />
+      ))}
     </group>
   );
 }
@@ -496,6 +628,8 @@ function Stands({
     <group>
       <mesh
         geometry={lowerGeometry}
+        castShadow
+        receiveShadow
         onClick={(event) => {
           event.stopPropagation();
           pick(merged.lower)(event.faceIndex);
@@ -514,6 +648,8 @@ function Stands({
       {upperOpacity > 0.02 && (
         <mesh
           geometry={upperGeometry}
+          castShadow
+          receiveShadow
           onClick={(event) => {
             event.stopPropagation();
             pick(merged.upper)(event.faceIndex);
@@ -997,7 +1133,7 @@ export function SiteScene(props: SceneProps) {
       )}
       {registered && (
         <Suspense fallback={null}>
-          <OfficialWorld data={data} centre={centre} />
+          <OfficialWorld data={data} centre={centre} interior={preset === 'ego'} />
         </Suspense>
       )}
       {/* Hallenkörper und Schilder sind Hilfsmittel der Übersicht. Auf
@@ -1017,7 +1153,14 @@ export function SiteScene(props: SceneProps) {
         onSelectStand={props.onSelectStand}
       />
       <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
+      <Hallenhuelle data={data} centre={centre} visible={preset === 'ego'} />
       <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
+      <Hallenlicht
+        data={data}
+        centre={centre}
+        hallKey={focusHallKey}
+        active={preset === 'ego'}
+      />
       <Vertikalverbindungen data={data} centre={centre} />
       <RouteRibbon data={data} route={route} centre={centre} />
       {preset !== 'ego' && (
