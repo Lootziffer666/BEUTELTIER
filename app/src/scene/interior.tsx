@@ -15,12 +15,20 @@ import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 
 import type { Dataset } from '../data/load';
+import type { Placement2D } from '../data/types';
 
 /** Abstand der Leuchtenreihen quer zur Halle. */
 const ROW_SPACING_M = 11;
-/** Wie weit unter der Decke die Bänder hängen. */
-const DROP_M = 0.55;
-const STRIP_WIDTH_M = 0.28;
+/**
+ * Wie weit unter der Decke die Bänder hängen.
+ *
+ * Nicht dicht unter dem Dach: die Deckenhöhe im Weltmodell ist nicht überall
+ * die lichte Höhe aus der Hallentabelle, und ein Band knapp darunter
+ * verschwindet dann hinter der Decke. Zwei Meter tiefer ist es in jeder Halle
+ * sichtbar -- und entspricht der Traversenhöhe, in der die Leuchten hängen.
+ */
+const DROP_M = 2.0;
+const STRIP_WIDTH_M = 0.42;
 const STRIP_THICKNESS_M = 0.12;
 /**
  * Eine Reihe ist keine durchgehende Stange.
@@ -33,6 +41,49 @@ const STRIP_THICKNESS_M = 0.12;
  */
 const SEGMENT_M = 5.6;
 const GAP_M = 1.1;
+
+/**
+ * Wie eine Halle liegt -- Mitte, Länge, Breite und Drehung.
+ *
+ * Die Hallen sind eingemessen, stehen also schief zu den Weltachsen. Eine
+ * achsparallele Hüllbox legte die Leuchtenreihen quer durch die Wände; die
+ * Halle blieb dunkel und wirkte wie ein Hof unter freiem Himmel. Gerechnet
+ * wird deshalb in den Kanten des Umrisses selbst.
+ */
+function hallenlage(footprint: Placement2D[]) {
+  if (footprint.length < 3) return null;
+  let laengste = 0;
+  let winkel = 0;
+  for (let i = 0; i < footprint.length; i += 1) {
+    const a = footprint[i];
+    const b = footprint[(i + 1) % footprint.length];
+    const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (d > laengste) {
+      laengste = d;
+      winkel = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    }
+  }
+  if (laengste < 1) return null;
+
+  const ux = Math.cos(winkel);
+  const uy = Math.sin(winkel);
+  let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity;
+  for (const [x, y] of footprint) {
+    const u = x * ux + y * uy;
+    const v = -x * uy + y * ux;
+    uMin = Math.min(uMin, u); uMax = Math.max(uMax, u);
+    vMin = Math.min(vMin, v); vMax = Math.max(vMax, v);
+  }
+  const uM = (uMin + uMax) / 2;
+  const vM = (vMin + vMax) / 2;
+  return {
+    mx: uM * ux - vM * uy,
+    my: uM * uy + vM * ux,
+    laenge: uMax - uMin,
+    breite: vMax - vMin,
+    winkel,
+  };
+}
 
 export function Deckenleuchten({
   data,
@@ -51,40 +102,36 @@ export function Deckenleuchten({
 
     for (const hall of data.site.halls) {
       if (hall.outdoor) continue;
-      const xs = hall.footprint.map((point) => point[0]);
-      const ys = hall.footprint.map((point) => point[1]);
-      const minX = Math.min(...xs);
-      const maxX = Math.max(...xs);
-      const minY = Math.min(...ys);
-      const maxY = Math.max(...ys);
-      const width = maxX - minX;
-      const depth = maxY - minY;
-      if (width < 20 || depth < 20) continue;
+      const lage = hallenlage(hall.footprint);
+      if (!lage) continue;
+      const { mx, my, laenge, breite, winkel } = lage;
+      if (laenge < 20 || breite < 20) continue;
 
       const ceiling = hall.baseY + (hall.height?.clearHeightM ?? 8) - DROP_M;
       // Die Bänder laufen längs der langen Seite, wie in der Halle gebaut.
-      const alongX = width >= depth;
-      const rows = Math.max(2, Math.floor((alongX ? depth : width) / ROW_SPACING_M));
-      const length = (alongX ? width : depth) * 0.86;
+      const rows = Math.max(2, Math.floor(breite / ROW_SPACING_M));
+      const length = laenge * 0.86;
 
       const pitch = SEGMENT_M + GAP_M;
       const segments = Math.max(1, Math.floor(length / pitch));
       const run = segments * pitch - GAP_M;
 
+      // Einheitsvektoren der Halle: u längs, v quer.
+      const ux = Math.cos(winkel);
+      const uy = Math.sin(winkel);
+      const vx = -uy;
+      const vy = ux;
+
       for (let row = 1; row <= rows; row += 1) {
-        const t = row / (rows + 1);
-        const cx = alongX ? (minX + maxX) / 2 : minX + width * t;
-        const cy = alongX ? minY + depth * t : (minY + maxY) / 2;
+        const quer = (row / (rows + 1) - 0.5) * breite;
 
         for (let segment = 0; segment < segments; segment += 1) {
           // Versatz entlang der Reihe, gemessen von ihrer Mitte.
           const offset = -run / 2 + SEGMENT_M / 2 + segment * pitch;
-          dummy.position.set(
-            cx - centre[0] + (alongX ? offset : 0),
-            ceiling,
-            -(cy - centre[1]) - (alongX ? 0 : offset),
-          );
-          dummy.rotation.set(0, alongX ? 0 : Math.PI / 2, 0);
+          const x = mx + ux * offset + vx * quer;
+          const y = my + uy * offset + vy * quer;
+          dummy.position.set(x - centre[0], ceiling, -(y - centre[1]));
+          dummy.rotation.set(0, winkel, 0);
           dummy.scale.set(SEGMENT_M, STRIP_THICKNESS_M, STRIP_WIDTH_M);
           dummy.updateMatrix();
           out.push({ matrix: dummy.matrix.clone() });

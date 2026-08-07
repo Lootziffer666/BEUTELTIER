@@ -32,6 +32,8 @@ import {
 } from './materials';
 import { Beleuchtung } from './lighting';
 import { Deckenleuchten } from './interior';
+import { Markenstaende } from './Markenstaende';
+import { MARKEN_STAND_IDS } from './marken';
 import { Vertikalverbindungen } from './vertical';
 import type { CameraSnapshot } from './survey';
 
@@ -71,6 +73,11 @@ const COLOURS = {
   standLower: '#3f7dd6',
   standUpper: '#d98a3f',
   standOccupied: '#f0b23c',
+  // Von oben trennt Farbe die Ebenen. Auf Augenhöhe steht man dagegen im
+  // Messebau, und der ist weiß bis hellgrau -- ein blauer Klotz neben dem
+  // LEGO-Stand sähe aus wie ein Spielzeug, nicht wie eine Halle.
+  standInterior: '#c6cad2',
+  standInteriorOccupied: '#e6dcc6',
   selected: '#ff5c8a',
   route: '#4ade80',
   routeUnconfirmed: '#facc15',
@@ -404,6 +411,9 @@ function Stands({
     // in einer anderen Halle und verdeckt den halben Blick. Was nicht genau
     // genug verortet ist, um daneben zu stehen, wird hier nicht gezeichnet.
     const shown = data.site.stands.filter((stand) => {
+      // Markenstände tragen eine eigene Fassade und dürfen nicht zusätzlich
+      // im Sammelkörper stecken -- zwei deckungsgleiche Wände flackern.
+      if (MARKEN_STAND_IDS.has(stand.id)) return false;
       if (!interior) return true;
       const hall = data.hallsByKey.get(stand.hallKey);
       return !hall || hall.placement.source !== 'geschaetzt';
@@ -436,8 +446,16 @@ function Stands({
     const geometry = group.geometry;
     const count = geometry.getAttribute('position').count;
     const colours = new Float32Array(count * 3);
-    const base = new THREE.Color(level === 'lower' ? COLOURS.standLower : COLOURS.standUpper);
-    const occupied = new THREE.Color(COLOURS.standOccupied);
+    const base = new THREE.Color(
+      interior
+        ? COLOURS.standInterior
+        : level === 'lower'
+          ? COLOURS.standLower
+          : COLOURS.standUpper,
+    );
+    const occupied = new THREE.Color(
+      interior ? COLOURS.standInteriorOccupied : COLOURS.standOccupied,
+    );
     const selected = new THREE.Color(COLOURS.selected);
     const onRoute = new THREE.Color(COLOURS.route);
 
@@ -692,9 +710,46 @@ function WalkControls({
     const site = start
       ? { x: start.x + centre[0], y: centre[1] - start.z, z: start.y }
       : null;
-    const footing = site && !data.walk.footingAt(site.x, site.y, site.z).blocked
-      ? { x: site.x, y: site.y, z: data.walk.footingAt(site.x, site.y, site.z).z }
-      : data.walk.spawn();
+    // Der Mittelpunkt einer Halle liegt oft mitten in einem Stand -- in Halle 9
+    // genau im LEGO-Block. Dann ist der nächstgelegene freie Punkt derselben
+    // Halle gemeint und nicht der erste begehbare Punkt des ganzen Geländes,
+    // der irgendwo im Obergeschoss von Halle 10 liegt.
+    // Der Mittelpunkt einer Halle liegt oft mitten in einem Stand -- in Halle 9
+    // genau im LEGO-Block. Gesucht ist dann nicht irgendein freier Punkt, sondern
+    // der Gang: wer mit der Nase an der Standwand startet, sieht von der Halle
+    // nichts. Deshalb zählt nicht „frei", sondern wie viel Platz ringsum ist.
+    const luft = (x: number, y: number, z: number) => {
+      if (data.walk.footingAt(x, y, z).blocked) return -1;
+      let weite = 0;
+      for (const abstand of [2, 4, 6]) {
+        const offen = [[abstand, 0], [-abstand, 0], [0, abstand], [0, -abstand]].every(
+          ([dx, dy]) => !data.walk.footingAt(x + dx, y + dy, z).blocked,
+        );
+        if (!offen) break;
+        weite = abstand;
+      }
+      return weite;
+    };
+
+    let footing: { x: number; y: number; z: number } | null = null;
+    if (site) {
+      let beste = -1;
+      for (let radius = 0; radius <= 40 && beste < 6; radius += 2) {
+        const schritte = radius === 0 ? 1 : 24;
+        for (let step = 0; step < schritte; step += 1) {
+          const winkel = (step / schritte) * Math.PI * 2;
+          const x = site.x + Math.cos(winkel) * radius;
+          const y = site.y + Math.sin(winkel) * radius;
+          const weite = luft(x, y, site.z);
+          if (weite > beste) {
+            beste = weite;
+            footing = { x, y, z: data.walk.footingAt(x, y, site.z).z };
+          }
+          if (beste >= 6) break;
+        }
+      }
+    }
+    if (!footing) footing = data.walk.spawn();
     if (footing) position.current = footing;
     look.current = { yaw: 0, pitch: 0 };
   }, [active, start, data, centre]);
@@ -961,6 +1016,7 @@ export function SiteScene(props: SceneProps) {
         interior={preset === 'ego'}
         onSelectStand={props.onSelectStand}
       />
+      <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
       <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
       <Vertikalverbindungen data={data} centre={centre} />
       <RouteRibbon data={data} route={route} centre={centre} />
