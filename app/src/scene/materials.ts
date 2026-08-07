@@ -525,6 +525,98 @@ export function hallendeckeSurface(): Surface {
 }
 
 /**
+ * Glasfassade des Boulevards.
+ *
+ * Auf dem Referenzfoto sind die Längsseiten raumhoch verglast: schlanke
+ * Pfosten im gut anderthalb Meter breiten Raster, ein Riegel auf Türhöhe,
+ * darüber durchgehend Glas bis unter die Decke. Das ist der Grund, warum der
+ * Boulevard hell ist und eine Halle nicht -- er steht im Tageslicht.
+ */
+export function glasfassadeSurface(): Surface {
+  const [colour, ctx] = layer('#dce6ee');
+  const [height, hctx] = layer('#808080');
+  const [rough, rctx] = layer('#1e1e1e');
+  const [glow, gctx] = layer('#000000');
+
+  // Das Glas selbst leuchtet: draussen ist Tag.
+  gctx.fillStyle = '#b9d3e8';
+  gctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Sockel: undurchsichtige Brüstung unten.
+  const sockel = SIZE * 0.88;
+  ctx.fillStyle = '#e6e8ea';
+  ctx.fillRect(0, sockel, SIZE, SIZE - sockel);
+  gctx.fillStyle = '#000000';
+  gctx.fillRect(0, sockel, SIZE, SIZE - sockel);
+  rctx.fillStyle = '#b0b0b0';
+  rctx.fillRect(0, sockel, SIZE, SIZE - sockel);
+
+  // Pfosten im Raster -- die Kachel deckt 30 m ab, also alle 1,7 m einer.
+  const pfosten = SIZE / 18;
+  for (let x = 0; x < SIZE; x += pfosten) {
+    for (const [context, farbe] of [[ctx, '#f2f4f6'], [gctx, '#101010'], [hctx, '#d8d8d8']] as const) {
+      context.fillStyle = farbe;
+      context.fillRect(x, 0, 7, SIZE);
+    }
+  }
+  // Riegel auf Türhöhe und unter der Decke.
+  for (const y of [SIZE * 0.1, SIZE * 0.62]) {
+    for (const [context, farbe] of [[ctx, '#eef0f2'], [gctx, '#101010'], [hctx, '#d8d8d8']] as const) {
+      context.fillStyle = farbe;
+      context.fillRect(0, y, SIZE, 8);
+    }
+  }
+
+  return {
+    map: texture(colour, [1, 1], true),
+    normalMap: texture(toNormalMap(height, 1.0), [1, 1]),
+    roughnessMap: texture(rough, [1, 1]),
+    emissiveMap: texture(glow, [1, 1], true),
+  };
+}
+
+/**
+ * Decke des Boulevards: hell, mit sichtbarer Tragstruktur.
+ *
+ * Anders als in der Halle ist sie nicht schwarz, sondern weiss -- auf dem
+ * Foto liegt das Licht oben, nicht die Dunkelheit. Quer laufen die Träger,
+ * dazwischen die geschlossenen Felder.
+ */
+export function boulevarddeckeSurface(): Surface {
+  const [colour, ctx] = layer('#eceef0');
+  const [height, hctx] = layer('#808080');
+  const [rough, rctx] = layer('#9a9a9a');
+
+  // Querträger alle rund drei Meter (Kachel = 12 m).
+  const traeger = SIZE / 4;
+  for (let y = 0; y < SIZE; y += traeger) {
+    ctx.fillStyle = '#c9ccd0';
+    ctx.fillRect(0, y, SIZE, 26);
+    hctx.fillStyle = '#e8e8e8';
+    hctx.fillRect(0, y, SIZE, 26);
+    rctx.fillStyle = '#6a6a6a';
+    rctx.fillRect(0, y, SIZE, 26);
+  }
+  // Feine Fugen der Deckenfelder dazwischen.
+  ctx.strokeStyle = 'rgba(150, 154, 160, 0.5)';
+  ctx.lineWidth = 3;
+  for (let x = 0; x <= SIZE; x += SIZE / 8) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, SIZE);
+    ctx.stroke();
+  }
+
+  speckle(ctx, 0.015);
+
+  return {
+    map: texture(colour, [1, 1], true),
+    normalMap: texture(toNormalMap(height, 1.0), [1, 1]),
+    roughnessMap: texture(rough, [1, 1]),
+  };
+}
+
+/**
  * Standflächen: Teppich, Messebauplatte, Stoffbanner.
  *
  * Die Farbe eines Standes trägt Information — belegt, gewählt, auf der Route —
