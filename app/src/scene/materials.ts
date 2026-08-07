@@ -532,38 +532,46 @@ export function hallendeckeSurface(): Surface {
  * darüber durchgehend Glas bis unter die Decke. Das ist der Grund, warum der
  * Boulevard hell ist und eine Halle nicht -- er steht im Tageslicht.
  */
-export function glasfassadeSurface(): Surface {
-  const [colour, ctx] = layer('#dce6ee');
+export function glasfassadeSurface(): Surface & { alphaMap: THREE.CanvasTexture } {
+  const [colour, ctx] = layer('#e8f0f6');
   const [height, hctx] = layer('#808080');
-  const [rough, rctx] = layer('#1e1e1e');
+  const [rough, rctx] = layer('#141414');
   const [glow, gctx] = layer('#000000');
+  // Die Alphakarte entscheidet, was Rahmen ist und was Glas: weiss bleibt
+  // stehen, dunkel wird durchsichtig. Ohne sie ist eine Glasfassade eine
+  // hellblaue Wand mit aufgemalten Sprossen.
+  const [alpha, actx] = layer('#2a2a2a');
 
-  // Das Glas selbst leuchtet: draussen ist Tag.
-  gctx.fillStyle = '#b9d3e8';
+  // Das Glas selbst leuchtet leicht: draussen ist Tag.
+  gctx.fillStyle = '#9fc0dc';
   gctx.fillRect(0, 0, SIZE, SIZE);
 
-  // Sockel: undurchsichtige Brüstung unten.
-  const sockel = SIZE * 0.88;
-  ctx.fillStyle = '#e6e8ea';
+  // Sockel: undurchsichtige Bruestung unten.
+  const sockel = SIZE * 0.9;
+  ctx.fillStyle = '#eceef0';
   ctx.fillRect(0, sockel, SIZE, SIZE - sockel);
   gctx.fillStyle = '#000000';
   gctx.fillRect(0, sockel, SIZE, SIZE - sockel);
   rctx.fillStyle = '#b0b0b0';
   rctx.fillRect(0, sockel, SIZE, SIZE - sockel);
+  actx.fillStyle = '#ffffff';
+  actx.fillRect(0, sockel, SIZE, SIZE - sockel);
 
   // Pfosten im Raster -- die Kachel deckt 30 m ab, also alle 1,7 m einer.
   const pfosten = SIZE / 18;
   for (let x = 0; x < SIZE; x += pfosten) {
-    for (const [context, farbe] of [[ctx, '#f2f4f6'], [gctx, '#101010'], [hctx, '#d8d8d8']] as const) {
+    for (const [context, farbe] of [[ctx, '#fbfcfd'], [gctx, '#101010'],
+                                    [hctx, '#d8d8d8'], [actx, '#ffffff']] as const) {
       context.fillStyle = farbe;
-      context.fillRect(x, 0, 7, SIZE);
+      context.fillRect(x, 0, 9, SIZE);
     }
   }
-  // Riegel auf Türhöhe und unter der Decke.
-  for (const y of [SIZE * 0.1, SIZE * 0.62]) {
-    for (const [context, farbe] of [[ctx, '#eef0f2'], [gctx, '#101010'], [hctx, '#d8d8d8']] as const) {
+  // Riegel auf Tuerhoehe und unter der Decke.
+  for (const y of [SIZE * 0.08, SIZE * 0.6]) {
+    for (const [context, farbe] of [[ctx, '#fbfcfd'], [gctx, '#101010'],
+                                    [hctx, '#d8d8d8'], [actx, '#ffffff']] as const) {
       context.fillStyle = farbe;
-      context.fillRect(0, y, SIZE, 8);
+      context.fillRect(0, y, SIZE, 10);
     }
   }
 
@@ -572,6 +580,7 @@ export function glasfassadeSurface(): Surface {
     normalMap: texture(toNormalMap(height, 1.0), [1, 1]),
     roughnessMap: texture(rough, [1, 1]),
     emissiveMap: texture(glow, [1, 1], true),
+    alphaMap: texture(alpha, [1, 1]),
   };
 }
 

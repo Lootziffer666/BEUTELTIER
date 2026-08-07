@@ -137,6 +137,51 @@ export class ArchitectureGenerator {
     return group;
   }
 
+  /**
+   * Doppelglastuer: zwei Fluegel in einem Rahmen, mit Mittelpfosten.
+   *
+   * Gebaut in der lokalen XY-Ebene, Fusspunkt bei y = 0, Blickrichtung +Z.
+   */
+  static createDoubleGlassDoor(width = 2.4, height = 2.5) {
+    const group = new THREE.Group();
+    const rahmen = materials.get('brushedAlu');
+    const glas = materials.get('balustradeGlass');
+    const profil = 0.09;
+
+    // Zarge: zwei Pfosten und ein Sturz.
+    for (const side of [-1, 1]) {
+      const post = new THREE.Mesh(
+        new THREE.BoxGeometry(profil, height, 0.16), rahmen);
+      post.position.set(side * (width / 2), height / 2, 0);
+      group.add(post);
+    }
+    const lintel = new THREE.Mesh(
+      new THREE.BoxGeometry(width + profil, profil, 0.16), rahmen);
+    lintel.position.set(0, height, 0);
+    group.add(lintel);
+
+    // Mittelpfosten zwischen den beiden Fluegeln.
+    const mullion = new THREE.Mesh(
+      new THREE.BoxGeometry(profil * 0.7, height, 0.14), rahmen);
+    mullion.position.set(0, height / 2, 0);
+    group.add(mullion);
+
+    // Die Fluegel selbst.
+    for (const side of [-1, 1]) {
+      const leaf = new THREE.Mesh(
+        new THREE.PlaneGeometry(width / 2 - profil, height - profil), glas);
+      leaf.position.set(side * (width / 4), height / 2, 0);
+      group.add(leaf);
+
+      const handle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.04, 0.9, 0.04), materials.get('chrome'));
+      handle.position.set(side * 0.12, height * 0.42, 0.09);
+      group.add(handle);
+    }
+
+    return group;
+  }
+
   static createCeilingTruss(width = 60, depth = 40, gridSize = 10, height = 13.5) {
     const group = new THREE.Group();
     const mat = materials.get('truss');

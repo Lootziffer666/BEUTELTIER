@@ -9,6 +9,7 @@ export declare class ArchitectureGenerator {
   static createEscalator(
     run?: number, rise?: number, width?: number, stepDepth?: number,
   ): THREE.Group;
+  static createDoubleGlassDoor(width?: number, height?: number): THREE.Group;
   static createCeilingTruss(
     width?: number, depth?: number, gridSize?: number, height?: number,
   ): THREE.Group;

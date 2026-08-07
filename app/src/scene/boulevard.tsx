@@ -26,6 +26,7 @@ import type { Placement2D } from '../data/types';
 import {
   boulevarddeckeSurface,
   disposeSurface,
+  facadeSurface,
   glasfassadeSurface,
   hallenbodenSurface,
   WELT_KACHEL_M,
@@ -58,12 +59,17 @@ const BODEN_Y = 0.02;
 const OBERLICHT_BREITE_M = 6.4;
 
 interface Achse {
-  /** Ursprung: Südende der Mittelachse, in Geländemetern. */
+  /** Ursprung: Anfang der Mittelachse, in Geländemetern. */
   x0: number;
   y0: number;
-  /** Einheitsvektor der Länge (nach Norden) und der Breite. */
+  /** Einheitsvektor der Länge und der Breite. */
   laengs: [number, number];
   quer: [number, number];
+  /** Die Rohwerte im gedrehten Hallensystem -- für die Wandabschnitte. */
+  winkel: number;
+  uMitte: number;
+  vorne: number;
+  richtung: number;
 }
 
 function spanne(footprint: Placement2D[], winkel: number) {
@@ -117,16 +123,70 @@ export function boulevardAchse(data: Dataset): Achse | null {
     y0: uMitte * uy + vorne * ux,
     laengs,
     quer: [ux, uy],
+    winkel: lage.winkel,
+    uMitte,
+    vorne,
+    richtung,
   };
+}
+
+/**
+ * Wo an der Laengsseite eine Halle steht -- und wo nicht.
+ *
+ * Der Boulevard ist nicht auf 235 m verglast. Ueberall dort, wo eine Halle
+ * mit ihrer Stirnseite andockt, steht eine richtige Wand; verglast sind die
+ * Luecken dazwischen, weil man dort ins Freie sieht. Welche Halle wie weit
+ * reicht, steht im Datensatz -- gerechnet wird es, nicht eingetragen.
+ */
+function wandAbschnitte(
+  data: Dataset,
+  winkel: number,
+  uMitte: number,
+  vorne: number,
+  richtung: number,
+  seite: -1 | 1,
+): { massiv: [number, number][]; glas: [number, number][] } {
+  const belegt: [number, number][] = [];
+  for (const hall of data.site.halls) {
+    if (hall.outdoor) continue;
+    const lage = spanne(hall.footprint, winkel);
+    // Liegt die Halle auf dieser Seite des Gangs?
+    const drin = seite < 0 ? lage.uMax <= uMitte + 1 : lage.uMin >= uMitte - 1;
+    if (!drin) continue;
+
+    const sA = (lage.vMin - vorne) * richtung;
+    const sB = (lage.vMax - vorne) * richtung;
+    const von = Math.max(0, Math.min(sA, sB));
+    const bis = Math.min(LAENGE_M, Math.max(sA, sB));
+    if (bis - von > 2) belegt.push([von, bis]);
+  }
+
+  belegt.sort((a, b) => a[0] - b[0]);
+  const massiv: [number, number][] = [];
+  for (const abschnitt of belegt) {
+    const letzter = massiv[massiv.length - 1];
+    if (letzter && abschnitt[0] <= letzter[1] + 0.5) {
+      letzter[1] = Math.max(letzter[1], abschnitt[1]);
+    } else {
+      massiv.push([...abschnitt] as [number, number]);
+    }
+  }
+
+  const glas: [number, number][] = [];
+  let cursor = 0;
+  for (const [von, bis] of massiv) {
+    if (von - cursor > 1) glas.push([cursor, von]);
+    cursor = bis;
+  }
+  if (LAENGE_M - cursor > 1) glas.push([cursor, LAENGE_M]);
+
+  return { massiv, glas };
 }
 
 /** Lichte Hoehe -- gleichbleibend über die ganze Laenge. */
 function hoeheBei(): number {
   return HOEHE_M;
 }
-
-/** Stationen entlang der Laenge. Zwei genuegen, solange die Hoehe konstant ist. */
-const STATIONEN = [0, LAENGE_M];
 
 /**
  * Ein Band aus Vierecken entlang des Boulevards.
@@ -141,6 +201,7 @@ function band(
   centre: [number, number],
   punkte: (s: number) => [[number, number], [number, number]],
   kachelM: number,
+  stuecke: [number, number][] = [[0, LAENGE_M]],
 ): THREE.BufferGeometry {
   const positions: number[] = [];
   const uvs: number[] = [];
@@ -151,9 +212,7 @@ function band(
     return [x - centre[0], h, -(y - centre[1])];
   };
 
-  for (let i = 1; i < STATIONEN.length; i += 1) {
-    const s0 = STATIONEN[i - 1];
-    const s1 = STATIONEN[i];
+  for (const [s0, s1] of stuecke) {
     const [a0, a1] = punkte(s0);
     const [b0, b1] = punkte(s1);
     const ecken = [
@@ -167,6 +226,7 @@ function band(
       uvs.push(ecken[index].uv[0], ecken[index].uv[1]);
     }
   }
+  if (!positions.length) return new THREE.BufferGeometry();
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -391,6 +451,10 @@ export function Boulevard({
     if (!achse) return null;
     const halb = BREITE_M / 2;
     const lichtHalb = OBERLICHT_BREITE_M / 2;
+    const west = wandAbschnitte(data, achse.winkel, achse.uMitte, achse.vorne,
+                                achse.richtung, -1);
+    const ost = wandAbschnitte(data, achse.winkel, achse.uMitte, achse.vorne,
+                               achse.richtung, 1);
 
     return {
       boden: band(achse, centre,
@@ -401,18 +465,23 @@ export function Boulevard({
       oberlicht: band(achse, centre,
         () => [[-lichtHalb, hoeheBei() - 0.06], [lichtHalb, hoeheBei() - 0.06]],
         WELT_KACHEL_M.decke),
-      wandWest: band(achse, centre,
-        () => [[-halb, BODEN_Y], [-halb, hoeheBei()]], WELT_KACHEL_M.wand),
-      wandOst: band(achse, centre,
-        () => [[halb, hoeheBei()], [halb, BODEN_Y]], WELT_KACHEL_M.wand),
+      wandWestMassiv: band(achse, centre,
+        () => [[-halb, BODEN_Y], [-halb, hoeheBei()]], WELT_KACHEL_M.wand, west.massiv),
+      wandWestGlas: band(achse, centre,
+        () => [[-halb, BODEN_Y], [-halb, hoeheBei()]], WELT_KACHEL_M.wand, west.glas),
+      wandOstMassiv: band(achse, centre,
+        () => [[halb, hoeheBei()], [halb, BODEN_Y]], WELT_KACHEL_M.wand, ost.massiv),
+      wandOstGlas: band(achse, centre,
+        () => [[halb, hoeheBei()], [halb, BODEN_Y]], WELT_KACHEL_M.wand, ost.glas),
     };
-  }, [achse, centre]);
+  }, [achse, centre, data]);
 
   const surfaces = useMemo(
     () => ({
       boden: hallenbodenSurface(),
       dach: boulevarddeckeSurface(),
       wand: glasfassadeSurface(),
+      massiv: facadeSurface(true),
     }),
     [],
   );
@@ -448,6 +517,14 @@ export function Boulevard({
       roughness: 0.25,
       side: THREE.DoubleSide,
     }),
+    wandMassiv: new THREE.MeshStandardMaterial({
+      map: kachel(surfaces.massiv.map),
+      normalMap: kachel(surfaces.massiv.normalMap),
+      roughnessMap: kachel(surfaces.massiv.roughnessMap),
+      roughness: 0.75,
+      metalness: 0.05,
+      side: THREE.DoubleSide,
+    }),
     wand: new THREE.MeshStandardMaterial({
       map: kachel(surfaces.wand.map),
       normalMap: kachel(surfaces.wand.normalMap),
@@ -460,6 +537,12 @@ export function Boulevard({
       roughness: 0.18,
       metalness: 0.1,
       side: THREE.DoubleSide,
+      // Durchsichtig, wo die Alphakarte dunkel ist -- also überall ausser
+      // Pfosten, Riegel und Sockel. Ohne `depthWrite: false` schneidet die
+      // Scheibe alles weg, was hinter ihr liegt.
+      alphaMap: kachel(surfaces.wand.alphaMap),
+      transparent: true,
+      depthWrite: false,
     }),
   }), [surfaces]);
 
@@ -468,6 +551,7 @@ export function Boulevard({
     disposeSurface(surfaces.boden);
     disposeSurface(surfaces.dach);
     disposeSurface(surfaces.wand);
+    disposeSurface(surfaces.massiv);
   }, [material, surfaces]);
 
   useEffect(() => () => {
@@ -525,6 +609,36 @@ export function Boulevard({
 
   const treppe = useMemo(() => (achse ? treppenteile(achse, centre) : null), [achse, centre]);
 
+  /**
+   * Die Stirnwand am Suedende: ebenfalls Glas, mit zwei Doppeltueren.
+   *
+   * Sie steht quer am Ende des Bands. Die Tueren sitzen mittig nebeneinander
+   * auf Fussbodenhoehe -- dort, wo man von draussen hereinkommt.
+   */
+  const suedwand = useMemo(() => {
+    if (!achse) return null;
+    const s = LAENGE_M;
+    const x = achse.x0 + achse.laengs[0] * s;
+    const y = achse.y0 + achse.laengs[1] * s;
+    const drehung = Math.atan2(achse.laengs[0], -achse.laengs[1]);
+    return {
+      position: [x - centre[0], BODEN_Y + HOEHE_M / 2, -(y - centre[1])] as
+        [number, number, number],
+      drehung,
+      tueren: [-1, 1].map((seite) => ({
+        versatz: seite * 1.9,
+        gruppe: ArchitectureGenerator.createDoubleGlassDoor(3.2, 2.6),
+      })),
+    };
+  }, [achse, centre]);
+
+  useEffect(() => () => (suedwand?.tueren ?? []).forEach(({ gruppe }) => {
+    gruppe.traverse((knoten) => {
+      const netz = knoten as THREE.Mesh;
+      if (netz.isMesh) netz.geometry.dispose();
+    });
+  }), [suedwand]);
+
   /** Je Seite eine gebaute Rolltreppe -- der Generator liefert eine Gruppe. */
   const rolltreppen = useMemo(() => (treppe?.rolltreppen ?? []).map((teil) => ({
     position: teil.position,
@@ -549,8 +663,10 @@ export function Boulevard({
       <mesh geometry={flaechen.boden} material={material.boden} receiveShadow />
       <mesh geometry={flaechen.dach} material={material.dach} />
       <mesh geometry={flaechen.oberlicht} material={material.oberlicht} />
-      <mesh geometry={flaechen.wandWest} material={material.wand} receiveShadow />
-      <mesh geometry={flaechen.wandOst} material={material.wand} receiveShadow />
+      <mesh geometry={flaechen.wandWestMassiv} material={material.wandMassiv} receiveShadow />
+      <mesh geometry={flaechen.wandOstMassiv} material={material.wandMassiv} receiveShadow />
+      <mesh geometry={flaechen.wandWestGlas} material={material.wand} />
+      <mesh geometry={flaechen.wandOstGlas} material={material.wand} />
       {pendel.map((position, index) => (
         <mesh key={`p${index}`} position={position}>
           <cylinderGeometry args={[0.62, 0.34, 0.42, 12]} />
@@ -575,6 +691,20 @@ export function Boulevard({
           />
         </mesh>
       ))}
+      {suedwand && (
+        <group position={suedwand.position} rotation={[0, suedwand.drehung, 0]}>
+          <mesh material={material.wand}>
+            <planeGeometry args={[BREITE_M, HOEHE_M]} />
+          </mesh>
+          {suedwand.tueren.map(({ versatz, gruppe }, index) => (
+            <primitive
+              key={`d${index}`}
+              object={gruppe}
+              position={[versatz, -HOEHE_M / 2, 0.12]}
+            />
+          ))}
+        </group>
+      )}
       {treppe && (
         <group>
           {treppe.stufen.map((teil, index) => (
