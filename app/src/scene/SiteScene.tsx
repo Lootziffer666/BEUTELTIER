@@ -35,6 +35,7 @@ import {
 } from './materials';
 import { Beleuchtung } from './lighting';
 import { Deckenleuchten, Hallenhuelle, Hallenlicht } from './interior';
+import { Boulevard } from './boulevard';
 import { Markenstaende } from './Markenstaende';
 import { MARKEN_STAND_IDS } from './marken';
 import { Vertikalverbindungen } from './vertical';
@@ -1154,6 +1155,7 @@ export function SiteScene(props: SceneProps) {
       />
       <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
       <Hallenhuelle data={data} centre={centre} visible={preset === 'ego'} />
+      <Boulevard data={data} centre={centre} visible={preset === 'ego'} />
       <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
       <Hallenlicht
         data={data}
