@@ -31,6 +31,7 @@ import {
   WELT_KACHEL_M,
 } from './materials';
 import { hallenlage } from './interior';
+import { ArchitectureGenerator } from '../procedural/generators/ArchitectureGenerator';
 
 /** Gibt die Achsrichtung der Hallenzeile vor. */
 const LEITHALLE = '9.1';
@@ -360,19 +361,16 @@ function treppenteile(achse: Achse, centre: [number, number]): {
     }
   }
 
-  // Rolltreppen: je ein geneigter Koerper ueber die ganze Strecke.
-  const laenge = Math.hypot(TREPPE_LAUF_M, TREPPE_HOEHE_M);
-  // Negativ: eine Drehung um +X kippt die lokale Z-Achse nach unten. Die
-  // Rolltreppe soll aber in dieselbe Richtung steigen wie die Treppe daneben.
-  const neigung = -Math.atan2(TREPPE_HOEHE_M, TREPPE_LAUF_M);
+  // Rolltreppen: nur der Fusspunkt. Den Koerper baut der Generator, und zwar
+  // am Fusspunkt beginnend und entlang der lokalen +Z-Achse steigend -- hier
+  // bleibt damit nur die Drehung um die Hochachse.
   const rolltreppen: Bauteil[] = [-1, 1].map((seite) => ({
     position: ort(
-      anfang + TREPPE_LAUF_M / 2,
+      anfang,
       seite * (TREPPE_BREITE_M / 2 + ROLLTREPPE_BREITE_M / 2 + 0.35),
-      BODEN_Y + TREPPE_HOEHE_M / 2,
+      BODEN_Y,
     ),
-    groesse: [ROLLTREPPE_BREITE_M, 0.9, laenge],
-    neigung,
+    groesse: [ROLLTREPPE_BREITE_M, 0, 0],
   }));
 
   return { stufen, rolltreppen, drehung };
@@ -527,6 +525,23 @@ export function Boulevard({
 
   const treppe = useMemo(() => (achse ? treppenteile(achse, centre) : null), [achse, centre]);
 
+  /** Je Seite eine gebaute Rolltreppe -- der Generator liefert eine Gruppe. */
+  const rolltreppen = useMemo(() => (treppe?.rolltreppen ?? []).map((teil) => ({
+    position: teil.position,
+    gruppe: ArchitectureGenerator.createEscalator(
+      TREPPE_LAUF_M, TREPPE_HOEHE_M, ROLLTREPPE_BREITE_M,
+    ),
+  })), [treppe]);
+
+  useEffect(() => () => rolltreppen.forEach(({ gruppe }) => {
+    // Nur die Geometrien: die Materialien kommen aus dem gemeinsamen Katalog
+    // und werden anderswo weiterbenutzt.
+    gruppe.traverse((knoten) => {
+      const netz = knoten as THREE.Mesh;
+      if (netz.isMesh) netz.geometry.dispose();
+    });
+  }), [rolltreppen]);
+
   if (!visible || !flaechen) return null;
 
   return (
@@ -574,18 +589,12 @@ export function Boulevard({
               <meshStandardMaterial color="#d9dade" roughness={0.55} metalness={0.1} />
             </mesh>
           ))}
-          {/* Erst um die Hochachse in die Boulevardrichtung, dann in einer
-              zweiten Gruppe kippen. Beides in einem Euler-Winkel wäre von der
-              Reihenfolge abhängig -- und genau daran kippt die Rolltreppe
-              hinterher in die falsche Ebene. */}
-          {treppe.rolltreppen.map((teil, index) => (
-            <group key={`r${index}`} position={teil.position} rotation={[0, treppe.drehung, 0]}>
-              <group rotation={[teil.neigung ?? 0, 0, 0]}>
-                <mesh castShadow>
-                  <boxGeometry args={teil.groesse} />
-                  <meshStandardMaterial color="#9aa0a8" roughness={0.32} metalness={0.65} />
-                </mesh>
-              </group>
+          {/* Stufenband, Glasbalustrade und Handlauf kommen aus dem
+              vorhandenen ArchitectureGenerator -- dieselben Materialien wie
+              der Rest des prozeduralen Messebaus. */}
+          {rolltreppen.map(({ position, gruppe }, index) => (
+            <group key={`r${index}`} position={position} rotation={[0, treppe.drehung, 0]}>
+              <primitive object={gruppe} />
             </group>
           ))}
         </group>
