@@ -362,7 +362,9 @@ function treppenteile(achse: Achse, centre: [number, number]): {
 
   // Rolltreppen: je ein geneigter Koerper ueber die ganze Strecke.
   const laenge = Math.hypot(TREPPE_LAUF_M, TREPPE_HOEHE_M);
-  const neigung = Math.atan2(TREPPE_HOEHE_M, TREPPE_LAUF_M);
+  // Negativ: eine Drehung um +X kippt die lokale Z-Achse nach unten. Die
+  // Rolltreppe soll aber in dieselbe Richtung steigen wie die Treppe daneben.
+  const neigung = -Math.atan2(TREPPE_HOEHE_M, TREPPE_LAUF_M);
   const rolltreppen: Bauteil[] = [-1, 1].map((seite) => ({
     position: ort(
       anfang + TREPPE_LAUF_M / 2,
