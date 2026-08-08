@@ -1,0 +1,223 @@
+{
+ "schema": "beuteltier.feature-zuordnung.v1",
+ "inventar": "data/raw/dznrw/feature-inventar.json",
+ "regeln": [
+  "Hallen 1-11 sind vollstaendig vorhanden.",
+  "Halle 5 besteht aus ZWEI realen Features; bei beiden steht Name=5.",
+  "Gleiche Fktkurz-Werte bedeuten NICHT dasselbe Objekt.",
+  "Ueberdachung_A und Ueberdachung_B sind zwei verschiedene Objekte.",
+  "Parkhaus_A und Parkhaus_B sind zwei verschiedene Objekte.",
+  "Halle 3, Halle 11 und Eingang Ost wurden mehrfach fotografiert, sind aber je ein Objekt.",
+  "AUX-Features nicht anhand aehnlicher Form oder gleicher Funktionsklasse zusammenlegen.",
+  "Rellage=Aufgestaendert explizit erhalten.",
+  "LoD2-zmin NICHT als Innenfussboden interpretieren.",
+  "Keine Hoehen aus Screenshots oder zmin neu ableiten.",
+  "Keine Gebaeudemasse aus dz.nrw-Screenshotmessungen uebernehmen."
+ ],
+ "zugeordnet": [
+  {
+   "object": "Halle_2",
+   "featureIds": [
+    "DENW37AL100064wf"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_3",
+   "featureIds": [
+    "DENW37AL100064yw"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_4",
+   "featureIds": [
+    "DENW37AL10006612"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_5_A",
+   "featureIds": [
+    "DENW37AL100065RJ"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_5_B",
+   "featureIds": [
+    "DENW37AL1000644Q"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_6",
+   "featureIds": [
+    "DENW37AL100064lq"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_7",
+   "featureIds": [
+    "DENW37AL1000660R"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_8",
+   "featureIds": [
+    "DENW37AL100063oN"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_9",
+   "featureIds": [
+    "DENW37AL100065KW"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_10",
+   "featureIds": [
+    "DENW37AL100064Zs"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  }
+ ],
+ "unresolved": [
+  {
+   "object": "Halle_1",
+   "grund": "keine Registrierung im Repo -- die Halle ist im Datensatz nicht auf ein amtliches Gebaeude gefuehrt"
+  },
+  {
+   "object": "Halle_11",
+   "grund": "keine Registrierung im Repo -- die Halle ist im Datensatz nicht auf ein amtliches Gebaeude gefuehrt"
+  },
+  {
+   "object": "Boulevard_Nord",
+   "grund": "79 Features mit 31001_2000 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 79
+  },
+  {
+   "object": "Eingang_Ost",
+   "grund": "79 Features mit 31001_2000 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 79
+  },
+  {
+   "object": "Parkhaus_A",
+   "grund": "0 Features mit 31001_2461 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 0
+  },
+  {
+   "object": "Parkhaus_B",
+   "grund": "0 Features mit 31001_2461 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 0
+  },
+  {
+   "object": "Ueberdachung_A",
+   "grund": "25 Features mit 51009_1610 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 25
+  },
+  {
+   "object": "Ueberdachung_B",
+   "grund": "25 Features mit 51009_1610 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 25
+  },
+  {
+   "object": "AUX_01",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116313"
+  },
+  {
+   "object": "AUX_02",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116303"
+  },
+  {
+   "object": "AUX_03",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116319"
+  },
+  {
+   "object": "AUX_04",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116323"
+  },
+  {
+   "object": "AUX_05",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116325"
+  },
+  {
+   "object": "AUX_06",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116326"
+  },
+  {
+   "object": "AUX_07",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116328"
+  },
+  {
+   "object": "AUX_08",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116329"
+  },
+  {
+   "object": "AUX_09",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116332"
+  },
+  {
+   "object": "AUX_10",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116333"
+  },
+  {
+   "object": "AUX_11",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116334"
+  },
+  {
+   "object": "AUX_12",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116338"
+  },
+  {
+   "object": "AUX_13",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116339"
+  },
+  {
+   "object": "AUX_14",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116340"
+  },
+  {
+   "object": "AUX_15",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116341"
+  },
+  {
+   "object": "AUX_16",
+   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "sourceRef": "1000116342"
+  }
+ ],
+ "bestandNachFunktion": {
+  "31001_1000": 39,
+  "31001_1100": 5,
+  "31001_2000": 79,
+  "31001_2400": 3,
+  "31001_2460": 14,
+  "31001_3014": 1,
+  "31001_3021": 6,
+  "31001_3060": 1,
+  "31001_3200": 1,
+  "51009_1610": 25,
+  "53001_1800": 5,
+  "ohne": 205
+ }
+}
