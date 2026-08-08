@@ -1,28 +1,31 @@
 /**
  * Der Nordboulevard.
  *
- * Er ist keine Halle, sondern der Gang, der sie erschliesst: 235 m lang,
- * 16 m breit, 11 m hoch, im Wesentlichen Nord-Sued. Die Hallen 5, 6, 7, 9
- * und 10 docken mit ihrer **kurzen** Seite seitlich an -- ihre Tiefe laeuft
- * vom Boulevard weg. Halle 8 ist die Ausnahme: sie liegt am Ende und stellt
- * sich mit ihrer **langen** Seite quer davor, ein T-Abschluss.
+ * Er ist keine Halle, sondern der Gang, der sie erschliesst: knapp 15 m breit,
+ * 11 m hoch, im Wesentlichen Nord-Sued. Die Hallen 5, 6, 7, 9 und 10 docken
+ * mit ihrer **kurzen** Seite seitlich an -- ihre Tiefe laeuft vom Boulevard
+ * weg. Halle 8 ist die Ausnahme: sie liegt am Ende und stellt sich mit ihrer
+ * **langen** Seite quer davor, ein T-Abschluss.
  *
- * Die Masse sind Vorgabe, nicht Messung: `walkable-surfaces.json` fuehrt den
- * Boulevard ausdruecklich als Luecke (`boulevard-not-surveyed`), es gibt kein
- * amtliches Polygon. Verankert wird er deshalb an dem, was eingemessen ist --
- * an der Achse der Hallenzeile, an der Luecke zwischen den beiden Zeilen und
- * an der Stirnseite von Halle 8. Verschieben sich die Hallen, geht der
- * Boulevard mit.
+ * Wo er genau liegt, wird hier **nicht** gerechnet. Es steht in
+ * `boulevard.json`, gemessen von `tools/build_boulevard.py` aus den amtlichen
+ * Gebaeudeumrissen des LoD2-Modells: Achse, Breite, und je Seite die Folge
+ * der Abschnitte mit der Angabe, ob dort eine Wand steht oder Glas.
  *
- * Halle 5 und Halle 10 liegen jenseits der 235 m und gehoeren damit zur
- * Fortsetzung, die hier noch nicht gebaut ist.
+ * Der Umweg ueber die Messung hat einen Grund. Abgeleitet aus
+ * `registered-site.json` kam der Gang falsch heraus -- diese Datei fuehrt die
+ * **belegte** Hallenflaeche und nicht den Gebaeudeumriss, und die beiden
+ * Gebaeude zwischen Halle 9 und Halle 8 fehlen dort ganz, weil in ihnen keine
+ * Messestaende liegen.
+ *
+ * Halle 5 und Halle 10 liegen jenseits der gebauten Laenge und gehoeren damit
+ * zur Fortsetzung, die hier noch nicht gebaut ist.
  */
 
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
-import type { Dataset, Gelaende } from '../data/load';
-import type { Placement2D } from '../data/types';
+import type { BoulevardAbschnitt, BoulevardPlan, Dataset } from '../data/load';
 import {
   boulevarddeckeSurface,
   disposeSurface,
@@ -31,19 +34,7 @@ import {
   hallenbodenSurface,
   WELT_KACHEL_M,
 } from './materials';
-import { hallenlage } from './interior';
 import { ArchitectureGenerator } from '../procedural/generators/ArchitectureGenerator';
-
-/** Gibt die Achsrichtung der Hallenzeile vor. */
-const LEITHALLE = '9.1';
-/** Die Zeile gegenueber -- sie schliesst die Luecke auf der anderen Seite. */
-const GEGENUEBER = '6.1';
-/** Die Halle, die sich quer vor das Ende stellt. */
-const ABSCHLUSS = '8.1';
-
-export const BREITE_M = 16;
-export const LAENGE_M = 235;
-export const HOEHE_M = 11;
 
 /**
  * Fussbodenhoehe.
@@ -58,134 +49,41 @@ export const BODEN_Y = 0.02;
 /** Breite des Oberlichtbands in der Mitte. */
 const OBERLICHT_BREITE_M = 6.4;
 
+/**
+ * Wo der Boulevard liegt.
+ *
+ * Nichts davon wird hier gerechnet -- `tools/build_boulevard.py` misst es aus
+ * den amtlichen Gebaeudeumrissen und legt es als `boulevard.json` ab. Diese
+ * Datei ist die einzige Quelle; fehlt sie, wird kein Boulevard gebaut.
+ */
 export interface Achse {
-  /** Ursprung: Anfang der Mittelachse, in Geländemetern. */
+  /** Station 0 auf der Mittelachse, in Geländemetern. */
   x0: number;
   y0: number;
-  /** Einheitsvektor der Länge und der Breite. */
+  /** Einheitsvektoren laengs (wachsende Station) und quer. */
   laengs: [number, number];
   quer: [number, number];
-  /** Die Rohwerte im gedrehten Hallensystem -- für die Wandabschnitte. */
-  winkel: number;
-  uMitte: number;
-  vorne: number;
-  richtung: number;
 }
 
-function spanne(footprint: Placement2D[], winkel: number) {
-  const ux = Math.cos(winkel);
-  const uy = Math.sin(winkel);
-  let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity;
-  for (const [x, y] of footprint) {
-    const u = x * ux + y * uy;
-    const v = -x * uy + y * ux;
-    uMin = Math.min(uMin, u); uMax = Math.max(uMax, u);
-    vMin = Math.min(vMin, v); vMax = Math.max(vMax, v);
-  }
-  return { uMin, uMax, vMin, vMax };
-}
-
-/**
- * Wo der Boulevard liegt, abgeleitet aus Halle 9.
- *
- * Die Querachse der Halle zeigt nach Süden, wenn v wächst -- das ergibt sich
- * aus der Drehung des Geländes und wird hier einmal festgehalten, statt an
- * jeder Stelle neu überlegt zu werden.
- */
-export function boulevardAchse(data: Gelaende): Achse | null {
-  const halle = data.hallsByKey.get(LEITHALLE);
-  const gegen = data.hallsByKey.get(GEGENUEBER);
-  const abschluss = data.hallsByKey.get(ABSCHLUSS);
-  if (!halle || !gegen || !abschluss) return null;
-  const lage = hallenlage(halle.footprint);
-  if (!lage) return null;
-
-  const ux = Math.cos(lage.winkel);
-  const uy = Math.sin(lage.winkel);
-  const eigen = spanne(halle.footprint, lage.winkel);
-  const drueben = spanne(gegen.footprint, lage.winkel);
-  const quer = spanne(abschluss.footprint, lage.winkel);
-
-  // Quer zur Zeile: mittig in die Luecke zwischen den beiden Hallenreihen.
-  const uMitte = (eigen.uMax + drueben.uMin) / 2;
-
-  // Laengs: an der Stirnseite von Halle 8 beginnen und von ihr weglaufen.
-  // Welche der beiden Kanten von Halle 8 die Stirnseite ist, sagt die Lage
-  // der Zeile -- der Boulevard laeuft immer auf sie zu.
-  const vorne = Math.abs(quer.vMin - eigen.vMax) < Math.abs(quer.vMax - eigen.vMax)
-    ? quer.vMin
-    : quer.vMax;
-  const richtung = Math.sign(((eigen.vMin + eigen.vMax) / 2) - vorne) || -1;
-
-  const laengs: [number, number] = [-uy * richtung, ux * richtung];
+export function boulevardAchse(data: Pick<Dataset, 'boulevard'>): Achse | null {
+  const plan = data.boulevard;
+  if (!plan) return null;
   return {
-    x0: uMitte * ux - vorne * uy,
-    y0: uMitte * uy + vorne * ux,
-    laengs,
-    quer: [ux, uy],
-    winkel: lage.winkel,
-    uMitte,
-    vorne,
-    richtung,
+    x0: plan.achse.x0,
+    y0: plan.achse.y0,
+    laengs: plan.achse.laengs,
+    quer: plan.achse.quer,
   };
 }
 
-/**
- * Wo an der Laengsseite eine Halle steht -- und wo nicht.
- *
- * Der Boulevard ist nicht auf 235 m verglast. Ueberall dort, wo eine Halle
- * mit ihrer Stirnseite andockt, steht eine richtige Wand; verglast sind die
- * Luecken dazwischen, weil man dort ins Freie sieht. Welche Halle wie weit
- * reicht, steht im Datensatz -- gerechnet wird es, nicht eingetragen.
- */
-export function wandAbschnitte(
-  data: Gelaende,
-  winkel: number,
-  uMitte: number,
-  vorne: number,
-  richtung: number,
-  seite: -1 | 1,
+/** Die Wandabschnitte einer Seite, getrennt nach massiv und verglast. */
+export function abschnitte(
+  seite: BoulevardAbschnitt[],
 ): { massiv: [number, number][]; glas: [number, number][] } {
-  const belegt: [number, number][] = [];
-  for (const hall of data.site.halls) {
-    if (hall.outdoor) continue;
-    const lage = spanne(hall.footprint, winkel);
-    // Liegt die Halle auf dieser Seite des Gangs?
-    const drin = seite < 0 ? lage.uMax <= uMitte + 1 : lage.uMin >= uMitte - 1;
-    if (!drin) continue;
-
-    const sA = (lage.vMin - vorne) * richtung;
-    const sB = (lage.vMax - vorne) * richtung;
-    const von = Math.max(0, Math.min(sA, sB));
-    const bis = Math.min(LAENGE_M, Math.max(sA, sB));
-    if (bis - von > 2) belegt.push([von, bis]);
-  }
-
-  belegt.sort((a, b) => a[0] - b[0]);
-  const massiv: [number, number][] = [];
-  for (const abschnitt of belegt) {
-    const letzter = massiv[massiv.length - 1];
-    if (letzter && abschnitt[0] <= letzter[1] + 0.5) {
-      letzter[1] = Math.max(letzter[1], abschnitt[1]);
-    } else {
-      massiv.push([...abschnitt] as [number, number]);
-    }
-  }
-
-  const glas: [number, number][] = [];
-  let cursor = 0;
-  for (const [von, bis] of massiv) {
-    if (von - cursor > 1) glas.push([cursor, von]);
-    cursor = bis;
-  }
-  if (LAENGE_M - cursor > 1) glas.push([cursor, LAENGE_M]);
-
-  return { massiv, glas };
-}
-
-/** Lichte Hoehe -- gleichbleibend über die ganze Laenge. */
-function hoeheBei(): number {
-  return HOEHE_M;
+  return {
+    massiv: seite.filter((s) => s.art === 'wand').map((s) => [s.von, s.bis]),
+    glas: seite.filter((s) => s.art === 'glas').map((s) => [s.von, s.bis]),
+  };
 }
 
 /**
@@ -201,7 +99,7 @@ function band(
   centre: [number, number],
   punkte: (s: number) => [[number, number], [number, number]],
   kachelM: number,
-  stuecke: [number, number][] = [[0, LAENGE_M]],
+  stuecke: [number, number][],
 ): THREE.BufferGeometry {
   const positions: number[] = [];
   const uvs: number[] = [];
@@ -254,8 +152,14 @@ function kachel(quelle: THREE.Texture | undefined, wiederholung = 1) {
  * grünem Pfeil. Wer den Gang betritt, liest sie, bevor er irgendetwas
  * anderes wahrnimmt.
  *
- * Angeschrieben wird, was tatsächlich dort abgeht -- die Halle links und die
- * Halle rechts, an der Stelle, an der man vor ihrem Eingang steht.
+ * Angeschrieben wird, was tatsächlich dort abgeht -- und zwar **gerechnet**,
+ * nicht eingetragen: welche Halle an welcher Station links und welche rechts
+ * liegt, steht gemessen in `boulevard.json`. Ein von Hand beschriftetes Schild
+ * widerspricht der Geometrie frueher oder spaeter; dieses kann es nicht.
+ *
+ * Jede Tafel hat zwei Gesichter. Links und rechts hängen an der Gehrichtung,
+ * also zeigt die eine Seite etwas anderes als die andere -- eine Tafel mit
+ * demselben Bild auf beiden Seiten ist für eine der beiden Richtungen falsch.
  */
 export interface Wegweiser {
   /** Meter vom Anfang (Stirnseite Halle 8). */
@@ -263,18 +167,77 @@ export interface Wegweiser {
   kopf: string;
   kopfKlein: string;
   zeilen: { text: string; pfeil: 'links' | 'rechts' | 'geradeaus' }[];
+  /** +1 = die Tafel schaut dem entgegen, der Richtung Süden geht. */
+  blick: 1 | -1;
 }
 
-export const WEGWEISER: Wegweiser[] = [
-  { station: 30, kopf: '7 – 8', kopfKlein: 'Congress-Centrum Nord\nAusgang Nord',
-    zeilen: [{ text: '8', pfeil: 'geradeaus' }, { text: '7', pfeil: 'rechts' }] },
-  { station: 95, kopf: '7', kopfKlein: 'Service Center Nord',
-    zeilen: [{ text: '7', pfeil: 'rechts' }, { text: '6', pfeil: 'links' }] },
-  { station: 175, kopf: '6 – 9', kopfKlein: 'Congress-Centrum Nord\nAusgang Nord',
-    zeilen: [{ text: '6', pfeil: 'rechts' }, { text: '9', pfeil: 'links' }] },
-  { station: 220, kopf: '9', kopfKlein: 'Ausgang Nord',
-    zeilen: [{ text: '9', pfeil: 'links' }, { text: '5 – 10', pfeil: 'geradeaus' }] },
-];
+/**
+ * Liegt die Ostseite links, wenn man Richtung Süden geht?
+ *
+ * Wird ausgerechnet und nicht angenommen: Die Geländedaten liegen in einer
+ * gespiegelten Ebene, und in einer gespiegelten Ebene vertauschen sich links
+ * und rechts. Wer das im Kopf macht, vertauscht es.
+ */
+function ostLiegtLinks(achse: Achse): boolean {
+  // Vorwärts (wachsende Station) in Szenenkoordinaten.
+  const vx = achse.laengs[0];
+  const vz = -achse.laengs[1];
+  // Links = Hochachse × vorwärts.
+  const lx = vz;
+  const lz = -vx;
+  // Die Ostseite liegt bei negativem q.
+  const ox = -achse.quer[0];
+  const oz = achse.quer[1];
+  return lx * ox + lz * oz > 0;
+}
+
+/** Die nächste Halle auf einer Seite, von einer Station aus gesehen. */
+function naechsteHalle(
+  seite: BoulevardAbschnitt[],
+  station: number,
+  vor: 1 | -1,
+): string | null {
+  const voraus = seite
+    .filter((s) => s.hallKey && (vor > 0 ? s.bis > station : s.von < station))
+    .sort((a, b) => (vor > 0 ? a.von - b.von : b.von - a.von));
+  return voraus.length ? voraus[0].hallKey!.split('.')[0] : null;
+}
+
+/**
+ * Die Tafeln, aus dem gemessenen Plan abgeleitet.
+ *
+ * Drei Standorte über die Länge verteilt, jeder mit zwei Gesichtern. Oben das
+ * Fernziel in Gehrichtung -- im Norden Halle 8, im Süden das, was dort andockt
+ * --, darunter die nächste Halle links und die nächste rechts.
+ */
+export function wegweiser(plan: BoulevardPlan, achse: Achse): Wegweiser[] {
+  const ostLinks = ostLiegtLinks(achse);
+  const out: Wegweiser[] = [];
+  for (const anteil of [0.12, 0.45, 0.82]) {
+    const station = Math.round(plan.laengeM * anteil);
+    for (const blick of [1, -1] as const) {
+      const ziel = blick > 0 ? plan.enden.sued : plan.enden.nord;
+      const linkeSeite = (blick > 0) === ostLinks ? plan.seiten.ost : plan.seiten.west;
+      const rechteSeite = (blick > 0) === ostLinks ? plan.seiten.west : plan.seiten.ost;
+      const links = naechsteHalle(linkeSeite, station, blick);
+      const rechts = naechsteHalle(rechteSeite, station, blick);
+      const zeilen: Wegweiser['zeilen'] = [];
+      if (links) zeilen.push({ text: links, pfeil: 'links' });
+      if (rechts) zeilen.push({ text: rechts, pfeil: 'rechts' });
+      if (!zeilen.length && ziel.length) {
+        zeilen.push({ text: ziel.join(' – '), pfeil: 'geradeaus' });
+      }
+      out.push({
+        station,
+        blick,
+        kopf: ziel.length ? ziel.join(' – ') : '',
+        kopfKlein: blick > 0 ? 'Ausgang Süd' : 'Congress-Centrum Nord\nAusgang Nord',
+        zeilen,
+      });
+    }
+  }
+  return out;
+}
 
 export const SCHILD_BREITE_M = 2.6;
 export const SCHILD_HOEHE_M = 3.4;
@@ -289,8 +252,11 @@ function pfeilZeichnen(
 ): void {
   ctx.save();
   ctx.translate(x, y);
-  if (richtung === 'links') ctx.rotate(Math.PI / 2);
-  if (richtung === 'rechts') ctx.rotate(-Math.PI / 2);
+  // Die Spitze zeigt in der Vorlage nach oben, also nach -Y. Auf einer
+  // Leinwand laeuft Y nach unten: eine Drehung um +90 Grad dreht damit im
+  // Uhrzeigersinn, und aus "links" wuerde ein Pfeil nach rechts.
+  if (richtung === 'links') ctx.rotate(-Math.PI / 2);
+  if (richtung === 'rechts') ctx.rotate(Math.PI / 2);
   ctx.fillStyle = GRUEN;
   const h = groesse * 0.5;
   ctx.beginPath();
@@ -383,7 +349,7 @@ export interface Bauteil {
   neigung?: number;
 }
 
-export function treppenteile(achse: Achse, centre: [number, number]): {
+export function treppenteile(achse: Achse, centre: [number, number], laenge: number): {
   stufen: Bauteil[];
   rolltreppen: Bauteil[];
   drehung: number;
@@ -396,7 +362,7 @@ export function treppenteile(achse: Achse, centre: [number, number]): {
   const drehung = Math.atan2(achse.laengs[0], -achse.laengs[1]);
 
   // Die Anlage sitzt am Ende des Bands und steigt darauf zu.
-  const anfang = LAENGE_M - TREPPE_LAUF_M;
+  const anfang = laenge - TREPPE_LAUF_M;
   const stufen: Bauteil[] = [];
   let s = anfang;
   let h = BODEN_Y;
@@ -493,36 +459,39 @@ export function Boulevard({
   /** Sparsames Glas ohne Durchblick -- siehe `glasMaterial`. */
   previewSafe?: boolean;
 }) {
+  const plan = data.boulevard;
   const achse = useMemo(() => boulevardAchse(data), [data]);
 
   const flaechen = useMemo(() => {
-    if (!achse) return null;
-    const halb = BREITE_M / 2;
+    if (!achse || !plan) return null;
+    const laenge = plan.laengeM;
+    const hoehe = plan.hoeheM;
+    const ganz: [number, number][] = [[0, laenge]];
     const lichtHalb = OBERLICHT_BREITE_M / 2;
-    const west = wandAbschnitte(data, achse.winkel, achse.uMitte, achse.vorne,
-                                achse.richtung, -1);
-    const ost = wandAbschnitte(data, achse.winkel, achse.uMitte, achse.vorne,
-                               achse.richtung, 1);
+    const ost = abschnitte(plan.seiten.ost);
+    const west = abschnitte(plan.seiten.west);
+    // Auf welcher Seite der Achse die beiden Wandlinien liegen, sagt der Plan.
+    const qOst = plan.seitenQ.ost;
+    const qWest = plan.seitenQ.west;
 
     return {
       boden: band(achse, centre,
-        () => [[-halb, BODEN_Y], [halb, BODEN_Y]], WELT_KACHEL_M.boden),
-      // Das Dach folgt dem Höhenverlauf, das Oberlicht liegt knapp darunter.
+        () => [[qOst, BODEN_Y], [qWest, BODEN_Y]], WELT_KACHEL_M.boden, ganz),
       dach: band(achse, centre,
-        () => [[-halb, hoeheBei()], [halb, hoeheBei()]], WELT_KACHEL_M.decke),
+        () => [[qOst, hoehe], [qWest, hoehe]], WELT_KACHEL_M.decke, ganz),
       oberlicht: band(achse, centre,
-        () => [[-lichtHalb, hoeheBei() - 0.06], [lichtHalb, hoeheBei() - 0.06]],
-        WELT_KACHEL_M.decke),
-      wandWestMassiv: band(achse, centre,
-        () => [[-halb, BODEN_Y], [-halb, hoeheBei()]], WELT_KACHEL_M.wand, west.massiv),
-      wandWestGlas: band(achse, centre,
-        () => [[-halb, BODEN_Y], [-halb, hoeheBei()]], WELT_KACHEL_M.wand, west.glas),
+        () => [[-lichtHalb, hoehe - 0.06], [lichtHalb, hoehe - 0.06]],
+        WELT_KACHEL_M.decke, ganz),
       wandOstMassiv: band(achse, centre,
-        () => [[halb, hoeheBei()], [halb, BODEN_Y]], WELT_KACHEL_M.wand, ost.massiv),
+        () => [[qOst, BODEN_Y], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.massiv),
       wandOstGlas: band(achse, centre,
-        () => [[halb, hoeheBei()], [halb, BODEN_Y]], WELT_KACHEL_M.wand, ost.glas),
+        () => [[qOst, BODEN_Y], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.glas),
+      wandWestMassiv: band(achse, centre,
+        () => [[qWest, hoehe], [qWest, BODEN_Y]], WELT_KACHEL_M.wand, west.massiv),
+      wandWestGlas: band(achse, centre,
+        () => [[qWest, hoehe], [qWest, BODEN_Y]], WELT_KACHEL_M.wand, west.glas),
     };
-  }, [achse, centre, data]);
+  }, [achse, centre, plan]);
 
   const surfaces = useMemo(
     () => ({
@@ -591,53 +560,63 @@ export function Boulevard({
 
   /** Tageslicht von oben, in Abständen entlang des Bands. */
   const lampen = useMemo(() => {
-    if (!achse) return [];
+    if (!achse || !plan) return [];
     const out: [number, number, number][] = [];
-    const anzahl = 6;
+    const anzahl = Math.max(4, Math.round(plan.laengeM / 40));
     for (let i = 0; i < anzahl; i += 1) {
-      const s = ((i + 0.5) / anzahl) * LAENGE_M;
+      const s = ((i + 0.5) / anzahl) * plan.laengeM;
       const x = achse.x0 + achse.laengs[0] * s;
       const y = achse.y0 + achse.laengs[1] * s;
-      out.push([x - centre[0], HOEHE_M - 1.2, -(y - centre[1])]);
+      out.push([x - centre[0], plan.hoeheM - 1.2, -(y - centre[1])]);
     }
     return out;
-  }, [achse, centre]);
+  }, [achse, centre, plan]);
 
   /** Pendelleuchten in zwei Reihen, wie auf dem Foto. */
   const pendel = useMemo(() => {
-    if (!achse) return [];
+    if (!achse || !plan) return [];
     const out: [number, number, number][] = [];
     const abstand = 9;
-    for (let s = abstand; s < LAENGE_M; s += abstand) {
+    for (let s = abstand; s < plan.laengeM; s += abstand) {
       for (const q of [-4.2, 4.2]) {
         const x = achse.x0 + achse.laengs[0] * s + achse.quer[0] * q;
         const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * q;
-        out.push([x - centre[0], HOEHE_M - 1.5, -(y - centre[1])]);
+        out.push([x - centre[0], plan.hoeheM - 1.5, -(y - centre[1])]);
       }
     }
     return out;
-  }, [achse, centre]);
+  }, [achse, centre, plan]);
 
   const schilder = useMemo(() => {
-    if (!achse) return [];
-    // Die Tafel steht quer im Gang und schaut dem Ankommenden entgegen.
-    const drehung = Math.atan2(-achse.laengs[0], achse.laengs[1]);
-    return WEGWEISER.map((schild) => {
-      const x = achse.x0 + achse.laengs[0] * schild.station + achse.quer[0] * 3.4;
-      const y = achse.y0 + achse.laengs[1] * schild.station + achse.quer[1] * 3.4;
+    if (!achse || !plan) return [];
+    // Die Tafel haengt mittig im Gang und schaut dem Ankommenden entgegen --
+    // je Gehrichtung ein Gesicht, um 180 Grad gedreht.
+    return wegweiser(plan, achse).map((schild, index) => {
+      const x = achse.x0 + achse.laengs[0] * schild.station;
+      const y = achse.y0 + achse.laengs[1] * schild.station;
+      const drehung = schild.blick > 0
+        ? Math.atan2(-achse.laengs[0], achse.laengs[1])
+        : Math.atan2(achse.laengs[0], -achse.laengs[1]);
       return {
+        schluessel: `${schild.station}-${schild.blick}-${index}`,
         schild,
-        position: [x - centre[0], SCHILD_Y + SCHILD_HOEHE_M / 2, -(y - centre[1])] as
-          [number, number, number],
+        position: [
+          x - centre[0],
+          SCHILD_Y + SCHILD_HOEHE_M / 2,
+          -(y - centre[1]),
+        ] as [number, number, number],
         drehung,
         textur: schildTextur(schild),
       };
     });
-  }, [achse, centre]);
+  }, [achse, centre, plan]);
 
   useEffect(() => () => schilder.forEach(({ textur }) => textur.dispose()), [schilder]);
 
-  const treppe = useMemo(() => (achse ? treppenteile(achse, centre) : null), [achse, centre]);
+  const treppe = useMemo(
+    () => (achse && plan ? treppenteile(achse, centre, plan.laengeM) : null),
+    [achse, centre, plan],
+  );
 
   /**
    * Die Stirnwand am Suedende: ebenfalls Glas, mit zwei Doppeltueren.
@@ -646,13 +625,13 @@ export function Boulevard({
    * auf Fussbodenhoehe -- dort, wo man von draussen hereinkommt.
    */
   const suedwand = useMemo(() => {
-    if (!achse) return null;
-    const s = LAENGE_M;
+    if (!achse || !plan) return null;
+    const s = plan.laengeM;
     const x = achse.x0 + achse.laengs[0] * s;
     const y = achse.y0 + achse.laengs[1] * s;
     const drehung = Math.atan2(achse.laengs[0], -achse.laengs[1]);
     return {
-      position: [x - centre[0], BODEN_Y + HOEHE_M / 2, -(y - centre[1])] as
+      position: [x - centre[0], BODEN_Y + plan.hoeheM / 2, -(y - centre[1])] as
         [number, number, number],
       drehung,
       tueren: [-1, 1].map((seite) => ({
@@ -660,7 +639,7 @@ export function Boulevard({
         gruppe: ArchitectureGenerator.createDoubleGlassDoor(3.2, 2.6),
       })),
     };
-  }, [achse, centre]);
+  }, [achse, centre, plan]);
 
   useEffect(() => () => (suedwand?.tueren ?? []).forEach(({ gruppe }) => {
     gruppe.traverse((knoten) => {
@@ -708,8 +687,8 @@ export function Boulevard({
           />
         </mesh>
       ))}
-      {schilder.map(({ schild, position, drehung, textur }) => (
-        <mesh key={schild.station} position={position} rotation={[0, drehung, 0]}>
+      {schilder.map(({ schluessel, position, drehung, textur }) => (
+        <mesh key={schluessel} position={position} rotation={[0, drehung, 0]}>
           <planeGeometry args={[SCHILD_BREITE_M, SCHILD_HOEHE_M]} />
           <meshStandardMaterial
             map={textur}
@@ -717,20 +696,22 @@ export function Boulevard({
             emissive="#ffffff"
             emissiveIntensity={0.45}
             roughness={0.55}
-            side={THREE.DoubleSide}
+            // Einseitig: die Rueckseite ist das Gesicht der Gegenrichtung und
+            // zeigt etwas anderes.
+            side={THREE.FrontSide}
           />
         </mesh>
       ))}
-      {suedwand && (
+      {suedwand && plan && (
         <group position={suedwand.position} rotation={[0, suedwand.drehung, 0]}>
           <mesh material={material.wand}>
-            <planeGeometry args={[BREITE_M, HOEHE_M]} />
+            <planeGeometry args={[plan.breiteM, plan.hoeheM]} />
           </mesh>
           {suedwand.tueren.map(({ versatz, gruppe }, index) => (
             <primitive
               key={`d${index}`}
               object={gruppe}
-              position={[versatz, -HOEHE_M / 2, 0.12]}
+              position={[versatz, -plan.hoeheM / 2, 0.12]}
             />
           ))}
         </group>

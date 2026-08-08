@@ -176,6 +176,44 @@ export interface WorldDiagnostics {
   } | null;
 }
 
+/**
+ * Der Nordboulevard, aus den amtlichen Gebaeudeumrissen gerechnet.
+ *
+ * Gebaut von tools/build_boulevard.py. Stationen in Metern ab der Stirnseite
+ * von Halle 8, Richtung Sueden; `art` sagt, ob dort eine Wand steht oder Glas.
+ */
+export interface BoulevardAbschnitt {
+  von: number;
+  bis: number;
+  art: 'wand' | 'glas';
+  was: string;
+  featureId: string | null;
+  hallKey: string | null;
+}
+
+export interface BoulevardPlan {
+  schema: 'beuteltier.boulevard.v1';
+  achse: {
+    /** Station 0 auf der Mittelachse, in Geländemetern. */
+    x0: number;
+    y0: number;
+    /** Einheitsvektoren laengs (wachsende Station) und quer. */
+    laengs: [number, number];
+    quer: [number, number];
+    winkelDeg: number;
+  };
+  laengeM: number;
+  breiteM: number;
+  hoeheM: number;
+  /** Abstand der beiden Wandlinien von der Achse, quer gemessen. */
+  seitenQ: { ost: number; west: number };
+  /** Wie weit der Gang geometrisch reicht -- bis Halle 5 und Halle 10. */
+  geometrieLaengeM: number;
+  /** Was an den beiden Enden liegt, als Hallennummern -- fuer die Wegweiser. */
+  enden: { nord: string[]; sued: string[] };
+  seiten: { ost: BoulevardAbschnitt[]; west: BoulevardAbschnitt[] };
+}
+
 export interface Dataset {
   site: Site;
   registry: Registry;
@@ -188,6 +226,8 @@ export interface Dataset {
   footprints: Footprints | null;
   /** Migrations-/Diagnosedaten; fehlen in älteren Offline-Snapshots erlaubt. */
   world: WorldDiagnostics | null;
+  /** Der Nordboulevard; fehlt in älteren Offline-Snapshots. */
+  boulevard: BoulevardPlan | null;
   /** registered = Halleninhalte und Routing liegen im lokalen amtlichen Raum. */
   spatialMode: 'legacy' | 'registered';
   standsById: Map<string, Site['stands'][number]>;
@@ -240,6 +280,7 @@ export async function loadDataset(): Promise<Dataset> {
     fetchJson<WorldDiagnostics['hallRegistrations']>('hall-registrations.json').catch(() => null),
     fetchJson<WorldDiagnostics['registeredLayout']>('registered-layout.json').catch(() => null),
   ]);
+  const boulevard = await fetchJson<BoulevardPlan>('boulevard.json').catch(() => null);
 
   return {
     site,
@@ -254,6 +295,7 @@ export async function loadDataset(): Promise<Dataset> {
       worldPackages, visibilityAnalysis, surfaceClassification, collisionSurfaces, hallRegistrations,
       registeredLayout,
     } : null,
+    boulevard,
     spatialMode,
     standsById: new Map(site.stands.map((stand) => [stand.id, stand])),
     hallsByKey: new Map(site.halls.map((hall) => [hall.key, hall])),

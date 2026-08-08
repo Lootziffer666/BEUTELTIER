@@ -1019,6 +1019,18 @@ function WalkControls({
         hallKey: data.walk.footingAt(x, y, z).hallKey,
       });
     }
+    // Nur im Entwicklungsbetrieb: die Kamera von aussen setzen. Der
+    // Bilderpruefer (`gang-check.mjs`) braucht in Sekunden, wofuer Laufen
+    // unter dem Software-Renderer Minuten braucht. `import.meta.env.DEV` ist
+    // im gebauten Stand false, der ausgelieferte Code hat den Haken nicht.
+    if (import.meta.env.DEV) {
+      (globalThis as unknown as { __SETZEN?: unknown }).__SETZEN =
+        (px: number, py: number, pz: number, yaw: number) => {
+          position.current = { x: px, y: py, z: pz };
+          look.current.yaw = yaw;
+          look.current.pitch = 0;
+        };
+    }
     camera.position.set(x - centre[0], z + EYE_HEIGHT_M, -(y - centre[1]));
     camera.rotation.set(0, 0, 0);
     camera.rotateY(look.current.yaw);

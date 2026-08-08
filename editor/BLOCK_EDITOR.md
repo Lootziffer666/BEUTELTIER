@@ -65,5 +65,22 @@ Der Abschnitt zwischen den Marken ist generiert und wird bei jedem Lauf
 - **Einbahnstraße.** Was im Editor verschoben wird, geht nicht automatisch in
   die App zurück. Der Weg zurück führt über `GLB Hülle` oder `GLB Module` und
   von dort in den Szenenaufbau — von Hand.
-- **Halle 5 und 10** liegen jenseits der 235 m Boulevard und sind dort nicht
+- **Halle 5 und 10** liegen jenseits der gebauten 285 m Boulevard und sind dort nicht
   gebaut; ihre Hallenplatten sind trotzdem enthalten.
+
+## Woher die Boulevard-Geometrie kommt
+
+Die Wandabschnitte am Nordboulevard sind nicht geschätzt, sondern gemessen:
+`tools/build_boulevard.py` projiziert die amtlichen Gebäudeumrisse aus dem
+LoD2-Modell der Geobasis NRW auf die Gangachse und schreibt daraus
+`app/public/data/boulevard.json`. Wo ein Gebäude an den Gang heranreicht,
+steht eine Wand; wo keines steht, ist verglast. Welche Halle welches Gebäude
+ist, steht in `hall-registrations.json`; die Namen der übrigen Gebäude kommen
+aus OpenStreetMap.
+
+Reihenfolge beim Neuaufbau:
+
+```bash
+python3 tools/build_boulevard.py   # misst den Gang neu
+cd app && npm run bauplan          # überträgt ihn in den Editor
+```

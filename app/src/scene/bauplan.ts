@@ -9,7 +9,7 @@
  * Der Bauplan übersetzt dieselbe Rechnung einmal in die einzige Sprache, die
  * ein Blockeditor versteht: Mittelpunkt, Außenmaß, Drehung um die Hochachse.
  * Gerechnet wird dabei nichts neu -- die Körper kommen aus `markenkoerper`,
- * die Achse aus `boulevardAchse`, die Wandabschnitte aus `wandAbschnitte`.
+ * Achse und Wandabschnitte des Boulevards aus `boulevard.json`.
  * Wird an der Szene etwas nachgezogen, zieht der Bauplan mit, sobald er neu
  * erzeugt wird.
  *
@@ -18,14 +18,11 @@
  * zeigen, wo etwas steht.
  */
 
-import type { Gelaende } from '../data/load';
+import type { BoulevardPlan, Dataset, Gelaende } from '../data/load';
 import {
   AUFTRITT_M,
   BODEN_Y,
-  BREITE_M,
   boulevardAchse,
-  HOEHE_M,
-  LAENGE_M,
   LAEUFE,
   PODEST_M,
   ROLLTREPPE_BREITE_M,
@@ -37,8 +34,7 @@ import {
   TREPPE_BREITE_M,
   TREPPE_HOEHE_M,
   TREPPE_LAUF_M,
-  WEGWEISER,
-  wandAbschnitte,
+  wegweiser,
   type Achse,
 } from './boulevard';
 import { hallenlage } from './interior';
@@ -221,7 +217,8 @@ function markenbloecke(data: Gelaende, centre: [number, number]): BauplanObjekt[
  * in Szenenkoordinaten. Die Drehung ist für alle Teile dieselbe -- lokal +Z
  * läuft die Achse entlang, lokal +X quer.
  */
-function boulevardbloecke(achse: Achse, data: Gelaende, centre: [number, number]): BauplanObjekt[] {
+function boulevardbloecke(achse: Achse, plan: BoulevardPlan,
+                          centre: [number, number]): BauplanObjekt[] {
   const gruppe = 'Boulevard Nord';
   const out: BauplanObjekt[] = [];
   const ort = (s: number, q: number, h: number): [number, number, number] => {
@@ -261,7 +258,9 @@ function boulevardbloecke(achse: Achse, data: Gelaende, centre: [number, number]
   };
 
   // Boden, Dach und Oberlicht laufen über die ganze Länge.
-  const boden = ort(LAENGE_M / 2, 0, 0);
+  const laenge = plan.laengeM;
+  const hoehe = plan.hoeheM;
+  const boden = ort(laenge / 2, 0, 0);
   out.push(eintrag({
     gruppe,
     name: 'Boulevard Boden',
@@ -269,9 +268,9 @@ function boulevardbloecke(achse: Achse, data: Gelaende, centre: [number, number]
     x: boden[0],
     y: BODEN_Y - 0.1,
     z: boden[2],
-    breite: BREITE_M,
+    breite: plan.breiteM,
     hoehe: 0.2,
-    tiefe: LAENGE_M,
+    tiefe: laenge,
     drehung,
     farbe: FARBE.boulevardboden,
   }));
@@ -280,11 +279,11 @@ function boulevardbloecke(achse: Achse, data: Gelaende, centre: [number, number]
     name: 'Boulevard Dach',
     art: 'block',
     x: boden[0],
-    y: HOEHE_M + 0.15,
+    y: hoehe + 0.15,
     z: boden[2],
-    breite: BREITE_M,
+    breite: plan.breiteM,
     hoehe: 0.3,
-    tiefe: LAENGE_M,
+    tiefe: laenge,
     drehung,
     farbe: FARBE.boulevarddach,
     sichtbar: false,
@@ -294,55 +293,48 @@ function boulevardbloecke(achse: Achse, data: Gelaende, centre: [number, number]
     name: 'Boulevard Oberlicht',
     art: 'block',
     x: boden[0],
-    y: HOEHE_M - 0.1,
+    y: hoehe - 0.1,
     z: boden[2],
     breite: 6.4,
     hoehe: 0.08,
-    tiefe: LAENGE_M,
+    tiefe: laenge,
     drehung,
     farbe: FARBE.oberlicht,
   }));
 
-  // Die Längswände: massiv, wo eine Halle andockt, sonst Glas.
-  const halb = BREITE_M / 2;
-  for (const seite of [-1, 1] as const) {
-    const bezeichnung = seite < 0 ? 'West' : 'Ost';
-    const abschnitte = wandAbschnitte(
-      data, achse.winkel, achse.uMitte, achse.vorne, achse.richtung, seite,
-    );
-    abschnitte.massiv.forEach(([von, bis], index) => {
+  // Beide Laengsseiten kommen aus der Messung: wo ein Gebaeude steht, ist es
+  // eine Wand, wo keines steht, sieht man ins Freie.
+  for (const [seite, q] of [['Ost', plan.seitenQ.ost], ['West', plan.seitenQ.west]] as const) {
+    for (const stueck of plan.seiten[seite === 'Ost' ? 'ost' : 'west']) {
+      const wand = stueck.art === 'wand';
       platte(
-        `Wand ${bezeichnung} massiv ${index + 1}`, 'block',
-        von, bis, seite * halb, BODEN_Y, HOEHE_M, 0.4, FARBE.massiv,
+        `${seite} ${stueck.was}`, wand ? 'block' : 'glass',
+        stueck.von, stueck.bis, q, BODEN_Y, hoehe,
+        wand ? 0.4 : 0.08, wand ? FARBE.massiv : FARBE.glas,
+        wand ? undefined : 0.28,
       );
-    });
-    abschnitte.glas.forEach(([von, bis], index) => {
-      platte(
-        `Wand ${bezeichnung} Glas ${index + 1}`, 'glass',
-        von, bis, seite * halb, BODEN_Y, HOEHE_M, 0.08, FARBE.glas, 0.28,
-      );
-    });
+    }
   }
 
   // Die Stirnwand am Südende steht quer im Gang: ihre Breite läuft entlang
   // der lokalen X-Achse, also quer zur Achse -- gedreht wird sie nicht.
-  const stirn = ort(LAENGE_M, 0, 0);
+  const stirn = ort(laenge, 0, 0);
   out.push(eintrag({
     gruppe,
     name: 'Südwand Glas',
     art: 'glass',
     x: stirn[0],
-    y: BODEN_Y + HOEHE_M / 2,
+    y: BODEN_Y + hoehe / 2,
     z: stirn[2],
-    breite: BREITE_M,
-    hoehe: HOEHE_M,
+    breite: plan.breiteM,
+    hoehe,
     tiefe: 0.08,
     drehung,
     farbe: FARBE.glas,
     deckkraft: 0.28,
   }));
   for (const [index, versatz] of [-1.9, 1.9].entries()) {
-    const tuer = ort(LAENGE_M, versatz, 0);
+    const tuer = ort(laenge, versatz, 0);
     out.push(eintrag({
       gruppe,
       name: `Südwand Doppeltür ${index + 1}`,
@@ -359,7 +351,8 @@ function boulevardbloecke(achse: Achse, data: Gelaende, centre: [number, number]
   }
 
   // Die Wegweiser hängen quer über dem Gang.
-  for (const schild of WEGWEISER) {
+  // Nur ein Gesicht je Standort: im Bauplan ist die Tafel ein Klotz.
+  for (const schild of wegweiser(plan, achse).filter((s) => s.blick > 0)) {
     const [x, , z] = ort(schild.station, 3.4, 0);
     out.push(eintrag({
       gruppe,
@@ -379,7 +372,7 @@ function boulevardbloecke(achse: Achse, data: Gelaende, centre: [number, number]
   // Die Treppenanlage: je Lauf ein Gefällekörper, dazwischen die Podeste.
   // In der Szene steht dort eine Folge von Stufenquadern; als 45 Klötze wäre
   // sie im Editor nicht zu gebrauchen, als drei Rampen ist sie es.
-  const anfang = LAENGE_M - TREPPE_LAUF_M;
+  const anfang = laenge - TREPPE_LAUF_M;
   const laufLaenge = STUFEN_JE_LAUF * AUFTRITT_M;
   const laufHoehe = STUFEN_JE_LAUF * STEIGUNG_M;
   let s = anfang;
@@ -454,13 +447,16 @@ function boulevardbloecke(achse: Achse, data: Gelaende, centre: [number, number]
   return out;
 }
 
-export function bauplan(data: Gelaende, centre: [number, number]): Bauplan {
+export function bauplan(data: Gelaende & Pick<Dataset, 'boulevard'>,
+                        centre: [number, number]): Bauplan {
   const objekte = [
     ...hallenplatten(data, centre),
     ...markenbloecke(data, centre),
   ];
   const achse = boulevardAchse(data);
-  if (achse) objekte.push(...boulevardbloecke(achse, data, centre));
+  if (achse && data.boulevard) {
+    objekte.push(...boulevardbloecke(achse, data.boulevard, centre));
+  }
 
   const gruppen: string[] = [];
   for (const objekt of objekte) {

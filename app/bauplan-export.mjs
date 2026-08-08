@@ -27,8 +27,12 @@ const MARKE_AUF = '/*BAUPLAN*/';
 const MARKE_ZU = '/*/BAUPLAN*/';
 
 const site = JSON.parse(await readFile(QUELLE, 'utf8'));
+const boulevard = JSON.parse(
+  await readFile(resolve(hier, 'public/data/boulevard.json'), 'utf8'),
+);
 const gelaende = {
   site,
+  boulevard,
   hallsByKey: new Map(site.halls.map((hall) => [hall.key, hall])),
 };
 

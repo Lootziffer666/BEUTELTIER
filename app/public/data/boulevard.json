@@ -1,0 +1,172 @@
+{
+ "schema": "beuteltier.boulevard.v1",
+ "quelle": {
+  "geometrie": "LoD2 Geobasis NRW (CityGML, EPSG:25832), dl-de/zero-2-0",
+  "zuordnung": "hall-registrations.json (official-footprint-containment)",
+  "namen": "OpenStreetMap (ODbL), nur Beschriftung",
+  "kacheln": [
+   "LoD2_32_357_5645_1_NW.gml",
+   "LoD2_32_357_5646_1_NW.gml",
+   "LoD2_32_358_5645_1_NW.gml",
+   "LoD2_32_358_5646_1_NW.gml"
+  ]
+ },
+ "origin": [
+  358300.0,
+  5645800.0
+ ],
+ "achse": {
+  "x0": -33.689,
+  "y0": -189.382,
+  "laengs": [
+   -0.481433063,
+   0.876482861
+  ],
+  "quer": [
+   -0.876482861,
+   -0.481433063
+  ],
+  "winkelDeg": 118.779
+ },
+ "laengeM": 285.0,
+ "breiteM": 14.91,
+ "hoeheM": 11.0,
+ "seitenQ": {
+  "ost": -7.456,
+  "west": 7.456
+ },
+ "geometrieLaengeM": 303.8,
+ "enden": {
+  "nord": [
+   "8"
+  ],
+  "sued": [
+   "5",
+   "10"
+  ]
+ },
+ "seiten": {
+  "ost": [
+   {
+    "von": 0.0,
+    "bis": 22.5,
+    "art": "glas",
+    "was": "Zwischenbereich, verglast",
+    "featureId": "DENW37AL100063v9",
+    "hallKey": null
+   },
+   {
+    "von": 22.5,
+    "bis": 70.75,
+    "art": "wand",
+    "was": "Congress-Centrum Nord",
+    "featureId": "DENW37AL1000668A",
+    "hallKey": null
+   },
+   {
+    "von": 70.75,
+    "bis": 99.5,
+    "art": "glas",
+    "was": "Aussenflaeche",
+    "featureId": null,
+    "hallKey": null
+   },
+   {
+    "von": 99.5,
+    "bis": 149.25,
+    "art": "wand",
+    "was": "Gebaeude 006857",
+    "featureId": "DENW37AL10006857",
+    "hallKey": null
+   },
+   {
+    "von": 149.25,
+    "bis": 174.25,
+    "art": "glas",
+    "was": "Aussenflaeche",
+    "featureId": null,
+    "hallKey": null
+   },
+   {
+    "von": 174.25,
+    "bis": 249.5,
+    "art": "wand",
+    "was": "Halle 9.1",
+    "featureId": "DENW37AL100065KW",
+    "hallKey": "9.1"
+   },
+   {
+    "von": 249.5,
+    "bis": 285.0,
+    "art": "glas",
+    "was": "Aussenflaeche",
+    "featureId": null,
+    "hallKey": null
+   }
+  ],
+  "west": [
+   {
+    "von": 0.0,
+    "bis": 29.0,
+    "art": "glas",
+    "was": "Aussenflaeche",
+    "featureId": null,
+    "hallKey": null
+   },
+   {
+    "von": 29.0,
+    "bis": 136.0,
+    "art": "wand",
+    "was": "Halle 7.1",
+    "featureId": "DENW37AL1000660R",
+    "hallKey": "7.1"
+   },
+   {
+    "von": 136.0,
+    "bis": 159.0,
+    "art": "glas",
+    "was": "Aussenflaeche",
+    "featureId": null,
+    "hallKey": null
+   },
+   {
+    "von": 159.0,
+    "bis": 285.0,
+    "art": "wand",
+    "was": "Halle 6.1",
+    "featureId": "DENW37AL100064lq",
+    "hallKey": "6.1"
+   }
+  ]
+ },
+ "hallen": {
+  "9.1": {
+   "featureId": "DENW37AL100065KW",
+   "vonM": 174.27,
+   "bisM": 249.56,
+   "amGangM": 75.28,
+   "tiefeM": 187.9,
+   "abstandM": 0.0,
+   "flaecheSqm": 14140
+  },
+  "6.1": {
+   "featureId": "DENW37AL100064lq",
+   "vonM": 158.98,
+   "bisM": 322.77,
+   "amGangM": 163.79,
+   "tiefeM": 247.63,
+   "abstandM": 0.0,
+   "flaecheSqm": 22918
+  },
+  "8.1": {
+   "featureId": "DENW37AL100063oN",
+   "vonM": -91.09,
+   "bisM": -0.0,
+   "amGangM": 91.09,
+   "tiefeM": 188.43,
+   "abstandM": 67.98,
+   "flaecheSqm": 17153
+  }
+ },
+ "hinweis": "Stationen in Metern ab der Stirnseite von Halle 8 (Norden), Richtung Sueden. Laenge und Hoehe sind Vorgabe, alles andere gemessen."
+}
