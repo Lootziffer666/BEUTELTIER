@@ -47,17 +47,18 @@ await page.getByRole('button', { name: 'Begehen' }).click();
 await page.waitForTimeout(1500);
 
 // Die Kamera direkt setzen: gehen dauert unter dem Software-Renderer Minuten.
-for (const [name, station, vor] of [
-  ['n1-nordende', 10, 1],
-  ['n2-vor-halle9', 190, 1],
-  ['n3-suedende', 265, -1],
-  ['n4-mitte-zurueck', 120, -1],
+const oben = plan.sued?.obenM ?? 0;
+for (const [name, station, vor, hoehe] of [
+  ['s1-vor-der-treppe', 275, 1, 0.02],
+  ['s2-treppe-oben', 306, 1, oben],
+  ['s3-suedteil', 340, 1, oben],
+  ['s4-zurueck-zur-treppe', 330, -1, oben],
 ]) {
   const [x, y] = ort(station);
   const yaw = blickrichtung(vor);
-  await page.evaluate(({ x, y, yaw }) => {
-    globalThis.__SETZEN?.(x, y, 0.02, yaw);
-  }, { x, y, yaw });
+  await page.evaluate(({ x, y, yaw, hoehe }) => {
+    globalThis.__SETZEN?.(x, y, hoehe, yaw);
+  }, { x, y, yaw, hoehe });
   await page.waitForTimeout(1200);
   await aufnehmen(page, `${ABLAGE}/${name}.png`, { einfrieren: false });
   console.log(`${name}: Station ${station} m`);

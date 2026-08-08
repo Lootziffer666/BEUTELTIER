@@ -212,6 +212,28 @@ export interface BoulevardPlan {
   /** Was an den beiden Enden liegt, als Hallennummern -- fuer die Wegweiser. */
   enden: { nord: string[]; sued: string[] };
   seiten: { ost: BoulevardAbschnitt[]; west: BoulevardAbschnitt[] };
+  /**
+   * Der Suedteil: dort weitet sich der Gang zwischen Halle 5 und Halle 10 und
+   * liegt eine Ebene hoeher. `kanteM` ist die gemessene Lage der senkrechten
+   * Verbindungen aus `portals.json`.
+   */
+  sued: {
+    vonM: number;
+    bisM: number;
+    breiteM: number;
+    seitenQ: { ost: number; west: number };
+    obenM: number | null;
+    untenM: number;
+    kanteM: number | null;
+    seiten: { ost: BoulevardAbschnitt[]; west: BoulevardAbschnitt[] };
+  } | null;
+  /** Die Treppenanlage zwischen beiden Teilen. */
+  treppe: {
+    vonM: number;
+    bisM: number;
+    untenM: number;
+    obenM: number | null;
+  } | null;
 }
 
 export interface Dataset {

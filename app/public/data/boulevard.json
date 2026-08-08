@@ -139,6 +139,54 @@
    }
   ]
  },
+ "sued": {
+  "vonM": 304.47,
+  "bisM": 377.65,
+  "seitenQ": {
+   "ost": -36.46,
+   "west": 8.803
+  },
+  "breiteM": 45.26,
+  "obenM": 7.6,
+  "untenM": 0.0,
+  "kanteM": 311.2,
+  "seiten": {
+   "ost": [
+    {
+     "von": 304.47,
+     "bis": 377.47,
+     "art": "wand",
+     "was": "Halle 10.2",
+     "featureId": "DENW37AL100064Zs",
+     "hallKey": "10.2"
+    }
+   ],
+   "west": [
+    {
+     "von": 304.47,
+     "bis": 322.72,
+     "art": "wand",
+     "was": "Halle 6.1",
+     "featureId": "DENW37AL100064lq",
+     "hallKey": "6.1"
+    },
+    {
+     "von": 322.72,
+     "bis": 377.47,
+     "art": "wand",
+     "was": "Halle 5.2",
+     "featureId": "DENW37AL1000644Q",
+     "hallKey": "5.2"
+    }
+   ]
+  }
+ },
+ "treppe": {
+  "vonM": 285.0,
+  "bisM": 303.8,
+  "untenM": 0.0,
+  "obenM": 7.6
+ },
  "hallen": {
   "9.1": {
    "featureId": "DENW37AL100065KW",

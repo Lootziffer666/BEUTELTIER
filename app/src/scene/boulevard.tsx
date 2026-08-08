@@ -349,7 +349,7 @@ export interface Bauteil {
   neigung?: number;
 }
 
-export function treppenteile(achse: Achse, centre: [number, number], laenge: number): {
+export function treppenteile(achse: Achse, centre: [number, number], anfang: number): {
   stufen: Bauteil[];
   rolltreppen: Bauteil[];
   drehung: number;
@@ -361,8 +361,8 @@ export function treppenteile(achse: Achse, centre: [number, number], laenge: num
   };
   const drehung = Math.atan2(achse.laengs[0], -achse.laengs[1]);
 
-  // Die Anlage sitzt am Ende des Bands und steigt darauf zu.
-  const anfang = laenge - TREPPE_LAUF_M;
+  // Wo die Anlage sitzt, ist gemessen und wird uebergeben: sie beginnt am
+  // Ende des Gangs und endet dort, wo Halle 5 und Halle 10 anfangen.
   const stufen: Bauteil[] = [];
   let s = anfang;
   let h = BODEN_Y;
@@ -447,6 +447,62 @@ function glasMaterial(
   });
 }
 
+/**
+ * Der Suedteil: derselbe Gang, eine Ebene hoeher und dreimal so breit.
+ *
+ * Suedlich von Halle 6 und Halle 9 hoert die enge Gasse auf. Zwischen Halle 5
+ * und Halle 10 sind es ueber 45 m, und der Fussboden liegt auf der oberen
+ * Ebene -- dort haengen die Hallen 5.2 und 10.2 an. Dazwischen liegt die
+ * Treppe: sie beginnt am Ende der 285 m und endet dort, wo die beiden Hallen
+ * anfangen. Dass diese Strecke 18,8 m misst und die Anlage aus 3x15 Stufen
+ * 18 m Lauf hat, ist die Gegenprobe -- die Zahlen kommen aus verschiedenen
+ * Quellen und treffen sich.
+ */
+interface Suedflaechen {
+  suedBoden?: THREE.BufferGeometry;
+  suedDach?: THREE.BufferGeometry;
+  suedStirn?: THREE.BufferGeometry;
+  suedWandOstMassiv?: THREE.BufferGeometry;
+  suedWandOstGlas?: THREE.BufferGeometry;
+  suedWandWestMassiv?: THREE.BufferGeometry;
+  suedWandWestGlas?: THREE.BufferGeometry;
+}
+
+function suedteil(
+  achse: Achse,
+  centre: [number, number],
+  plan: BoulevardPlan,
+): Suedflaechen {
+  const sued = plan.sued;
+  if (!sued || sued.obenM === null) return {};
+  const oben = sued.obenM;
+  const dach = oben + plan.hoeheM;
+  const qOst = sued.seitenQ.ost;
+  const qWest = sued.seitenQ.west;
+  const ganz: [number, number][] = [[sued.vonM, sued.bisM]];
+  const ost = abschnitte(sued.seiten.ost);
+  const west = abschnitte(sued.seiten.west);
+  return {
+    suedBoden: band(achse, centre,
+      () => [[qOst, oben], [qWest, oben]], WELT_KACHEL_M.boden, ganz),
+    suedDach: band(achse, centre,
+      () => [[qOst, dach], [qWest, dach]], WELT_KACHEL_M.decke, ganz),
+    suedWandOstMassiv: band(achse, centre,
+      () => [[qOst, oben], [qOst, dach]], WELT_KACHEL_M.wand, ost.massiv),
+    suedWandOstGlas: band(achse, centre,
+      () => [[qOst, oben], [qOst, dach]], WELT_KACHEL_M.wand, ost.glas),
+    suedWandWestMassiv: band(achse, centre,
+      () => [[qWest, dach], [qWest, oben]], WELT_KACHEL_M.wand, west.massiv),
+    suedWandWestGlas: band(achse, centre,
+      () => [[qWest, dach], [qWest, oben]], WELT_KACHEL_M.wand, west.glas),
+    // Die Stirnseite ueber der Treppe: unter dem oberen Fussboden ist die
+    // Halle offen, darueber steht die Wand, an der im Foto die Banner haengen.
+    suedStirn: band(achse, centre,
+      () => [[qOst, oben], [qWest, oben]], WELT_KACHEL_M.wand,
+      [[sued.vonM - 0.4, sued.vonM]]),
+  };
+}
+
 export function Boulevard({
   data,
   centre,
@@ -490,6 +546,7 @@ export function Boulevard({
         () => [[qWest, hoehe], [qWest, BODEN_Y]], WELT_KACHEL_M.wand, west.massiv),
       wandWestGlas: band(achse, centre,
         () => [[qWest, hoehe], [qWest, BODEN_Y]], WELT_KACHEL_M.wand, west.glas),
+      ...suedteil(achse, centre, plan),
     };
   }, [achse, centre, plan]);
 
@@ -614,7 +671,7 @@ export function Boulevard({
   useEffect(() => () => schilder.forEach(({ textur }) => textur.dispose()), [schilder]);
 
   const treppe = useMemo(
-    () => (achse && plan ? treppenteile(achse, centre, plan.laengeM) : null),
+    () => (achse && plan?.treppe ? treppenteile(achse, centre, plan.treppe.vonM) : null),
     [achse, centre, plan],
   );
 
@@ -676,6 +733,26 @@ export function Boulevard({
       <mesh geometry={flaechen.wandOstMassiv} material={material.wandMassiv} receiveShadow />
       <mesh geometry={flaechen.wandWestGlas} material={material.wand} />
       <mesh geometry={flaechen.wandOstGlas} material={material.wand} />
+      {/* Der Suedteil, eine Ebene hoeher. */}
+      {flaechen.suedBoden && (
+        <mesh geometry={flaechen.suedBoden} material={material.boden} receiveShadow />
+      )}
+      {flaechen.suedDach && <mesh geometry={flaechen.suedDach} material={material.dach} />}
+      {flaechen.suedStirn && (
+        <mesh geometry={flaechen.suedStirn} material={material.wandMassiv} />
+      )}
+      {flaechen.suedWandOstMassiv && (
+        <mesh geometry={flaechen.suedWandOstMassiv} material={material.wandMassiv} receiveShadow />
+      )}
+      {flaechen.suedWandWestMassiv && (
+        <mesh geometry={flaechen.suedWandWestMassiv} material={material.wandMassiv} receiveShadow />
+      )}
+      {flaechen.suedWandOstGlas && (
+        <mesh geometry={flaechen.suedWandOstGlas} material={material.wand} />
+      )}
+      {flaechen.suedWandWestGlas && (
+        <mesh geometry={flaechen.suedWandWestGlas} material={material.wand} />
+      )}
       {pendel.map((position, index) => (
         <mesh key={`p${index}`} position={position}>
           <cylinderGeometry args={[0.62, 0.34, 0.42, 12]} />

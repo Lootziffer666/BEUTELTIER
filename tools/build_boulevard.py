@@ -55,6 +55,10 @@ BOUNDS = (357700.0, 5645200.0, 358900.0, 5646500.0)
 LEITHALLE = "9.1"      # gibt die Richtung vor
 GEGENUEBER = "6.1"     # die Zeile auf der anderen Seite
 ABSCHLUSS = "8.1"      # steht quer am Nordende, Station 0
+# Der Suedteil: dort weitet sich der Gang zwischen diesen beiden Hallen und
+# wechselt die Ebene.
+SUED_WEST = "5.2"
+SUED_OST = "10.2"
 
 # Vorgabe, keine Messung: die lichte Hoehe und wie weit der Gang gebaut wird.
 # Suedlich davon geht er weiter, dort docken Halle 5 und Halle 10 an -- das
@@ -291,7 +295,9 @@ def main() -> int:
 
     seiten = {}
     for seite, liste in kandidaten.items():
-        seiten[seite] = abschnitte(liste)
+        seiten[seite] = abschnitte(liste, 0.0, LAENGE_M)
+
+    sued = suedteil(gebaeude, ziel, station, laengs, quer, achse_q, registrations)
 
     plan = {
         "schema": "beuteltier.boulevard.v1",
@@ -326,6 +332,18 @@ def main() -> int:
         # Was an den beiden Enden liegt -- das steht auf den Wegweisern.
         "enden": enden(gebaeude, station, laengs, quer, achse_q),
         "seiten": seiten,
+        "sued": sued,
+        # Die Treppe liegt zwischen beiden Teilen: sie beginnt am Ende der
+        # gebauten Laenge und endet dort, wo Halle 5 und Halle 10 anfangen.
+        # Dass diese Strecke 18,8 m lang ist und die Anlage aus 3x15 Stufen
+        # mit 16,56 cm genau 18 m Lauf und 7,45 m Hoehe hat, ist die
+        # Gegenprobe: beide Zahlen kommen aus verschiedenen Quellen.
+        "treppe": {
+            "vonM": LAENGE_M,
+            "bisM": round(naechste_hallen(gebaeude, station, laengs, quer), 1),
+            "untenM": 0.0,
+            "obenM": (sued or {}).get("obenM"),
+        } if sued else None,
         "hallen": {
             LEITHALLE: masse(halle9, station, s9, q9, wand_ost, wand_west),
             GEGENUEBER: masse(halle6, station, s6, q6, wand_ost, wand_west),
@@ -405,6 +423,119 @@ def naechste_hallen(gebaeude: dict[str, Gebaeude], station, laengs, quer) -> flo
     return min(anfaenge) if anfaenge else LAENGE_M
 
 
+def suedteil(gebaeude: dict[str, Gebaeude], ziel: dict[str, list[str]], station,
+             laengs, quer, achse_q: float, registrations: dict) -> dict | None:
+    """Der Suedteil: wo sich der Gang weitet und die Ebene wechselt.
+
+    Suedlich von Halle 6 und Halle 9 hoert die enge Gasse auf. Halle 5 steht
+    dort dicht an der Achse, Halle 10 dagegen weit zurueck -- aus 15 m Gang
+    werden ueber 40 m Halle. Und es geht eine Ebene hinunter: Halle 5.2 und
+    Halle 10.2 liegen auf rund 7,5 m, Halle 5.1 und Halle 10.1 auf null.
+
+    Wo genau es hinuntergeht, sagt das Wegenetz: `portals.json` fuehrt an
+    dieser Stelle drei senkrechte Verbindungen 10.1 <-> 10.2 nebeneinander --
+    die breite Treppe mit den Rolltreppen beidseitig. Die Portale sind Entwurf
+    und auf 20 m genau, ihre **Lage zueinander** ist trotzdem eindeutig.
+    """
+    # Eine Halle kann aus mehreren amtlichen Gebaeuden bestehen -- Halle 5 aus
+    # zweien. Am Gang steht das, welches der Achse am naechsten kommt.
+    def naechstes(key: str, zur_achse: str) -> tuple | None:
+        teile = [gebaeude[fid] for fid in ziel.get(key, []) if fid in gebaeude]
+        if not teile:
+            return None
+        gemessen = [(strecke(t.poly, laengs, quer), t) for t in teile]
+        if zur_achse == "west":
+            return min(gemessen, key=lambda g: g[0][1][0])
+        return max(gemessen, key=lambda g: g[0][1][1])
+
+    treffer_west = naechstes(SUED_WEST, "west")
+    treffer_ost = naechstes(SUED_OST, "ost")
+    if not treffer_west or not treffer_ost:
+        return None
+    ((s_west, q_west), west) = treffer_west
+    ((s_ost, q_ost), ost) = treffer_ost
+    wand_west = q_west[0] - achse_q
+    wand_ost = q_ost[1] - achse_q
+    von = max(min(station(s_west[0]), station(s_west[1])),
+              min(station(s_ost[0]), station(s_ost[1])))
+    # Bis zur naechsten Querung: dort geht der Gang in die Passage ueber.
+    bis = min(max(station(s_west[0]), station(s_west[1])),
+              max(station(s_ost[0]), station(s_ost[1])))
+
+    hoehen = hallenhoehen()
+    oben = hoehen.get(SUED_WEST)
+    unten = hoehen.get(SUED_OST.split(".")[0] + ".1", 0.0)
+
+    kante = treppenstation(station, laengs, quer)
+
+    kandidaten: dict[str, list] = {"ost": [], "west": []}
+    for bau in gebaeude.values():
+        (s_span, q_span) = strecke(bau.poly, laengs, quer)
+        qo = q_span[1] - achse_q
+        qw = q_span[0] - achse_q
+        if qo <= (wand_ost + wand_west) / 2:
+            seite, abstand = "ost", wand_ost - qo
+        else:
+            seite, abstand = "west", qw - wand_west
+        if abs(abstand) > FRONT_M:
+            continue
+        a, b = sorted((station(s_span[0]), station(s_span[1])))
+        if b <= von or a >= bis:
+            continue
+        kandidaten[seite].append((max(von, a), min(bis, b), abstand, bau))
+
+    return {
+        "vonM": round(von, 2),
+        "bisM": round(bis, 2),
+        "seitenQ": {"ost": round(wand_ost, 3), "west": round(wand_west, 3)},
+        "breiteM": round(wand_west - wand_ost, 2),
+        # Fussboden oben und unten, aus den amtlichen Hallenhoehen.
+        "obenM": round(oben, 2) if oben is not None else None,
+        "untenM": round(unten, 2),
+        # Wo die Treppe liegt -- Mittel der senkrechten Portale.
+        "kanteM": round(kante, 1) if kante is not None else None,
+        "seiten": {
+            seite: abschnitte(liste, von, bis) for seite, liste in kandidaten.items()
+        },
+    }
+
+
+def hallenhoehen() -> dict[str, float]:
+    """Fussbodenhoehen der Hallenebenen, aus der Standortdatei."""
+    pfad = ROOT / "app" / "public" / "data" / "registered-site.json"
+    site = json.loads(pfad.read_text(encoding="utf-8"))
+    return {h["key"]: h["height"]["floorElevationRenderM"] for h in site["halls"]}
+
+
+def treppenstation(station, laengs, quer) -> float | None:
+    """Wo die senkrechten Verbindungen 10.1 <-> 10.2 liegen."""
+    pfad = ROOT / "app" / "public" / "data" / "portals.json"
+    if not pfad.exists():
+        return None
+    portale = json.loads(pfad.read_text(encoding="utf-8"))["portals"]
+    stationen = []
+    for portal in portale:
+        a = portal["fromSurface"].split(":")[-1]
+        b = portal["toSurface"].split(":")[-1]
+        if {a, b} != {"10.1", "10.2"} or portal["kind"] != "vertical-unknown":
+            continue
+        x, _h, y = portal["position"]
+        stationen.append(station(x * laengs[0] + y * laengs[1]))
+    if not stationen:
+        return None
+    # Der dichteste Haufen ist die Anlage; einzelne Ausreisser liegen tief in
+    # der Halle und gehoeren nicht zum Gang.
+    stationen.sort()
+    beste = min(
+        ((stationen[i + 2] - stationen[i], i) for i in range(len(stationen) - 2)),
+        default=(0.0, 0),
+    )
+    if len(stationen) < 3:
+        return sum(stationen) / len(stationen)
+    haufen = stationen[beste[1]:beste[1] + 3]
+    return sum(haufen) / len(haufen)
+
+
 def masse(bau: Gebaeude, station, s_span, q_span, wand_ost: float,
           wand_west: float) -> dict:
     von, bis = sorted((station(s_span[0]), station(s_span[1])))
@@ -420,7 +551,7 @@ def masse(bau: Gebaeude, station, s_span, q_span, wand_ost: float,
     }
 
 
-def abschnitte(liste: list) -> list[dict]:
+def abschnitte(liste: list, von_m: float, bis_m: float) -> list[dict]:
     """Tastet die Achse ab und fasst gleiche Nachbarn zusammen.
 
     Abgetastet statt sortiert, weil sich Gebaeude ueberlappen: am Gang zaehlt,
@@ -428,17 +559,17 @@ def abschnitte(liste: list) -> list[dict]:
     Schritt fuer Schritt entscheiden, ohne Sonderfaelle fuer jede Art von
     Ueberschneidung.
     """
-    schritte = int(LAENGE_M / SCHRITT_M)
+    schritte = int((bis_m - von_m) / SCHRITT_M)
     belegung: list[Gebaeude | None] = []
     for index in range(schritte):
-        s = (index + 0.5) * SCHRITT_M
+        s = von_m + (index + 0.5) * SCHRITT_M
         treffer = [(abstand, bau) for von, bis, abstand, bau in liste if von <= s <= bis]
         treffer.sort(key=lambda t: t[0])
         belegung.append(treffer[0][1] if treffer else None)
 
     roh: list[dict] = []
     for index, bau in enumerate(belegung):
-        von = index * SCHRITT_M
+        von = von_m + index * SCHRITT_M
         bis = von + SCHRITT_M
         letzter = roh[-1] if roh else None
         kennung = bau.id if bau else None
