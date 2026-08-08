@@ -132,14 +132,14 @@
    },
    {
     "von": 29.0,
-    "bis": 136.0,
+    "bis": 120.0,
     "art": "wand",
     "was": "Halle 7.1",
     "featureId": "DENW37AL1000660R",
     "hallKey": "7.1"
    },
    {
-    "von": 136.0,
+    "von": 120.0,
     "bis": 159.0,
     "art": "glas",
     "was": "Aussenflaeche",
@@ -148,11 +148,19 @@
    },
    {
     "von": 159.0,
-    "bis": 285.0,
+    "bis": 249.75,
     "art": "wand",
     "was": "Halle 6.1",
     "featureId": "DENW37AL100064lq",
     "hallKey": "6.1"
+   },
+   {
+    "von": 249.75,
+    "bis": 285.0,
+    "art": "glas",
+    "was": "Aussenflaeche",
+    "featureId": null,
+    "hallKey": null
    }
   ]
  },
@@ -160,10 +168,11 @@
   {
    "id": "hof-8_1-7_1",
    "seite": "west",
-   "vonM": -0.0,
-   "bisM": 29.02,
+   "vonM": 0.0,
+   "bisM": 29.0,
    "qVonM": 7.456,
    "qBisM": 127.456,
+   "breiteM": 29.0,
    "tiefeM": 120.0,
    "zwischen": [
     "8.1",
@@ -172,24 +181,25 @@
    "endetAn": "Nachbar endet",
    "gekappt": false,
    "quelle": "LoD2",
-   "herkunft": "Luecke zwischen den amtlichen Umrissen, abgetastet"
+   "herkunft": "offener Wandabschnitt, Tiefe abgetastet"
   },
   {
    "id": "hof-7_1-6_1",
    "seite": "west",
-   "vonM": 136.05,
-   "bisM": 158.98,
+   "vonM": 120.0,
+   "bisM": 159.0,
    "qVonM": 7.456,
-   "qBisM": 209.456,
-   "tiefeM": 202.0,
+   "qBisM": 194.456,
+   "breiteM": 39.0,
+   "tiefeM": 187.0,
    "zwischen": [
     "7.1",
     "6.1"
    ],
-   "endetAn": "Nachbar endet",
+   "endetAn": "Gebaeude",
    "gekappt": false,
    "quelle": "LoD2",
-   "herkunft": "Luecke zwischen den amtlichen Umrissen, abgetastet"
+   "herkunft": "offener Wandabschnitt, Tiefe abgetastet"
   },
   {
    "id": "hinter-8_1",
@@ -413,8 +423,8 @@
    "hallKey": "7.1",
    "featureId": "DENW37AL1000660R",
    "abschnittVonM": 29.0,
-   "abschnittBisM": 136.0,
-   "stationM": 57.25,
+   "abschnittBisM": 120.0,
+   "stationM": 53.25,
    "breiteM": 6.0,
    "hoeheM": 4.0,
    "gemessen": false,
@@ -426,8 +436,8 @@
    "hallKey": "7.1",
    "featureId": "DENW37AL1000660R",
    "abschnittVonM": 29.0,
-   "abschnittBisM": 136.0,
-   "stationM": 107.75,
+   "abschnittBisM": 120.0,
+   "stationM": 95.75,
    "breiteM": 6.0,
    "hoeheM": 4.0,
    "gemessen": false,
@@ -439,8 +449,8 @@
    "hallKey": "6.1",
    "featureId": "DENW37AL100064lq",
    "abschnittVonM": 159.0,
-   "abschnittBisM": 285.0,
-   "stationM": 182.0,
+   "abschnittBisM": 249.75,
+   "stationM": 183.19,
    "breiteM": 6.0,
    "hoeheM": 4.0,
    "gemessen": false,
@@ -452,21 +462,8 @@
    "hallKey": "6.1",
    "featureId": "DENW37AL100064lq",
    "abschnittVonM": 159.0,
-   "abschnittBisM": 285.0,
-   "stationM": 222.0,
-   "breiteM": 6.0,
-   "hoeheM": 4.0,
-   "gemessen": false,
-   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
-  },
-  {
-   "id": "tor-west-6_1-3",
-   "seite": "west",
-   "hallKey": "6.1",
-   "featureId": "DENW37AL100064lq",
-   "abschnittVonM": 159.0,
-   "abschnittBisM": 285.0,
-   "stationM": 262.0,
+   "abschnittBisM": 249.75,
+   "stationM": 225.56,
    "breiteM": 6.0,
    "hoeheM": 4.0,
    "gemessen": false,
@@ -498,14 +495,6 @@
    "west": [
     {
      "von": 304.47,
-     "bis": 322.72,
-     "art": "wand",
-     "was": "Halle 6.1",
-     "featureId": "DENW37AL100064lq",
-     "hallKey": "6.1"
-    },
-    {
-     "von": 322.72,
      "bis": 377.47,
      "art": "wand",
      "was": "Halle 5.2",

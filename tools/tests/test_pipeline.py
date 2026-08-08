@@ -1037,3 +1037,128 @@ class TestBuildingModel:
         assert "Geobasis NRW" in source["provider"]
         assert "Zero" in source["licence"]
         assert "UTM32" in source["crs"]
+
+
+BOULEVARD_JSON = BUILD / "boulevard.json"
+
+
+@pytest.fixture(scope="module")
+def boulevard():
+    if not BOULEVARD_JSON.exists():
+        pytest.skip("boulevard.json fehlt -- tools/build_boulevard.py laeuft nicht")
+    return json.loads(BOULEVARD_JSON.read_text(encoding="utf-8"))
+
+
+class TestNordboulevard:
+    """Der Gang und was an ihm haengt.
+
+    Die Wandabschnitte wurden lange aus den **Huellquadern** der Hallen
+    zugeteilt. In der Gangebene ist aber kein Gebaeude ein Rechteck -- der Gang
+    laeuft schraeg zu ihren Kanten --, und so standen 51 m Wand dort, wo nichts
+    steht: Halle 7 bis Station 136 statt 120, Halle 6 bis 285 statt 250. Der
+    Hof dazwischen kam 23 m breit heraus statt 39 m, und ein abgeleiteter
+    Durchgang fuehrte in ein Gebaeude, das es nicht gibt.
+
+    Diese Pruefungen halten die Stellen fest, an denen das auffallen muss.
+    """
+
+    def test_abschnitte_decken_den_gang_lueckenlos(self, boulevard):
+        for seite in ("ost", "west"):
+            teile = boulevard["seiten"][seite]
+            assert teile, seite
+            assert teile[0]["von"] == pytest.approx(0.0, abs=0.3)
+            assert teile[-1]["bis"] == pytest.approx(boulevard["laengeM"], abs=0.3)
+            for links, rechts in zip(teile, teile[1:]):
+                assert links["bis"] == pytest.approx(rechts["von"], abs=1e-6), seite
+
+    def test_jeder_hof_ist_ein_offener_wandabschnitt(self, boulevard):
+        """Hofbreite und Wandluecke sind dieselbe Zahl, nicht zwei aehnliche."""
+        for hof in boulevard.get("aussen", []):
+            if hof["seite"] not in ("ost", "west"):
+                continue
+            passend = [
+                teil for teil in boulevard["seiten"][hof["seite"]]
+                if teil["art"] == "glas" and teil["featureId"] is None
+                and teil["von"] == pytest.approx(hof["vonM"], abs=0.01)
+                and teil["bis"] == pytest.approx(hof["bisM"], abs=0.01)
+            ]
+            assert passend, (hof["id"], hof["vonM"], hof["bisM"])
+
+    def test_hof_zwischen_halle_7_und_6_ist_neununddreissig_meter_breit(self, boulevard):
+        """Vor Ort auf etwa 37 m geschaetzt -- der Huellquader sagte 23 m."""
+        hof = next(h for h in boulevard["aussen"] if h["id"] == "hof-7_1-6_1")
+        assert hof["bisM"] - hof["vonM"] == pytest.approx(39.0, abs=2.0)
+
+    def test_kein_durchgang_fuehrt_ins_leere(self, boulevard):
+        """Jeder abgeleitete Zugang liegt in der Fassade, aus der er stammt."""
+        for tor in boulevard.get("durchgaenge", []):
+            traeger = [
+                teil for teil in boulevard["seiten"][tor["seite"]]
+                if teil["art"] == "wand" and teil["hallKey"] == tor["hallKey"]
+                and teil["von"] <= tor["stationM"] - tor["breiteM"] / 2
+                and teil["bis"] >= tor["stationM"] + tor["breiteM"] / 2
+            ]
+            assert traeger, (tor["id"], tor["stationM"])
+
+    def test_durchgaenge_geben_sich_als_abgeleitet_zu_erkennen(self, boulevard):
+        """Kein Datensatz nennt die Hallentueren -- das muss die Datei sagen."""
+        tore = boulevard.get("durchgaenge", [])
+        assert tore
+        assert all(tor["gemessen"] is False for tor in tore)
+
+    def test_gekappte_flaechen_sind_als_vorgabe_ausgewiesen(self, boulevard):
+        """Eine Kante aus einer Vorgabe darf nicht wie eine Messung aussehen."""
+        for flaeche in boulevard.get("aussen", []):
+            assert isinstance(flaeche["gekappt"], bool)
+            if flaeche["gekappt"]:
+                assert flaeche["endetAn"] == "Vorgabe"
+
+    def test_plaetze_nennen_ihre_quelle(self, boulevard):
+        """Plaetze kommen aus OSM, Gebaeude aus LoD2 -- das steht am Eintrag."""
+        for platz in boulevard.get("plaetze", []):
+            assert "OpenStreetMap" in platz["quelle"]
+            assert len(platz["polygon"]) >= 4
+
+    def test_wandabschnitte_stehen_wirklich_auf_einem_gebaeude(self, boulevard):
+        """Die haerteste Pruefung: gegen den amtlichen Umriss selbst.
+
+        Braucht die LoD2-Rohkacheln; ohne sie greifen nur die Pruefungen oben.
+        """
+        import build_boulevard as bb
+        from beuteltier import lod2
+
+        if not list(bb.LOD2_DIR.glob("*.gml")):
+            pytest.skip("LoD2-Kacheln fehlen -- python3 tools/fetch_lod2.py")
+
+        origin = tuple(boulevard["origin"])
+        achse = boulevard["achse"]
+        laengs, quer = tuple(achse["laengs"]), tuple(achse["quer"])
+        umrisse = {}
+        for tile in sorted(bb.LOD2_DIR.glob("*.gml")):
+            for bau in lod2.read_buildings(tile, bb.BOUNDS):
+                ring = bau.footprint()
+                if len(ring) >= 3:
+                    umrisse[bau.id] = [bb.ins_gelaende(x, y, origin) for x, y in ring]
+
+        for seite in ("ost", "west"):
+            wand_q = boulevard["seitenQ"][seite]
+            nach_aussen = 1.0 if seite == "west" else -1.0
+            for teil in boulevard["seiten"][seite]:
+                if teil["art"] != "wand" or teil["featureId"] not in umrisse:
+                    continue
+                ring = umrisse[teil["featureId"]]
+                # Nicht nur in der Mitte pruefen: der Fehler sass an den
+                # **Enden**. Halle 6 stand bis Station 285 in der Datei und
+                # hoert bei 250 auf -- die Mitte des falschen Abschnitts lag
+                # bei 222 und war gedeckt. Wer nur dort hinsieht, findet nichts.
+                for anteil in (0.05, 0.25, 0.5, 0.75, 0.95):
+                    laengs_station = teil["von"] + (teil["bis"] - teil["von"]) * anteil
+                    getroffen = False
+                    for schritt in range(int(bb.FRONT_M) + 1):
+                        q = wand_q + nach_aussen * schritt
+                        x = achse["x0"] + laengs[0] * laengs_station + quer[0] * q
+                        y = achse["y0"] + laengs[1] * laengs_station + quer[1] * q
+                        if bb.punkt_in_polygon((x, y), ring):
+                            getroffen = True
+                            break
+                    assert getroffen, (seite, teil["was"], round(laengs_station, 1))

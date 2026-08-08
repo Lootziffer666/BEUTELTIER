@@ -74,6 +74,8 @@ MIN_FLAECHE_SQM = 400.0
 FRONT_M = 12.0
 # Schrittweite, mit der die Achse abgetastet wird.
 SCHRITT_M = 0.25
+# Schrittweite quer dazu, beim Tasten nach dem Gebaeude hinter der Wandlinie.
+TAST_SCHRITT_M = 0.5
 # Kuerzere Abschnitte als dieser Wert sind Digitalisierungsrauschen.
 MIN_ABSCHNITT_M = 2.0
 # Wie weit eine Halle seitlich vom Gang stehen darf und trotzdem noch als
@@ -344,7 +346,10 @@ def main() -> int:
     y0 = null * laengs[1] + achse_q * quer[1]
     laengs_gerichtet = (laengs[0] * richtung, laengs[1] * richtung)
 
-    # Welche Gebaeude begrenzen den Gang?
+    # Welche Gebaeude kommen als Wand des Gangs ueberhaupt in Frage? Der
+    # Huellquader taugt als Vorauswahl -- was ihn nicht schneidet, kann auch
+    # den Umriss nicht an die Wand bringen. Wo das Gebaeude dann wirklich
+    # steht, entscheidet danach der Umriss selbst.
     kandidaten: dict[str, list] = {"ost": [], "west": []}
     for bau in gebaeude.values():
         (s_span, q_span) = strecke(bau.poly, laengs, quer)
@@ -359,21 +364,24 @@ def main() -> int:
         von, bis = sorted((station(s_span[0]), station(s_span[1])))
         if bis <= 0 or von >= LAENGE_M:
             continue
-        kandidaten[seite].append((max(0.0, von), min(LAENGE_M, bis), abstand, bau))
+        kandidaten[seite].append(bau)
 
+    rahmen = Rahmen(laengs=laengs, quer=quer, null=null, richtung=richtung,
+                    achse_q=achse_q, wand_ost=wand_ost, wand_west=wand_west)
     seiten = {}
     for seite, liste in kandidaten.items():
-        seiten[seite] = abschnitte(liste, 0.0, LAENGE_M)
+        belegung = belegung_messen(liste, rahmen, rahmen.wandlinie(seite),
+                                   1.0 if seite == "west" else -1.0, 0.0, LAENGE_M)
+        seiten[seite] = abschnitte(belegung, 0.0, LAENGE_M)
 
-    sued = suedteil(gebaeude, ziel, station, laengs, quer, achse_q, registrations)
+    sued = suedteil(gebaeude, ziel, station, laengs, quer, achse_q, registrations,
+                    rahmen)
 
     # Das Aussengelaende. Die Ostseite ist bewusst noch nicht dabei: dort
     # liegen Parkhaus, Eingang Ost und der Messeplatz ineinander, und das ist
     # ein eigener Schritt.
-    rahmen = Rahmen(laengs=laengs, quer=quer, null=null, richtung=richtung,
-                    achse_q=achse_q, wand_ost=wand_ost, wand_west=wand_west)
     _osm_bauten, osm_roh = osm_flaechen(origin)
-    aussen = hoefe(gebaeude, rahmen, "west")
+    aussen = hoefe(seiten["west"], gebaeude, rahmen, "west")
     hinterhof = hinter(gebaeude, rahmen, ABSCHLUSS, ziel)
     if hinterhof:
         aussen.append(hinterhof)
@@ -553,7 +561,8 @@ def naechste_hallen(gebaeude: dict[str, Gebaeude], station, laengs, quer) -> flo
 
 
 def suedteil(gebaeude: dict[str, Gebaeude], ziel: dict[str, list[str]], station,
-             laengs, quer, achse_q: float, registrations: dict) -> dict | None:
+             laengs, quer, achse_q: float, registrations: dict,
+             rahmen: Rahmen) -> dict | None:
     """Der Suedteil: wo sich der Gang weitet und die Ebene wechselt.
 
     Suedlich von Halle 6 und Halle 9 hoert die enge Gasse auf. Halle 5 steht
@@ -611,7 +620,7 @@ def suedteil(gebaeude: dict[str, Gebaeude], ziel: dict[str, list[str]], station,
         a, b = sorted((station(s_span[0]), station(s_span[1])))
         if b <= von or a >= bis:
             continue
-        kandidaten[seite].append((max(von, a), min(bis, b), abstand, bau))
+        kandidaten[seite].append(bau)
 
     return {
         "vonM": round(von, 2),
@@ -624,7 +633,14 @@ def suedteil(gebaeude: dict[str, Gebaeude], ziel: dict[str, list[str]], station,
         # Wo die Treppe liegt -- Mittel der senkrechten Portale.
         "kanteM": round(kante, 1) if kante is not None else None,
         "seiten": {
-            seite: abschnitte(liste, von, bis) for seite, liste in kandidaten.items()
+            # Wie am Hauptgang: der Huellquader war nur die Vorauswahl, wo das
+            # Gebaeude wirklich steht, sagt sein Umriss.
+            seite: abschnitte(
+                belegung_messen(liste, rahmen,
+                                wand_west if seite == "west" else wand_ost,
+                                1.0 if seite == "west" else -1.0, von, bis),
+                von, bis)
+            for seite, liste in kandidaten.items()
         },
     }
 
@@ -704,62 +720,65 @@ def tiefe_messen(gebaeude: dict[str, Gebaeude], rahmen: Rahmen, seite: str,
     return tiefe, "Nachbar endet"
 
 
-def hoefe(gebaeude: dict[str, Gebaeude], rahmen: Rahmen, seite: str) -> list[dict]:
+def hoefe(teile: list[dict], gebaeude: dict[str, Gebaeude], rahmen: Rahmen,
+          seite: str) -> list[dict]:
     """Die rechteckigen Zwischenraeume zwischen den Hallen einer Seite.
 
-    Dieselbe Methode wie bei den Wandabschnitten, nur andersherum gelesen: dort
-    zaehlte, wo ein Gebaeude an den Gang heranreicht, hier zaehlt, wo keines
-    steht. Wo der Gang "Aussenflaeche" meldet, liegt ein Hof -- und dieser
-    Rechenweg sagt, wie tief er ist.
+    Gelesen werden die bereits gemessenen Wandabschnitte: wo der Gang
+    "Aussenflaeche" meldet, steht kein Gebaeude, und genau das ist ein Hof.
+    Damit kann die Hofbreite nicht mehr von der Wand abweichen -- beide sind
+    dieselbe Zahl. Gerechnet wird hier nur noch die Tiefe.
     """
-    nachbarn: list[tuple[float, float, float, float, Gebaeude]] = []
-    for bau in gebaeude.values():
-        if not bau.hall_key:
-            continue
-        (s_span, q_span) = strecke(bau.poly, rahmen.laengs, rahmen.quer)
-        # Zaehlt, wer bis an die Wandlinie dieser Seite heranreicht -- und
-        # nicht, wer ganz auf dieser Seite liegt. Halle 8 steht quer vor dem
-        # Gang und reicht ueber **beide** Wandlinien hinaus; sie ist trotzdem
-        # der noerdliche Nachbar des ersten Hofs.
-        if seite == "west":
-            if q_span[1] < rahmen.wand_west:
-                continue
-            reichweite = q_span[1] - rahmen.wand_west
-        else:
-            if q_span[0] > rahmen.wand_ost:
-                continue
-            reichweite = rahmen.wand_ost - q_span[0]
-        von, bis = sorted((rahmen.station(s_span[0]), rahmen.station(s_span[1])))
-        nachbarn.append((von, bis, reichweite, q_span[0], bau))
+    def reichweite(bau: Gebaeude) -> float:
+        (_s, q_span) = strecke(bau.poly, rahmen.laengs, rahmen.quer)
+        return (q_span[1] - rahmen.wand_west if seite == "west"
+                else rahmen.wand_ost - q_span[0])
 
-    nachbarn.sort(key=lambda n: n[0])
+    nach_hallkey = {bau.hall_key: bau for bau in gebaeude.values() if bau.hall_key}
     out: list[dict] = []
-    for links, rechts in zip(nachbarn, nachbarn[1:]):
-        luecke_von = links[1]
-        luecke_bis = rechts[0]
-        if luecke_bis - luecke_von < MIN_HOF_M:
+    for index, teil in enumerate(teile):
+        # Ein Hof ist ein Stueck Gang, an dem nichts steht -- kein Gebaeude,
+        # auch kein verglastes.
+        if teil["art"] != "glas" or teil["featureId"] is not None:
             continue
-        von = luecke_von + HOF_RAND_M
-        bis = luecke_bis - HOF_RAND_M
-        grenze = min(links[2], rechts[2])
+        links = next((t for t in reversed(teile[:index]) if t["hallKey"]), None)
+        rechts = next((t for t in teile[index + 1:] if t["hallKey"]), None)
+        # Am Nordende steht Halle 8 quer davor; sie taucht in den Abschnitten
+        # dieser Seite nicht auf, begrenzt den ersten Hof aber trotzdem.
+        links_key = links["hallKey"] if links else (
+            ABSCHLUSS if teil["von"] <= SCHRITT_M else None)
+        rechts_key = rechts["hallKey"] if rechts else None
+        if not links_key or not rechts_key:
+            continue
+        links_bau = nach_hallkey.get(links_key)
+        rechts_bau = nach_hallkey.get(rechts_key)
+        if not links_bau or not rechts_bau:
+            continue
+        if teil["bis"] - teil["von"] < MIN_HOF_M:
+            continue
+
+        von = teil["von"] + HOF_RAND_M
+        bis = teil["bis"] - HOF_RAND_M
+        grenze = min(reichweite(links_bau), reichweite(rechts_bau))
         tiefe, grund = tiefe_messen(gebaeude, rahmen, seite, von, bis, grenze)
         if tiefe < MIN_HOF_M:
             continue
         wand = rahmen.wandlinie(seite)
         aussen = wand + (tiefe if seite == "west" else -tiefe)
         out.append({
-            "id": f"hof-{links[4].hall_key}-{rechts[4].hall_key}".replace(".", "_"),
+            "id": f"hof-{links_key}-{rechts_key}".replace(".", "_"),
             "seite": seite,
-            "vonM": round(luecke_von, 2),
-            "bisM": round(luecke_bis, 2),
+            "vonM": round(teil["von"], 2),
+            "bisM": round(teil["bis"], 2),
             "qVonM": round(min(wand, aussen), 3),
             "qBisM": round(max(wand, aussen), 3),
+            "breiteM": round(teil["bis"] - teil["von"], 2),
             "tiefeM": round(tiefe, 2),
-            "zwischen": [links[4].hall_key, rechts[4].hall_key],
+            "zwischen": [links_key, rechts_key],
             "endetAn": grund,
             "gekappt": False,
             "quelle": "LoD2",
-            "herkunft": "Luecke zwischen den amtlichen Umrissen, abgetastet",
+            "herkunft": "offener Wandabschnitt, Tiefe abgetastet",
         })
     return out
 
@@ -955,22 +974,44 @@ def masse(bau: Gebaeude, station, s_span, q_span, wand_ost: float,
     }
 
 
-def abschnitte(liste: list, von_m: float, bis_m: float) -> list[dict]:
-    """Tastet die Achse ab und fasst gleiche Nachbarn zusammen.
+def belegung_messen(liste: list, rahmen: Rahmen, wand_q: float, nach_aussen: float,
+                    von_m: float, bis_m: float) -> list[Gebaeude | None]:
+    """Welches Gebaeude steht an welcher Station wirklich an der Wand?
 
-    Abgetastet statt sortiert, weil sich Gebaeude ueberlappen: am Gang zaehlt,
-    welches am dichtesten an der Fassadenlinie steht, und das laesst sich
-    Schritt fuer Schritt entscheiden, ohne Sonderfaelle fuer jede Art von
-    Ueberschneidung.
+    Frueher wurde das aus den **Huellquadern** der Gebaeude beantwortet: jedes
+    galt ueber seine ganze projizierte Stationsspanne als anwesend. In der
+    Gangebene ist aber kein einziges dieser Gebaeude ein Rechteck -- der Gang
+    laeuft schraeg zu ihren Kanten. Halle 7 reicht mit ihrem Huellquader bis
+    Station 136, ihr Umriss an der Wand endet aber bei 120; Halle 6 endet bei
+    250 statt bei 285. Einundfuenfzig Meter Wand standen so dort, wo nichts
+    steht, und der Hof zwischen beiden kam 23 m breit heraus statt 39 m.
+
+    Gefragt wird deshalb den Umriss selbst: an jeder Station wird von der
+    Wandlinie nach aussen getastet, und es gilt das Gebaeude, das zuerst
+    getroffen wird. Das ist dieselbe Absicht wie vorher -- am Gang zaehlt, was
+    am dichtesten an der Fassadenlinie steht --, nur ohne den Umweg ueber eine
+    Naeherung, die hier nicht traegt.
     """
     schritte = int((bis_m - von_m) / SCHRITT_M)
-    belegung: list[Gebaeude | None] = []
+    tiefen = [t * TAST_SCHRITT_M for t in range(int(FRONT_M / TAST_SCHRITT_M) + 1)]
+    out: list[Gebaeude | None] = []
     for index in range(schritte):
         s = von_m + (index + 0.5) * SCHRITT_M
-        treffer = [(abstand, bau) for von, bis, abstand, bau in liste if von <= s <= bis]
-        treffer.sort(key=lambda t: t[0])
-        belegung.append(treffer[0][1] if treffer else None)
+        gefunden: Gebaeude | None = None
+        for tiefe in tiefen:
+            punkt = rahmen.ort(s, wand_q + nach_aussen * tiefe)
+            for bau in liste:
+                if punkt_in_polygon(punkt, bau.poly):
+                    gefunden = bau
+                    break
+            if gefunden:
+                break
+        out.append(gefunden)
+    return out
 
+
+def abschnitte(belegung: list, von_m: float, bis_m: float) -> list[dict]:
+    """Fasst gleiche Nachbarn der abgetasteten Belegung zusammen."""
     roh: list[dict] = []
     for index, bau in enumerate(belegung):
         von = von_m + index * SCHRITT_M
