@@ -55,6 +55,8 @@ export interface SceneProps {
   onSelectStand: (standId: string | null) => void;
   /** Verlässt die Ego-Perspektive, wenn der Nutzer Escape drückt. */
   onLeaveEgo?: () => void;
+  /** Sparsames Glas: keine Transmission, kein Durchblick -- dafür schnell. */
+  previewSafe?: boolean;
   /** Vermessungsmodus: Kollision aus, um Referenzfoto-Perspektiven zu erreichen. */
   noClip?: boolean;
   /** Bewegung und Umsehen pausiert, während ein Referenzfoto ausgerichtet wird. */
@@ -1155,7 +1157,12 @@ export function SiteScene(props: SceneProps) {
       />
       <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
       <Hallenhuelle data={data} centre={centre} visible={preset === 'ego'} />
-      <Boulevard data={data} centre={centre} visible={preset === 'ego'} />
+      <Boulevard
+        data={data}
+        centre={centre}
+        visible={preset === 'ego'}
+        previewSafe={props.previewSafe ?? true}
+      />
       <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
       <Hallenlicht
         data={data}

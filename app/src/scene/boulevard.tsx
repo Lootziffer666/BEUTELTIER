@@ -436,14 +436,62 @@ function treppenteile(achse: Achse, centre: [number, number]): {
   return { stufen, rolltreppen, drehung };
 }
 
+/**
+ * Zwei Glassorten, umschaltbar.
+ *
+ * Echtes Glas ist in three.js ein Transmissionsmaterial: der Renderer zeichnet
+ * dafür je Bild ein eigenes Ziel und alles, was hinter der Scheibe liegt --
+ * hier also die Halleninnenräume. Das sieht richtig aus und kostet
+ * entsprechend. Die sparsame Sorte ist eine gewöhnliche helle Fläche ohne
+ * Durchblick; sie kostet nichts und reicht, solange man die Szene nur
+ * durchsehen will.
+ *
+ * Welche gilt, entscheidet der Betrachter im Betrieb und nicht der Übersetzer:
+ * ob es ruckelt, hängt an der Maschine, auf der es läuft.
+ */
+function glasMaterial(
+  previewSafe: boolean,
+  flaeche: ReturnType<typeof glasfassadeSurface>,
+): THREE.Material {
+  const karten = {
+    map: kachel(flaeche.map),
+    normalMap: kachel(flaeche.normalMap),
+    roughnessMap: kachel(flaeche.roughnessMap),
+    side: THREE.DoubleSide,
+  };
+  if (previewSafe) {
+    return new THREE.MeshStandardMaterial({
+      ...karten,
+      color: 0xeaf4f7,
+      roughness: 0.18,
+      metalness: 0.05,
+    });
+  }
+  return new THREE.MeshPhysicalMaterial({
+    ...karten,
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.22,
+    transmission: 0.8,
+    roughness: 0.12,
+    thickness: 0.02,
+    // Nur die Felder werden durchsichtig, Pfosten und Sockel bleiben stehen.
+    alphaMap: kachel(flaeche.alphaMap),
+    depthWrite: false,
+  });
+}
+
 export function Boulevard({
   data,
   centre,
   visible,
+  previewSafe = true,
 }: {
   data: Dataset;
   centre: [number, number];
   visible: boolean;
+  /** Sparsames Glas ohne Durchblick -- siehe `glasMaterial`. */
+  previewSafe?: boolean;
 }) {
   const achse = useMemo(() => boulevardAchse(data), [data]);
 
@@ -525,26 +573,8 @@ export function Boulevard({
       metalness: 0.05,
       side: THREE.DoubleSide,
     }),
-    wand: new THREE.MeshStandardMaterial({
-      map: kachel(surfaces.wand.map),
-      normalMap: kachel(surfaces.wand.normalMap),
-      roughnessMap: kachel(surfaces.wand.roughnessMap),
-      emissiveMap: kachel(surfaces.wand.emissiveMap),
-      // Draussen ist Tag: das Glas trägt das Licht in den Gang, nicht die
-      // Lampen. Deshalb leuchtet es kräftig und ist fast spiegelglatt.
-      emissive: new THREE.Color('#cfe2f2'),
-      emissiveIntensity: 1.5,
-      roughness: 0.18,
-      metalness: 0.1,
-      side: THREE.DoubleSide,
-      // Durchsichtig, wo die Alphakarte dunkel ist -- also überall ausser
-      // Pfosten, Riegel und Sockel. Ohne `depthWrite: false` schneidet die
-      // Scheibe alles weg, was hinter ihr liegt.
-      alphaMap: kachel(surfaces.wand.alphaMap),
-      transparent: true,
-      depthWrite: false,
-    }),
-  }), [surfaces]);
+    wand: glasMaterial(previewSafe, surfaces.wand),
+  }), [surfaces, previewSafe]);
 
   useEffect(() => () => {
     Object.values(material).forEach((eintrag) => eintrag.dispose());
