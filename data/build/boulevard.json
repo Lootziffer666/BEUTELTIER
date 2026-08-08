@@ -205,6 +205,99 @@
    "herkunft": "freies Gelaende noerdlich der Halle, abgetastet"
   }
  ],
+ "durchgaenge": [
+  {
+   "id": "tor-ost-9_1-1",
+   "seite": "ost",
+   "hallKey": "9.1",
+   "featureId": "DENW37AL100065KW",
+   "abschnittVonM": 174.25,
+   "abschnittBisM": 249.5,
+   "stationM": 194.56,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  },
+  {
+   "id": "tor-ost-9_1-2",
+   "seite": "ost",
+   "hallKey": "9.1",
+   "featureId": "DENW37AL100065KW",
+   "abschnittVonM": 174.25,
+   "abschnittBisM": 249.5,
+   "stationM": 229.19,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  },
+  {
+   "id": "tor-west-7_1-1",
+   "seite": "west",
+   "hallKey": "7.1",
+   "featureId": "DENW37AL1000660R",
+   "abschnittVonM": 29.0,
+   "abschnittBisM": 136.0,
+   "stationM": 57.25,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  },
+  {
+   "id": "tor-west-7_1-2",
+   "seite": "west",
+   "hallKey": "7.1",
+   "featureId": "DENW37AL1000660R",
+   "abschnittVonM": 29.0,
+   "abschnittBisM": 136.0,
+   "stationM": 107.75,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  },
+  {
+   "id": "tor-west-6_1-1",
+   "seite": "west",
+   "hallKey": "6.1",
+   "featureId": "DENW37AL100064lq",
+   "abschnittVonM": 159.0,
+   "abschnittBisM": 285.0,
+   "stationM": 182.0,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  },
+  {
+   "id": "tor-west-6_1-2",
+   "seite": "west",
+   "hallKey": "6.1",
+   "featureId": "DENW37AL100064lq",
+   "abschnittVonM": 159.0,
+   "abschnittBisM": 285.0,
+   "stationM": 222.0,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  },
+  {
+   "id": "tor-west-6_1-3",
+   "seite": "west",
+   "hallKey": "6.1",
+   "featureId": "DENW37AL100064lq",
+   "abschnittVonM": 159.0,
+   "abschnittBisM": 285.0,
+   "stationM": 262.0,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  }
+ ],
  "sued": {
   "vonM": 304.47,
   "bisM": 377.65,

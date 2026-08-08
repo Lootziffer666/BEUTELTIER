@@ -216,6 +216,29 @@ export interface BoulevardAussen {
   herkunft: string;
 }
 
+/**
+ * Ein Zugang von einer Halle in den Gang.
+ *
+ * `gemessen` ist bei diesen Eintraegen immer false, und das ist keine
+ * Nachlaessigkeit: kein verfuegbarer Datensatz nennt die Hallentueren am
+ * Nordboulevard. Gemessen ist die Fassade, an der der Zugang liegt
+ * (`abschnittVonM`/`abschnittBisM`); abgeleitet ist seine Mitte, vorgegeben
+ * sind Anzahl und Groesse.
+ */
+export interface BoulevardDurchgang {
+  id: string;
+  seite: 'ost' | 'west';
+  hallKey: string;
+  featureId: string | null;
+  abschnittVonM: number;
+  abschnittBisM: number;
+  stationM: number;
+  breiteM: number;
+  hoeheM: number;
+  gemessen: boolean;
+  herkunft: string;
+}
+
 export interface BoulevardPlan {
   schema: 'beuteltier.boulevard.v1';
   achse: {
@@ -245,6 +268,12 @@ export interface BoulevardPlan {
    * Fehlt in aelteren Schnappschuessen -- deshalb erlaubt leer.
    */
   aussen?: BoulevardAussen[];
+  /**
+   * Die Zugaenge von den Hallen in den Gang -- abgeleitet, nicht gemessen.
+   *
+   * Fehlt in aelteren Schnappschuessen; dann bleibt der Gang geschlossen.
+   */
+  durchgaenge?: BoulevardDurchgang[];
   /**
    * Der Suedteil: dort weitet sich der Gang zwischen Halle 5 und Halle 10 und
    * liegt eine Ebene hoeher. `kanteM` ist die gemessene Lage der senkrechten

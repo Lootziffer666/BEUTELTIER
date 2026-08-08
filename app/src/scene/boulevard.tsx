@@ -49,6 +49,14 @@ export const BODEN_Y = 0.02;
 const OBERLICHT_BREITE_M = 6.4;
 
 /**
+ * Oberkante der Hallenzugaenge.
+ *
+ * Muss zu `DURCHGANG_HOEHE_M` in `tools/build_boulevard.py` passen: dort wird
+ * sie in den Plan geschrieben, hier wird die Wand danach geteilt.
+ */
+const TOR_HOEHE_M = 4.0;
+
+/**
  * Wo der Boulevard liegt.
  *
  * Nichts davon wird hier gerechnet -- `tools/build_boulevard.py` misst es aus
@@ -83,6 +91,51 @@ export function abschnitte(
     massiv: seite.filter((s) => s.art === 'wand').map((s) => [s.von, s.bis]),
     glas: seite.filter((s) => s.art === 'glas').map((s) => [s.von, s.bis]),
   };
+}
+
+/**
+ * Wo eine Seite ihre Durchgaenge hat, als Stationsbereiche.
+ *
+ * Dieselbe Liste versorgt zwei Bauteile, die sonst auseinanderliefen: die
+ * gezeichnete Wand laesst hier ihre Oeffnung, und die Kollision laesst hier
+ * hindurch.
+ */
+export function durchgangsbereiche(
+  plan: BoulevardPlan,
+  seite: 'ost' | 'west',
+): [number, number][] {
+  return (plan.durchgaenge ?? [])
+    .filter((tor) => tor.seite === seite)
+    .map((tor): [number, number] =>
+      [tor.stationM - tor.breiteM / 2, tor.stationM + tor.breiteM / 2])
+    .sort((a, b) => a[0] - b[0]);
+}
+
+/**
+ * Zieht die Durchgaenge aus einer Folge von Wandstuecken heraus.
+ *
+ * Aus einem Stueck, in dem ein Tor steht, werden zwei -- links und rechts
+ * davon. Liegt das Tor am Rand, bleibt eines uebrig; deckt es das ganze
+ * Stueck, bleibt keines.
+ */
+export function ohneDurchgaenge(
+  stuecke: [number, number][],
+  oeffnungen: [number, number][],
+): [number, number][] {
+  let rest = stuecke;
+  for (const [von, bis] of oeffnungen) {
+    const naechste: [number, number][] = [];
+    for (const [a, b] of rest) {
+      if (bis <= a || von >= b) {
+        naechste.push([a, b]);
+        continue;
+      }
+      if (a < von) naechste.push([a, von]);
+      if (bis < b) naechste.push([bis, b]);
+    }
+    rest = naechste;
+  }
+  return rest;
 }
 
 /**
@@ -687,6 +740,8 @@ export function Boulevard({
     const lichtHalb = OBERLICHT_BREITE_M / 2;
     const ost = abschnitte(plan.seiten.ost);
     const west = abschnitte(plan.seiten.west);
+    const toreOst = durchgangsbereiche(plan, 'ost');
+    const toreWest = durchgangsbereiche(plan, 'west');
     // Auf welcher Seite der Achse die beiden Wandlinien liegen, sagt der Plan.
     const qOst = plan.seitenQ.ost;
     const qWest = plan.seitenQ.west;
@@ -699,14 +754,30 @@ export function Boulevard({
       oberlicht: band(achse, centre,
         () => [[-lichtHalb, hoehe - 0.06], [lichtHalb, hoehe - 0.06]],
         WELT_KACHEL_M.decke, ganz),
+      // Die Laengswaende sind in zwei Baender geteilt: unterhalb der
+      // Torhoehe stehen die Durchgaenge offen, oberhalb laeuft die Wand
+      // durch. Ohne die Teilung waere jeder Zugang ein Schlitz bis unter die
+      // Decke -- ein Loch in der Wand ist kein Tor.
       wandOstMassiv: band(achse, centre,
-        () => [[qOst, BODEN_Y], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.massiv),
+        () => [[qOst, TOR_HOEHE_M], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.massiv),
       wandOstGlas: band(achse, centre,
-        () => [[qOst, BODEN_Y], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.glas),
+        () => [[qOst, TOR_HOEHE_M], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.glas),
+      wandOstMassivUnten: band(achse, centre,
+        () => [[qOst, BODEN_Y], [qOst, TOR_HOEHE_M]], WELT_KACHEL_M.wand,
+        ohneDurchgaenge(ost.massiv, toreOst)),
+      wandOstGlasUnten: band(achse, centre,
+        () => [[qOst, BODEN_Y], [qOst, TOR_HOEHE_M]], WELT_KACHEL_M.wand,
+        ohneDurchgaenge(ost.glas, toreOst)),
       wandWestMassiv: band(achse, centre,
-        () => [[qWest, hoehe], [qWest, BODEN_Y]], WELT_KACHEL_M.wand, west.massiv),
+        () => [[qWest, hoehe], [qWest, TOR_HOEHE_M]], WELT_KACHEL_M.wand, west.massiv),
       wandWestGlas: band(achse, centre,
-        () => [[qWest, hoehe], [qWest, BODEN_Y]], WELT_KACHEL_M.wand, west.glas),
+        () => [[qWest, hoehe], [qWest, TOR_HOEHE_M]], WELT_KACHEL_M.wand, west.glas),
+      wandWestMassivUnten: band(achse, centre,
+        () => [[qWest, TOR_HOEHE_M], [qWest, BODEN_Y]], WELT_KACHEL_M.wand,
+        ohneDurchgaenge(west.massiv, toreWest)),
+      wandWestGlasUnten: band(achse, centre,
+        () => [[qWest, TOR_HOEHE_M], [qWest, BODEN_Y]], WELT_KACHEL_M.wand,
+        ohneDurchgaenge(west.glas, toreWest)),
       ...suedteil(achse, centre, plan),
     };
   }, [achse, centre, plan]);
@@ -953,6 +1024,11 @@ export function Boulevard({
       <mesh geometry={flaechen.wandOstMassiv} material={material.wandMassiv} receiveShadow />
       <mesh geometry={flaechen.wandWestGlas} material={material.wand} />
       <mesh geometry={flaechen.wandOstGlas} material={material.wand} />
+      {/* Unterhalb der Torhoehe -- hier fehlen die Durchgaenge. */}
+      <mesh geometry={flaechen.wandWestMassivUnten} material={material.wandMassiv} receiveShadow />
+      <mesh geometry={flaechen.wandOstMassivUnten} material={material.wandMassiv} receiveShadow />
+      <mesh geometry={flaechen.wandWestGlasUnten} material={material.wand} />
+      <mesh geometry={flaechen.wandOstGlasUnten} material={material.wand} />
       {/* Der Suedteil, eine Ebene hoeher. */}
       {flaechen.suedBoden && (
         <mesh geometry={flaechen.suedBoden} material={material.boden} receiveShadow />

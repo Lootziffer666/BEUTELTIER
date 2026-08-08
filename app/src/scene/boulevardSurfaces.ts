@@ -205,12 +205,24 @@ export class BoulevardSurfaces implements SurfaceProvider {
   private readonly abschnitte: readonly Abschnitt[];
   private readonly querwaende: readonly Querwand[];
   private readonly aussen: readonly Abschnitt[];
+  private readonly tore: readonly { seite: 'ost' | 'west'; vonM: number; bisM: number }[];
 
   constructor(plan: BoulevardPlan, achse: Achse) {
     this.achse = achse;
     this.abschnitte = abschnitteAusPlan(plan);
     this.querwaende = querwaendeAusPlan(plan);
     this.aussen = aussenAusPlan(plan);
+    this.tore = (plan.durchgaenge ?? []).map((tor) => ({
+      seite: tor.seite,
+      vonM: tor.stationM - tor.breiteM / 2,
+      bisM: tor.stationM + tor.breiteM / 2,
+    }));
+  }
+
+  /** Steht man in einem Hallenzugang? Dann sperrt die Laengswand hier nicht. */
+  private imDurchgang(s: number, q: number): boolean {
+    return this.tore.some((tor) =>
+      s >= tor.vonM && s <= tor.bisM && (tor.seite === 'west' ? q > 0 : q < 0));
   }
 
   /**
@@ -245,7 +257,10 @@ export class BoulevardSurfaces implements SurfaceProvider {
       return { z: teil.hoehe(s), blocked: false, surfaceId: teil.id };
     }
 
-    // Nicht drin, aber dicht daneben: das ist die Huelle.
+    // Nicht drin, aber dicht daneben: das ist die Huelle. Ausser dort, wo ein
+    // Hallenzugang durch sie hindurchfuehrt -- dann faellt die Frage weiter
+    // an die Halle dahinter, und die hat ihr eigenes Gitter.
+    if (this.imDurchgang(s, q)) return { z: 0, blocked: false, surfaceId: null };
     for (const teil of this.abschnitte) {
       if (s < teil.vonM - HUELLE_M || s > teil.bisM + HUELLE_M) continue;
       if (q < teil.qOst - HUELLE_M || q > teil.qWest + HUELLE_M) continue;

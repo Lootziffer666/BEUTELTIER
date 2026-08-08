@@ -93,6 +93,26 @@ HOF_RAND_M = 1.0
 # hoert so bald nicht auf. So weit, wie man vom Gang aus blickt, reicht es.
 HINTER_MAX_M = 120.0
 
+# Durchgaenge von den Hallen in den Gang.
+#
+# OSM kennt sie nicht: im vollstaendigen Datensatz (28.228 Knoten) liegt kein
+# einziger Eingangs- oder Torknoten am Nordgang. Die amtlichen Daten fuehren
+# Gebaeudeumrisse, keine Tueren. Ohne Durchgang waere der Gang aber ein
+# geschlossener Schlauch, den man nur mit abgeschalteter Kollision betritt.
+#
+# Abgeleitet wird deshalb aus dem, was gemessen ist: jeder Wandabschnitt, hinter
+# dem eine Halle steht, ist eine Hallenfassade, und eine Hallenfassade am
+# Hauptgang hat Zugaenge. Ihre **Lage** folgt der gemessenen Abschnittslaenge,
+# ihre **Anzahl** und **Groesse** sind Vorgabe. Beides steht getrennt in der
+# Datei, damit niemand die Vorgabe fuer eine Messung haelt.
+DURCHGANG_BREITE_M = 6.0
+DURCHGANG_HOEHE_M = 4.0
+# Ein Zugang je angefangene 45 m Fassade -- so liegen sie etwa so dicht wie auf
+# den Referenzfotos, ohne dass die Wand zum Kamm wird.
+DURCHGANG_ABSTAND_M = 45.0
+# Wieviel Wand neben einem Durchgang mindestens stehen bleibt.
+DURCHGANG_RAND_M = 3.0
+
 # Gebaeude, die den Gang zwar begrenzen, dort aber verglast sind.
 # Beobachtung vor Ort, nicht aus der Geometrie ableitbar: ein Grundriss sagt,
 # **dass** dort etwas steht, nicht **woraus** die Wand ist.
@@ -418,6 +438,9 @@ def main() -> int:
         # Gelaende hinter Halle 8. Dort, wo der Gang "Aussenflaeche" meldet,
         # sieht man durch das Glas auf eine dieser Flaechen.
         "aussen": aussen,
+        # Die Zugaenge von den Hallen in den Gang. Abgeleitet, nicht gemessen
+        # -- siehe durchgaenge().
+        "durchgaenge": durchgaenge(seiten),
         "sued": sued,
         # Die Treppe liegt zwischen beiden Teilen: sie beginnt am Ende der
         # gebauten Laenge und endet dort, wo Halle 5 und Halle 10 anfangen.
@@ -454,6 +477,10 @@ def main() -> int:
         for teil in seiten[seite]:
             print(f"  {teil['von']:7.1f} .. {teil['bis']:7.1f} "
                   f"({teil['bis'] - teil['von']:6.1f} m)  {teil['art']:5s}  {teil['was']}")
+    print("\nDURCHGAENGE (abgeleitet):")
+    for tor in plan["durchgaenge"]:
+        print(f"  {tor['stationM']:7.1f}  {tor['seite']:4s}  Halle {tor['hallKey']:5s} "
+              f"{tor['breiteM']:.1f} m breit   {tor['id']}")
     print("\nAUSSENGELAENDE:")
     for flaeche in aussen:
         print(f"  {flaeche['vonM']:7.1f} .. {flaeche['bisM']:7.1f}  "
@@ -746,6 +773,50 @@ def hinter(gebaeude: dict[str, Gebaeude], rahmen: Rahmen,
         "gekappt": gekappt,
         "herkunft": "freies Gelaende noerdlich der Halle, abgetastet",
     }
+
+
+def durchgaenge(seiten: dict[str, list[dict]]) -> list[dict]:
+    """Die Zugaenge von den Hallen in den Gang.
+
+    Kein Datensatz nennt sie: OSM hat am Nordgang keinen einzigen Eingangs-
+    knoten, und LoD2 kennt Gebaeude, keine Tueren. Statt sie zu erfinden,
+    werden sie aus der einzigen Messung abgeleitet, die es dazu gibt -- der
+    Laenge der Fassade, mit der eine Halle am Gang steht. Wo 75 m Halle 9
+    stehen, sind zwei Zugaenge; wo 126 m Halle 6 stehen, sind drei.
+
+    Was gemessen ist und was Vorgabe ist, steht bei jedem Eintrag einzeln.
+    """
+    out: list[dict] = []
+    for seite, abschnitte_der_seite in seiten.items():
+        for teil in abschnitte_der_seite:
+            if teil["art"] != "wand" or not teil["hallKey"]:
+                continue
+            laenge = teil["bis"] - teil["von"]
+            nutzbar = laenge - 2 * DURCHGANG_RAND_M
+            if nutzbar < DURCHGANG_BREITE_M:
+                continue
+            anzahl = max(1, round(laenge / DURCHGANG_ABSTAND_M))
+            # So viele, wie nebeneinander passen -- nicht mehr.
+            anzahl = min(anzahl, int(nutzbar // DURCHGANG_BREITE_M))
+            for index in range(anzahl):
+                mitte = teil["von"] + DURCHGANG_RAND_M + nutzbar * (index + 0.5) / anzahl
+                out.append({
+                    "id": f"tor-{seite}-{teil['hallKey']}-{index + 1}".replace(".", "_"),
+                    "seite": seite,
+                    "hallKey": teil["hallKey"],
+                    "featureId": teil["featureId"],
+                    # Gemessen: wo die Fassade anfaengt und aufhoert.
+                    "abschnittVonM": teil["von"],
+                    "abschnittBisM": teil["bis"],
+                    # Abgeleitet: die Mitte des ihm zustehenden Fassadenstuecks.
+                    "stationM": round(mitte, 2),
+                    "breiteM": DURCHGANG_BREITE_M,
+                    "hoeheM": DURCHGANG_HOEHE_M,
+                    "gemessen": False,
+                    "herkunft": ("abgeleitet aus der gemessenen Fassadenlaenge; "
+                                 "Anzahl und Groesse sind Vorgabe"),
+                })
+    return out
 
 
 def hallenhoehen() -> dict[str, float]:

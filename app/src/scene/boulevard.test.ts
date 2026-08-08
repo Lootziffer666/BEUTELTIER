@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   glasfelder,
+  ohneDurchgaenge,
   TUER_BREITE_M,
   TUER_PROFIL_M,
   TUER_VERSATZ_M,
@@ -45,5 +46,38 @@ describe('glasfelder', () => {
     const felder = glasfelder(breite, versatze, OEFFNUNG_HALB);
     const glas = felder.reduce((summe, [von, bis]) => summe + (bis - von), 0);
     expect(glas + versatze.length * 2 * OEFFNUNG_HALB).toBeCloseTo(breite, 6);
+  });
+});
+
+describe('ohneDurchgaenge', () => {
+  it('teilt ein Wandstueck in zwei, wenn ein Tor darin steht', () => {
+    expect(ohneDurchgaenge([[0, 100]], [[40, 46]])).toEqual([[0, 40], [46, 100]]);
+  });
+
+  it('kuerzt, wenn das Tor am Rand liegt', () => {
+    expect(ohneDurchgaenge([[0, 100]], [[0, 6]])).toEqual([[6, 100]]);
+    expect(ohneDurchgaenge([[0, 100]], [[94, 100]])).toEqual([[0, 94]]);
+  });
+
+  it('laesst nichts stehen, wenn das Tor das ganze Stueck deckt', () => {
+    expect(ohneDurchgaenge([[10, 20]], [[5, 25]])).toEqual([]);
+  });
+
+  it('laesst Stuecke unberuehrt, die das Tor nicht trifft', () => {
+    expect(ohneDurchgaenge([[0, 10], [50, 60]], [[20, 26]])).toEqual([[0, 10], [50, 60]]);
+  });
+
+  it('kommt mit mehreren Toren im selben Stueck zurecht', () => {
+    const rest = ohneDurchgaenge([[0, 300]], [[57, 63]]);
+    expect(rest).toEqual([[0, 57], [63, 300]]);
+    const zwei = ohneDurchgaenge([[0, 300]], [[57, 63], [180, 186]]);
+    expect(zwei).toEqual([[0, 57], [63, 180], [186, 300]]);
+  });
+
+  it('nimmt der Wand genau die Torbreite und keinen Zentimeter mehr', () => {
+    const tore: [number, number][] = [[57, 63], [180, 186], [260, 266]];
+    const rest = ohneDurchgaenge([[0, 300]], tore);
+    const wand = rest.reduce((summe, [a, b]) => summe + (b - a), 0);
+    expect(wand).toBeCloseTo(300 - tore.length * 6, 9);
   });
 });

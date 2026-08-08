@@ -7,7 +7,13 @@ import { describe, expect, it } from 'vitest';
 
 import gemessen from '../../public/data/boulevard.json';
 import type { BoulevardPlan } from '../data/load';
-import { boulevardAchse, BODEN_Y, TUER_VERSATZ_M } from './boulevard';
+import {
+  boulevardAchse,
+  BODEN_Y,
+  durchgangsbereiche,
+  ohneDurchgaenge,
+  TUER_VERSATZ_M,
+} from './boulevard';
 import { BoulevardSurfaces } from './boulevardSurfaces';
 import { LEGACY_OPEN_OUTSIDE, WalkGrid } from './walk';
 import { PrioritySurfaceProvider } from './surfaces';
@@ -283,6 +289,59 @@ describe('Aussengelaende', () => {
   });
 });
 
+describe('Hallenzugaenge', () => {
+  const tore = plan.durchgaenge ?? [];
+
+  it('gibt jeder Halle am Gang mindestens einen Zugang', () => {
+    const hallen = new Set(
+      [...plan.seiten.ost, ...plan.seiten.west]
+        .filter((a) => a.art === 'wand' && a.hallKey)
+        .map((a) => a.hallKey!),
+    );
+    for (const halle of hallen) {
+      expect(tore.some((tor) => tor.hallKey === halle)).toBe(true);
+    }
+  });
+
+  it('laesst durch jeden Zugang hindurch', () => {
+    for (const tor of tore) {
+      const q = tor.seite === 'west' ? plan.seitenQ.west + 1 : plan.seitenQ.ost - 1;
+      expect(fussAuf(tor.stationM, q).blocked).toBe(false);
+    }
+  });
+
+  it('sperrt unmittelbar neben jedem Zugang', () => {
+    for (const tor of tore) {
+      const q = tor.seite === 'west' ? plan.seitenQ.west + 1 : plan.seitenQ.ost - 1;
+      const daneben = tor.breiteM / 2 + 1;
+      expect(fussAuf(tor.stationM + daneben, q).blocked).toBe(true);
+      expect(fussAuf(tor.stationM - daneben, q).blocked).toBe(true);
+    }
+  });
+
+  it('oeffnet nur die eigene Seite', () => {
+    for (const tor of tore) {
+      // Auf der Gegenseite derselben Station muss die Wand stehen bleiben.
+      const gegen = tor.seite === 'west' ? plan.seitenQ.ost - 1 : plan.seitenQ.west + 1;
+      const offen = tore.some((anderes) =>
+        anderes.seite !== tor.seite
+        && Math.abs(anderes.stationM - tor.stationM) < (anderes.breiteM + tor.breiteM) / 2);
+      if (!offen) expect(fussAuf(tor.stationM, gegen).blocked).toBe(true);
+    }
+  });
+
+  it('liegt jeder Zugang in der Fassade, aus der er abgeleitet ist', () => {
+    for (const tor of tore) {
+      expect(tor.stationM - tor.breiteM / 2).toBeGreaterThanOrEqual(tor.abschnittVonM);
+      expect(tor.stationM + tor.breiteM / 2).toBeLessThanOrEqual(tor.abschnittBisM);
+    }
+  });
+
+  it('gibt sich als abgeleitet zu erkennen', () => {
+    for (const tor of tore) expect(tor.gemessen).toBe(false);
+  });
+});
+
 describe('Zustaendigkeit', () => {
   it('sagt weit weg vom Gang nichts', () => {
     expect(fussAuf(140, 300).surfaceId).toBeNull();
@@ -302,4 +361,36 @@ describe('Zustaendigkeit', () => {
     const [x, y] = ort(140, plan.seitenQ.west + 0.5);
     expect(aussen.footingAt(x, y, 0).blocked).toBe(true);
   });
+});
+
+/**
+ * Wand und Kollision muessen dieselben Loecher haben.
+ *
+ * Beide lesen `plan.durchgaenge`, aber ueber verschiedene Wege: die Wand ueber
+ * `durchgangsbereiche` + `ohneDurchgaenge`, die Kollision ueber die Huelle.
+ * Laufen die auseinander, sieht man ein Tor und laeuft gegen Glas -- oder
+ * umgekehrt.
+ */
+describe('Wandausschnitt und Kollision stimmen ueberein', () => {
+  for (const seite of ['ost', 'west'] as const) {
+    it(`deckt sich auf der ${seite}lichen Seite`, () => {
+      const bereiche = durchgangsbereiche(plan, seite);
+      const wand = ohneDurchgaenge(
+        plan.seiten[seite]
+          .filter((a) => a.art === 'wand')
+          .map((a): [number, number] => [a.von, a.bis]),
+        bereiche,
+      );
+      const q = seite === 'west' ? plan.seitenQ.west + 1 : plan.seitenQ.ost - 1;
+      // Wo die gezeichnete Wand steht, muss die Kollision sperren.
+      for (const [von, bis] of wand) {
+        const mitte = (von + bis) / 2;
+        expect(fussAuf(mitte, q).blocked).toBe(true);
+      }
+      // Und wo sie fehlt, muss man hindurchkommen.
+      for (const [von, bis] of bereiche) {
+        expect(fussAuf((von + bis) / 2, q).blocked).toBe(false);
+      }
+    });
+  }
 });
