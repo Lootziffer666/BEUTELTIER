@@ -13,7 +13,8 @@
   "Rellage=Aufgestaendert explizit erhalten.",
   "LoD2-zmin NICHT als Innenfussboden interpretieren.",
   "Keine Hoehen aus Screenshots oder zmin neu ableiten.",
-  "Keine Gebaeudemasse aus dz.nrw-Screenshotmessungen uebernehmen."
+  "Keine Gebaeudemasse aus dz.nrw-Screenshotmessungen uebernehmen.",
+  "Halle 1 und Halle 11 haben keine Standregistrierung, weil dort keine Messestaende liegen -- das ist erwartet und kein Datenfehler."
  ],
  "zugeordnet": [
   {
@@ -149,11 +150,15 @@
  "unresolved": [
   {
    "object": "Halle_1",
-   "grund": "keine Registrierung im Repo -- die Halle ist im Datensatz nicht auf ein amtliches Gebaeude gefuehrt"
+   "grund": "keine Standregistrierung im Repo",
+   "erwartet": true,
+   "nutzung": "Bisher nur fuer ein Konzert benutzt, nicht fuer Messestaende."
   },
   {
    "object": "Halle_11",
-   "grund": "keine Registrierung im Repo -- die Halle ist im Datensatz nicht auf ein amtliches Gebaeude gefuehrt"
+   "grund": "keine Standregistrierung im Repo",
+   "erwartet": true,
+   "nutzung": "11.1 Einlass, 11.2 Signing Area, 11.3 unbekannt. Von Halle 11 fuehren Treppen und Rolltreppen hinauf zu Halle 10."
   },
   {
    "object": "Boulevard_Nord",

@@ -108,10 +108,14 @@ def main() -> int:
                 "quelle": "hall-registrations (official-footprint-containment)",
             })
         else:
+            # Registriert wird ueber die Lage der Messestaende. Wo keine
+            # stehen, gibt es nichts zu registrieren -- bei Halle 1 und
+            # Halle 11 ist das der Fall und damit erwartet, kein Datenfehler.
             offen.append({
                 "object": halle["object"],
-                "grund": "keine Registrierung im Repo -- die Halle ist im "
-                         "Datensatz nicht auf ein amtliches Gebaeude gefuehrt",
+                "grund": "keine Standregistrierung im Repo",
+                "erwartet": bool(halle.get("nutzung")),
+                "nutzung": halle.get("nutzung"),
             })
 
     # Was der Nutzer selbst gezeigt hat: drei Baukoerper oestlich des

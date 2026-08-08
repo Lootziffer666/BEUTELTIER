@@ -23,7 +23,8 @@
   {
    "object": "Halle_1",
    "klasse": "standard_building",
-   "rellage": "Aufgestaendert"
+   "rellage": "Aufgestaendert",
+   "nutzung": "Bisher nur fuer ein Konzert benutzt, nicht fuer Messestaende."
   },
   {
    "object": "Halle_2",
@@ -80,7 +81,8 @@
   {
    "object": "Halle_11",
    "klasse": "standard_building",
-   "name": "11"
+   "name": "11",
+   "nutzung": "11.1 Einlass, 11.2 Signing Area, 11.3 unbekannt. Von Halle 11 fuehren Treppen und Rolltreppen hinauf zu Halle 10."
   }
  ],
  "sonderbauten": [
@@ -222,6 +224,7 @@
   "Rellage=Aufgestaendert explizit erhalten.",
   "LoD2-zmin NICHT als Innenfussboden interpretieren.",
   "Keine Hoehen aus Screenshots oder zmin neu ableiten.",
-  "Keine Gebaeudemasse aus dz.nrw-Screenshotmessungen uebernehmen."
+  "Keine Gebaeudemasse aus dz.nrw-Screenshotmessungen uebernehmen.",
+  "Halle 1 und Halle 11 haben keine Standregistrierung, weil dort keine Messestaende liegen -- das ist erwartet und kein Datenfehler."
  ]
 }
