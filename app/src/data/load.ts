@@ -10,7 +10,11 @@ import { RouteGraph, type CompactGraph } from '../routing/graph';
 import { LEGACY_OPEN_OUTSIDE, WalkGrid } from '../scene/walk';
 import { boulevardAchse } from '../scene/boulevard';
 import { BoulevardSurfaces } from '../scene/boulevardSurfaces';
-import { PrioritySurfaceProvider, type SurfaceProvider } from '../scene/surfaces';
+import {
+  FlatSurfaceProvider,
+  PrioritySurfaceProvider,
+  type SurfaceProvider,
+} from '../scene/surfaces';
 import type { Registry, Site } from './types';
 
 const BASE = `${import.meta.env.BASE_URL}data`;
@@ -239,6 +243,31 @@ export interface BoulevardDurchgang {
   herkunft: string;
 }
 
+/**
+ * Ein benannter Platz am Gelaende.
+ *
+ * Aus OpenStreetMap und nicht aus LoD2 -- nicht aus Bequemlichkeit, sondern
+ * weil ein Gebaeudemodell Gebaeude fuehrt und ein Platz keines ist. Der Umriss
+ * wird uebernommen und nicht in ein Rechteck gepresst: der Messeplatz hat 39
+ * Ecken, und ein Huellquader um ihn herum wuerde Flaeche behaupten, die es
+ * nicht gibt.
+ */
+export interface BoulevardPlatz {
+  id: string;
+  name: string;
+  quelle: string;
+  osmWayId: number;
+  vonM: number;
+  bisM: number;
+  qVonM: number;
+  qBisM: number;
+  hoeheM: number;
+  belag: string | null;
+  beleuchtet: boolean;
+  /** Der volle Umriss in Geländemetern. */
+  polygon: [number, number][];
+}
+
 export interface BoulevardPlan {
   schema: 'beuteltier.boulevard.v1';
   achse: {
@@ -274,6 +303,8 @@ export interface BoulevardPlan {
    * Fehlt in aelteren Schnappschuessen; dann bleibt der Gang geschlossen.
    */
   durchgaenge?: BoulevardDurchgang[];
+  /** Benannte Plaetze aus OpenStreetMap; fehlen in aelteren Schnappschuessen. */
+  plaetze?: BoulevardPlatz[];
   /**
    * Der Suedteil: dort weitet sich der Gang zwischen Halle 5 und Halle 10 und
    * liegt eine Ebene hoeher. `kanteM` ist die gemessene Lage der senkrechten
@@ -361,8 +392,20 @@ async function fetchJson<T>(name: string): Promise<T> {
 function aussenraum(plan: BoulevardPlan | null): SurfaceProvider {
   const achse = plan ? boulevardAchse({ boulevard: plan }) : null;
   if (!plan || !achse) return LEGACY_OPEN_OUTSIDE;
+  // Die Plaetze liegen hinter dem Boulevard in der Reihenfolge: wo beide etwas
+  // sagen, gilt der Gang. Ihr Umriss kommt unveraendert aus dem Plan, deshalb
+  // reicht hier der vorhandene Polygongeber.
+  const plaetze = new FlatSurfaceProvider(
+    (plan.plaetze ?? []).map((platz) => ({
+      id: platz.id,
+      polygon: platz.polygon,
+      z: platz.hoeheM,
+      blocked: false,
+    })),
+  );
   return new PrioritySurfaceProvider([
     new BoulevardSurfaces(plan, achse),
+    plaetze,
     LEGACY_OPEN_OUTSIDE,
   ]);
 }

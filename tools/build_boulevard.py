@@ -45,6 +45,7 @@ from beuteltier import lod2  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 LOD2_DIR = ROOT / "data" / "raw" / "lod2"
 OSM_BUILDINGS = ROOT / "data" / "raw" / "osm" / "gebaeude.json"
+OSM_FLAECHEN = ROOT / "data" / "raw" / "osm" / "flaechen.json"
 REGISTRATIONS = ROOT / "app" / "public" / "data" / "hall-registrations.json"
 OUT = ROOT / "data" / "build" / "boulevard.json"
 OUT_APP = ROOT / "app" / "public" / "data" / "boulevard.json"
@@ -371,6 +372,7 @@ def main() -> int:
     # ein eigener Schritt.
     rahmen = Rahmen(laengs=laengs, quer=quer, null=null, richtung=richtung,
                     achse_q=achse_q, wand_ost=wand_ost, wand_west=wand_west)
+    _osm_bauten, osm_roh = osm_flaechen(origin)
     aussen = hoefe(gebaeude, rahmen, "west")
     hinterhof = hinter(gebaeude, rahmen, ABSCHLUSS, ziel)
     if hinterhof:
@@ -438,6 +440,10 @@ def main() -> int:
         # Gelaende hinter Halle 8. Dort, wo der Gang "Aussenflaeche" meldet,
         # sieht man durch das Glas auf eine dieser Flaechen.
         "aussen": aussen,
+        # Benannte Plaetze aus OSM. Sie stehen bewusst getrennt von "aussen":
+        # dort sind Rechtecke aus amtlichen Umrissen gerechnet, hier sind
+        # Polygone aus einer anderen Quelle uebernommen.
+        "plaetze": plaetze(osm_roh, rahmen),
         # Die Zugaenge von den Hallen in den Gang. Abgeleitet, nicht gemessen
         # -- siehe durchgaenge().
         "durchgaenge": durchgaenge(seiten),
@@ -481,6 +487,11 @@ def main() -> int:
     for tor in plan["durchgaenge"]:
         print(f"  {tor['stationM']:7.1f}  {tor['seite']:4s}  Halle {tor['hallKey']:5s} "
               f"{tor['breiteM']:.1f} m breit   {tor['id']}")
+    print("\nPLAETZE (OSM):")
+    for platz in plan["plaetze"]:
+        print(f"  {platz['vonM']:7.1f} .. {platz['bisM']:7.1f}  "
+              f"q {platz['qVonM']:7.1f} .. {platz['qBisM']:7.1f}  "
+              f"{len(platz['polygon']):3d} Ecken  {platz['name']} ({platz['belag']})")
     print("\nAUSSENGELAENDE:")
     for flaeche in aussen:
         print(f"  {flaeche['vonM']:7.1f} .. {flaeche['bisM']:7.1f}  "
@@ -618,6 +629,37 @@ def suedteil(gebaeude: dict[str, Gebaeude], ziel: dict[str, list[str]], station,
     }
 
 
+def osm_flaechen(origin: tuple[float, float]) -> tuple[list, list]:
+    """Gebaeude und Plaetze aus dem OSM-Flaechenabruf, in Geländemetern.
+
+    Beides fuehrt LoD2 nicht: einen Platz kann ein Gebaeudemodell nicht kennen,
+    und die Verbindungsbauten zwischen den Hallen fehlen im amtlichen Umriss.
+    Alles, was von hier kommt, wird in der Ergebnisdatei als OSM ausgewiesen.
+    """
+    if not OSM_FLAECHEN.exists():
+        return [], []
+    payload = json.loads(OSM_FLAECHEN.read_text(encoding="utf-8"))
+    punkte = {e["id"]: (e["lat"], e["lon"])
+              for e in payload.get("elements", []) if e["type"] == "node"}
+
+    bauten: list = []
+    plaetze: list = []
+    for element in payload.get("elements", []):
+        if element["type"] != "way":
+            continue
+        tags = element.get("tags", {})
+        ring = [utm32(*punkte[ref], origin)
+                for ref in element.get("nodes", []) if ref in punkte]
+        if len(ring) < 4:
+            continue
+        if tags.get("building"):
+            bauten.append((tags.get("name") or f"OSM {element['id']}", ring))
+        elif tags.get("name") and (tags.get("area") == "yes"
+                                   or tags.get("highway") == "pedestrian"):
+            plaetze.append((tags["name"], ring, tags, element["id"]))
+    return bauten, plaetze
+
+
 def frei(gebaeude: dict[str, Gebaeude], rahmen: Rahmen,
          von: float, bis: float, q_rel: float) -> bool:
     """Steht auf dieser Querlinie zwischen zwei Stationen kein Gebaeude?
@@ -662,8 +704,7 @@ def tiefe_messen(gebaeude: dict[str, Gebaeude], rahmen: Rahmen, seite: str,
     return tiefe, "Nachbar endet"
 
 
-def hoefe(gebaeude: dict[str, Gebaeude], rahmen: Rahmen,
-          seite: str) -> list[dict]:
+def hoefe(gebaeude: dict[str, Gebaeude], rahmen: Rahmen, seite: str) -> list[dict]:
     """Die rechteckigen Zwischenraeume zwischen den Hallen einer Seite.
 
     Dieselbe Methode wie bei den Wandabschnitten, nur andersherum gelesen: dort
@@ -717,6 +758,7 @@ def hoefe(gebaeude: dict[str, Gebaeude], rahmen: Rahmen,
             "zwischen": [links[4].hall_key, rechts[4].hall_key],
             "endetAn": grund,
             "gekappt": False,
+            "quelle": "LoD2",
             "herkunft": "Luecke zwischen den amtlichen Umrissen, abgetastet",
         })
     return out
@@ -817,6 +859,49 @@ def durchgaenge(seiten: dict[str, list[dict]]) -> list[dict]:
                                  "Anzahl und Groesse sind Vorgabe"),
                 })
     return out
+
+
+def plaetze(osm_plaetze: list, rahmen: Rahmen) -> list[dict]:
+    """Die benannten Plaetze am Gelaende, als Polygone in Geländemetern.
+
+    Der Messeplatz ist in OSM `area=yes, highway=footway, surface=paving_stones`
+    -- eine Verkehrsflaeche mit 39 Ecken. LoD2 kann ihn nicht fuehren: ein
+    Gebaeudemodell kennt Gebaeude. Hier ist OSM also nicht die zweite Meinung,
+    sondern die einzige.
+
+    Anders als bei den Hoefen wird nichts gerechnet, sondern der Umriss
+    uebernommen. Deshalb bleibt er ein Polygon und wird nicht in ein Rechteck
+    gepresst -- ein Platz mit 39 Ecken ist kein Rechteck, und ein Huellquader
+    um ihn herum wuerde Flaeche behaupten, die es nicht gibt.
+    """
+    out: list[dict] = []
+    for name, ring, tags, way_id in osm_plaetze:
+        stationen = [rahmen.station(x * rahmen.laengs[0] + y * rahmen.laengs[1])
+                     for x, y in ring]
+        quer = [x * rahmen.quer[0] + y * rahmen.quer[1] - rahmen.achse_q
+                for x, y in ring]
+        mitte_s = sum(stationen) / len(stationen)
+        mitte_q = sum(quer) / len(quer)
+        # Nur was am Gelaende liegt; die Abfrage reicht weiter als der Gang.
+        if not (-320.0 < mitte_s < 760.0 and abs(mitte_q) < 320.0):
+            continue
+        out.append({
+            "id": f"platz-{way_id}",
+            "name": name,
+            "quelle": "OpenStreetMap (ODbL)",
+            "osmWayId": way_id,
+            "vonM": round(min(stationen), 2),
+            "bisM": round(max(stationen), 2),
+            "qVonM": round(min(quer), 2),
+            "qBisM": round(max(quer), 2),
+            "hoeheM": 0.0,
+            "belag": tags.get("surface"),
+            "beleuchtet": tags.get("lit") == "yes",
+            # Der volle Umriss in Geländemetern -- die Kollision liest ihn
+            # unveraendert, damit der Platz seine Form behaelt.
+            "polygon": [[round(x, 2), round(y, 2)] for x, y in ring],
+        })
+    return sorted(out, key=lambda p: p["vonM"])
 
 
 def hallenhoehen() -> dict[str, float]:
