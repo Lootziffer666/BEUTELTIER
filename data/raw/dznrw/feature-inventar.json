@@ -44,13 +44,13 @@
    "object": "Halle_5_A",
    "klasse": "standard_building",
    "name": "5",
-   "note": "Erster realer Teil"
+   "note": "Erster realer Teil. Zweistoeckig -- Ebenen 5.1 und 5.2."
   },
   {
    "object": "Halle_5_B",
    "klasse": "standard_building",
    "name": "5",
-   "note": "Zweiter realer Teil; nicht zusammenlegen"
+   "note": "Zweiter realer Teil; nicht zusammenlegen. Ebenfalls zweistoeckig -- Ebenen 5.1 und 5.2."
   },
   {
    "object": "Halle_6",
@@ -202,6 +202,7 @@
  "regeln": [
   "Hallen 1-11 sind vollstaendig vorhanden.",
   "Halle 5 besteht aus ZWEI realen Features; bei beiden steht Name=5.",
+  "Halle 5 laesst sich in der Mitte teilen; BEIDE Teile haben zwei Ebenen.",
   "Gleiche Fktkurz-Werte bedeuten NICHT dasselbe Objekt.",
   "Ueberdachung_A und Ueberdachung_B sind zwei verschiedene Objekte.",
   "Parkhaus_A und Parkhaus_B sind zwei verschiedene Objekte.",

@@ -4,6 +4,7 @@
  "regeln": [
   "Hallen 1-11 sind vollstaendig vorhanden.",
   "Halle 5 besteht aus ZWEI realen Features; bei beiden steht Name=5.",
+  "Halle 5 laesst sich in der Mitte teilen; BEIDE Teile haben zwei Ebenen.",
   "Gleiche Fktkurz-Werte bedeuten NICHT dasselbe Objekt.",
   "Ueberdachung_A und Ueberdachung_B sind zwei verschiedene Objekte.",
   "Parkhaus_A und Parkhaus_B sind zwei verschiedene Objekte.",
@@ -20,12 +21,19 @@
    "featureIds": [
     "DENW37AL100064wf"
    ],
+   "ebenen": [
+    "2.1",
+    "2.2"
+   ],
    "quelle": "hall-registrations (official-footprint-containment)"
   },
   {
    "object": "Halle_3",
    "featureIds": [
     "DENW37AL100064yw"
+   ],
+   "ebenen": [
+    "3.2"
    ],
    "quelle": "hall-registrations (official-footprint-containment)"
   },
@@ -34,12 +42,20 @@
    "featureIds": [
     "DENW37AL10006612"
    ],
+   "ebenen": [
+    "4.1",
+    "4.2"
+   ],
    "quelle": "hall-registrations (official-footprint-containment)"
   },
   {
    "object": "Halle_5_A",
    "featureIds": [
     "DENW37AL100065RJ"
+   ],
+   "ebenen": [
+    "5.1",
+    "5.2"
    ],
    "quelle": "hall-registrations (official-footprint-containment)"
   },
@@ -48,12 +64,19 @@
    "featureIds": [
     "DENW37AL1000644Q"
    ],
+   "ebenen": [
+    "5.1",
+    "5.2"
+   ],
    "quelle": "hall-registrations (official-footprint-containment)"
   },
   {
    "object": "Halle_6",
    "featureIds": [
     "DENW37AL100064lq"
+   ],
+   "ebenen": [
+    "6.1"
    ],
    "quelle": "hall-registrations (official-footprint-containment)"
   },
@@ -62,12 +85,18 @@
    "featureIds": [
     "DENW37AL1000660R"
    ],
+   "ebenen": [
+    "7.1"
+   ],
    "quelle": "hall-registrations (official-footprint-containment)"
   },
   {
    "object": "Halle_8",
    "featureIds": [
     "DENW37AL100063oN"
+   ],
+   "ebenen": [
+    "8.1"
    ],
    "quelle": "hall-registrations (official-footprint-containment)"
   },
@@ -76,12 +105,19 @@
    "featureIds": [
     "DENW37AL100065KW"
    ],
+   "ebenen": [
+    "9.1"
+   ],
    "quelle": "hall-registrations (official-footprint-containment)"
   },
   {
    "object": "Halle_10",
    "featureIds": [
     "DENW37AL100064Zs"
+   ],
+   "ebenen": [
+    "10.1",
+    "10.2"
    ],
    "quelle": "hall-registrations (official-footprint-containment)"
   }

@@ -45,12 +45,19 @@ def main() -> int:
 
     # Halle -> amtliche Gebaeude. Eine Halle kann aus mehreren bestehen.
     je_halle: dict[str, list[str]] = {}
+    # Welche Ebenen auf einem Gebaeude liegen. Halle 5 teilt sich in zwei
+    # Baukoerper, und **beide** tragen beide Ebenen -- die Teilung verlaeuft
+    # senkrecht durch das Haus, nicht waagerecht zwischen den Geschossen.
+    ebenen: dict[str, list[str]] = {}
     for eintrag in registrations["registrations"]:
         nummer = eintrag["hallKey"].split(".")[0]
         for feature_id in eintrag["targetFeatureIds"]:
             je_halle.setdefault(nummer, [])
             if feature_id not in je_halle[nummer]:
                 je_halle[nummer].append(feature_id)
+            ebenen.setdefault(feature_id, [])
+            if eintrag["hallKey"] not in ebenen[feature_id]:
+                ebenen[feature_id].append(eintrag["hallKey"])
 
     # Der Bestand, nach Funktionsschluessel.
     bestand: dict[str, list[dict]] = {}
@@ -83,6 +90,7 @@ def main() -> int:
             zuordnung.append({
                 "object": halle["object"],
                 "featureIds": treffer,
+                "ebenen": sorted({e for fid in treffer for e in ebenen.get(fid, [])}),
                 "quelle": "hall-registrations (official-footprint-containment)",
             })
         else:
