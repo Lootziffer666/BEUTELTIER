@@ -813,15 +813,24 @@ export function Boulevard({
    * auf Fussbodenhoehe -- dort, wo man von draussen hereinkommt.
    */
   const suedwand = useMemo(() => {
-    if (!achse || !plan) return null;
-    const s = plan.laengeM;
+    if (!achse || !plan?.treppe || !plan.sued || plan.sued.obenM === null) return null;
+    // Sie steht am **Kopf** der Treppe, dort wo der Suedteil anfaengt -- nicht
+    // an ihrem Fuss. Unten ist sie massiv: das ist die Stirnseite des oberen
+    // Fussbodens und was darunter liegt. Erst oberhalb von 7,45 m ist sie
+    // verglast, und dort sitzen auch die beiden Doppeltueren: der Eingang zum
+    // Boulevard Sued liegt auf der zweiten Ebene.
+    const s = plan.treppe.bisM;
     const x = achse.x0 + achse.laengs[0] * s;
     const y = achse.y0 + achse.laengs[1] * s;
-    const drehung = Math.atan2(achse.laengs[0], -achse.laengs[1]);
     return {
-      position: [x - centre[0], BODEN_Y + plan.hoeheM / 2, -(y - centre[1])] as
-        [number, number, number],
-      drehung,
+      // Der Fusspunkt der Wand; die Teile sitzen darueber in echten Hoehen.
+      position: [x - centre[0], 0, -(y - centre[1])] as [number, number, number],
+      drehung: Math.atan2(achse.laengs[0], -achse.laengs[1]),
+      /** Oberkante des massiven Sockels -- ab hier Glas. */
+      sockel: 7.45,
+      boden: plan.sued.obenM,
+      dach: plan.sued.obenM + plan.hoeheM,
+      breite: plan.sued.breiteM,
       tueren: [-1, 1].map((seite) => ({
         versatz: seite * 1.9,
         gruppe: ArchitectureGenerator.createDoubleGlassDoor(3.2, 2.6),
@@ -924,34 +933,31 @@ export function Boulevard({
           />
         </mesh>
       ))}
-      {suedwand && plan && (
+      {suedwand && (
         <group position={suedwand.position} rotation={[0, suedwand.drehung, 0]}>
-          <mesh material={material.wand}>
-            <planeGeometry args={[plan.breiteM, plan.hoeheM]} />
+          {/* Unten massiv bis 7,45 m ... */}
+          <mesh
+            position={[0, suedwand.sockel / 2, 0]}
+            material={material.wandMassiv}
+            receiveShadow
+          >
+            <planeGeometry args={[suedwand.breite, suedwand.sockel]} />
+          </mesh>
+          {/* ... darueber Glas, bis unter das Dach des Suedteils. */}
+          <mesh
+            position={[0, (suedwand.sockel + suedwand.dach) / 2, 0]}
+            material={material.wand}
+          >
+            <planeGeometry args={[suedwand.breite, suedwand.dach - suedwand.sockel]} />
           </mesh>
           {suedwand.tueren.map(({ versatz, gruppe }, index) => (
             <primitive
               key={`d${index}`}
               object={gruppe}
-              position={[versatz, -plan.hoeheM / 2, 0.12]}
+              position={[versatz, suedwand.boden, 0.12]}
             />
           ))}
         </group>
-      )}
-      {bauzaun && (
-        <mesh
-          position={bauzaun.position}
-          rotation={[0, bauzaun.drehung, 0]}
-          castShadow
-        >
-          <planeGeometry args={[bauzaun.breite, 1.2]} />
-          <meshStandardMaterial
-            map={bauzaun.textur}
-            roughness={0.7}
-            metalness={0.05}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
       )}
       {treppe && (
         <group>
