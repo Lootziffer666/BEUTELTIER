@@ -390,6 +390,52 @@ export interface Bauteil {
   neigung?: number;
 }
 
+/**
+ * Die beiden Doppeltueren am Suedeingang, als Rohbaumass.
+ *
+ * `createDoubleGlassDoor` setzt die Zarge auf `±breite/2` und den Sturz auf
+ * `hoehe`; das Profil steht dabei zur Haelfte darueber hinaus. Die lichte
+ * Oeffnung, die die Glasfront freilassen muss, ist also etwas groesser als das
+ * genannte Mass -- und zwar um genau dieses halbe Profil.
+ */
+export const TUER_BREITE_M = 3.2;
+export const TUER_HOEHE_M = 2.6;
+export const TUER_PROFIL_M = 0.09;
+/** Abstand der beiden Tuermitten von der Mitte der Wand. */
+export const TUER_VERSATZ_M = 1.9;
+
+/**
+ * Die Glasfelder zwischen den Tueroeffnungen.
+ *
+ * Die Front war bisher **eine** durchgehende Scheibe, vor der die Tueren
+ * zwoelf Zentimeter davor hingen -- von aussen sah man die Tuer, ging aber
+ * durch Glas. Statt beides nebeneinander zu stellen, wird hier aus derselben
+ * Zahlenreihe beides abgeleitet: aus den Tuermitten entstehen die Oeffnungen,
+ * und was zwischen ihnen uebrig bleibt, ist Glas. Zwei Tueren ergeben so drei
+ * Felder; die Rechnung kommt aber auch mit einer anderen Anzahl zurecht.
+ *
+ * Ueberlappende Oeffnungen werden zusammengefasst -- sonst entstuende ein
+ * Feld mit negativer Breite, und three.js zeichnet das wortlos verkehrt herum.
+ */
+export function glasfelder(
+  breite: number,
+  versatze: readonly number[],
+  oeffnungHalb: number,
+): [number, number][] {
+  const oeffnungen = [...versatze]
+    .sort((a, b) => a - b)
+    .map((mitte) => [mitte - oeffnungHalb, mitte + oeffnungHalb] as [number, number]);
+
+  const felder: [number, number][] = [];
+  let kante = -breite / 2;
+  for (const [von, bis] of oeffnungen) {
+    if (von > kante) felder.push([kante, von]);
+    kante = Math.max(kante, bis);
+  }
+  if (kante < breite / 2) felder.push([kante, breite / 2]);
+  return felder;
+}
+
 export function treppenteile(achse: Achse, centre: [number, number], anfang: number): {
   stufen: Bauteil[];
   rolltreppen: Bauteil[];
@@ -811,6 +857,12 @@ export function Boulevard({
    *
    * Sie steht quer am Ende des Bands. Die Tueren sitzen mittig nebeneinander
    * auf Fussbodenhoehe -- dort, wo man von draussen hereinkommt.
+   *
+   * Die Front ist deshalb keine Scheibe, sondern eine Tischlerarbeit: unter
+   * dem Fussboden ein durchlaufendes Band, darueber drei Felder mit den
+   * Oeffnungen dazwischen, darueber der Sturz bis unters Dach. Die Oeffnungen
+   * und die Tueren stammen aus derselben Rechnung -- eine Tuer, die neben
+   * ihrem Loch sitzt, kann so nicht entstehen.
    */
   const suedwand = useMemo(() => {
     if (!achse || !plan?.treppe || !plan.sued || plan.sued.obenM === null) return null;
@@ -822,18 +874,30 @@ export function Boulevard({
     const s = plan.treppe.bisM;
     const x = achse.x0 + achse.laengs[0] * s;
     const y = achse.y0 + achse.laengs[1] * s;
+    const sockel = 7.45;
+    const boden = plan.sued.obenM;
+    const breite = plan.sued.breiteM;
+    const versatze = [-TUER_VERSATZ_M, TUER_VERSATZ_M];
+    // Die lichte Oeffnung: das Rahmenprofil steht zur Haelfte ueber das
+    // genannte Tuermass hinaus, oben wie an beiden Seiten.
+    const oeffnungHalb = TUER_BREITE_M / 2 + TUER_PROFIL_M / 2;
+    const sturzY = boden + TUER_HOEHE_M + TUER_PROFIL_M / 2;
     return {
       // Der Fusspunkt der Wand; die Teile sitzen darueber in echten Hoehen.
       position: [x - centre[0], 0, -(y - centre[1])] as [number, number, number],
       drehung: Math.atan2(achse.laengs[0], -achse.laengs[1]),
       /** Oberkante des massiven Sockels -- ab hier Glas. */
-      sockel: 7.45,
-      boden: plan.sued.obenM,
-      dach: plan.sued.obenM + plan.hoeheM,
-      breite: plan.sued.breiteM,
-      tueren: [-1, 1].map((seite) => ({
-        versatz: seite * 1.9,
-        gruppe: ArchitectureGenerator.createDoubleGlassDoor(3.2, 2.6),
+      sockel,
+      boden,
+      dach: boden + plan.hoeheM,
+      breite,
+      /** Unter dem Fussboden laeuft das Glas durch -- man sieht es nicht. */
+      bruestung: Math.max(0, boden - sockel),
+      sturzY,
+      felder: glasfelder(breite, versatze, oeffnungHalb),
+      tueren: versatze.map((versatz) => ({
+        versatz,
+        gruppe: ArchitectureGenerator.createDoubleGlassDoor(TUER_BREITE_M, TUER_HOEHE_M),
       })),
     };
   }, [achse, centre, plan]);
@@ -943,18 +1007,39 @@ export function Boulevard({
           >
             <planeGeometry args={[suedwand.breite, suedwand.sockel]} />
           </mesh>
-          {/* ... darueber Glas, bis unter das Dach des Suedteils. */}
+          {/* ... ein schmales Band bis auf Fussbodenhoehe, das der Besucher
+              nie sieht -- es liegt unter dem Boden, auf dem er steht ... */}
+          {suedwand.bruestung > 0 && (
+            <mesh
+              position={[0, suedwand.sockel + suedwand.bruestung / 2, 0]}
+              material={material.wand}
+            >
+              <planeGeometry args={[suedwand.breite, suedwand.bruestung]} />
+            </mesh>
+          )}
+          {/* ... auf Tuerhoehe drei Felder mit den Oeffnungen dazwischen ... */}
+          {suedwand.felder.map(([von, bis], index) => (
+            <mesh
+              key={`f${index}`}
+              position={[(von + bis) / 2, (suedwand.boden + suedwand.sturzY) / 2, 0]}
+              material={material.wand}
+            >
+              <planeGeometry args={[bis - von, suedwand.sturzY - suedwand.boden]} />
+            </mesh>
+          ))}
+          {/* ... und darueber der Sturz, durchlaufend bis unters Dach. */}
           <mesh
-            position={[0, (suedwand.sockel + suedwand.dach) / 2, 0]}
+            position={[0, (suedwand.sturzY + suedwand.dach) / 2, 0]}
             material={material.wand}
           >
-            <planeGeometry args={[suedwand.breite, suedwand.dach - suedwand.sockel]} />
+            <planeGeometry args={[suedwand.breite, suedwand.dach - suedwand.sturzY]} />
           </mesh>
+          {/* Die Tueren sitzen jetzt **in** der Wand und nicht davor. */}
           {suedwand.tueren.map(({ versatz, gruppe }, index) => (
             <primitive
               key={`d${index}`}
               object={gruppe}
-              position={[versatz, suedwand.boden, 0.12]}
+              position={[versatz, suedwand.boden, 0]}
             />
           ))}
         </group>
