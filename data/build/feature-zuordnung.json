@@ -15,7 +15,8 @@
   "Keine Hoehen aus Screenshots oder zmin neu ableiten.",
   "Keine Gebaeudemasse aus dz.nrw-Screenshotmessungen uebernehmen.",
   "Halle 1 und Halle 11 haben keine Standregistrierung, weil dort keine Messestaende liegen -- das ist erwartet und kein Datenfehler.",
-  "Von den AUX-Koerpern werden nur die Aussenmasse gebraucht -- sie muessen nicht einzeln identifiziert werden."
+  "Von den AUX-Koerpern werden nur die Aussenmasse gebraucht -- sie muessen nicht einzeln identifiziert werden.",
+  "Eingang Ost besteht aus drei Teilen; nur einer traegt den Namen."
  ],
  "zugeordnet": [
   {
@@ -124,6 +125,15 @@
    "quelle": "hall-registrations (official-footprint-containment)"
   },
   {
+   "object": "Boulevard_Nord",
+   "featureIds": [
+    "UUID_bec8e8e7-29eb-4eda-bc5a-6b825e96f224",
+    "UUID_8a5bca01-f6e6-4f45-8b8d-68308b2adeb8"
+   ],
+   "lage": "Gangkoerper auf der Achse, Station 0-250",
+   "quelle": "Nutzerangabe (dz.nrw Feature Info)"
+  },
+  {
    "object": "Parkhaus_A",
    "featureIds": [
     "UUID_50088905-9994-4e77-89ea-02a587cee29a"
@@ -162,29 +172,28 @@
    "nutzung": "11.1 Einlass, 11.2 Signing Area, 11.3 unbekannt. Von Halle 11 fuehren Treppen und Rolltreppen hinauf zu Halle 10."
   },
   {
-   "object": "Boulevard_Nord",
-   "grund": "210 Features mit 31001_2000 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
-   "kandidaten": 210
-  },
-  {
    "object": "Eingang_Ost",
    "grund": "210 Features mit 31001_2000 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
-   "kandidaten": 210
+   "kandidaten": 210,
+   "teile": 3
   },
   {
    "object": "Parkhaus_B",
    "grund": "10 Features mit 31001_2461 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
-   "kandidaten": 10
+   "kandidaten": 10,
+   "teile": null
   },
   {
    "object": "Ueberdachung_A",
    "grund": "25 Features mit 51009_1610 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
-   "kandidaten": 25
+   "kandidaten": 25,
+   "teile": null
   },
   {
    "object": "Ueberdachung_B",
    "grund": "25 Features mit 51009_1610 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
-   "kandidaten": 25
+   "kandidaten": 25,
+   "teile": null
   },
   {
    "object": "AUX_01",

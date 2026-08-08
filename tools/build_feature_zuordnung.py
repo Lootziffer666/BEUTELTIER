@@ -130,9 +130,25 @@ def main() -> int:
         "Ost_C": ("DENW37AL1000668A",
                   "breiter Koerper suedlich Halle 8, Station 12-71"),
     }
+    # Der Gang selbst: zwei Teile auf der Achse, Station 0 bis 250. Das in
+    # dz.nrw markierte Feature reicht am Nordende zusaetzlich nach Osten zum
+    # Messeplatz -- der Gangkoerper ist dieser hier.
+    MEHRTEILIG = {
+        "Boulevard_Nord": (["UUID_bec8e8e7-29eb-4eda-bc5a-6b825e96f224",
+                            "UUID_8a5bca01-f6e6-4f45-8b8d-68308b2adeb8"],
+                           "Gangkoerper auf der Achse, Station 0-250"),
+    }
 
     # Sonderbauten und AUX: der Funktionsschluessel allein reicht nicht.
     for eintrag in inventar["sonderbauten"]:
+        mehrteilig = MEHRTEILIG.get(eintrag["object"])
+        if mehrteilig:
+            ids, lage = mehrteilig
+            zuordnung.append({
+                "object": eintrag["object"], "featureIds": ids, "lage": lage,
+                "quelle": "Nutzerangabe (dz.nrw Feature Info)",
+            })
+            continue
         gezeigt = GEZEIGT.get(eintrag["object"])
         if gezeigt:
             feature_id, lage = gezeigt
@@ -151,6 +167,7 @@ def main() -> int:
                      "die Inventur nennt keinen Schluessel, der eines davon "
                      "eindeutig benennt",
             "kandidaten": len(kandidaten),
+            "teile": eintrag.get("teile"),
         })
 
     # Die AUX-Koerper werden nur wegen ihrer Aussenmasse gefuehrt, und die

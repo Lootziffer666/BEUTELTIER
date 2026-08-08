@@ -96,7 +96,9 @@
    "klasse": "standard_building",
    "name": "Eingang Ost",
    "rellage": "Aufgestaendert",
-   "lagebez": "Deutz-Muelheimer Str. 51"
+   "lagebez": "Deutz-Muelheimer Str. 51",
+   "note": "Besteht aus DREI Teilen (Nutzerangabe). Nur einer traegt den Namen.",
+   "teile": 3
   },
   {
    "object": "Parkhaus_A",
@@ -242,6 +244,7 @@
   "Keine Hoehen aus Screenshots oder zmin neu ableiten.",
   "Keine Gebaeudemasse aus dz.nrw-Screenshotmessungen uebernehmen.",
   "Halle 1 und Halle 11 haben keine Standregistrierung, weil dort keine Messestaende liegen -- das ist erwartet und kein Datenfehler.",
-  "Von den AUX-Koerpern werden nur die Aussenmasse gebraucht -- sie muessen nicht einzeln identifiziert werden."
+  "Von den AUX-Koerpern werden nur die Aussenmasse gebraucht -- sie muessen nicht einzeln identifiziert werden.",
+  "Eingang Ost besteht aus drei Teilen; nur einer traegt den Namen."
  ]
 }
