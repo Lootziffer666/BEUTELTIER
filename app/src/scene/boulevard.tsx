@@ -463,6 +463,7 @@ interface Suedflaechen {
   knotenBoden?: THREE.BufferGeometry;
   knotenDach?: THREE.BufferGeometry;
   knotenPassage?: THREE.BufferGeometry;
+  knotenTreppeOst?: THREE.BufferGeometry;
   suedBoden?: THREE.BufferGeometry;
   suedDach?: THREE.BufferGeometry;
   suedStirn?: THREE.BufferGeometry;
@@ -549,6 +550,13 @@ function suedknoten(
     knotenDach: band(achse, centre,
       () => [[qOst, riegel.hoeheM + plan.hoeheM], [qWest, riegel.hoeheM + plan.hoeheM]],
       WELT_KACHEL_M.decke, [[riegel.vonM, riegel.bisM]]),
+    // Das Treppenhaus hinunter zu Halle 10: es sitzt am Ostrand des Riegels
+    // und faellt quer zur Achse ab, ueber sechsundzwanzig Stufen von 4,30 m
+    // auf null. Als geneigte Flaeche gebaut, nicht als Stufenfolge.
+    knotenTreppeOst: band(achse, centre,
+      () => [[knoten.qOstM - knoten.stufenOst * 0.30, 0], [knoten.qOstM, riegel.hoeheM]],
+      WELT_KACHEL_M.boden,
+      [[(riegel.vonM + riegel.bisM) / 2 - 6, (riegel.vonM + riegel.bisM) / 2 + 6]]),
     // Die Passage nach Sueden faellt sanft zur Piazza ab.
     knotenPassage: band(achse, centre,
       (s) => {
@@ -821,6 +829,9 @@ export function Boulevard({
       {flaechen.knotenDach && <mesh geometry={flaechen.knotenDach} material={material.dach} />}
       {flaechen.knotenPassage && (
         <mesh geometry={flaechen.knotenPassage} material={material.boden} receiveShadow />
+      )}
+      {flaechen.knotenTreppeOst && (
+        <mesh geometry={flaechen.knotenTreppeOst} material={material.boden} receiveShadow />
       )}
       {pendel.map((position, index) => (
         <mesh key={`p${index}`} position={position}>

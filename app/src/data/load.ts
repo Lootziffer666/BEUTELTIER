@@ -231,6 +231,9 @@ export interface BoulevardPlan {
   knoten: {
     riegel: { vonM: number; bisM: number; hoeheM: number };
     treppeM: number;
+    /** Ostrand des Riegels und die Stufenzahl hinunter zu Halle 10.1. */
+    qOstM: number;
+    stufenOst: number;
     piazzaVonM: number;
     piazzaHoeheM: number;
   } | null;

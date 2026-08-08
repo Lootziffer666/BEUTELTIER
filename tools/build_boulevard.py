@@ -344,6 +344,10 @@ def main() -> int:
             "riegel": {"vonM": 377.4, "bisM": 400.3,
                        "hoeheM": round(26 * 7.60 / 46, 2)},
             "treppeM": round(20 * 0.30, 2),
+            # Das Treppenhaus zu Halle 10: es sitzt am Ostrand des Riegels
+            # und faellt quer zur Achse auf Hallenniveau ab.
+            "qOstM": -12.1,
+            "stufenOst": 26,
             "piazzaVonM": 485.0,
             "piazzaHoeheM": round(20 * 0.1656, 2),
         } if sued else None,
