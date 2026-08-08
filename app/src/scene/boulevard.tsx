@@ -39,10 +39,9 @@ import { ArchitectureGenerator } from '../procedural/generators/ArchitectureGene
 /**
  * Fussbodenhoehe.
  *
- * Der Boulevard hat kein eigenes Wegenetz; draussen laeuft die Kollision auf
- * Hoehe null. Laege sein Boden auf Hallenniveau, stuende der Besucher einen
- * halben Meter darin. Der halbe Meter Versatz zur Halle faellt weniger auf
- * als eine Augenhoehe von 1,20 m.
+ * Knapp ueber null, wie das Gelaende ringsum. Seit `boulevardSurfaces.ts` die
+ * Kollision aus demselben Plan baut, ist das nicht mehr nur die gezeichnete,
+ * sondern auch die begangene Hoehe -- beide lesen diese Zahl.
  */
 export const BODEN_Y = 0.02;
 
@@ -401,8 +400,17 @@ export interface Bauteil {
 export const TUER_BREITE_M = 3.2;
 export const TUER_HOEHE_M = 2.6;
 export const TUER_PROFIL_M = 0.09;
-/** Abstand der beiden Tuermitten von der Mitte der Wand. */
+/** Abstand der beiden Tuermitten von der Gangachse. */
 export const TUER_VERSATZ_M = 1.9;
+/**
+ * Halbe lichte Oeffnung.
+ *
+ * Steht hier und nicht in der Wand, weil zwei Bauteile sie brauchen: die
+ * Glasfront laesst sie frei, und die Kollision laesst an derselben Stelle
+ * durch. Zwei Rechnungen daneben waeren eine Tuer, die man sieht und durch
+ * die man nicht geht.
+ */
+export const TUER_OEFFNUNG_HALB_M = TUER_BREITE_M / 2 + TUER_PROFIL_M / 2;
 
 /**
  * Die Glasfelder zwischen den Tueroeffnungen.
@@ -871,16 +879,24 @@ export function Boulevard({
     // Fussbodens und was darunter liegt. Erst oberhalb von 7,45 m ist sie
     // verglast, und dort sitzen auch die beiden Doppeltueren: der Eingang zum
     // Boulevard Sued liegt auf der zweiten Ebene.
+    // Sie steht auf der Mitte des **Suedteils** und nicht auf der Achse des
+    // Nordgangs. Die beiden fallen nicht zusammen: der Suedteil reicht von
+    // q -36,46 bis q +8,80 und liegt damit weit nach Osten versetzt. Auf der
+    // Gangachse gebaut ragte die Wand dreizehn Meter nach Westen ins Freie
+    // und liess im Osten dasselbe Stueck offen.
     const s = plan.treppe.bisM;
-    const x = achse.x0 + achse.laengs[0] * s;
-    const y = achse.y0 + achse.laengs[1] * s;
+    const qMitte = (plan.sued.seitenQ.ost + plan.sued.seitenQ.west) / 2;
+    const x = achse.x0 + achse.laengs[0] * s + achse.quer[0] * qMitte;
+    const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * qMitte;
     const sockel = 7.45;
     const boden = plan.sued.obenM;
     const breite = plan.sued.breiteM;
-    const versatze = [-TUER_VERSATZ_M, TUER_VERSATZ_M];
+    // Die Tueren bleiben dort, wo die Treppe ankommt -- auf der Gangachse,
+    // also bei q = 0. In den Wandkoordinaten ist das um deren Mitte versetzt.
+    const versatze = [-TUER_VERSATZ_M - qMitte, TUER_VERSATZ_M - qMitte];
     // Die lichte Oeffnung: das Rahmenprofil steht zur Haelfte ueber das
     // genannte Tuermass hinaus, oben wie an beiden Seiten.
-    const oeffnungHalb = TUER_BREITE_M / 2 + TUER_PROFIL_M / 2;
+    const oeffnungHalb = TUER_OEFFNUNG_HALB_M;
     const sturzY = boden + TUER_HOEHE_M + TUER_PROFIL_M / 2;
     return {
       // Der Fusspunkt der Wand; die Teile sitzen darueber in echten Hoehen.

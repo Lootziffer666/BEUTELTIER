@@ -7,7 +7,10 @@
  */
 
 import { RouteGraph, type CompactGraph } from '../routing/graph';
-import { WalkGrid } from '../scene/walk';
+import { LEGACY_OPEN_OUTSIDE, WalkGrid } from '../scene/walk';
+import { boulevardAchse } from '../scene/boulevard';
+import { BoulevardSurfaces } from '../scene/boulevardSurfaces';
+import { PrioritySurfaceProvider, type SurfaceProvider } from '../scene/surfaces';
 import type { Registry, Site } from './types';
 
 const BASE = `${import.meta.env.BASE_URL}data`;
@@ -283,6 +286,28 @@ async function fetchJson<T>(name: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+/**
+ * Was ausserhalb der Hallengitter unter den Fuessen liegt.
+ *
+ * Zuerst der Boulevard: er bringt eigene Fussboeden und eigene Waende mit.
+ * Was er nicht kennt, faellt weiter auf die alte Regel zurueck -- draussen ist
+ * offen. Die Reihenfolge ist der ganze Trick: `PrioritySurfaceProvider` nimmt
+ * den ersten Geber, der sich zustaendig erklaert, und der Boulevard erklaert
+ * sich nur dort zustaendig, wo er auch steht. Das uebrige Gelaende bleibt
+ * damit unveraendert begehbar.
+ *
+ * Ohne `boulevard.json` -- in aelteren Offline-Schnappschuessen -- bleibt alles
+ * beim Alten.
+ */
+function aussenraum(plan: BoulevardPlan | null): SurfaceProvider {
+  const achse = plan ? boulevardAchse({ boulevard: plan }) : null;
+  if (!plan || !achse) return LEGACY_OPEN_OUTSIDE;
+  return new PrioritySurfaceProvider([
+    new BoulevardSurfaces(plan, achse),
+    LEGACY_OPEN_OUTSIDE,
+  ]);
+}
+
 export async function loadDataset(): Promise<Dataset> {
   const [legacySite, registry, legacyCompact, registeredSite, registeredCompact] = await Promise.all([
     fetchJson<Site>('site.json'),
@@ -318,7 +343,7 @@ export async function loadDataset(): Promise<Dataset> {
     site,
     registry,
     graph: RouteGraph.fromCompact(compact),
-    walk: WalkGrid.fromCompact(compact),
+    walk: WalkGrid.fromCompact(compact, aussenraum(boulevard)),
     ortho,
     surroundings,
     footprints,
