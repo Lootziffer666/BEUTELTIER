@@ -19,7 +19,7 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
-import type { Dataset } from '../data/load';
+import type { Dataset, Gelaende } from '../data/load';
 import type { Placement2D } from '../data/types';
 import { polygonCentre, toScene } from './geometry';
 import { MARKEN, MARKENFLAECHEN, type Marke } from './marken';
@@ -253,7 +253,7 @@ interface Rechteck {
   v: [number, number];
 }
 
-function rechteck(polygon: Placement2D[]): Rechteck | null {
+export function rechteck(polygon: Placement2D[]): Rechteck | null {
   if (polygon.length < 4) return null;
   const [p0, p1, p2] = polygon;
   const e1: [number, number] = [p1[0] - p0[0], p1[1] - p0[1]];
@@ -273,7 +273,7 @@ function rechteck(polygon: Placement2D[]): Rechteck | null {
   };
 }
 
-interface Koerper {
+export interface Koerper {
   standId: string;
   marke: Marke;
   /** Materialsatz: Marke plus Anzahl der Schriftzüge auf der Wand. */
@@ -293,6 +293,101 @@ interface Koerper {
 const BANNER_Y = 8.4;
 const BANNER_H = 3.6;
 
+/**
+ * Die Standkörper als reine Rechnung.
+ *
+ * Getrennt von der Darstellung, weil derselbe Körper zweimal gebraucht wird:
+ * einmal als Mesh in der Szene und einmal als Quader im Blockeditor. Was
+ * gebaut ist, soll dort auch dann noch stimmen, wenn hier etwas nachgezogen
+ * wird -- also wird es an einer Stelle gerechnet und nicht an zweien.
+ */
+export function markenkoerper(data: Gelaende, centre: [number, number]): Koerper[] {
+  const stands = new Map(data.site.stands.map((stand) => [stand.id, stand]));
+  const out: Koerper[] = [];
+
+  for (const flaeche of MARKENFLAECHEN) {
+    const stand = stands.get(flaeche.standId);
+    const marke = MARKEN[flaeche.marke];
+    if (!stand || !marke) continue;
+    const hall = data.hallsByKey.get(stand.hallKey);
+
+    const voll = rechteck(stand.polygon);
+    if (!voll) continue;
+
+    // Geteilte Stände: der lange Block ganz rechts trägt im Referenzplan zwei
+    // Marken. Geteilt wird entlang der langen Kante, und welche Hälfte welcher
+    // Marke gehört, entscheidet die Nachbarschaft -- nicht die Himmelsrichtung,
+    // die bei einer eingemessenen Halle nichts mehr über den Plan aussagt.
+    let breite = voll.breite;
+    let tiefe = voll.tiefe;
+    let mx = voll.mx;
+    let my = voll.my;
+    if (flaeche.naheAn) {
+      const nachbar = stands.get(flaeche.naheAn);
+      if (!nachbar) continue;
+      const ziel = polygonCentre(nachbar.polygon);
+      const laengs = voll.tiefe >= voll.breite;
+      const achse = laengs ? voll.v : voll.u;
+      const halb = (laengs ? voll.tiefe : voll.breite) / 4;
+      const richtung =
+        (ziel[0] - voll.mx) * achse[0] + (ziel[1] - voll.my) * achse[1] >= 0 ? 1 : -1;
+      mx = voll.mx + achse[0] * halb * richtung;
+      my = voll.my + achse[1] * halb * richtung;
+      if (laengs) tiefe = voll.tiefe / 2;
+      else breite = voll.breite / 2;
+    }
+    if (breite < 2 || tiefe < 2) continue;
+
+    // Wo liegt der Gang? Von den vier Seiten die, die zur Hallenmitte zeigt.
+    let banner: Koerper['banner'] = null;
+    if (marke.banner && hall) {
+      const [hx, hy] = polygonCentre(hall.footprint);
+      const nach: [number, number] = [hx - mx, hy - my];
+      const seiten: { richtung: [number, number]; abstand: number; laenge: number }[] = [
+        { richtung: voll.u, abstand: breite / 2, laenge: tiefe },
+        { richtung: [-voll.u[0], -voll.u[1]], abstand: breite / 2, laenge: tiefe },
+        { richtung: voll.v, abstand: tiefe / 2, laenge: breite },
+        { richtung: [-voll.v[0], -voll.v[1]], abstand: tiefe / 2, laenge: breite },
+      ];
+      let beste = seiten[0];
+      let bester = -Infinity;
+      for (const seite of seiten) {
+        const wert = nach[0] * seite.richtung[0] + nach[1] * seite.richtung[1];
+        if (wert > bester) {
+          bester = wert;
+          beste = seite;
+        }
+      }
+      const bx = mx + beste.richtung[0] * (beste.abstand + 1.6);
+      const by = my + beste.richtung[1] * (beste.abstand + 1.6);
+      banner = {
+        position: toScene(bx, by, BANNER_Y, centre),
+        breite: Math.min(beste.laenge * 0.72, 18),
+        // Die Bannerfläche zeigt mit ihrer Vorderseite nach aussen in den Gang.
+        drehung: Math.atan2(beste.richtung[0], -beste.richtung[1]),
+      };
+    }
+
+    const wiederholungen = Math.max(
+      1,
+      Math.round((breite + tiefe) / 2 / LOGO_ABSTAND_M),
+    );
+    out.push({
+      standId: stand.id,
+      marke,
+      satzKey: `${marke.key}:${wiederholungen}`,
+      wiederholungen,
+      position: toScene(mx, my, stand.baseY + marke.hoeheM / 2 + 0.05, centre),
+      breite,
+      tiefe,
+      hoehe: marke.hoeheM,
+      drehung: voll.winkel,
+      banner,
+    });
+  }
+  return out;
+}
+
 export function Markenstaende({
   data,
   centre,
@@ -302,92 +397,7 @@ export function Markenstaende({
   centre: [number, number];
   onSelectStand: (standId: string | null) => void;
 }) {
-  const koerper = useMemo<Koerper[]>(() => {
-    const stands = new Map(data.site.stands.map((stand) => [stand.id, stand]));
-    const out: Koerper[] = [];
-
-    for (const flaeche of MARKENFLAECHEN) {
-      const stand = stands.get(flaeche.standId);
-      const marke = MARKEN[flaeche.marke];
-      if (!stand || !marke) continue;
-      const hall = data.hallsByKey.get(stand.hallKey);
-
-      const voll = rechteck(stand.polygon);
-      if (!voll) continue;
-
-      // Geteilte Stände: der lange Block ganz rechts trägt im Referenzplan zwei
-      // Marken. Geteilt wird entlang der langen Kante, und welche Hälfte welcher
-      // Marke gehört, entscheidet die Nachbarschaft -- nicht die Himmelsrichtung,
-      // die bei einer eingemessenen Halle nichts mehr über den Plan aussagt.
-      let breite = voll.breite;
-      let tiefe = voll.tiefe;
-      let mx = voll.mx;
-      let my = voll.my;
-      if (flaeche.naheAn) {
-        const nachbar = stands.get(flaeche.naheAn);
-        if (!nachbar) continue;
-        const ziel = polygonCentre(nachbar.polygon);
-        const laengs = voll.tiefe >= voll.breite;
-        const achse = laengs ? voll.v : voll.u;
-        const halb = (laengs ? voll.tiefe : voll.breite) / 4;
-        const richtung =
-          (ziel[0] - voll.mx) * achse[0] + (ziel[1] - voll.my) * achse[1] >= 0 ? 1 : -1;
-        mx = voll.mx + achse[0] * halb * richtung;
-        my = voll.my + achse[1] * halb * richtung;
-        if (laengs) tiefe = voll.tiefe / 2;
-        else breite = voll.breite / 2;
-      }
-      if (breite < 2 || tiefe < 2) continue;
-
-      // Wo liegt der Gang? Von den vier Seiten die, die zur Hallenmitte zeigt.
-      let banner: Koerper['banner'] = null;
-      if (marke.banner && hall) {
-        const [hx, hy] = polygonCentre(hall.footprint);
-        const nach: [number, number] = [hx - mx, hy - my];
-        const seiten: { richtung: [number, number]; abstand: number; laenge: number }[] = [
-          { richtung: voll.u, abstand: breite / 2, laenge: tiefe },
-          { richtung: [-voll.u[0], -voll.u[1]], abstand: breite / 2, laenge: tiefe },
-          { richtung: voll.v, abstand: tiefe / 2, laenge: breite },
-          { richtung: [-voll.v[0], -voll.v[1]], abstand: tiefe / 2, laenge: breite },
-        ];
-        let beste = seiten[0];
-        let bester = -Infinity;
-        for (const seite of seiten) {
-          const wert = nach[0] * seite.richtung[0] + nach[1] * seite.richtung[1];
-          if (wert > bester) {
-            bester = wert;
-            beste = seite;
-          }
-        }
-        const bx = mx + beste.richtung[0] * (beste.abstand + 1.6);
-        const by = my + beste.richtung[1] * (beste.abstand + 1.6);
-        banner = {
-          position: toScene(bx, by, BANNER_Y, centre),
-          breite: Math.min(beste.laenge * 0.72, 18),
-          // Die Bannerfläche zeigt mit ihrer Vorderseite nach aussen in den Gang.
-          drehung: Math.atan2(beste.richtung[0], -beste.richtung[1]),
-        };
-      }
-
-      const wiederholungen = Math.max(
-        1,
-        Math.round((breite + tiefe) / 2 / LOGO_ABSTAND_M),
-      );
-      out.push({
-        standId: stand.id,
-        marke,
-        satzKey: `${marke.key}:${wiederholungen}`,
-        wiederholungen,
-        position: toScene(mx, my, stand.baseY + marke.hoeheM / 2 + 0.05, centre),
-        breite,
-        tiefe,
-        hoehe: marke.hoeheM,
-        drehung: voll.winkel,
-        banner,
-      });
-    }
-    return out;
-  }, [data, centre]);
+  const koerper = useMemo<Koerper[]>(() => markenkoerper(data, centre), [data, centre]);
 
   const saetze = useMemo(() => {
     const map = new Map<string, Fassadensatz>();

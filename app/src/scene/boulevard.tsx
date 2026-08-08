@@ -21,7 +21,7 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
-import type { Dataset } from '../data/load';
+import type { Dataset, Gelaende } from '../data/load';
 import type { Placement2D } from '../data/types';
 import {
   boulevarddeckeSurface,
@@ -41,9 +41,9 @@ const GEGENUEBER = '6.1';
 /** Die Halle, die sich quer vor das Ende stellt. */
 const ABSCHLUSS = '8.1';
 
-const BREITE_M = 16;
-const LAENGE_M = 235;
-const HOEHE_M = 11;
+export const BREITE_M = 16;
+export const LAENGE_M = 235;
+export const HOEHE_M = 11;
 
 /**
  * Fussbodenhoehe.
@@ -53,12 +53,12 @@ const HOEHE_M = 11;
  * halben Meter darin. Der halbe Meter Versatz zur Halle faellt weniger auf
  * als eine Augenhoehe von 1,20 m.
  */
-const BODEN_Y = 0.02;
+export const BODEN_Y = 0.02;
 
 /** Breite des Oberlichtbands in der Mitte. */
 const OBERLICHT_BREITE_M = 6.4;
 
-interface Achse {
+export interface Achse {
   /** Ursprung: Anfang der Mittelachse, in Geländemetern. */
   x0: number;
   y0: number;
@@ -92,7 +92,7 @@ function spanne(footprint: Placement2D[], winkel: number) {
  * aus der Drehung des Geländes und wird hier einmal festgehalten, statt an
  * jeder Stelle neu überlegt zu werden.
  */
-export function boulevardAchse(data: Dataset): Achse | null {
+export function boulevardAchse(data: Gelaende): Achse | null {
   const halle = data.hallsByKey.get(LEITHALLE);
   const gegen = data.hallsByKey.get(GEGENUEBER);
   const abschluss = data.hallsByKey.get(ABSCHLUSS);
@@ -138,8 +138,8 @@ export function boulevardAchse(data: Dataset): Achse | null {
  * Luecken dazwischen, weil man dort ins Freie sieht. Welche Halle wie weit
  * reicht, steht im Datensatz -- gerechnet wird es, nicht eingetragen.
  */
-function wandAbschnitte(
-  data: Dataset,
+export function wandAbschnitte(
+  data: Gelaende,
   winkel: number,
   uMitte: number,
   vorne: number,
@@ -257,7 +257,7 @@ function kachel(quelle: THREE.Texture | undefined, wiederholung = 1) {
  * Angeschrieben wird, was tatsächlich dort abgeht -- die Halle links und die
  * Halle rechts, an der Stelle, an der man vor ihrem Eingang steht.
  */
-interface Wegweiser {
+export interface Wegweiser {
   /** Meter vom Anfang (Stirnseite Halle 8). */
   station: number;
   kopf: string;
@@ -265,7 +265,7 @@ interface Wegweiser {
   zeilen: { text: string; pfeil: 'links' | 'rechts' | 'geradeaus' }[];
 }
 
-const WEGWEISER: Wegweiser[] = [
+export const WEGWEISER: Wegweiser[] = [
   { station: 30, kopf: '7 – 8', kopfKlein: 'Congress-Centrum Nord\nAusgang Nord',
     zeilen: [{ text: '8', pfeil: 'geradeaus' }, { text: '7', pfeil: 'rechts' }] },
   { station: 95, kopf: '7', kopfKlein: 'Service Center Nord',
@@ -276,10 +276,10 @@ const WEGWEISER: Wegweiser[] = [
     zeilen: [{ text: '9', pfeil: 'links' }, { text: '5 – 10', pfeil: 'geradeaus' }] },
 ];
 
-const SCHILD_BREITE_M = 2.6;
-const SCHILD_HOEHE_M = 3.4;
+export const SCHILD_BREITE_M = 2.6;
+export const SCHILD_HOEHE_M = 3.4;
 /** Unterkante über dem Boden -- hoch genug, dass niemand dagegenläuft. */
-const SCHILD_Y = 4.4;
+export const SCHILD_Y = 4.4;
 const GRUEN = '#3aa935';
 
 function pfeilZeichnen(
@@ -366,24 +366,24 @@ function schildTextur(schild: Wegweiser): THREE.CanvasTexture {
  * obere Ebene. 45 Stufen zu 16,56 cm sind 7,45 m -- das ist kein Absatz,
  * das ist ein Geschoss.
  */
-const LAEUFE = 3;
-const STUFEN_JE_LAUF = 15;
-const STEIGUNG_M = 0.1656;
-const AUFTRITT_M = 0.30;
-const PODEST_M = 2.2;
-const TREPPE_BREITE_M = 7;
-const ROLLTREPPE_BREITE_M = 1.4;
+export const LAEUFE = 3;
+export const STUFEN_JE_LAUF = 15;
+export const STEIGUNG_M = 0.1656;
+export const AUFTRITT_M = 0.30;
+export const PODEST_M = 2.2;
+export const TREPPE_BREITE_M = 7;
+export const ROLLTREPPE_BREITE_M = 1.4;
 /** Gesamter Lauf in der Laenge und die Gesamthoehe. */
-const TREPPE_LAUF_M = LAEUFE * STUFEN_JE_LAUF * AUFTRITT_M + (LAEUFE - 1) * PODEST_M;
-const TREPPE_HOEHE_M = LAEUFE * STUFEN_JE_LAUF * STEIGUNG_M;
+export const TREPPE_LAUF_M = LAEUFE * STUFEN_JE_LAUF * AUFTRITT_M + (LAEUFE - 1) * PODEST_M;
+export const TREPPE_HOEHE_M = LAEUFE * STUFEN_JE_LAUF * STEIGUNG_M;
 
-interface Bauteil {
+export interface Bauteil {
   position: [number, number, number];
   groesse: [number, number, number];
   neigung?: number;
 }
 
-function treppenteile(achse: Achse, centre: [number, number]): {
+export function treppenteile(achse: Achse, centre: [number, number]): {
   stufen: Bauteil[];
   rolltreppen: Bauteil[];
   drehung: number;

@@ -195,6 +195,16 @@ export interface Dataset {
   exhibitorsById: Map<string, Registry['exhibitors'][number]>;
 }
 
+/**
+ * Nur die Geometrie des Gelaendes.
+ *
+ * Wer Hallen und Staende in Koerper umrechnet, braucht weder Wegenetz noch
+ * Registry. Als eigener Typ geschrieben, damit derselbe Rechenweg auch
+ * ausserhalb der laufenden App laeuft -- der Bauplan-Export fuer den
+ * Blockeditor hat nur die Standortdatei, aber dieselben Hallen.
+ */
+export type Gelaende = Pick<Dataset, 'site' | 'hallsByKey'>;
+
 async function fetchJson<T>(name: string): Promise<T> {
   const response = await fetch(`${BASE}/${name}`);
   if (!response.ok) throw new Error(`${name} konnte nicht geladen werden (${response.status})`);
