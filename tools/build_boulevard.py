@@ -331,6 +331,15 @@ def main() -> int:
         "geometrieLaengeM": round(naechste_hallen(gebaeude, station, laengs, quer), 1),
         # Was an den beiden Enden liegt -- das steht auf den Wegweisern.
         "enden": enden(gebaeude, station, laengs, quer, achse_q),
+        # Die Piazza am Suedende, aus gezaehlten Stufen:
+        # Halle 11 liegt ebenerdig wie Halle 10.1 (0,00 m), und von dort
+        # fuehren zweimal zehn Stufen hinauf. Mit demselben Steigungsmass wie
+        # ueberall auf dem Gelaende sind das 20 x 16,56 cm.
+        "piazza": {
+            "hoeheM": round(20 * 0.1656, 2),
+            "stufen": 20,
+            "herkunft": "gezaehlt (Halle 11 -> Piazza), Halle 11 ebenerdig wie 10.1",
+        },
         "seiten": seiten,
         "sued": sued,
         # Die Treppe liegt zwischen beiden Teilen: sie beginnt am Ende der
