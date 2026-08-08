@@ -133,6 +133,47 @@ function band(
   return geometry;
 }
 
+/**
+ * Bauzaun mit Schraffur und Aufschrift.
+ *
+ * Suedoestlich der Piazza ist noch nichts gebaut. Statt den Besucher ins
+ * Leere laufen zu lassen, steht dort das, was auf jeder Baustelle steht --
+ * das ist ehrlicher als eine unsichtbare Wand und braucht keine Erklaerung.
+ */
+function bauzaunTextur(): THREE.CanvasTexture {
+  const B = 2048;
+  const H = 256;
+  const element = document.createElement('canvas');
+  element.width = B;
+  element.height = H;
+  const ctx = element.getContext('2d');
+  if (!ctx) throw new Error('Canvas ohne 2D-Kontext');
+  ctx.fillStyle = '#f2c200';
+  ctx.fillRect(0, 0, B, H);
+  ctx.fillStyle = '#1b1b1b';
+  for (let x = -H; x < B + H; x += 96) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + 48, 0);
+    ctx.lineTo(x + 48 + H, H);
+    ctx.lineTo(x + H, H);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Ein weisses Feld in der Mitte traegt die Schrift.
+  ctx.fillStyle = '#f6f6f4';
+  ctx.fillRect(B * 0.22, H * 0.2, B * 0.56, H * 0.6);
+  ctx.fillStyle = '#1b1b1b';
+  ctx.font = '800 84px "Arial Black", Helvetica, Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('UNDER CONSTRUCTION', B / 2, H / 2);
+  const textur = new THREE.CanvasTexture(element);
+  textur.colorSpace = THREE.SRGBColorSpace;
+  textur.wrapS = THREE.RepeatWrapping;
+  return textur;
+}
+
 function kachel(quelle: THREE.Texture | undefined, wiederholung = 1) {
   if (!quelle) return null;
   const kopie = quelle.clone();
@@ -736,6 +777,30 @@ export function Boulevard({
 
   useEffect(() => () => schilder.forEach(({ textur }) => textur.dispose()), [schilder]);
 
+  /**
+   * Wo das Gebaute aufhoert: quer ueber die Passage, vor der Piazza.
+   *
+   * Der Suedostteil um Halle 11 ist Provisorium und wartet auf Aufnahmen vor
+   * Ort. Bis dahin steht dort ein Bauzaun.
+   */
+  const bauzaun = useMemo(() => {
+    const knoten = plan?.knoten;
+    const sued = plan?.sued;
+    if (!achse || !knoten || !sued) return null;
+    const s = knoten.piazzaVonM;
+    const x = achse.x0 + achse.laengs[0] * s;
+    const y = achse.y0 + achse.laengs[1] * s;
+    return {
+      position: [x - centre[0], knoten.piazzaHoeheM + 0.6, -(y - centre[1])] as
+        [number, number, number],
+      drehung: Math.atan2(achse.laengs[0], -achse.laengs[1]),
+      breite: sued.breiteM,
+      textur: bauzaunTextur(),
+    };
+  }, [achse, centre, plan]);
+
+  useEffect(() => () => bauzaun?.textur.dispose(), [bauzaun]);
+
   const treppe = useMemo(
     () => (achse && plan?.treppe ? treppenteile(achse, centre, plan.treppe.vonM) : null),
     [achse, centre, plan],
@@ -872,6 +937,21 @@ export function Boulevard({
             />
           ))}
         </group>
+      )}
+      {bauzaun && (
+        <mesh
+          position={bauzaun.position}
+          rotation={[0, bauzaun.drehung, 0]}
+          castShadow
+        >
+          <planeGeometry args={[bauzaun.breite, 1.2]} />
+          <meshStandardMaterial
+            map={bauzaun.textur}
+            roughness={0.7}
+            metalness={0.05}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
       )}
       {treppe && (
         <group>
