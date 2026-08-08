@@ -335,6 +335,18 @@ def main() -> int:
         # Halle 11 liegt ebenerdig wie Halle 10.1 (0,00 m), und von dort
         # fuehren zweimal zehn Stufen hinauf. Mit demselben Steigungsmass wie
         # ueberall auf dem Gelaende sind das 20 x 16,56 cm.
+        # Der Suedknoten, aus gezaehlten Stufen und amtlichen Geschosshoehen.
+        # Der Querriegel liegt zwischen dem Suedteil (7,60 m) und Halle 10.1
+        # (0,00 m): zwanzig Stufen hinunter, sechsundzwanzig weiter hinunter.
+        # 46 Stufen auf 7,60 m sind 16,52 cm -- dasselbe Mass wie am
+        # Nordboulevard, wo 45 Stufen 7,45 m ueberwinden.
+        "knoten": {
+            "riegel": {"vonM": 377.4, "bisM": 400.3,
+                       "hoeheM": round(26 * 7.60 / 46, 2)},
+            "treppeM": round(20 * 0.30, 2),
+            "piazzaVonM": 485.0,
+            "piazzaHoeheM": round(20 * 0.1656, 2),
+        } if sued else None,
         "piazza": {
             "hoeheM": round(20 * 0.1656, 2),
             "stufen": 20,

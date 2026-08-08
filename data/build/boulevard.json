@@ -45,6 +45,16 @@
    "10"
   ]
  },
+ "knoten": {
+  "riegel": {
+   "vonM": 377.4,
+   "bisM": 400.3,
+   "hoeheM": 4.3
+  },
+  "treppeM": 6.0,
+  "piazzaVonM": 485.0,
+  "piazzaHoeheM": 3.31
+ },
  "piazza": {
   "hoeheM": 3.31,
   "stufen": 20,

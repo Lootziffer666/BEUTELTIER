@@ -459,6 +459,10 @@ function glasMaterial(
  * Quellen und treffen sich.
  */
 interface Suedflaechen {
+  knotenTreppe?: THREE.BufferGeometry;
+  knotenBoden?: THREE.BufferGeometry;
+  knotenDach?: THREE.BufferGeometry;
+  knotenPassage?: THREE.BufferGeometry;
   suedBoden?: THREE.BufferGeometry;
   suedDach?: THREE.BufferGeometry;
   suedStirn?: THREE.BufferGeometry;
@@ -500,6 +504,60 @@ function suedteil(
     suedStirn: band(achse, centre,
       () => [[qOst, oben], [qWest, oben]], WELT_KACHEL_M.wand,
       [[sued.vonM - 0.4, sued.vonM]]),
+    ...suedknoten(achse, centre, plan, oben, qOst, qWest),
+  };
+}
+
+/**
+ * Der Suedknoten: Querriegel, Treppe hinunter und Passage zur Piazza.
+ *
+ * Alle Hoehen sind belegt und keine geschaetzt. Der Suedteil liegt auf
+ * 7,60 m (amtliche Geschosshoehe), von dort fuehren zwanzig gezaehlte Stufen
+ * hinunter auf den Querriegel, weitere sechsundzwanzig hinunter zu Halle 10.1
+ * auf null. Die Piazza liegt zwanzig Stufen ueber Halle 11, die ebenerdig
+ * ist -- also auf 3,31 m. Die Passage dazwischen faellt entsprechend um
+ * knapp einen Meter; man geht von der Piazza sanft hinauf zum Boulevard.
+ *
+ * Treppen sind hier geneigte Baender und keine Stufenfolgen. Aus zwei Metern
+ * Entfernung ist das derselbe Anblick, und der Suedknoten soll zuerst einmal
+ * begehbar dastehen.
+ */
+function suedknoten(
+  achse: Achse,
+  centre: [number, number],
+  plan: BoulevardPlan,
+  oben: number,
+  qOst: number,
+  qWest: number,
+): Suedflaechen {
+  const knoten = plan.knoten;
+  if (!knoten) return {};
+  const riegel = knoten.riegel;
+  const lauf = knoten.treppeM;
+  return {
+    // Die Treppe vom Suedteil auf den Querriegel.
+    knotenTreppe: band(achse, centre,
+      (s) => {
+        const teil = (s - (riegel.vonM - lauf)) / lauf;
+        const hoehe = oben + (riegel.hoeheM - oben) * Math.min(1, Math.max(0, teil));
+        return [[qOst, hoehe], [qWest, hoehe]];
+      },
+      WELT_KACHEL_M.boden, [[riegel.vonM - lauf, riegel.vonM]]),
+    knotenBoden: band(achse, centre,
+      () => [[qOst, riegel.hoeheM], [qWest, riegel.hoeheM]],
+      WELT_KACHEL_M.boden, [[riegel.vonM, riegel.bisM]]),
+    knotenDach: band(achse, centre,
+      () => [[qOst, riegel.hoeheM + plan.hoeheM], [qWest, riegel.hoeheM + plan.hoeheM]],
+      WELT_KACHEL_M.decke, [[riegel.vonM, riegel.bisM]]),
+    // Die Passage nach Sueden faellt sanft zur Piazza ab.
+    knotenPassage: band(achse, centre,
+      (s) => {
+        const teil = (s - riegel.bisM) / Math.max(1, knoten.piazzaVonM - riegel.bisM);
+        const hoehe = riegel.hoeheM
+          + (knoten.piazzaHoeheM - riegel.hoeheM) * Math.min(1, Math.max(0, teil));
+        return [[qOst, hoehe], [qWest, hoehe]];
+      },
+      WELT_KACHEL_M.boden, [[riegel.bisM, knoten.piazzaVonM]]),
   };
 }
 
@@ -752,6 +810,17 @@ export function Boulevard({
       )}
       {flaechen.suedWandWestGlas && (
         <mesh geometry={flaechen.suedWandWestGlas} material={material.wand} />
+      )}
+      {/* Suedknoten: Treppe, Querriegel und Passage zur Piazza. */}
+      {flaechen.knotenTreppe && (
+        <mesh geometry={flaechen.knotenTreppe} material={material.boden} receiveShadow />
+      )}
+      {flaechen.knotenBoden && (
+        <mesh geometry={flaechen.knotenBoden} material={material.boden} receiveShadow />
+      )}
+      {flaechen.knotenDach && <mesh geometry={flaechen.knotenDach} material={material.dach} />}
+      {flaechen.knotenPassage && (
+        <mesh geometry={flaechen.knotenPassage} material={material.boden} receiveShadow />
       )}
       {pendel.map((position, index) => (
         <mesh key={`p${index}`} position={position}>

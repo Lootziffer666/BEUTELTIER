@@ -227,6 +227,13 @@ export interface BoulevardPlan {
     kanteM: number | null;
     seiten: { ost: BoulevardAbschnitt[]; west: BoulevardAbschnitt[] };
   } | null;
+  /** Der Suedknoten: Querriegel, Treppe und Passage zur Piazza. */
+  knoten: {
+    riegel: { vonM: number; bisM: number; hoeheM: number };
+    treppeM: number;
+    piazzaVonM: number;
+    piazzaHoeheM: number;
+  } | null;
   /** Die Treppenanlage zwischen beiden Teilen. */
   treppe: {
     vonM: number;
