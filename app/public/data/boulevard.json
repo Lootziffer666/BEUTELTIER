@@ -156,6 +156,55 @@
    }
   ]
  },
+ "aussen": [
+  {
+   "id": "hof-8_1-7_1",
+   "seite": "west",
+   "vonM": -0.0,
+   "bisM": 29.02,
+   "qVonM": 7.456,
+   "qBisM": 127.456,
+   "tiefeM": 120.0,
+   "zwischen": [
+    "8.1",
+    "7.1"
+   ],
+   "endetAn": "Nachbar endet",
+   "gekappt": false,
+   "herkunft": "Luecke zwischen den amtlichen Umrissen, abgetastet"
+  },
+  {
+   "id": "hof-7_1-6_1",
+   "seite": "west",
+   "vonM": 136.05,
+   "bisM": 158.98,
+   "qVonM": 7.456,
+   "qBisM": 209.456,
+   "tiefeM": 202.0,
+   "zwischen": [
+    "7.1",
+    "6.1"
+   ],
+   "endetAn": "Nachbar endet",
+   "gekappt": false,
+   "herkunft": "Luecke zwischen den amtlichen Umrissen, abgetastet"
+  },
+  {
+   "id": "hinter-8_1",
+   "seite": "nord",
+   "vonM": -211.09,
+   "bisM": -91.09,
+   "qVonM": -59.522,
+   "qBisM": 126.909,
+   "tiefeM": 120.0,
+   "zwischen": [
+    "8.1"
+   ],
+   "endetAn": "Vorgabe",
+   "gekappt": true,
+   "herkunft": "freies Gelaende noerdlich der Halle, abgetastet"
+  }
+ ],
  "sued": {
   "vonM": 304.47,
   "bisM": 377.65,

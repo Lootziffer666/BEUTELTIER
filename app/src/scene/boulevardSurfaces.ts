@@ -178,15 +178,39 @@ export function querwaendeAusPlan(plan: BoulevardPlan): Querwand[] {
   }];
 }
 
+/**
+ * Das Aussengelaende neben dem Gang.
+ *
+ * Dieselben Rechtecke wie die Abschnitte, aber eine Stufe spaeter gefragt:
+ * die Hoefe stossen unmittelbar an die Laengswand, und wer sie zusammen mit
+ * dem Gang abfragte, machte damit die Glasfassade begehbar. Erst Gang, dann
+ * Huelle, dann Hof -- in dieser Reihenfolge bleibt die Wand eine Wand und der
+ * Hof trotzdem ein Boden.
+ */
+export function aussenAusPlan(plan: BoulevardPlan): Abschnitt[] {
+  return (plan.aussen ?? []).map((flaeche) => ({
+    id: flaeche.id,
+    vonM: flaeche.vonM,
+    bisM: flaeche.bisM,
+    qOst: Math.min(flaeche.qVonM, flaeche.qBisM),
+    qWest: Math.max(flaeche.qVonM, flaeche.qBisM),
+    // Gelaendehoehe. Draussen fuehrt das Projekt bislang keine Hoehen; null
+    // ist dasselbe, was der alte Aussenraum liefert, und damit kein Bruch.
+    hoehe: () => 0,
+  }));
+}
+
 export class BoulevardSurfaces implements SurfaceProvider {
   private readonly achse: Achse;
   private readonly abschnitte: readonly Abschnitt[];
   private readonly querwaende: readonly Querwand[];
+  private readonly aussen: readonly Abschnitt[];
 
   constructor(plan: BoulevardPlan, achse: Achse) {
     this.achse = achse;
     this.abschnitte = abschnitteAusPlan(plan);
     this.querwaende = querwaendeAusPlan(plan);
+    this.aussen = aussenAusPlan(plan);
   }
 
   /**
@@ -226,6 +250,13 @@ export class BoulevardSurfaces implements SurfaceProvider {
       if (s < teil.vonM - HUELLE_M || s > teil.bisM + HUELLE_M) continue;
       if (q < teil.qOst - HUELLE_M || q > teil.qWest + HUELLE_M) continue;
       return { ...BLOCKED_FOOTING, surfaceId: `${teil.id}:huelle` };
+    }
+
+    // Erst jenseits der Wand kommen die Hoefe.
+    for (const hof of this.aussen) {
+      if (s < hof.vonM || s > hof.bisM) continue;
+      if (q < hof.qOst || q > hof.qWest) continue;
+      return { z: hof.hoehe(s), blocked: false, surfaceId: hof.id };
     }
 
     // Weit weg vom Gang -- hier hat dieser Geber nichts zu sagen.

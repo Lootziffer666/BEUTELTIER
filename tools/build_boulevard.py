@@ -79,6 +79,20 @@ MIN_ABSCHNITT_M = 2.0
 # sein Ziel gilt -- fuer die Beschriftung der Wegweiser.
 ENDE_ABSTAND_M = 40.0
 
+# Aussengelaende: wie tief die Hoefe zwischen den Hallen abgetastet werden und
+# in welchen Schritten. Schmaler als MIN_HOF_M ist keine Hoffnung auf einen
+# Hof, sondern eine Fuge zwischen zwei Bauteilen.
+HOF_SCHRITT_M = 1.0
+MIN_HOF_M = 6.0
+# Ein Meter Luft zu beiden Nachbarn: die amtlichen Umrisse sind auf etwa einen
+# Meter genau, und ein Hof, der in die Wand hineinreicht, waere schlechter als
+# einer, der einen Meter zu klein ist.
+HOF_RAND_M = 1.0
+# Wie weit hinter Halle 8 ueberhaupt noch Gelaende gefuehrt wird. Vorgabe und
+# keine Messung: noerdlich der Halle geht das Freie in den Rheinpark ueber und
+# hoert so bald nicht auf. So weit, wie man vom Gang aus blickt, reicht es.
+HINTER_MAX_M = 120.0
+
 # Gebaeude, die den Gang zwar begrenzen, dort aber verglast sind.
 # Beobachtung vor Ort, nicht aus der Geometrie ableitbar: ein Grundriss sagt,
 # **dass** dort etwas steht, nicht **woraus** die Wand ist.
@@ -94,6 +108,39 @@ class Gebaeude:
     flaeche: float
     hall_key: str | None
     name: str | None
+
+
+@dataclass
+class Rahmen:
+    """Der Bezugsrahmen des Gangs.
+
+    Die Achse, ihr Nullpunkt und die beiden Wandlinien -- alles, was man
+    braucht, um zwischen Geländemetern und dem Paar (Station, Quermass) hin
+    und her zu rechnen. Steht als eigener Typ da, weil die Aussenflaechen
+    dieselbe Umrechnung brauchen wie die Wandabschnitte und zwei Kopien davon
+    frueher oder spaeter auseinanderlaufen.
+    """
+    laengs: tuple[float, float]
+    quer: tuple[float, float]
+    null: float
+    richtung: float
+    achse_q: float
+    wand_ost: float
+    wand_west: float
+
+    def station(self, wert: float) -> float:
+        return (wert - self.null) * self.richtung
+
+    def ort(self, station: float, q_rel: float) -> tuple[float, float]:
+        """(Station, Quermass ab Achse) -> Geländemeter."""
+        s = self.null + station * self.richtung
+        q = self.achse_q + q_rel
+        return (s * self.laengs[0] + q * self.quer[0],
+                s * self.laengs[1] + q * self.quer[1])
+
+    def wandlinie(self, seite: str) -> float:
+        """Das Quermass der Wandlinie einer Seite, relativ zur Achse."""
+        return (self.wand_west if seite == "west" else self.wand_ost) - self.achse_q
 
 
 def ring_richtung(poly: list[tuple[float, float]]) -> float:
@@ -299,6 +346,16 @@ def main() -> int:
 
     sued = suedteil(gebaeude, ziel, station, laengs, quer, achse_q, registrations)
 
+    # Das Aussengelaende. Die Ostseite ist bewusst noch nicht dabei: dort
+    # liegen Parkhaus, Eingang Ost und der Messeplatz ineinander, und das ist
+    # ein eigener Schritt.
+    rahmen = Rahmen(laengs=laengs, quer=quer, null=null, richtung=richtung,
+                    achse_q=achse_q, wand_ost=wand_ost, wand_west=wand_west)
+    aussen = hoefe(gebaeude, rahmen, "west")
+    hinterhof = hinter(gebaeude, rahmen, ABSCHLUSS, ziel)
+    if hinterhof:
+        aussen.append(hinterhof)
+
     plan = {
         "schema": "beuteltier.boulevard.v1",
         "quelle": {
@@ -357,6 +414,10 @@ def main() -> int:
             "herkunft": "gezaehlt (Halle 11 -> Piazza), Halle 11 ebenerdig wie 10.1",
         },
         "seiten": seiten,
+        # Das Aussengelaende: die Hoefe zwischen den Hallen und das freie
+        # Gelaende hinter Halle 8. Dort, wo der Gang "Aussenflaeche" meldet,
+        # sieht man durch das Glas auf eine dieser Flaechen.
+        "aussen": aussen,
         "sued": sued,
         # Die Treppe liegt zwischen beiden Teilen: sie beginnt am Ende der
         # gebauten Laenge und endet dort, wo Halle 5 und Halle 10 anfangen.
@@ -393,6 +454,11 @@ def main() -> int:
         for teil in seiten[seite]:
             print(f"  {teil['von']:7.1f} .. {teil['bis']:7.1f} "
                   f"({teil['bis'] - teil['von']:6.1f} m)  {teil['art']:5s}  {teil['was']}")
+    print("\nAUSSENGELAENDE:")
+    for flaeche in aussen:
+        print(f"  {flaeche['vonM']:7.1f} .. {flaeche['bisM']:7.1f}  "
+              f"q {flaeche['qVonM']:7.1f} .. {flaeche['qBisM']:7.1f}  "
+              f"tief {flaeche['tiefeM']:6.1f} m  {flaeche['id']}")
     print(f"\n-> {OUT} und {OUT_APP}")
     return 0
 
@@ -522,6 +588,163 @@ def suedteil(gebaeude: dict[str, Gebaeude], ziel: dict[str, list[str]], station,
         "seiten": {
             seite: abschnitte(liste, von, bis) for seite, liste in kandidaten.items()
         },
+    }
+
+
+def frei(gebaeude: dict[str, Gebaeude], rahmen: Rahmen,
+         von: float, bis: float, q_rel: float) -> bool:
+    """Steht auf dieser Querlinie zwischen zwei Stationen kein Gebaeude?
+
+    Abgetastet und nicht gerechnet -- aus demselben Grund wie bei den
+    Wandabschnitten: die amtlichen Umrisse sind keine Rechtecke, und ihre
+    Huellquader ueberlappen sich auch dort, wo die Gebaeude es nicht tun. Wer
+    mit Huellquadern rechnet, bekommt Hoefe, die in Hallen hineinragen.
+    """
+    schritte = max(1, int((bis - von) / HOF_SCHRITT_M))
+    for index in range(schritte + 1):
+        s = von + (bis - von) * index / schritte
+        punkt = rahmen.ort(s, q_rel)
+        for bau in gebaeude.values():
+            if punkt_in_polygon(punkt, bau.poly):
+                return False
+    return True
+
+
+def tiefe_messen(gebaeude: dict[str, Gebaeude], rahmen: Rahmen, seite: str,
+                 von: float, bis: float, grenze: float) -> tuple[float, str]:
+    """Wie weit ein Hof von der Wandlinie nach aussen reicht.
+
+    Schrittweise nach draussen, bis entweder ein Gebaeude im Weg steht oder
+    die Grenze erreicht ist. Die Grenze ist der flachere der beiden Nachbarn:
+    weiter draussen ist der Hof nach einer Seite offen und damit kein Hof mehr,
+    sondern freies Gelaende.
+
+    Zurueck kommt auch, **warum** es aufgehoert hat. Beides sind Messungen,
+    aber verschiedene: einmal steht dort ein Gebaeude, einmal endet der
+    Nachbar. Wer das nicht unterscheidet, haelt spaeter das eine fuer das
+    andere.
+    """
+    vorzeichen = 1.0 if seite == "west" else -1.0
+    wand = rahmen.wandlinie(seite)
+    tiefe = 0.0
+    while tiefe + HOF_SCHRITT_M <= grenze:
+        probe = wand + vorzeichen * (tiefe + HOF_SCHRITT_M)
+        if not frei(gebaeude, rahmen, von, bis, probe):
+            return tiefe, "Gebaeude"
+        tiefe += HOF_SCHRITT_M
+    return tiefe, "Nachbar endet"
+
+
+def hoefe(gebaeude: dict[str, Gebaeude], rahmen: Rahmen,
+          seite: str) -> list[dict]:
+    """Die rechteckigen Zwischenraeume zwischen den Hallen einer Seite.
+
+    Dieselbe Methode wie bei den Wandabschnitten, nur andersherum gelesen: dort
+    zaehlte, wo ein Gebaeude an den Gang heranreicht, hier zaehlt, wo keines
+    steht. Wo der Gang "Aussenflaeche" meldet, liegt ein Hof -- und dieser
+    Rechenweg sagt, wie tief er ist.
+    """
+    nachbarn: list[tuple[float, float, float, float, Gebaeude]] = []
+    for bau in gebaeude.values():
+        if not bau.hall_key:
+            continue
+        (s_span, q_span) = strecke(bau.poly, rahmen.laengs, rahmen.quer)
+        # Zaehlt, wer bis an die Wandlinie dieser Seite heranreicht -- und
+        # nicht, wer ganz auf dieser Seite liegt. Halle 8 steht quer vor dem
+        # Gang und reicht ueber **beide** Wandlinien hinaus; sie ist trotzdem
+        # der noerdliche Nachbar des ersten Hofs.
+        if seite == "west":
+            if q_span[1] < rahmen.wand_west:
+                continue
+            reichweite = q_span[1] - rahmen.wand_west
+        else:
+            if q_span[0] > rahmen.wand_ost:
+                continue
+            reichweite = rahmen.wand_ost - q_span[0]
+        von, bis = sorted((rahmen.station(s_span[0]), rahmen.station(s_span[1])))
+        nachbarn.append((von, bis, reichweite, q_span[0], bau))
+
+    nachbarn.sort(key=lambda n: n[0])
+    out: list[dict] = []
+    for links, rechts in zip(nachbarn, nachbarn[1:]):
+        luecke_von = links[1]
+        luecke_bis = rechts[0]
+        if luecke_bis - luecke_von < MIN_HOF_M:
+            continue
+        von = luecke_von + HOF_RAND_M
+        bis = luecke_bis - HOF_RAND_M
+        grenze = min(links[2], rechts[2])
+        tiefe, grund = tiefe_messen(gebaeude, rahmen, seite, von, bis, grenze)
+        if tiefe < MIN_HOF_M:
+            continue
+        wand = rahmen.wandlinie(seite)
+        aussen = wand + (tiefe if seite == "west" else -tiefe)
+        out.append({
+            "id": f"hof-{links[4].hall_key}-{rechts[4].hall_key}".replace(".", "_"),
+            "seite": seite,
+            "vonM": round(luecke_von, 2),
+            "bisM": round(luecke_bis, 2),
+            "qVonM": round(min(wand, aussen), 3),
+            "qBisM": round(max(wand, aussen), 3),
+            "tiefeM": round(tiefe, 2),
+            "zwischen": [links[4].hall_key, rechts[4].hall_key],
+            "endetAn": grund,
+            "gekappt": False,
+            "herkunft": "Luecke zwischen den amtlichen Umrissen, abgetastet",
+        })
+    return out
+
+
+def hinter(gebaeude: dict[str, Gebaeude], rahmen: Rahmen,
+           schluessel: str, ziel: dict[str, list[str]]) -> dict | None:
+    """Das freie Gelaende hinter der Halle am Nordende.
+
+    Halle 8 steht quer vor dem Gang; noerdlich von ihr hoert das Gebaute auf.
+    Wie weit, wird genauso abgetastet wie bei den Hoefen -- nur laengs statt
+    quer, denn hier ist die Halle die Wand und die Station die Tiefe.
+    """
+    teile = [gebaeude[fid] for fid in ziel.get(schluessel, []) if fid in gebaeude]
+    if not teile:
+        return None
+    halle = teile[0]
+    (s_span, q_span) = strecke(halle.poly, rahmen.laengs, rahmen.quer)
+    stirn = min(rahmen.station(s_span[0]), rahmen.station(s_span[1]))
+    q_von = q_span[0] - rahmen.achse_q + HOF_RAND_M
+    q_bis = q_span[1] - rahmen.achse_q - HOF_RAND_M
+
+    tiefe = 0.0
+    while tiefe + HOF_SCHRITT_M <= HINTER_MAX_M:
+        probe = stirn - (tiefe + HOF_SCHRITT_M)
+        schritte = max(1, int((q_bis - q_von) / HOF_SCHRITT_M))
+        offen = True
+        for index in range(schritte + 1):
+            q = q_von + (q_bis - q_von) * index / schritte
+            punkt = rahmen.ort(probe, q)
+            if any(punkt_in_polygon(punkt, bau.poly) for bau in gebaeude.values()):
+                offen = False
+                break
+        if not offen:
+            break
+        tiefe += HOF_SCHRITT_M
+    if tiefe < MIN_HOF_M:
+        return None
+    gekappt = tiefe + HOF_SCHRITT_M > HINTER_MAX_M
+    return {
+        "id": f"hinter-{schluessel}".replace(".", "_"),
+        "seite": "nord",
+        "vonM": round(stirn - tiefe, 2),
+        "bisM": round(stirn, 2),
+        "qVonM": round(q_von, 3),
+        "qBisM": round(q_bis, 3),
+        "tiefeM": round(tiefe, 2),
+        "zwischen": [schluessel],
+        "endetAn": "Vorgabe" if gekappt else "Gebaeude",
+        # Ehrlich gesagt: noerdlich von Halle 8 geht das freie Gelaende in den
+        # Rheinpark ueber und hoert so bald nicht auf. Die Zahl ist dann keine
+        # gemessene Kante, sondern die Vorgabe von oben -- und das steht hier,
+        # damit sie niemand fuer eine Messung haelt.
+        "gekappt": gekappt,
+        "herkunft": "freies Gelaende noerdlich der Halle, abgetastet",
     }
 
 

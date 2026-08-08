@@ -194,6 +194,28 @@ export interface BoulevardAbschnitt {
   hallKey: string | null;
 }
 
+/**
+ * Eine Aussenflaeche neben dem Gang, in Station und Quermass.
+ *
+ * `endetAn` sagt, woran die Tiefe aufgehoert hat: an einem Gebaeude, am Ende
+ * des flacheren Nachbarn -- oder an einer Vorgabe. Die ersten beiden sind
+ * Messungen, die dritte ist keine, und `gekappt` macht den Unterschied
+ * unuebersehbar.
+ */
+export interface BoulevardAussen {
+  id: string;
+  seite: 'ost' | 'west' | 'nord';
+  vonM: number;
+  bisM: number;
+  qVonM: number;
+  qBisM: number;
+  tiefeM: number;
+  zwischen: (string | null)[];
+  endetAn: string;
+  gekappt: boolean;
+  herkunft: string;
+}
+
 export interface BoulevardPlan {
   schema: 'beuteltier.boulevard.v1';
   achse: {
@@ -215,6 +237,14 @@ export interface BoulevardPlan {
   /** Was an den beiden Enden liegt, als Hallennummern -- fuer die Wegweiser. */
   enden: { nord: string[]; sued: string[] };
   seiten: { ost: BoulevardAbschnitt[]; west: BoulevardAbschnitt[] };
+  /**
+   * Das Aussengelaende: die Hoefe zwischen den Hallen und das freie Gelaende
+   * hinter Halle 8. Dort, wo der Gang "Aussenflaeche" meldet, liegt eine
+   * dieser Flaechen hinter dem Glas.
+   *
+   * Fehlt in aelteren Schnappschuessen -- deshalb erlaubt leer.
+   */
+  aussen?: BoulevardAussen[];
   /**
    * Der Suedteil: dort weitet sich der Gang zwischen Halle 5 und Halle 10 und
    * liegt eine Ebene hoeher. `kanteM` ist die gemessene Lage der senkrechten

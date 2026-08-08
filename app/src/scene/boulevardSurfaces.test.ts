@@ -233,6 +233,56 @@ describe('Laufen', () => {
   });
 });
 
+describe('Aussengelaende', () => {
+  const hoefe = plan.aussen ?? [];
+
+  it('kennt die beiden Hoefe und das Gelaende hinter Halle 8', () => {
+    expect(hoefe.map((h) => h.id).sort()).toEqual(
+      ['hinter-8_1', 'hof-7_1-6_1', 'hof-8_1-7_1'],
+    );
+  });
+
+  it('gibt jedem Hof einen Boden', () => {
+    for (const hof of hoefe) {
+      const s = (hof.vonM + hof.bisM) / 2;
+      // Weit genug von der Wand weg, dass die Huelle nicht mehr greift.
+      const q = (hof.qVonM + hof.qBisM) / 2;
+      const fuss = fussAuf(s, q);
+      expect(fuss.surfaceId).toBe(hof.id);
+      expect(fuss.blocked).toBe(false);
+      expect(fuss.z).toBe(0);
+    }
+  });
+
+  it('liegt jeder Hof dort, wo der Gang Aussenflaeche meldet', () => {
+    for (const hof of hoefe.filter((h) => h.seite === 'west')) {
+      const mitte = (hof.vonM + hof.bisM) / 2;
+      const abschnitt = plan.seiten.west.find((a) => a.von <= mitte && mitte <= a.bis);
+      expect(abschnitt?.art).toBe('glas');
+    }
+  });
+
+  it('laesst die Glaswand zwischen Gang und Hof trotzdem stehen', () => {
+    const hof = hoefe.find((h) => h.id === 'hof-7_1-6_1')!;
+    const s = (hof.vonM + hof.bisM) / 2;
+    // Im Gang begehbar, unmittelbar dahinter Wand, weiter draussen der Hof.
+    expect(fussAuf(s, plan.seitenQ.west - 0.5).surfaceId).toBe('boulevard:nord');
+    expect(fussAuf(s, plan.seitenQ.west + 0.5).blocked).toBe(true);
+    expect(fussAuf(s, plan.seitenQ.west + 20).surfaceId).toBe(hof.id);
+  });
+
+  it('sagt bei jeder Flaeche, ob die Tiefe gemessen oder vorgegeben ist', () => {
+    for (const hof of hoefe) {
+      expect(typeof hof.gekappt).toBe('boolean');
+      expect(hof.endetAn.length).toBeGreaterThan(0);
+      // Nur eine einzige Flaeche darf eine Vorgabe sein: das freie Gelaende
+      // hinter Halle 8 geht in den Rheinpark ueber und hoert nicht von selbst
+      // auf. Alles andere muss an Gebautem enden.
+      if (hof.gekappt) expect(hof.id).toBe('hinter-8_1');
+    }
+  });
+});
+
 describe('Zustaendigkeit', () => {
   it('sagt weit weg vom Gang nichts', () => {
     expect(fussAuf(140, 300).surfaceId).toBeNull();
