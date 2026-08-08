@@ -60,9 +60,17 @@ def main() -> int:
                 ebenen[feature_id].append(eintrag["hallKey"])
 
     # Der Bestand, nach Funktionsschluessel.
-    bestand: dict[str, list[dict]] = {}
+    #
+    # Der Schluessel steht am **Building**, nicht am BuildingPart. Wer nur die
+    # Parts zaehlt, findet das Parkhaus nicht: es ist ein Teil eines groesseren
+    # Hauses und traegt selbst keine Funktion. Also erst die Funktionen der
+    # Eltern sammeln, dann vererben.
+    funktion: dict[str, str] = {}
+    teile: list[tuple] = []
     for tile in sorted(bb.LOD2_DIR.glob("*.gml")):
         for feature in lod2.read_features(tile, bb.BOUNDS):
+            if feature.function:
+                funktion[feature.id] = feature.function
             poly = feature.footprint()
             if len(poly) < 3:
                 continue
@@ -70,8 +78,14 @@ def main() -> int:
             flaeche = abs(lod2.ring_area(lokal))
             if flaeche < MIN_FLAECHE_SQM:
                 continue
-            bestand.setdefault(feature.function or "ohne", []).append(
-                {"featureId": feature.id, "flaecheSqm": round(flaeche)})
+            teile.append((feature.id, feature.function, feature.parent_id, flaeche))
+
+    bestand: dict[str, list[dict]] = {}
+    for feature_id, eigene, eltern, flaeche in teile:
+        code = eigene or funktion.get(eltern or "", None) or "ohne"
+        bestand.setdefault(code, []).append(
+            {"featureId": feature_id, "flaecheSqm": round(flaeche),
+             "geerbtVon": None if eigene else eltern})
 
     zuordnung: list[dict] = []
     offen: list[dict] = []
@@ -100,8 +114,31 @@ def main() -> int:
                          "Datensatz nicht auf ein amtliches Gebaeude gefuehrt",
             })
 
+    # Was der Nutzer selbst gezeigt hat: drei Baukoerper oestlich des
+    # Boulevards, in dz.nrw als A, B und C markiert. Die Zuordnung kommt damit
+    # aus der Anschauung und nicht aus der Funktionsklasse -- deshalb steht sie
+    # hier namentlich und nicht als Regel.
+    GEZEIGT = {
+        "Ost_A": ("UUID_e3204ca6-6d8e-4d46-a631-80808442a1de",
+                  "schmaler Riegel an der Ostwand, Station 100-149"),
+        "Parkhaus_A": ("UUID_50088905-9994-4e77-89ea-02a587cee29a",
+                       "Parkhaus oestlich dahinter, Station 103-145"),
+        "Ost_C": ("DENW37AL1000668A",
+                  "breiter Koerper suedlich Halle 8, Station 12-71"),
+    }
+
     # Sonderbauten und AUX: der Funktionsschluessel allein reicht nicht.
     for eintrag in inventar["sonderbauten"]:
+        gezeigt = GEZEIGT.get(eintrag["object"])
+        if gezeigt:
+            feature_id, lage = gezeigt
+            zuordnung.append({
+                "object": eintrag["object"],
+                "featureIds": [feature_id],
+                "lage": lage,
+                "quelle": "Nutzerangabe (dz.nrw Feature Info)",
+            })
+            continue
         code = inventar["klassen"][eintrag["klasse"]]["fktkurz"]
         kandidaten = bestand.get(code, [])
         offen.append({

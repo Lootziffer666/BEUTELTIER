@@ -120,6 +120,30 @@
     "10.2"
    ],
    "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Parkhaus_A",
+   "featureIds": [
+    "UUID_50088905-9994-4e77-89ea-02a587cee29a"
+   ],
+   "lage": "Parkhaus oestlich dahinter, Station 103-145",
+   "quelle": "Nutzerangabe (dz.nrw Feature Info)"
+  },
+  {
+   "object": "Ost_A",
+   "featureIds": [
+    "UUID_e3204ca6-6d8e-4d46-a631-80808442a1de"
+   ],
+   "lage": "schmaler Riegel an der Ostwand, Station 100-149",
+   "quelle": "Nutzerangabe (dz.nrw Feature Info)"
+  },
+  {
+   "object": "Ost_C",
+   "featureIds": [
+    "DENW37AL1000668A"
+   ],
+   "lage": "breiter Koerper suedlich Halle 8, Station 12-71",
+   "quelle": "Nutzerangabe (dz.nrw Feature Info)"
   }
  ],
  "unresolved": [
@@ -133,23 +157,18 @@
   },
   {
    "object": "Boulevard_Nord",
-   "grund": "79 Features mit 31001_2000 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
-   "kandidaten": 79
+   "grund": "210 Features mit 31001_2000 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 210
   },
   {
    "object": "Eingang_Ost",
-   "grund": "79 Features mit 31001_2000 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
-   "kandidaten": 79
-  },
-  {
-   "object": "Parkhaus_A",
-   "grund": "0 Features mit 31001_2461 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
-   "kandidaten": 0
+   "grund": "210 Features mit 31001_2000 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 210
   },
   {
    "object": "Parkhaus_B",
-   "grund": "0 Features mit 31001_2461 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
-   "kandidaten": 0
+   "grund": "10 Features mit 31001_2461 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 10
   },
   {
    "object": "Ueberdachung_A",
@@ -243,17 +262,21 @@
   }
  ],
  "bestandNachFunktion": {
-  "31001_1000": 39,
-  "31001_1100": 5,
-  "31001_2000": 79,
-  "31001_2400": 3,
-  "31001_2460": 14,
+  "31001_1000": 66,
+  "31001_1100": 8,
+  "31001_2000": 210,
+  "31001_2400": 8,
+  "31001_2460": 15,
+  "31001_2461": 10,
+  "31001_2500": 1,
+  "31001_3010": 6,
   "31001_3014": 1,
-  "31001_3021": 6,
+  "31001_3021": 16,
+  "31001_3030": 4,
   "31001_3060": 1,
-  "31001_3200": 1,
+  "31001_3200": 4,
+  "31001_3221": 4,
   "51009_1610": 25,
-  "53001_1800": 5,
-  "ohne": 205
+  "53001_1800": 5
  }
 }

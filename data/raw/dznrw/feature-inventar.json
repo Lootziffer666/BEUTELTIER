@@ -98,7 +98,8 @@
   },
   {
    "object": "Parkhaus_A",
-   "klasse": "parking"
+   "klasse": "parking",
+   "note": "Vom Nutzer als B bezeichnet: oestlich hinter Ost_A, Station 103-145."
   },
   {
    "object": "Parkhaus_B",
@@ -113,6 +114,16 @@
    "object": "Ueberdachung_B",
    "klasse": "canopy",
    "note": "Nicht mit Ueberdachung_A zusammenlegen"
+  },
+  {
+   "object": "Ost_A",
+   "klasse": "standard_building",
+   "note": "Schmaler Riegel an der Boulevard-Ostwand, Station 100-149. Vom Nutzer als A bezeichnet."
+  },
+  {
+   "object": "Ost_C",
+   "klasse": "standard_building",
+   "note": "Breiter Koerper suedlich Halle 8 am Messeplatz, Station 12-71. Vom Nutzer als C bezeichnet."
   }
  ],
  "aux": [
