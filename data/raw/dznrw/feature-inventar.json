@@ -132,84 +132,100 @@
   {
    "id": "AUX_01",
    "source_ref": "1000116313",
-   "form": "annaehernd rechteckiger kompakter Baukoerper"
+   "form": "annaehernd rechteckiger kompakter Baukoerper",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_02",
    "source_ref": "1000116303",
-   "form": "breiter verzweigter T-/Kreuz-Baukoerper"
+   "form": "breiter verzweigter T-/Kreuz-Baukoerper",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_03",
    "source_ref": "1000116319",
    "form": "T-foermiger aufgestaenderter Verbindungsriegel",
-   "rellage": "Aufgestaendert"
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_04",
    "source_ref": "1000116323",
-   "form": "kleiner querliegender Verbindungskoerper"
+   "form": "kleiner querliegender Verbindungskoerper",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_05",
    "source_ref": "1000116325",
-   "form": "schmaler laenglicher Riegel"
+   "form": "schmaler laenglicher Riegel",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_06",
    "source_ref": "1000116326",
-   "form": "L-foermiger Baukoerper"
+   "form": "L-foermiger Baukoerper",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_07",
    "source_ref": "1000116328",
-   "form": "kompakter suedlicher Baukoerper bei Eingang Ost"
+   "form": "kompakter suedlicher Baukoerper bei Eingang Ost",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_08",
    "source_ref": "1000116329",
-   "form": "laengerer noerdlicher Baukoerper bei Eingang Ost"
+   "form": "laengerer noerdlicher Baukoerper bei Eingang Ost",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_09",
    "source_ref": "1000116332",
-   "form": "breiter unregelmaessiger Verbindungsbau"
+   "form": "breiter unregelmaessiger Verbindungsbau",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_10",
    "source_ref": "1000116333",
    "form": "sehr schmaler aufgestaenderter Riegel",
-   "rellage": "Aufgestaendert"
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_11",
    "source_ref": "1000116334",
    "form": "breiter aufgestaenderter Riegel",
-   "rellage": "Aufgestaendert"
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_12",
    "source_ref": "1000116338",
-   "rellage": "Aufgestaendert"
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_13",
    "source_ref": "1000116339",
-   "rellage": "Aufgestaendert"
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_14",
    "source_ref": "1000116340",
-   "rellage": "Aufgestaendert"
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_15",
    "source_ref": "1000116341",
-   "rellage": "Aufgestaendert"
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   },
   {
    "id": "AUX_16",
-   "source_ref": "1000116342"
+   "source_ref": "1000116342",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
   }
  ],
  "regeln": [
@@ -225,6 +241,7 @@
   "LoD2-zmin NICHT als Innenfussboden interpretieren.",
   "Keine Hoehen aus Screenshots oder zmin neu ableiten.",
   "Keine Gebaeudemasse aus dz.nrw-Screenshotmessungen uebernehmen.",
-  "Halle 1 und Halle 11 haben keine Standregistrierung, weil dort keine Messestaende liegen -- das ist erwartet und kein Datenfehler."
+  "Halle 1 und Halle 11 haben keine Standregistrierung, weil dort keine Messestaende liegen -- das ist erwartet und kein Datenfehler.",
+  "Von den AUX-Koerpern werden nur die Aussenmasse gebraucht -- sie muessen nicht einzeln identifiziert werden."
  ]
 }

@@ -14,7 +14,8 @@
   "LoD2-zmin NICHT als Innenfussboden interpretieren.",
   "Keine Hoehen aus Screenshots oder zmin neu ableiten.",
   "Keine Gebaeudemasse aus dz.nrw-Screenshotmessungen uebernehmen.",
-  "Halle 1 und Halle 11 haben keine Standregistrierung, weil dort keine Messestaende liegen -- das ist erwartet und kein Datenfehler."
+  "Halle 1 und Halle 11 haben keine Standregistrierung, weil dort keine Messestaende liegen -- das ist erwartet und kein Datenfehler.",
+  "Von den AUX-Koerpern werden nur die Aussenmasse gebraucht -- sie muessen nicht einzeln identifiziert werden."
  ],
  "zugeordnet": [
   {
@@ -187,82 +188,98 @@
   },
   {
    "object": "AUX_01",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116313"
   },
   {
    "object": "AUX_02",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116303"
   },
   {
    "object": "AUX_03",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116319"
   },
   {
    "object": "AUX_04",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116323"
   },
   {
    "object": "AUX_05",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116325"
   },
   {
    "object": "AUX_06",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116326"
   },
   {
    "object": "AUX_07",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116328"
   },
   {
    "object": "AUX_08",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116329"
   },
   {
    "object": "AUX_09",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116332"
   },
   {
    "object": "AUX_10",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116333"
   },
   {
    "object": "AUX_11",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116334"
   },
   {
    "object": "AUX_12",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116338"
   },
   {
    "object": "AUX_13",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116339"
   },
   {
    "object": "AUX_14",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116340"
   },
   {
    "object": "AUX_15",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116341"
   },
   {
    "object": "AUX_16",
-   "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
    "sourceRef": "1000116342"
   }
  ],

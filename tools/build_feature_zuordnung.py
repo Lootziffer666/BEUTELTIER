@@ -153,11 +153,15 @@ def main() -> int:
             "kandidaten": len(kandidaten),
         })
 
+    # Die AUX-Koerper werden nur wegen ihrer Aussenmasse gefuehrt, und die
+    # stehen bereits im LoD2. Eine namentliche Zuordnung ist dafuer nicht
+    # noetig -- sie bleibt offen, ohne dass etwas fehlt.
     for eintrag in inventar["aux"]:
         offen.append({
             "object": eintrag["id"],
-            "grund": "source_ref ist eine dz.nrw-Objektnummer; das LoD2 fuehrt "
-                     "GML-IDs. Kein gemeinsamer Schluessel im Repo.",
+            "grund": "nicht einzeln zugeordnet; gebraucht werden nur die "
+                     "Aussenmasse, und die liegen im LoD2 vor",
+            "erwartet": True,
             "sourceRef": eintrag.get("source_ref"),
         })
 
