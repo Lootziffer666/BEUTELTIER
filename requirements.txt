@@ -1,8 +1,8 @@
 # pypdf liest die Vektor-PDFs -- Hallenplan, Barrierefrei-Plan und die
 # Technischen Richtlinien. Mehr braucht die Aufbereitung nicht: CityGML wird
 # mit der Standardbibliothek gelesen, das GLB von Hand geschrieben.
-pypdf==6.14.2
+pypdf==6.15.0
 # Pillow dekodiert die JPEG2000-Orthophotos und entzerrt sie ins
 # Gelaendesystem. Ohne openjpeg-Unterstuetzung faellt build_ortho.py aus.
 pillow==12.3.0
-pytest==8.3.4
+pytest==9.0.3
