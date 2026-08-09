@@ -9,6 +9,7 @@
  *   PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node e2e.mjs
  */
 import { chromium } from 'playwright';
+import { aufnehmen, AUFNAHME_MS } from './screenshot.mjs';
 import { mkdir } from 'node:fs/promises';
 
 const BASE = process.env.BEUTELTIER_URL ?? 'http://localhost:4173/';
@@ -50,6 +51,8 @@ const browser = await chromium.launch({
   args: ['--no-sandbox', '--use-gl=swiftshader', '--enable-unsafe-swiftshader'],
 });
 const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+// Aufnahmen der 3D-Ansicht dauern Sekunden -- siehe screenshot.mjs.
+page.setDefaultTimeout(AUFNAHME_MS);
 
 const errors = [];
 page.on('pageerror', (error) => errors.push(error.message));
@@ -61,14 +64,14 @@ await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.waitForSelector('canvas', { timeout: 30000 });
 await page.waitForTimeout(3500);
 check('Gelände wird gerendert', true);
-await page.screenshot({ path: `${OUT}/app-1-gelaende-nordost.png` });
+await aufnehmen(page, `${OUT}/app-1-gelaende-nordost.png`);
 
 // Die Gesamtansicht aus mehreren reproduzierbaren Orbit-Perspektiven sichern.
 // So zeigt der Workflow nicht nur bei jedem Lauf dieselbe Startkamera.
 await orbitScene(page, 330, -70, -180);
-await page.screenshot({ path: `${OUT}/app-2-gelaende-suedost.png` });
+await aufnehmen(page, `${OUT}/app-2-gelaende-suedost.png`);
 await orbitScene(page, -650, 115, 260);
-await page.screenshot({ path: `${OUT}/app-3-gelaende-west.png` });
+await aufnehmen(page, `${OUT}/app-3-gelaende-west.png`);
 
 // --- Meldung einlesen und automatisch zuordnen ----------------------------
 await page.getByRole('button', { name: 'Funkwache' }).click();
@@ -87,7 +90,7 @@ check('Meldungen eingelesen und zugeordnet', /\d+ Meldungen/.test(noticeText), n
 const routeButtons = page.getByTestId('report-route');
 const assigned = await routeButtons.count();
 check('mindestens eine Meldung hat einen Stand', assigned > 0, `${assigned} zugeordnet`);
-await page.screenshot({ path: `${OUT}/app-4-funkwache.png` });
+await aufnehmen(page, `${OUT}/app-4-funkwache.png`);
 
 // --- Von der Meldung auf die Karte ----------------------------------------
 if (assigned > 0) {
@@ -118,7 +121,7 @@ const figures = page.locator('.card', { hasText: 'ROUTE' }).locator('.figures st
 const hasRoute = (await figures.count()) > 0;
 const firstDistance = hasRoute ? await figures.first().textContent() : null;
 check('Route wird berechnet', hasRoute, firstDistance ?? 'keine Strecke');
-await page.screenshot({ path: `${OUT}/app-5-route.png` });
+await aufnehmen(page, `${OUT}/app-5-route.png`);
 
 // --- Sperre schalten, Route muss sich ändern ------------------------------
 const blockButtons = page.locator('.edges__states button', { hasText: 'gesperrt' });
@@ -144,7 +147,7 @@ if (switchable > 0 && hasRoute) {
     secondDistance !== firstDistance,
     `${firstDistance} → ${secondDistance ?? 'keine Route'}`,
   );
-  await page.screenshot({ path: `${OUT}/app-6-gesperrt.png` });
+  await aufnehmen(page, `${OUT}/app-6-gesperrt.png`);
 }
 
 // --- Epix: Import, Kampagnenfenster, Export -------------------------------
@@ -162,7 +165,7 @@ await page.getByRole('button', { name: 'Übernehmen' }).click();
 await page.locator('.epix__item').first().waitFor({ timeout: 10000 }).catch(() => undefined);
 const epixCount = await page.locator('.epix__item').count();
 check('Epix-Einträge übernommen', epixCount >= 2, `${epixCount} Einträge`);
-await page.screenshot({ path: `${OUT}/app-7-epix.png` });
+await aufnehmen(page, `${OUT}/app-7-epix.png`);
 
 await page.getByRole('button', { name: 'SteamGifts-Export' }).click();
 await page.waitForTimeout(400);
@@ -175,7 +178,7 @@ await page.waitForTimeout(400);
 const registerText = await page.innerText('.panel__body');
 check('Register nennt die Indie Arena Booth', /Indie Arena Booth/.test(registerText));
 check('Register weist fehlende Lagen aus', /Ohne Lage|11\.1/.test(registerText));
-await page.screenshot({ path: `${OUT}/app-8-register.png` });
+await aufnehmen(page, `${OUT}/app-8-register.png`);
 
 // --- Amtliche Welt / Migration -------------------------------------------
 await page.getByRole('button', { name: 'Diagnose' }).click();
@@ -184,7 +187,7 @@ const diagnosticText = await page.innerText('.panel__body');
 check('Weltdiagnose zeigt LoD2 und Begehbarkeit', /LOD2-INVENTAR/.test(diagnosticText) && /BEGEHBARKEIT/.test(diagnosticText));
 check('Viewer nutzt registrierte Laufzeitkoordinaten', /Laufzeit-Koordinaten: amtlich registriert/.test(diagnosticText));
 check('Ungeprüfte Portale bleiben erkennbar', /davon 0 baulich geprüft/.test(diagnosticText));
-await page.screenshot({ path: `${OUT}/app-9-diagnose.png` });
+await aufnehmen(page, `${OUT}/app-9-diagnose.png`);
 
 check('keine Fehler in der Konsole', errors.length === 0, errors.slice(0, 3).join(' | '));
 

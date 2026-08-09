@@ -2,7 +2,13 @@
   "title": "OpenStreetMap-Ausschnitt Koelnmesse",
   "provider": "OpenStreetMap-Mitwirkende",
   "url": "https://www.openstreetmap.org/copyright",
-  "retrieval": "2026-08-06T09:52:21Z",
+  "retrieval": "2026-08-09T09:49:51Z",
   "licence": "Open Data Commons Open Database License (ODbL) 1.0",
-  "query": "[out:json][timeout:120];(\nway[highway](50.932,6.965,50.954,7.005);node[amenity](50.932,6.965,50.954,7.005);node[entrance](50.932,6.965,50.954,7.005);\nnode[shop](50.932,6.965,50.954,7.005);node[tourism](50.932,6.965,50.954,7.005););out body;>;out skel qt;"
+  "query": "[out:json][timeout:120];(\nway[highway](50.932,6.965,50.954,7.005);node[amenity](50.932,6.965,50.954,7.005);node[entrance](50.932,6.965,50.954,7.005);\nnode[shop](50.932,6.965,50.954,7.005);node[tourism](50.932,6.965,50.954,7.005););out body;>;out skel qt;",
+  "flaechen": {
+    "datei": "flaechen.json",
+    "query": "[out:json][timeout:180];(\nway[building](50.9390,6.9730,50.9550,6.9960);\nway[highway][area=yes](50.9390,6.9730,50.9550,6.9960);\nway[highway=pedestrian](50.9390,6.9730,50.9550,6.9960);\nway[amenity=parking](50.9390,6.9730,50.9550,6.9960);\n);out body;>;out skel qt;",
+    "retrieval": "2026-06-14T08:48:07Z",
+    "zweck": "Plaetze und Verbindungsbauten -- beides fuehrt LoD2 nicht. Gebaeudegeometrie kommt weiterhin aus LoD2."
+  }
 }

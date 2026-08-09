@@ -1,28 +1,31 @@
 /**
  * Der Nordboulevard.
  *
- * Er ist keine Halle, sondern der Gang, der sie erschliesst: 235 m lang,
- * 16 m breit, 11 m hoch, im Wesentlichen Nord-Sued. Die Hallen 5, 6, 7, 9
- * und 10 docken mit ihrer **kurzen** Seite seitlich an -- ihre Tiefe laeuft
- * vom Boulevard weg. Halle 8 ist die Ausnahme: sie liegt am Ende und stellt
- * sich mit ihrer **langen** Seite quer davor, ein T-Abschluss.
+ * Er ist keine Halle, sondern der Gang, der sie erschliesst: knapp 15 m breit,
+ * 11 m hoch, im Wesentlichen Nord-Sued. Die Hallen 5, 6, 7, 9 und 10 docken
+ * mit ihrer **kurzen** Seite seitlich an -- ihre Tiefe laeuft vom Boulevard
+ * weg. Halle 8 ist die Ausnahme: sie liegt am Ende und stellt sich mit ihrer
+ * **langen** Seite quer davor, ein T-Abschluss.
  *
- * Die Masse sind Vorgabe, nicht Messung: `walkable-surfaces.json` fuehrt den
- * Boulevard ausdruecklich als Luecke (`boulevard-not-surveyed`), es gibt kein
- * amtliches Polygon. Verankert wird er deshalb an dem, was eingemessen ist --
- * an der Achse der Hallenzeile, an der Luecke zwischen den beiden Zeilen und
- * an der Stirnseite von Halle 8. Verschieben sich die Hallen, geht der
- * Boulevard mit.
+ * Wo er genau liegt, wird hier **nicht** gerechnet. Es steht in
+ * `boulevard.json`, gemessen von `tools/build_boulevard.py` aus den amtlichen
+ * Gebaeudeumrissen des LoD2-Modells: Achse, Breite, und je Seite die Folge
+ * der Abschnitte mit der Angabe, ob dort eine Wand steht oder Glas.
  *
- * Halle 5 und Halle 10 liegen jenseits der 235 m und gehoeren damit zur
- * Fortsetzung, die hier noch nicht gebaut ist.
+ * Der Umweg ueber die Messung hat einen Grund. Abgeleitet aus
+ * `registered-site.json` kam der Gang falsch heraus -- diese Datei fuehrt die
+ * **belegte** Hallenflaeche und nicht den Gebaeudeumriss, und die beiden
+ * Gebaeude zwischen Halle 9 und Halle 8 fehlen dort ganz, weil in ihnen keine
+ * Messestaende liegen.
+ *
+ * Halle 5 und Halle 10 liegen jenseits der gebauten Laenge und gehoeren damit
+ * zur Fortsetzung, die hier noch nicht gebaut ist.
  */
 
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
-import type { Dataset } from '../data/load';
-import type { Placement2D } from '../data/types';
+import type { BoulevardAbschnitt, BoulevardPlan, Dataset } from '../data/load';
 import {
   boulevarddeckeSurface,
   disposeSurface,
@@ -31,161 +34,108 @@ import {
   hallenbodenSurface,
   WELT_KACHEL_M,
 } from './materials';
-import { hallenlage } from './interior';
 import { ArchitectureGenerator } from '../procedural/generators/ArchitectureGenerator';
-
-/** Gibt die Achsrichtung der Hallenzeile vor. */
-const LEITHALLE = '9.1';
-/** Die Zeile gegenueber -- sie schliesst die Luecke auf der anderen Seite. */
-const GEGENUEBER = '6.1';
-/** Die Halle, die sich quer vor das Ende stellt. */
-const ABSCHLUSS = '8.1';
-
-const BREITE_M = 16;
-const LAENGE_M = 235;
-const HOEHE_M = 11;
 
 /**
  * Fussbodenhoehe.
  *
- * Der Boulevard hat kein eigenes Wegenetz; draussen laeuft die Kollision auf
- * Hoehe null. Laege sein Boden auf Hallenniveau, stuende der Besucher einen
- * halben Meter darin. Der halbe Meter Versatz zur Halle faellt weniger auf
- * als eine Augenhoehe von 1,20 m.
+ * Knapp ueber null, wie das Gelaende ringsum. Seit `boulevardSurfaces.ts` die
+ * Kollision aus demselben Plan baut, ist das nicht mehr nur die gezeichnete,
+ * sondern auch die begangene Hoehe -- beide lesen diese Zahl.
  */
-const BODEN_Y = 0.02;
+export const BODEN_Y = 0.02;
 
 /** Breite des Oberlichtbands in der Mitte. */
 const OBERLICHT_BREITE_M = 6.4;
 
-interface Achse {
-  /** Ursprung: Anfang der Mittelachse, in Geländemetern. */
-  x0: number;
-  y0: number;
-  /** Einheitsvektor der Länge und der Breite. */
-  laengs: [number, number];
-  quer: [number, number];
-  /** Die Rohwerte im gedrehten Hallensystem -- für die Wandabschnitte. */
-  winkel: number;
-  uMitte: number;
-  vorne: number;
-  richtung: number;
-}
-
-function spanne(footprint: Placement2D[], winkel: number) {
-  const ux = Math.cos(winkel);
-  const uy = Math.sin(winkel);
-  let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity;
-  for (const [x, y] of footprint) {
-    const u = x * ux + y * uy;
-    const v = -x * uy + y * ux;
-    uMin = Math.min(uMin, u); uMax = Math.max(uMax, u);
-    vMin = Math.min(vMin, v); vMax = Math.max(vMax, v);
-  }
-  return { uMin, uMax, vMin, vMax };
-}
+/**
+ * Oberkante der Hallenzugaenge.
+ *
+ * Muss zu `DURCHGANG_HOEHE_M` in `tools/build_boulevard.py` passen: dort wird
+ * sie in den Plan geschrieben, hier wird die Wand danach geteilt.
+ */
+const TOR_HOEHE_M = 4.0;
 
 /**
- * Wo der Boulevard liegt, abgeleitet aus Halle 9.
+ * Wo der Boulevard liegt.
  *
- * Die Querachse der Halle zeigt nach Süden, wenn v wächst -- das ergibt sich
- * aus der Drehung des Geländes und wird hier einmal festgehalten, statt an
- * jeder Stelle neu überlegt zu werden.
+ * Nichts davon wird hier gerechnet -- `tools/build_boulevard.py` misst es aus
+ * den amtlichen Gebaeudeumrissen und legt es als `boulevard.json` ab. Diese
+ * Datei ist die einzige Quelle; fehlt sie, wird kein Boulevard gebaut.
  */
-export function boulevardAchse(data: Dataset): Achse | null {
-  const halle = data.hallsByKey.get(LEITHALLE);
-  const gegen = data.hallsByKey.get(GEGENUEBER);
-  const abschluss = data.hallsByKey.get(ABSCHLUSS);
-  if (!halle || !gegen || !abschluss) return null;
-  const lage = hallenlage(halle.footprint);
-  if (!lage) return null;
+export interface Achse {
+  /** Station 0 auf der Mittelachse, in Geländemetern. */
+  x0: number;
+  y0: number;
+  /** Einheitsvektoren laengs (wachsende Station) und quer. */
+  laengs: [number, number];
+  quer: [number, number];
+}
 
-  const ux = Math.cos(lage.winkel);
-  const uy = Math.sin(lage.winkel);
-  const eigen = spanne(halle.footprint, lage.winkel);
-  const drueben = spanne(gegen.footprint, lage.winkel);
-  const quer = spanne(abschluss.footprint, lage.winkel);
-
-  // Quer zur Zeile: mittig in die Luecke zwischen den beiden Hallenreihen.
-  const uMitte = (eigen.uMax + drueben.uMin) / 2;
-
-  // Laengs: an der Stirnseite von Halle 8 beginnen und von ihr weglaufen.
-  // Welche der beiden Kanten von Halle 8 die Stirnseite ist, sagt die Lage
-  // der Zeile -- der Boulevard laeuft immer auf sie zu.
-  const vorne = Math.abs(quer.vMin - eigen.vMax) < Math.abs(quer.vMax - eigen.vMax)
-    ? quer.vMin
-    : quer.vMax;
-  const richtung = Math.sign(((eigen.vMin + eigen.vMax) / 2) - vorne) || -1;
-
-  const laengs: [number, number] = [-uy * richtung, ux * richtung];
+export function boulevardAchse(data: Pick<Dataset, 'boulevard'>): Achse | null {
+  const plan = data.boulevard;
+  if (!plan) return null;
   return {
-    x0: uMitte * ux - vorne * uy,
-    y0: uMitte * uy + vorne * ux,
-    laengs,
-    quer: [ux, uy],
-    winkel: lage.winkel,
-    uMitte,
-    vorne,
-    richtung,
+    x0: plan.achse.x0,
+    y0: plan.achse.y0,
+    laengs: plan.achse.laengs,
+    quer: plan.achse.quer,
+  };
+}
+
+/** Die Wandabschnitte einer Seite, getrennt nach massiv und verglast. */
+export function abschnitte(
+  seite: BoulevardAbschnitt[],
+): { massiv: [number, number][]; glas: [number, number][] } {
+  return {
+    massiv: seite.filter((s) => s.art === 'wand').map((s) => [s.von, s.bis]),
+    glas: seite.filter((s) => s.art === 'glas').map((s) => [s.von, s.bis]),
   };
 }
 
 /**
- * Wo an der Laengsseite eine Halle steht -- und wo nicht.
+ * Wo eine Seite ihre Durchgaenge hat, als Stationsbereiche.
  *
- * Der Boulevard ist nicht auf 235 m verglast. Ueberall dort, wo eine Halle
- * mit ihrer Stirnseite andockt, steht eine richtige Wand; verglast sind die
- * Luecken dazwischen, weil man dort ins Freie sieht. Welche Halle wie weit
- * reicht, steht im Datensatz -- gerechnet wird es, nicht eingetragen.
+ * Dieselbe Liste versorgt zwei Bauteile, die sonst auseinanderliefen: die
+ * gezeichnete Wand laesst hier ihre Oeffnung, und die Kollision laesst hier
+ * hindurch.
  */
-function wandAbschnitte(
-  data: Dataset,
-  winkel: number,
-  uMitte: number,
-  vorne: number,
-  richtung: number,
-  seite: -1 | 1,
-): { massiv: [number, number][]; glas: [number, number][] } {
-  const belegt: [number, number][] = [];
-  for (const hall of data.site.halls) {
-    if (hall.outdoor) continue;
-    const lage = spanne(hall.footprint, winkel);
-    // Liegt die Halle auf dieser Seite des Gangs?
-    const drin = seite < 0 ? lage.uMax <= uMitte + 1 : lage.uMin >= uMitte - 1;
-    if (!drin) continue;
-
-    const sA = (lage.vMin - vorne) * richtung;
-    const sB = (lage.vMax - vorne) * richtung;
-    const von = Math.max(0, Math.min(sA, sB));
-    const bis = Math.min(LAENGE_M, Math.max(sA, sB));
-    if (bis - von > 2) belegt.push([von, bis]);
-  }
-
-  belegt.sort((a, b) => a[0] - b[0]);
-  const massiv: [number, number][] = [];
-  for (const abschnitt of belegt) {
-    const letzter = massiv[massiv.length - 1];
-    if (letzter && abschnitt[0] <= letzter[1] + 0.5) {
-      letzter[1] = Math.max(letzter[1], abschnitt[1]);
-    } else {
-      massiv.push([...abschnitt] as [number, number]);
-    }
-  }
-
-  const glas: [number, number][] = [];
-  let cursor = 0;
-  for (const [von, bis] of massiv) {
-    if (von - cursor > 1) glas.push([cursor, von]);
-    cursor = bis;
-  }
-  if (LAENGE_M - cursor > 1) glas.push([cursor, LAENGE_M]);
-
-  return { massiv, glas };
+export function durchgangsbereiche(
+  plan: BoulevardPlan,
+  seite: 'ost' | 'west',
+): [number, number][] {
+  return (plan.durchgaenge ?? [])
+    .filter((tor) => tor.seite === seite)
+    .map((tor): [number, number] =>
+      [tor.stationM - tor.breiteM / 2, tor.stationM + tor.breiteM / 2])
+    .sort((a, b) => a[0] - b[0]);
 }
 
-/** Lichte Hoehe -- gleichbleibend über die ganze Laenge. */
-function hoeheBei(): number {
-  return HOEHE_M;
+/**
+ * Zieht die Durchgaenge aus einer Folge von Wandstuecken heraus.
+ *
+ * Aus einem Stueck, in dem ein Tor steht, werden zwei -- links und rechts
+ * davon. Liegt das Tor am Rand, bleibt eines uebrig; deckt es das ganze
+ * Stueck, bleibt keines.
+ */
+export function ohneDurchgaenge(
+  stuecke: [number, number][],
+  oeffnungen: [number, number][],
+): [number, number][] {
+  let rest = stuecke;
+  for (const [von, bis] of oeffnungen) {
+    const naechste: [number, number][] = [];
+    for (const [a, b] of rest) {
+      if (bis <= a || von >= b) {
+        naechste.push([a, b]);
+        continue;
+      }
+      if (a < von) naechste.push([a, von]);
+      if (bis < b) naechste.push([bis, b]);
+    }
+    rest = naechste;
+  }
+  return rest;
 }
 
 /**
@@ -201,7 +151,7 @@ function band(
   centre: [number, number],
   punkte: (s: number) => [[number, number], [number, number]],
   kachelM: number,
-  stuecke: [number, number][] = [[0, LAENGE_M]],
+  stuecke: [number, number][],
 ): THREE.BufferGeometry {
   const positions: number[] = [];
   const uvs: number[] = [];
@@ -235,6 +185,47 @@ function band(
   return geometry;
 }
 
+/**
+ * Bauzaun mit Schraffur und Aufschrift.
+ *
+ * Suedoestlich der Piazza ist noch nichts gebaut. Statt den Besucher ins
+ * Leere laufen zu lassen, steht dort das, was auf jeder Baustelle steht --
+ * das ist ehrlicher als eine unsichtbare Wand und braucht keine Erklaerung.
+ */
+function bauzaunTextur(): THREE.CanvasTexture {
+  const B = 2048;
+  const H = 256;
+  const element = document.createElement('canvas');
+  element.width = B;
+  element.height = H;
+  const ctx = element.getContext('2d');
+  if (!ctx) throw new Error('Canvas ohne 2D-Kontext');
+  ctx.fillStyle = '#f2c200';
+  ctx.fillRect(0, 0, B, H);
+  ctx.fillStyle = '#1b1b1b';
+  for (let x = -H; x < B + H; x += 96) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + 48, 0);
+    ctx.lineTo(x + 48 + H, H);
+    ctx.lineTo(x + H, H);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Ein weisses Feld in der Mitte traegt die Schrift.
+  ctx.fillStyle = '#f6f6f4';
+  ctx.fillRect(B * 0.22, H * 0.2, B * 0.56, H * 0.6);
+  ctx.fillStyle = '#1b1b1b';
+  ctx.font = '800 84px "Arial Black", Helvetica, Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('UNDER CONSTRUCTION', B / 2, H / 2);
+  const textur = new THREE.CanvasTexture(element);
+  textur.colorSpace = THREE.SRGBColorSpace;
+  textur.wrapS = THREE.RepeatWrapping;
+  return textur;
+}
+
 function kachel(quelle: THREE.Texture | undefined, wiederholung = 1) {
   if (!quelle) return null;
   const kopie = quelle.clone();
@@ -254,32 +245,97 @@ function kachel(quelle: THREE.Texture | undefined, wiederholung = 1) {
  * grünem Pfeil. Wer den Gang betritt, liest sie, bevor er irgendetwas
  * anderes wahrnimmt.
  *
- * Angeschrieben wird, was tatsächlich dort abgeht -- die Halle links und die
- * Halle rechts, an der Stelle, an der man vor ihrem Eingang steht.
+ * Angeschrieben wird, was tatsächlich dort abgeht -- und zwar **gerechnet**,
+ * nicht eingetragen: welche Halle an welcher Station links und welche rechts
+ * liegt, steht gemessen in `boulevard.json`. Ein von Hand beschriftetes Schild
+ * widerspricht der Geometrie frueher oder spaeter; dieses kann es nicht.
+ *
+ * Jede Tafel hat zwei Gesichter. Links und rechts hängen an der Gehrichtung,
+ * also zeigt die eine Seite etwas anderes als die andere -- eine Tafel mit
+ * demselben Bild auf beiden Seiten ist für eine der beiden Richtungen falsch.
  */
-interface Wegweiser {
+export interface Wegweiser {
   /** Meter vom Anfang (Stirnseite Halle 8). */
   station: number;
   kopf: string;
   kopfKlein: string;
   zeilen: { text: string; pfeil: 'links' | 'rechts' | 'geradeaus' }[];
+  /** +1 = die Tafel schaut dem entgegen, der Richtung Süden geht. */
+  blick: 1 | -1;
 }
 
-const WEGWEISER: Wegweiser[] = [
-  { station: 30, kopf: '7 – 8', kopfKlein: 'Congress-Centrum Nord\nAusgang Nord',
-    zeilen: [{ text: '8', pfeil: 'geradeaus' }, { text: '7', pfeil: 'rechts' }] },
-  { station: 95, kopf: '7', kopfKlein: 'Service Center Nord',
-    zeilen: [{ text: '7', pfeil: 'rechts' }, { text: '6', pfeil: 'links' }] },
-  { station: 175, kopf: '6 – 9', kopfKlein: 'Congress-Centrum Nord\nAusgang Nord',
-    zeilen: [{ text: '6', pfeil: 'rechts' }, { text: '9', pfeil: 'links' }] },
-  { station: 220, kopf: '9', kopfKlein: 'Ausgang Nord',
-    zeilen: [{ text: '9', pfeil: 'links' }, { text: '5 – 10', pfeil: 'geradeaus' }] },
-];
+/**
+ * Liegt die Ostseite links, wenn man Richtung Süden geht?
+ *
+ * Wird ausgerechnet und nicht angenommen: Die Geländedaten liegen in einer
+ * gespiegelten Ebene, und in einer gespiegelten Ebene vertauschen sich links
+ * und rechts. Wer das im Kopf macht, vertauscht es.
+ */
+function ostLiegtLinks(achse: Achse): boolean {
+  // Vorwärts (wachsende Station) in Szenenkoordinaten.
+  const vx = achse.laengs[0];
+  const vz = -achse.laengs[1];
+  // Links = Hochachse × vorwärts.
+  const lx = vz;
+  const lz = -vx;
+  // Die Ostseite liegt bei negativem q.
+  const ox = -achse.quer[0];
+  const oz = achse.quer[1];
+  return lx * ox + lz * oz > 0;
+}
 
-const SCHILD_BREITE_M = 2.6;
-const SCHILD_HOEHE_M = 3.4;
+/** Die nächste Halle auf einer Seite, von einer Station aus gesehen. */
+function naechsteHalle(
+  seite: BoulevardAbschnitt[],
+  station: number,
+  vor: 1 | -1,
+): string | null {
+  const voraus = seite
+    .filter((s) => s.hallKey && (vor > 0 ? s.bis > station : s.von < station))
+    .sort((a, b) => (vor > 0 ? a.von - b.von : b.von - a.von));
+  return voraus.length ? voraus[0].hallKey!.split('.')[0] : null;
+}
+
+/**
+ * Die Tafeln, aus dem gemessenen Plan abgeleitet.
+ *
+ * Drei Standorte über die Länge verteilt, jeder mit zwei Gesichtern. Oben das
+ * Fernziel in Gehrichtung -- im Norden Halle 8, im Süden das, was dort andockt
+ * --, darunter die nächste Halle links und die nächste rechts.
+ */
+export function wegweiser(plan: BoulevardPlan, achse: Achse): Wegweiser[] {
+  const ostLinks = ostLiegtLinks(achse);
+  const out: Wegweiser[] = [];
+  for (const anteil of [0.12, 0.45, 0.82]) {
+    const station = Math.round(plan.laengeM * anteil);
+    for (const blick of [1, -1] as const) {
+      const ziel = blick > 0 ? plan.enden.sued : plan.enden.nord;
+      const linkeSeite = (blick > 0) === ostLinks ? plan.seiten.ost : plan.seiten.west;
+      const rechteSeite = (blick > 0) === ostLinks ? plan.seiten.west : plan.seiten.ost;
+      const links = naechsteHalle(linkeSeite, station, blick);
+      const rechts = naechsteHalle(rechteSeite, station, blick);
+      const zeilen: Wegweiser['zeilen'] = [];
+      if (links) zeilen.push({ text: links, pfeil: 'links' });
+      if (rechts) zeilen.push({ text: rechts, pfeil: 'rechts' });
+      if (!zeilen.length && ziel.length) {
+        zeilen.push({ text: ziel.join(' – '), pfeil: 'geradeaus' });
+      }
+      out.push({
+        station,
+        blick,
+        kopf: ziel.length ? ziel.join(' – ') : '',
+        kopfKlein: blick > 0 ? 'Ausgang Süd' : 'Congress-Centrum Nord\nAusgang Nord',
+        zeilen,
+      });
+    }
+  }
+  return out;
+}
+
+export const SCHILD_BREITE_M = 2.6;
+export const SCHILD_HOEHE_M = 3.4;
 /** Unterkante über dem Boden -- hoch genug, dass niemand dagegenläuft. */
-const SCHILD_Y = 4.4;
+export const SCHILD_Y = 4.4;
 const GRUEN = '#3aa935';
 
 function pfeilZeichnen(
@@ -289,8 +345,11 @@ function pfeilZeichnen(
 ): void {
   ctx.save();
   ctx.translate(x, y);
-  if (richtung === 'links') ctx.rotate(Math.PI / 2);
-  if (richtung === 'rechts') ctx.rotate(-Math.PI / 2);
+  // Die Spitze zeigt in der Vorlage nach oben, also nach -Y. Auf einer
+  // Leinwand laeuft Y nach unten: eine Drehung um +90 Grad dreht damit im
+  // Uhrzeigersinn, und aus "links" wuerde ein Pfeil nach rechts.
+  if (richtung === 'links') ctx.rotate(-Math.PI / 2);
+  if (richtung === 'rechts') ctx.rotate(Math.PI / 2);
   ctx.fillStyle = GRUEN;
   const h = groesse * 0.5;
   ctx.beginPath();
@@ -366,24 +425,79 @@ function schildTextur(schild: Wegweiser): THREE.CanvasTexture {
  * obere Ebene. 45 Stufen zu 16,56 cm sind 7,45 m -- das ist kein Absatz,
  * das ist ein Geschoss.
  */
-const LAEUFE = 3;
-const STUFEN_JE_LAUF = 15;
-const STEIGUNG_M = 0.1656;
-const AUFTRITT_M = 0.30;
-const PODEST_M = 2.2;
-const TREPPE_BREITE_M = 7;
-const ROLLTREPPE_BREITE_M = 1.4;
+export const LAEUFE = 3;
+export const STUFEN_JE_LAUF = 15;
+export const STEIGUNG_M = 0.1656;
+export const AUFTRITT_M = 0.30;
+export const PODEST_M = 2.2;
+export const TREPPE_BREITE_M = 7;
+export const ROLLTREPPE_BREITE_M = 1.4;
 /** Gesamter Lauf in der Laenge und die Gesamthoehe. */
-const TREPPE_LAUF_M = LAEUFE * STUFEN_JE_LAUF * AUFTRITT_M + (LAEUFE - 1) * PODEST_M;
-const TREPPE_HOEHE_M = LAEUFE * STUFEN_JE_LAUF * STEIGUNG_M;
+export const TREPPE_LAUF_M = LAEUFE * STUFEN_JE_LAUF * AUFTRITT_M + (LAEUFE - 1) * PODEST_M;
+export const TREPPE_HOEHE_M = LAEUFE * STUFEN_JE_LAUF * STEIGUNG_M;
 
-interface Bauteil {
+export interface Bauteil {
   position: [number, number, number];
   groesse: [number, number, number];
   neigung?: number;
 }
 
-function treppenteile(achse: Achse, centre: [number, number]): {
+/**
+ * Die beiden Doppeltueren am Suedeingang, als Rohbaumass.
+ *
+ * `createDoubleGlassDoor` setzt die Zarge auf `±breite/2` und den Sturz auf
+ * `hoehe`; das Profil steht dabei zur Haelfte darueber hinaus. Die lichte
+ * Oeffnung, die die Glasfront freilassen muss, ist also etwas groesser als das
+ * genannte Mass -- und zwar um genau dieses halbe Profil.
+ */
+export const TUER_BREITE_M = 3.2;
+export const TUER_HOEHE_M = 2.6;
+export const TUER_PROFIL_M = 0.09;
+/** Abstand der beiden Tuermitten von der Gangachse. */
+export const TUER_VERSATZ_M = 1.9;
+/**
+ * Halbe lichte Oeffnung.
+ *
+ * Steht hier und nicht in der Wand, weil zwei Bauteile sie brauchen: die
+ * Glasfront laesst sie frei, und die Kollision laesst an derselben Stelle
+ * durch. Zwei Rechnungen daneben waeren eine Tuer, die man sieht und durch
+ * die man nicht geht.
+ */
+export const TUER_OEFFNUNG_HALB_M = TUER_BREITE_M / 2 + TUER_PROFIL_M / 2;
+
+/**
+ * Die Glasfelder zwischen den Tueroeffnungen.
+ *
+ * Die Front war bisher **eine** durchgehende Scheibe, vor der die Tueren
+ * zwoelf Zentimeter davor hingen -- von aussen sah man die Tuer, ging aber
+ * durch Glas. Statt beides nebeneinander zu stellen, wird hier aus derselben
+ * Zahlenreihe beides abgeleitet: aus den Tuermitten entstehen die Oeffnungen,
+ * und was zwischen ihnen uebrig bleibt, ist Glas. Zwei Tueren ergeben so drei
+ * Felder; die Rechnung kommt aber auch mit einer anderen Anzahl zurecht.
+ *
+ * Ueberlappende Oeffnungen werden zusammengefasst -- sonst entstuende ein
+ * Feld mit negativer Breite, und three.js zeichnet das wortlos verkehrt herum.
+ */
+export function glasfelder(
+  breite: number,
+  versatze: readonly number[],
+  oeffnungHalb: number,
+): [number, number][] {
+  const oeffnungen = [...versatze]
+    .sort((a, b) => a - b)
+    .map((mitte) => [mitte - oeffnungHalb, mitte + oeffnungHalb] as [number, number]);
+
+  const felder: [number, number][] = [];
+  let kante = -breite / 2;
+  for (const [von, bis] of oeffnungen) {
+    if (von > kante) felder.push([kante, von]);
+    kante = Math.max(kante, bis);
+  }
+  if (kante < breite / 2) felder.push([kante, breite / 2]);
+  return felder;
+}
+
+export function treppenteile(achse: Achse, centre: [number, number], anfang: number): {
   stufen: Bauteil[];
   rolltreppen: Bauteil[];
   drehung: number;
@@ -395,8 +509,8 @@ function treppenteile(achse: Achse, centre: [number, number]): {
   };
   const drehung = Math.atan2(achse.laengs[0], -achse.laengs[1]);
 
-  // Die Anlage sitzt am Ende des Bands und steigt darauf zu.
-  const anfang = LAENGE_M - TREPPE_LAUF_M;
+  // Wo die Anlage sitzt, ist gemessen und wird uebergeben: sie beginnt am
+  // Ende des Gangs und endet dort, wo Halle 5 und Halle 10 anfangen.
   const stufen: Bauteil[] = [];
   let s = anfang;
   let h = BODEN_Y;
@@ -481,6 +595,186 @@ function glasMaterial(
   });
 }
 
+/**
+ * Der Suedteil: derselbe Gang, eine Ebene hoeher und dreimal so breit.
+ *
+ * Suedlich von Halle 6 und Halle 9 hoert die enge Gasse auf. Zwischen Halle 5
+ * und Halle 10 sind es ueber 45 m, und der Fussboden liegt auf der oberen
+ * Ebene -- dort haengen die Hallen 5.2 und 10.2 an. Dazwischen liegt die
+ * Treppe: sie beginnt am Ende der 285 m und endet dort, wo die beiden Hallen
+ * anfangen. Dass diese Strecke 18,8 m misst und die Anlage aus 3x15 Stufen
+ * 18 m Lauf hat, ist die Gegenprobe -- die Zahlen kommen aus verschiedenen
+ * Quellen und treffen sich.
+ */
+interface Suedflaechen {
+  knotenTreppe?: THREE.BufferGeometry;
+  knotenBoden?: THREE.BufferGeometry;
+  knotenDach?: THREE.BufferGeometry;
+  knotenPassage?: THREE.BufferGeometry;
+  knotenTreppeOst?: THREE.BufferGeometry;
+  suedBoden?: THREE.BufferGeometry;
+  suedDach?: THREE.BufferGeometry;
+  suedStirn?: THREE.BufferGeometry;
+  suedWandOstMassiv?: THREE.BufferGeometry;
+  suedWandOstGlas?: THREE.BufferGeometry;
+  suedWandWestMassiv?: THREE.BufferGeometry;
+  suedWandWestGlas?: THREE.BufferGeometry;
+}
+
+function suedteil(
+  achse: Achse,
+  centre: [number, number],
+  plan: BoulevardPlan,
+): Suedflaechen {
+  const sued = plan.sued;
+  if (!sued || sued.obenM === null) return {};
+  const oben = sued.obenM;
+  const dach = oben + plan.hoeheM;
+  const qOst = sued.seitenQ.ost;
+  const qWest = sued.seitenQ.west;
+  const ganz: [number, number][] = [[sued.vonM, sued.bisM]];
+  const ost = abschnitte(sued.seiten.ost);
+  const west = abschnitte(sued.seiten.west);
+  return {
+    suedBoden: band(achse, centre,
+      () => [[qOst, oben], [qWest, oben]], WELT_KACHEL_M.boden, ganz),
+    suedDach: band(achse, centre,
+      () => [[qOst, dach], [qWest, dach]], WELT_KACHEL_M.decke, ganz),
+    suedWandOstMassiv: band(achse, centre,
+      () => [[qOst, oben], [qOst, dach]], WELT_KACHEL_M.wand, ost.massiv),
+    suedWandOstGlas: band(achse, centre,
+      () => [[qOst, oben], [qOst, dach]], WELT_KACHEL_M.wand, ost.glas),
+    suedWandWestMassiv: band(achse, centre,
+      () => [[qWest, dach], [qWest, oben]], WELT_KACHEL_M.wand, west.massiv),
+    suedWandWestGlas: band(achse, centre,
+      () => [[qWest, dach], [qWest, oben]], WELT_KACHEL_M.wand, west.glas),
+    // Die Stirnseite ueber der Treppe: unter dem oberen Fussboden ist die
+    // Halle offen, darueber steht die Wand, an der im Foto die Banner haengen.
+    suedStirn: band(achse, centre,
+      () => [[qOst, oben], [qWest, oben]], WELT_KACHEL_M.wand,
+      [[sued.vonM - 0.4, sued.vonM]]),
+    ...suedknoten(achse, centre, plan, oben, qOst, qWest),
+  };
+}
+
+/**
+ * Der Suedknoten: Querriegel, Treppe hinunter und Passage zur Piazza.
+ *
+ * Alle Hoehen sind belegt und keine geschaetzt. Der Suedteil liegt auf
+ * 7,60 m (amtliche Geschosshoehe), von dort fuehren zwanzig gezaehlte Stufen
+ * hinunter auf den Querriegel, weitere sechsundzwanzig hinunter zu Halle 10.1
+ * auf null. Die Piazza liegt zwanzig Stufen ueber Halle 11, die ebenerdig
+ * ist -- also auf 3,31 m. Die Passage dazwischen faellt entsprechend um
+ * knapp einen Meter; man geht von der Piazza sanft hinauf zum Boulevard.
+ *
+ * Treppen sind hier geneigte Baender und keine Stufenfolgen. Aus zwei Metern
+ * Entfernung ist das derselbe Anblick, und der Suedknoten soll zuerst einmal
+ * begehbar dastehen.
+ */
+function suedknoten(
+  achse: Achse,
+  centre: [number, number],
+  plan: BoulevardPlan,
+  oben: number,
+  qOst: number,
+  qWest: number,
+): Suedflaechen {
+  const knoten = plan.knoten;
+  if (!knoten) return {};
+  const riegel = knoten.riegel;
+  const lauf = knoten.treppeM;
+  return {
+    // Die Treppe vom Suedteil auf den Querriegel.
+    knotenTreppe: band(achse, centre,
+      (s) => {
+        const teil = (s - (riegel.vonM - lauf)) / lauf;
+        const hoehe = oben + (riegel.hoeheM - oben) * Math.min(1, Math.max(0, teil));
+        return [[qOst, hoehe], [qWest, hoehe]];
+      },
+      WELT_KACHEL_M.boden, [[riegel.vonM - lauf, riegel.vonM]]),
+    knotenBoden: band(achse, centre,
+      () => [[qOst, riegel.hoeheM], [qWest, riegel.hoeheM]],
+      WELT_KACHEL_M.boden, [[riegel.vonM, riegel.bisM]]),
+    knotenDach: band(achse, centre,
+      () => [[qOst, riegel.hoeheM + plan.hoeheM], [qWest, riegel.hoeheM + plan.hoeheM]],
+      WELT_KACHEL_M.decke, [[riegel.vonM, riegel.bisM]]),
+    // Das Treppenhaus hinunter zu Halle 10: es sitzt am Ostrand des Riegels
+    // und faellt quer zur Achse ab, ueber sechsundzwanzig Stufen von 4,30 m
+    // auf null. Als geneigte Flaeche gebaut, nicht als Stufenfolge.
+    knotenTreppeOst: band(achse, centre,
+      () => [[knoten.qOstM - knoten.stufenOst * 0.30, 0], [knoten.qOstM, riegel.hoeheM]],
+      WELT_KACHEL_M.boden,
+      [[(riegel.vonM + riegel.bisM) / 2 - 6, (riegel.vonM + riegel.bisM) / 2 + 6]]),
+    // Die Passage nach Sueden faellt sanft zur Piazza ab.
+    knotenPassage: band(achse, centre,
+      (s) => {
+        const teil = (s - riegel.bisM) / Math.max(1, knoten.piazzaVonM - riegel.bisM);
+        const hoehe = riegel.hoeheM
+          + (knoten.piazzaHoeheM - riegel.hoeheM) * Math.min(1, Math.max(0, teil));
+        return [[qOst, hoehe], [qWest, hoehe]];
+      },
+      WELT_KACHEL_M.boden, [[riegel.bisM, knoten.piazzaVonM]]),
+  };
+}
+
+/**
+ * Boden oder Decke des Nordknicks, aus seinem amtlichen Umriss.
+ *
+ * Der Knick ist kein Band entlang der Achse, sondern eine Flaeche mit 67
+ * Ecken -- inklusive der gerundeten Fassade zum Messeplatz. `band()` kann das
+ * nicht, `THREE.Shape` schon: es zerlegt das Vieleck selbst in Dreiecke.
+ *
+ * Der Umweg ueber die Drehung ist beabsichtigt. `ShapeGeometry` legt die
+ * Flaeche in die XY-Ebene; eine Drehung um -90 Grad um X bildet (u, v, 0) auf
+ * (u, 0, -v) ab -- und genau das ist die Umrechnung von Geländemetern in
+ * Szenenkoordinaten, die der ganze Rest der Datei von Hand macht.
+ */
+function knickflaeche(
+  polygon: readonly (readonly [number, number])[],
+  centre: [number, number],
+  kachelM: number,
+): THREE.BufferGeometry {
+  const shape = new THREE.Shape(
+    polygon.map(([x, y]) => new THREE.Vector2(x - centre[0], y - centre[1])),
+  );
+  const geometry = new THREE.ShapeGeometry(shape);
+  // ShapeGeometry legt die UV in Metern an; ohne Teilung wiederholt sich die
+  // Textur je Meter und der Boden wird zum Flimmern.
+  const uv = geometry.getAttribute('uv');
+  for (let i = 0; i < uv.count; i += 1) {
+    uv.setXY(i, uv.getX(i) / kachelM, uv.getY(i) / kachelM);
+  }
+  uv.needsUpdate = true;
+  return geometry;
+}
+
+/**
+ * Die Rampe des Aussengelaendes, aus ihren zwei Dreiecken.
+ *
+ * Anders als die ebenen Flaechen kann sie nicht flach gelegt und angehoben
+ * werden -- ihre Hoehe steht an jeder Ecke einzeln. Genommen wird sie deshalb
+ * direkt aus dem Plan; hier wird nichts nachgerechnet, was dort schon steht.
+ */
+function rampenflaeche(
+  dreiecke: readonly (readonly (readonly [number, number, number])[])[],
+  centre: [number, number],
+  kachelM: number,
+): THREE.BufferGeometry {
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  for (const dreieck of dreiecke) {
+    for (const [x, y, h] of dreieck) {
+      positions.push(x - centre[0], h, -(y - centre[1]));
+      uvs.push(x / kachelM, y / kachelM);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 export function Boulevard({
   data,
   centre,
@@ -493,36 +787,58 @@ export function Boulevard({
   /** Sparsames Glas ohne Durchblick -- siehe `glasMaterial`. */
   previewSafe?: boolean;
 }) {
+  const plan = data.boulevard;
   const achse = useMemo(() => boulevardAchse(data), [data]);
 
   const flaechen = useMemo(() => {
-    if (!achse) return null;
-    const halb = BREITE_M / 2;
+    if (!achse || !plan) return null;
+    const laenge = plan.laengeM;
+    const hoehe = plan.hoeheM;
+    const ganz: [number, number][] = [[0, laenge]];
     const lichtHalb = OBERLICHT_BREITE_M / 2;
-    const west = wandAbschnitte(data, achse.winkel, achse.uMitte, achse.vorne,
-                                achse.richtung, -1);
-    const ost = wandAbschnitte(data, achse.winkel, achse.uMitte, achse.vorne,
-                               achse.richtung, 1);
+    const ost = abschnitte(plan.seiten.ost);
+    const west = abschnitte(plan.seiten.west);
+    const toreOst = durchgangsbereiche(plan, 'ost');
+    const toreWest = durchgangsbereiche(plan, 'west');
+    // Auf welcher Seite der Achse die beiden Wandlinien liegen, sagt der Plan.
+    const qOst = plan.seitenQ.ost;
+    const qWest = plan.seitenQ.west;
 
     return {
       boden: band(achse, centre,
-        () => [[-halb, BODEN_Y], [halb, BODEN_Y]], WELT_KACHEL_M.boden),
-      // Das Dach folgt dem Höhenverlauf, das Oberlicht liegt knapp darunter.
+        () => [[qOst, BODEN_Y], [qWest, BODEN_Y]], WELT_KACHEL_M.boden, ganz),
       dach: band(achse, centre,
-        () => [[-halb, hoeheBei()], [halb, hoeheBei()]], WELT_KACHEL_M.decke),
+        () => [[qOst, hoehe], [qWest, hoehe]], WELT_KACHEL_M.decke, ganz),
       oberlicht: band(achse, centre,
-        () => [[-lichtHalb, hoeheBei() - 0.06], [lichtHalb, hoeheBei() - 0.06]],
-        WELT_KACHEL_M.decke),
-      wandWestMassiv: band(achse, centre,
-        () => [[-halb, BODEN_Y], [-halb, hoeheBei()]], WELT_KACHEL_M.wand, west.massiv),
-      wandWestGlas: band(achse, centre,
-        () => [[-halb, BODEN_Y], [-halb, hoeheBei()]], WELT_KACHEL_M.wand, west.glas),
+        () => [[-lichtHalb, hoehe - 0.06], [lichtHalb, hoehe - 0.06]],
+        WELT_KACHEL_M.decke, ganz),
+      // Die Laengswaende sind in zwei Baender geteilt: unterhalb der
+      // Torhoehe stehen die Durchgaenge offen, oberhalb laeuft die Wand
+      // durch. Ohne die Teilung waere jeder Zugang ein Schlitz bis unter die
+      // Decke -- ein Loch in der Wand ist kein Tor.
       wandOstMassiv: band(achse, centre,
-        () => [[halb, hoeheBei()], [halb, BODEN_Y]], WELT_KACHEL_M.wand, ost.massiv),
+        () => [[qOst, TOR_HOEHE_M], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.massiv),
       wandOstGlas: band(achse, centre,
-        () => [[halb, hoeheBei()], [halb, BODEN_Y]], WELT_KACHEL_M.wand, ost.glas),
+        () => [[qOst, TOR_HOEHE_M], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.glas),
+      wandOstMassivUnten: band(achse, centre,
+        () => [[qOst, BODEN_Y], [qOst, TOR_HOEHE_M]], WELT_KACHEL_M.wand,
+        ohneDurchgaenge(ost.massiv, toreOst)),
+      wandOstGlasUnten: band(achse, centre,
+        () => [[qOst, BODEN_Y], [qOst, TOR_HOEHE_M]], WELT_KACHEL_M.wand,
+        ohneDurchgaenge(ost.glas, toreOst)),
+      wandWestMassiv: band(achse, centre,
+        () => [[qWest, hoehe], [qWest, TOR_HOEHE_M]], WELT_KACHEL_M.wand, west.massiv),
+      wandWestGlas: band(achse, centre,
+        () => [[qWest, hoehe], [qWest, TOR_HOEHE_M]], WELT_KACHEL_M.wand, west.glas),
+      wandWestMassivUnten: band(achse, centre,
+        () => [[qWest, TOR_HOEHE_M], [qWest, BODEN_Y]], WELT_KACHEL_M.wand,
+        ohneDurchgaenge(west.massiv, toreWest)),
+      wandWestGlasUnten: band(achse, centre,
+        () => [[qWest, TOR_HOEHE_M], [qWest, BODEN_Y]], WELT_KACHEL_M.wand,
+        ohneDurchgaenge(west.glas, toreWest)),
+      ...suedteil(achse, centre, plan),
     };
-  }, [achse, centre, data]);
+  }, [achse, centre, plan]);
 
   const surfaces = useMemo(
     () => ({
@@ -591,76 +907,181 @@ export function Boulevard({
 
   /** Tageslicht von oben, in Abständen entlang des Bands. */
   const lampen = useMemo(() => {
-    if (!achse) return [];
+    if (!achse || !plan) return [];
     const out: [number, number, number][] = [];
-    const anzahl = 6;
+    const anzahl = Math.max(4, Math.round(plan.laengeM / 40));
     for (let i = 0; i < anzahl; i += 1) {
-      const s = ((i + 0.5) / anzahl) * LAENGE_M;
+      const s = ((i + 0.5) / anzahl) * plan.laengeM;
       const x = achse.x0 + achse.laengs[0] * s;
       const y = achse.y0 + achse.laengs[1] * s;
-      out.push([x - centre[0], HOEHE_M - 1.2, -(y - centre[1])]);
+      out.push([x - centre[0], plan.hoeheM - 1.2, -(y - centre[1])]);
     }
     return out;
-  }, [achse, centre]);
+  }, [achse, centre, plan]);
 
   /** Pendelleuchten in zwei Reihen, wie auf dem Foto. */
   const pendel = useMemo(() => {
-    if (!achse) return [];
+    if (!achse || !plan) return [];
     const out: [number, number, number][] = [];
     const abstand = 9;
-    for (let s = abstand; s < LAENGE_M; s += abstand) {
+    for (let s = abstand; s < plan.laengeM; s += abstand) {
       for (const q of [-4.2, 4.2]) {
         const x = achse.x0 + achse.laengs[0] * s + achse.quer[0] * q;
         const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * q;
-        out.push([x - centre[0], HOEHE_M - 1.5, -(y - centre[1])]);
+        out.push([x - centre[0], plan.hoeheM - 1.5, -(y - centre[1])]);
       }
     }
     return out;
-  }, [achse, centre]);
+  }, [achse, centre, plan]);
 
   const schilder = useMemo(() => {
-    if (!achse) return [];
-    // Die Tafel steht quer im Gang und schaut dem Ankommenden entgegen.
-    const drehung = Math.atan2(-achse.laengs[0], achse.laengs[1]);
-    return WEGWEISER.map((schild) => {
-      const x = achse.x0 + achse.laengs[0] * schild.station + achse.quer[0] * 3.4;
-      const y = achse.y0 + achse.laengs[1] * schild.station + achse.quer[1] * 3.4;
+    if (!achse || !plan) return [];
+    // Die Tafel haengt mittig im Gang und schaut dem Ankommenden entgegen --
+    // je Gehrichtung ein Gesicht, um 180 Grad gedreht.
+    return wegweiser(plan, achse).map((schild, index) => {
+      const x = achse.x0 + achse.laengs[0] * schild.station;
+      const y = achse.y0 + achse.laengs[1] * schild.station;
+      const drehung = schild.blick > 0
+        ? Math.atan2(-achse.laengs[0], achse.laengs[1])
+        : Math.atan2(achse.laengs[0], -achse.laengs[1]);
       return {
+        schluessel: `${schild.station}-${schild.blick}-${index}`,
         schild,
-        position: [x - centre[0], SCHILD_Y + SCHILD_HOEHE_M / 2, -(y - centre[1])] as
-          [number, number, number],
+        position: [
+          x - centre[0],
+          SCHILD_Y + SCHILD_HOEHE_M / 2,
+          -(y - centre[1]),
+        ] as [number, number, number],
         drehung,
         textur: schildTextur(schild),
       };
     });
-  }, [achse, centre]);
+  }, [achse, centre, plan]);
 
   useEffect(() => () => schilder.forEach(({ textur }) => textur.dispose()), [schilder]);
 
-  const treppe = useMemo(() => (achse ? treppenteile(achse, centre) : null), [achse, centre]);
+  /**
+   * Wo das Gebaute aufhoert: quer ueber die Passage, vor der Piazza.
+   *
+   * Der Suedostteil um Halle 11 ist Provisorium und wartet auf Aufnahmen vor
+   * Ort. Bis dahin steht dort ein Bauzaun.
+   */
+  const bauzaun = useMemo(() => {
+    const knoten = plan?.knoten;
+    const sued = plan?.sued;
+    if (!achse || !knoten || !sued) return null;
+    const s = knoten.piazzaVonM;
+    const x = achse.x0 + achse.laengs[0] * s;
+    const y = achse.y0 + achse.laengs[1] * s;
+    return {
+      position: [x - centre[0], knoten.piazzaHoeheM + 0.6, -(y - centre[1])] as
+        [number, number, number],
+      drehung: Math.atan2(achse.laengs[0], -achse.laengs[1]),
+      breite: sued.breiteM,
+      textur: bauzaunTextur(),
+    };
+  }, [achse, centre, plan]);
+
+  useEffect(() => () => bauzaun?.textur.dispose(), [bauzaun]);
+
+  /** Der Knick am Nordende: Boden und Decke aus dem amtlichen Umriss. */
+  const knick = useMemo(() => {
+    const knoten = plan?.nordknoten;
+    if (!knoten) return null;
+    return {
+      boden: knickflaeche(knoten.polygon, centre, WELT_KACHEL_M.boden),
+      decke: knickflaeche(knoten.polygon, centre, WELT_KACHEL_M.decke),
+      bodenY: knoten.bodenM,
+      deckeY: knoten.deckeM,
+    };
+  }, [centre, plan]);
+
+  useEffect(() => () => {
+    knick?.boden.dispose();
+    knick?.decke.dispose();
+  }, [knick]);
+
+  /** Das Aussengelaende 9/10: zwei Ebenen und die Rampe dazwischen. */
+  const aussen = useMemo(() => {
+    const a = plan?.aussen9_10;
+    if (!a) return null;
+    return {
+      ebene1: knickflaeche(a.ebene1.polygon, centre, WELT_KACHEL_M.boden),
+      ebene1Y: a.ebene1.hoeheM,
+      ebene0: knickflaeche(a.ebene0.polygon, centre, WELT_KACHEL_M.boden),
+      ebene0Y: a.ebene0.hoeheM,
+      schraege: rampenflaeche(a.schraege.dreiecke, centre, WELT_KACHEL_M.boden),
+    };
+  }, [centre, plan]);
+
+  useEffect(() => () => {
+    aussen?.ebene1.dispose();
+    aussen?.ebene0.dispose();
+    aussen?.schraege.dispose();
+  }, [aussen]);
+
+  const treppe = useMemo(
+    () => (achse && plan?.treppe ? treppenteile(achse, centre, plan.treppe.vonM) : null),
+    [achse, centre, plan],
+  );
 
   /**
    * Die Stirnwand am Suedende: ebenfalls Glas, mit zwei Doppeltueren.
    *
    * Sie steht quer am Ende des Bands. Die Tueren sitzen mittig nebeneinander
    * auf Fussbodenhoehe -- dort, wo man von draussen hereinkommt.
+   *
+   * Die Front ist deshalb keine Scheibe, sondern eine Tischlerarbeit: unter
+   * dem Fussboden ein durchlaufendes Band, darueber drei Felder mit den
+   * Oeffnungen dazwischen, darueber der Sturz bis unters Dach. Die Oeffnungen
+   * und die Tueren stammen aus derselben Rechnung -- eine Tuer, die neben
+   * ihrem Loch sitzt, kann so nicht entstehen.
    */
   const suedwand = useMemo(() => {
-    if (!achse) return null;
-    const s = LAENGE_M;
-    const x = achse.x0 + achse.laengs[0] * s;
-    const y = achse.y0 + achse.laengs[1] * s;
-    const drehung = Math.atan2(achse.laengs[0], -achse.laengs[1]);
+    if (!achse || !plan?.treppe || !plan.sued || plan.sued.obenM === null) return null;
+    // Sie steht am **Kopf** der Treppe, dort wo der Suedteil anfaengt -- nicht
+    // an ihrem Fuss. Unten ist sie massiv: das ist die Stirnseite des oberen
+    // Fussbodens und was darunter liegt. Erst oberhalb von 7,45 m ist sie
+    // verglast, und dort sitzen auch die beiden Doppeltueren: der Eingang zum
+    // Boulevard Sued liegt auf der zweiten Ebene.
+    // Sie steht auf der Mitte des **Suedteils** und nicht auf der Achse des
+    // Nordgangs. Die beiden fallen nicht zusammen: der Suedteil reicht von
+    // q -36,46 bis q +8,80 und liegt damit weit nach Osten versetzt. Auf der
+    // Gangachse gebaut ragte die Wand dreizehn Meter nach Westen ins Freie
+    // und liess im Osten dasselbe Stueck offen.
+    const s = plan.treppe.bisM;
+    const qMitte = (plan.sued.seitenQ.ost + plan.sued.seitenQ.west) / 2;
+    const x = achse.x0 + achse.laengs[0] * s + achse.quer[0] * qMitte;
+    const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * qMitte;
+    const sockel = 7.45;
+    const boden = plan.sued.obenM;
+    const breite = plan.sued.breiteM;
+    // Die Tueren bleiben dort, wo die Treppe ankommt -- auf der Gangachse,
+    // also bei q = 0. In den Wandkoordinaten ist das um deren Mitte versetzt.
+    const versatze = [-TUER_VERSATZ_M - qMitte, TUER_VERSATZ_M - qMitte];
+    // Die lichte Oeffnung: das Rahmenprofil steht zur Haelfte ueber das
+    // genannte Tuermass hinaus, oben wie an beiden Seiten.
+    const oeffnungHalb = TUER_OEFFNUNG_HALB_M;
+    const sturzY = boden + TUER_HOEHE_M + TUER_PROFIL_M / 2;
     return {
-      position: [x - centre[0], BODEN_Y + HOEHE_M / 2, -(y - centre[1])] as
-        [number, number, number],
-      drehung,
-      tueren: [-1, 1].map((seite) => ({
-        versatz: seite * 1.9,
-        gruppe: ArchitectureGenerator.createDoubleGlassDoor(3.2, 2.6),
+      // Der Fusspunkt der Wand; die Teile sitzen darueber in echten Hoehen.
+      position: [x - centre[0], 0, -(y - centre[1])] as [number, number, number],
+      drehung: Math.atan2(achse.laengs[0], -achse.laengs[1]),
+      /** Oberkante des massiven Sockels -- ab hier Glas. */
+      sockel,
+      boden,
+      dach: boden + plan.hoeheM,
+      breite,
+      /** Unter dem Fussboden laeuft das Glas durch -- man sieht es nicht. */
+      bruestung: Math.max(0, boden - sockel),
+      sturzY,
+      felder: glasfelder(breite, versatze, oeffnungHalb),
+      tueren: versatze.map((versatz) => ({
+        versatz,
+        gruppe: ArchitectureGenerator.createDoubleGlassDoor(TUER_BREITE_M, TUER_HOEHE_M),
       })),
     };
-  }, [achse, centre]);
+  }, [achse, centre, plan]);
 
   useEffect(() => () => (suedwand?.tueren ?? []).forEach(({ gruppe }) => {
     gruppe.traverse((knoten) => {
@@ -697,6 +1118,83 @@ export function Boulevard({
       <mesh geometry={flaechen.wandOstMassiv} material={material.wandMassiv} receiveShadow />
       <mesh geometry={flaechen.wandWestGlas} material={material.wand} />
       <mesh geometry={flaechen.wandOstGlas} material={material.wand} />
+      {/* Unterhalb der Torhoehe -- hier fehlen die Durchgaenge. */}
+      <mesh geometry={flaechen.wandWestMassivUnten} material={material.wandMassiv} receiveShadow />
+      <mesh geometry={flaechen.wandOstMassivUnten} material={material.wandMassiv} receiveShadow />
+      <mesh geometry={flaechen.wandWestGlasUnten} material={material.wand} />
+      <mesh geometry={flaechen.wandOstGlasUnten} material={material.wand} />
+      {/* Aussengelaende 9/10: Ebene 1, Schraege, Ebene 0 -- eine Oberflaeche. */}
+      {aussen && (
+        <group>
+          <mesh
+            geometry={aussen.ebene1}
+            material={material.boden}
+            position={[0, aussen.ebene1Y, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            receiveShadow
+          />
+          <mesh geometry={aussen.schraege} material={material.boden} receiveShadow />
+          <mesh
+            geometry={aussen.ebene0}
+            material={material.boden}
+            position={[0, aussen.ebene0Y, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            receiveShadow
+          />
+        </group>
+      )}
+      {/* Der Knick am Nordende -- ebenerdig, stufenlos an den Gang anschliessend. */}
+      {knick && (
+        <group>
+          <mesh
+            geometry={knick.boden}
+            material={material.boden}
+            position={[0, knick.bodenY, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            receiveShadow
+          />
+          <mesh
+            geometry={knick.decke}
+            material={material.dach}
+            position={[0, knick.deckeY, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+          />
+        </group>
+      )}
+      {/* Der Suedteil, eine Ebene hoeher. */}
+      {flaechen.suedBoden && (
+        <mesh geometry={flaechen.suedBoden} material={material.boden} receiveShadow />
+      )}
+      {flaechen.suedDach && <mesh geometry={flaechen.suedDach} material={material.dach} />}
+      {flaechen.suedStirn && (
+        <mesh geometry={flaechen.suedStirn} material={material.wandMassiv} />
+      )}
+      {flaechen.suedWandOstMassiv && (
+        <mesh geometry={flaechen.suedWandOstMassiv} material={material.wandMassiv} receiveShadow />
+      )}
+      {flaechen.suedWandWestMassiv && (
+        <mesh geometry={flaechen.suedWandWestMassiv} material={material.wandMassiv} receiveShadow />
+      )}
+      {flaechen.suedWandOstGlas && (
+        <mesh geometry={flaechen.suedWandOstGlas} material={material.wand} />
+      )}
+      {flaechen.suedWandWestGlas && (
+        <mesh geometry={flaechen.suedWandWestGlas} material={material.wand} />
+      )}
+      {/* Suedknoten: Treppe, Querriegel und Passage zur Piazza. */}
+      {flaechen.knotenTreppe && (
+        <mesh geometry={flaechen.knotenTreppe} material={material.boden} receiveShadow />
+      )}
+      {flaechen.knotenBoden && (
+        <mesh geometry={flaechen.knotenBoden} material={material.boden} receiveShadow />
+      )}
+      {flaechen.knotenDach && <mesh geometry={flaechen.knotenDach} material={material.dach} />}
+      {flaechen.knotenPassage && (
+        <mesh geometry={flaechen.knotenPassage} material={material.boden} receiveShadow />
+      )}
+      {flaechen.knotenTreppeOst && (
+        <mesh geometry={flaechen.knotenTreppeOst} material={material.boden} receiveShadow />
+      )}
       {pendel.map((position, index) => (
         <mesh key={`p${index}`} position={position}>
           <cylinderGeometry args={[0.62, 0.34, 0.42, 12]} />
@@ -708,8 +1206,8 @@ export function Boulevard({
           />
         </mesh>
       ))}
-      {schilder.map(({ schild, position, drehung, textur }) => (
-        <mesh key={schild.station} position={position} rotation={[0, drehung, 0]}>
+      {schilder.map(({ schluessel, position, drehung, textur }) => (
+        <mesh key={schluessel} position={position} rotation={[0, drehung, 0]}>
           <planeGeometry args={[SCHILD_BREITE_M, SCHILD_HOEHE_M]} />
           <meshStandardMaterial
             map={textur}
@@ -717,20 +1215,55 @@ export function Boulevard({
             emissive="#ffffff"
             emissiveIntensity={0.45}
             roughness={0.55}
-            side={THREE.DoubleSide}
+            // Einseitig: die Rueckseite ist das Gesicht der Gegenrichtung und
+            // zeigt etwas anderes.
+            side={THREE.FrontSide}
           />
         </mesh>
       ))}
       {suedwand && (
         <group position={suedwand.position} rotation={[0, suedwand.drehung, 0]}>
-          <mesh material={material.wand}>
-            <planeGeometry args={[BREITE_M, HOEHE_M]} />
+          {/* Unten massiv bis 7,45 m ... */}
+          <mesh
+            position={[0, suedwand.sockel / 2, 0]}
+            material={material.wandMassiv}
+            receiveShadow
+          >
+            <planeGeometry args={[suedwand.breite, suedwand.sockel]} />
           </mesh>
+          {/* ... ein schmales Band bis auf Fussbodenhoehe, das der Besucher
+              nie sieht -- es liegt unter dem Boden, auf dem er steht ... */}
+          {suedwand.bruestung > 0 && (
+            <mesh
+              position={[0, suedwand.sockel + suedwand.bruestung / 2, 0]}
+              material={material.wand}
+            >
+              <planeGeometry args={[suedwand.breite, suedwand.bruestung]} />
+            </mesh>
+          )}
+          {/* ... auf Tuerhoehe drei Felder mit den Oeffnungen dazwischen ... */}
+          {suedwand.felder.map(([von, bis], index) => (
+            <mesh
+              key={`f${index}`}
+              position={[(von + bis) / 2, (suedwand.boden + suedwand.sturzY) / 2, 0]}
+              material={material.wand}
+            >
+              <planeGeometry args={[bis - von, suedwand.sturzY - suedwand.boden]} />
+            </mesh>
+          ))}
+          {/* ... und darueber der Sturz, durchlaufend bis unters Dach. */}
+          <mesh
+            position={[0, (suedwand.sturzY + suedwand.dach) / 2, 0]}
+            material={material.wand}
+          >
+            <planeGeometry args={[suedwand.breite, suedwand.dach - suedwand.sturzY]} />
+          </mesh>
+          {/* Die Tueren sitzen jetzt **in** der Wand und nicht davor. */}
           {suedwand.tueren.map(({ versatz, gruppe }, index) => (
             <primitive
               key={`d${index}`}
               object={gruppe}
-              position={[versatz, -HOEHE_M / 2, 0.12]}
+              position={[versatz, suedwand.boden, 0]}
             />
           ))}
         </group>

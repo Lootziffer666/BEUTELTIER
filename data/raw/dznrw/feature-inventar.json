@@ -1,0 +1,251 @@
+{
+ "schema": "beuteltier.dznrw-inventar.v1",
+ "quelle": "dz.nrw Feature Info, vom Nutzer geliefert. Keine Recherche, keine Screenshotanalyse.",
+ "gmdschl": "05315000",
+ "klassen": {
+  "standard_building": {
+   "gebnutzbez": "Gebaeude",
+   "funktion": "Gebaeude fuer Wirtschaft oder Gewerbe",
+   "fktkurz": "31001_2000"
+  },
+  "parking": {
+   "gebnutzbez": "Gebaeude",
+   "funktion": "Parkhaus",
+   "fktkurz": "31001_2461"
+  },
+  "canopy": {
+   "gebnutzbez": "Sonstiges Bauwerk oder sonstige Einrichtung",
+   "funktion": "Ueberdachung",
+   "fktkurz": "51009_1610"
+  }
+ },
+ "hallen": [
+  {
+   "object": "Halle_1",
+   "klasse": "standard_building",
+   "rellage": "Aufgestaendert",
+   "nutzung": "Bisher nur fuer ein Konzert benutzt, nicht fuer Messestaende."
+  },
+  {
+   "object": "Halle_2",
+   "klasse": "standard_building",
+   "name": "2"
+  },
+  {
+   "object": "Halle_3",
+   "klasse": "standard_building",
+   "name": "3"
+  },
+  {
+   "object": "Halle_4",
+   "klasse": "standard_building",
+   "name": "4"
+  },
+  {
+   "object": "Halle_5_A",
+   "klasse": "standard_building",
+   "name": "5",
+   "note": "Erster realer Teil. Zweistoeckig -- Ebenen 5.1 und 5.2."
+  },
+  {
+   "object": "Halle_5_B",
+   "klasse": "standard_building",
+   "name": "5",
+   "note": "Zweiter realer Teil; nicht zusammenlegen. Ebenfalls zweistoeckig -- Ebenen 5.1 und 5.2."
+  },
+  {
+   "object": "Halle_6",
+   "klasse": "standard_building",
+   "name": "6"
+  },
+  {
+   "object": "Halle_7",
+   "klasse": "standard_building",
+   "name": "7"
+  },
+  {
+   "object": "Halle_8",
+   "klasse": "standard_building",
+   "name": "8"
+  },
+  {
+   "object": "Halle_9",
+   "klasse": "standard_building",
+   "name": "9"
+  },
+  {
+   "object": "Halle_10",
+   "klasse": "standard_building",
+   "name": "10"
+  },
+  {
+   "object": "Halle_11",
+   "klasse": "standard_building",
+   "name": "11",
+   "nutzung": "11.1 Einlass, 11.2 Signing Area, 11.3 unbekannt. Von Halle 11 fuehren Treppen und Rolltreppen hinauf zu Halle 10."
+  }
+ ],
+ "sonderbauten": [
+  {
+   "object": "Boulevard_Nord",
+   "klasse": "standard_building",
+   "lagebez": "Messeplatz 1"
+  },
+  {
+   "object": "Eingang_Ost",
+   "klasse": "standard_building",
+   "name": "Eingang Ost",
+   "rellage": "Aufgestaendert",
+   "lagebez": "Deutz-Muelheimer Str. 51",
+   "note": "Besteht aus DREI Teilen (Nutzerangabe). Nur einer traegt den Namen.",
+   "teile": 3
+  },
+  {
+   "object": "Parkhaus_A",
+   "klasse": "parking",
+   "note": "Vom Nutzer als B bezeichnet: oestlich hinter Ost_A, Station 103-145."
+  },
+  {
+   "object": "Parkhaus_B",
+   "klasse": "parking",
+   "note": "Nicht mit Parkhaus_A zusammenlegen"
+  },
+  {
+   "object": "Ueberdachung_A",
+   "klasse": "canopy"
+  },
+  {
+   "object": "Ueberdachung_B",
+   "klasse": "canopy",
+   "note": "Nicht mit Ueberdachung_A zusammenlegen"
+  },
+  {
+   "object": "Ost_A",
+   "klasse": "standard_building",
+   "note": "Schmaler Riegel an der Boulevard-Ostwand, Station 100-149. Vom Nutzer als A bezeichnet."
+  },
+  {
+   "object": "Ost_C",
+   "klasse": "standard_building",
+   "note": "Breiter Koerper suedlich Halle 8 am Messeplatz, Station 12-71. Vom Nutzer als C bezeichnet."
+  }
+ ],
+ "aux": [
+  {
+   "id": "AUX_01",
+   "source_ref": "1000116313",
+   "form": "annaehernd rechteckiger kompakter Baukoerper",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_02",
+   "source_ref": "1000116303",
+   "form": "breiter verzweigter T-/Kreuz-Baukoerper",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_03",
+   "source_ref": "1000116319",
+   "form": "T-foermiger aufgestaenderter Verbindungsriegel",
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_04",
+   "source_ref": "1000116323",
+   "form": "kleiner querliegender Verbindungskoerper",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_05",
+   "source_ref": "1000116325",
+   "form": "schmaler laenglicher Riegel",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_06",
+   "source_ref": "1000116326",
+   "form": "L-foermiger Baukoerper",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_07",
+   "source_ref": "1000116328",
+   "form": "kompakter suedlicher Baukoerper bei Eingang Ost",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_08",
+   "source_ref": "1000116329",
+   "form": "laengerer noerdlicher Baukoerper bei Eingang Ost",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_09",
+   "source_ref": "1000116332",
+   "form": "breiter unregelmaessiger Verbindungsbau",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_10",
+   "source_ref": "1000116333",
+   "form": "sehr schmaler aufgestaenderter Riegel",
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_11",
+   "source_ref": "1000116334",
+   "form": "breiter aufgestaenderter Riegel",
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_12",
+   "source_ref": "1000116338",
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_13",
+   "source_ref": "1000116339",
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_14",
+   "source_ref": "1000116340",
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_15",
+   "source_ref": "1000116341",
+   "rellage": "Aufgestaendert",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  },
+  {
+   "id": "AUX_16",
+   "source_ref": "1000116342",
+   "zweck": "Nur die Aussenmasse werden gebraucht; die Geometrie liegt im LoD2 vor."
+  }
+ ],
+ "regeln": [
+  "Hallen 1-11 sind vollstaendig vorhanden.",
+  "Halle 5 besteht aus ZWEI realen Features; bei beiden steht Name=5.",
+  "Halle 5 laesst sich in der Mitte teilen; BEIDE Teile haben zwei Ebenen.",
+  "Gleiche Fktkurz-Werte bedeuten NICHT dasselbe Objekt.",
+  "Ueberdachung_A und Ueberdachung_B sind zwei verschiedene Objekte.",
+  "Parkhaus_A und Parkhaus_B sind zwei verschiedene Objekte.",
+  "Halle 3, Halle 11 und Eingang Ost wurden mehrfach fotografiert, sind aber je ein Objekt.",
+  "AUX-Features nicht anhand aehnlicher Form oder gleicher Funktionsklasse zusammenlegen.",
+  "Rellage=Aufgestaendert explizit erhalten.",
+  "LoD2-zmin NICHT als Innenfussboden interpretieren.",
+  "Keine Hoehen aus Screenshots oder zmin neu ableiten.",
+  "Keine Gebaeudemasse aus dz.nrw-Screenshotmessungen uebernehmen.",
+  "Halle 1 und Halle 11 haben keine Standregistrierung, weil dort keine Messestaende liegen -- das ist erwartet und kein Datenfehler.",
+  "Von den AUX-Koerpern werden nur die Aussenmasse gebraucht -- sie muessen nicht einzeln identifiziert werden.",
+  "Eingang Ost besteht aus drei Teilen; nur einer traegt den Namen.",
+  "Der Suedost-Teil mit Halle 11 bleibt ein Provisorium -- Fotos vom Montag vor der Gamescom ersetzen die Annahmen dort."
+ ]
+}

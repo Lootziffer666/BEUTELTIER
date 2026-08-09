@@ -1,0 +1,1710 @@
+{
+ "schema": "beuteltier.boulevard.v1",
+ "quelle": {
+  "geometrie": "LoD2 Geobasis NRW (CityGML, EPSG:25832), dl-de/zero-2-0",
+  "zuordnung": "hall-registrations.json (official-footprint-containment)",
+  "namen": "OpenStreetMap (ODbL), nur Beschriftung",
+  "kacheln": [
+   "LoD2_32_357_5645_1_NW.gml",
+   "LoD2_32_357_5646_1_NW.gml",
+   "LoD2_32_358_5645_1_NW.gml",
+   "LoD2_32_358_5646_1_NW.gml"
+  ]
+ },
+ "origin": [
+  358300.0,
+  5645800.0
+ ],
+ "achse": {
+  "x0": -33.689,
+  "y0": -189.382,
+  "laengs": [
+   -0.481433063,
+   0.876482861
+  ],
+  "quer": [
+   -0.876482861,
+   -0.481433063
+  ],
+  "winkelDeg": 118.779
+ },
+ "laengeM": 285.0,
+ "breiteM": 14.91,
+ "hoeheM": 11.0,
+ "seitenQ": {
+  "ost": -7.456,
+  "west": 7.456
+ },
+ "geometrieLaengeM": 303.8,
+ "enden": {
+  "nord": [
+   "8"
+  ],
+  "sued": [
+   "5",
+   "10"
+  ]
+ },
+ "knoten": {
+  "riegel": {
+   "vonM": 377.4,
+   "bisM": 400.3,
+   "hoeheM": 4.3
+  },
+  "treppeM": 6.0,
+  "qOstM": -12.1,
+  "stufenOst": 26,
+  "piazzaVonM": 485.0,
+  "piazzaHoeheM": 3.31
+ },
+ "piazza": {
+  "hoeheM": 3.31,
+  "stufen": 20,
+  "herkunft": "gezaehlt (Halle 11 -> Piazza), Halle 11 ebenerdig wie 10.1"
+ },
+ "seiten": {
+  "ost": [
+   {
+    "von": 0.0,
+    "bis": 22.5,
+    "art": "glas",
+    "was": "Zwischenbereich, verglast",
+    "featureId": "DENW37AL100063v9",
+    "hallKey": null
+   },
+   {
+    "von": 22.5,
+    "bis": 70.75,
+    "art": "wand",
+    "was": "Congress-Centrum Nord",
+    "featureId": "DENW37AL1000668A",
+    "hallKey": null
+   },
+   {
+    "von": 70.75,
+    "bis": 99.5,
+    "art": "glas",
+    "was": "Aussenflaeche",
+    "featureId": null,
+    "hallKey": null
+   },
+   {
+    "von": 99.5,
+    "bis": 149.25,
+    "art": "wand",
+    "was": "Gebaeude 006857",
+    "featureId": "DENW37AL10006857",
+    "hallKey": null
+   },
+   {
+    "von": 149.25,
+    "bis": 174.25,
+    "art": "glas",
+    "was": "Aussenflaeche",
+    "featureId": null,
+    "hallKey": null
+   },
+   {
+    "von": 174.25,
+    "bis": 249.5,
+    "art": "wand",
+    "was": "Halle 9.1",
+    "featureId": "DENW37AL100065KW",
+    "hallKey": "9.1"
+   },
+   {
+    "von": 249.5,
+    "bis": 285.0,
+    "art": "glas",
+    "was": "Aussenflaeche",
+    "featureId": null,
+    "hallKey": null
+   }
+  ],
+  "west": [
+   {
+    "von": 0.0,
+    "bis": 29.0,
+    "art": "glas",
+    "was": "Aussenflaeche",
+    "featureId": null,
+    "hallKey": null
+   },
+   {
+    "von": 29.0,
+    "bis": 120.0,
+    "art": "wand",
+    "was": "Halle 7.1",
+    "featureId": "DENW37AL1000660R",
+    "hallKey": "7.1"
+   },
+   {
+    "von": 120.0,
+    "bis": 159.0,
+    "art": "glas",
+    "was": "Aussenflaeche",
+    "featureId": null,
+    "hallKey": null
+   },
+   {
+    "von": 159.0,
+    "bis": 249.75,
+    "art": "wand",
+    "was": "Halle 6.1",
+    "featureId": "DENW37AL100064lq",
+    "hallKey": "6.1"
+   },
+   {
+    "von": 249.75,
+    "bis": 285.0,
+    "art": "glas",
+    "was": "Aussenflaeche",
+    "featureId": null,
+    "hallKey": null
+   }
+  ]
+ },
+ "aussen": [
+  {
+   "id": "hof-8_1-7_1",
+   "seite": "west",
+   "vonM": 0.0,
+   "bisM": 29.0,
+   "qVonM": 7.456,
+   "qBisM": 127.456,
+   "breiteM": 29.0,
+   "tiefeM": 120.0,
+   "zwischen": [
+    "8.1",
+    "7.1"
+   ],
+   "endetAn": "Nachbar endet",
+   "gekappt": false,
+   "quelle": "LoD2",
+   "herkunft": "offener Wandabschnitt, Tiefe abgetastet"
+  },
+  {
+   "id": "hof-7_1-6_1",
+   "seite": "west",
+   "vonM": 120.0,
+   "bisM": 159.0,
+   "qVonM": 7.456,
+   "qBisM": 194.456,
+   "breiteM": 39.0,
+   "tiefeM": 187.0,
+   "zwischen": [
+    "7.1",
+    "6.1"
+   ],
+   "endetAn": "Gebaeude",
+   "gekappt": false,
+   "quelle": "LoD2",
+   "herkunft": "offener Wandabschnitt, Tiefe abgetastet"
+  }
+ ],
+ "plaetze": [
+  {
+   "id": "platz-45324343",
+   "name": "Claudius-Therme",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 45324343,
+   "vonM": -262.36,
+   "bisM": -169.73,
+   "qVonM": 115.83,
+   "qBisM": 201.99,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -104.94,
+     -479.22
+    ],
+    [
+     -107.69,
+     -464.79
+    ],
+    [
+     -94.72,
+     -437.08
+    ],
+    [
+     -89.08,
+     -425.56
+    ],
+    [
+     -86.71,
+     -421.64
+    ],
+    [
+     -79.83,
+     -408.38
+    ],
+    [
+     -17.34,
+     -459.75
+    ],
+    [
+     -23.81,
+     -464.2
+    ],
+    [
+     -21.82,
+     -466.56
+    ],
+    [
+     -79.96,
+     -514.14
+    ],
+    [
+     -104.94,
+     -479.22
+    ]
+   ]
+  },
+  {
+   "id": "platz-39353363",
+   "name": "P8",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 39353363,
+   "vonM": -218.21,
+   "bisM": -99.04,
+   "qVonM": -70.58,
+   "qBisM": 122.82,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": "Parkplatz; waehrend der Messe liegt darin die Freiflaeche Halle 8 Nord -- Zuschnitt siehe hallKey F8 in registered-site.json",
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -93.66,
+     -335.32
+    ],
+    [
+     -6.51,
+     -289.39
+    ],
+    [
+     43.25,
+     -263.17
+    ],
+    [
+     50.16,
+     -272.01
+    ],
+    [
+     59.78,
+     -271.76
+    ],
+    [
+     65.53,
+     -266.11
+    ],
+    [
+     93.04,
+     -273.5
+    ],
+    [
+     51.66,
+     -375.37
+    ],
+    [
+     43.57,
+     -385.36
+    ],
+    [
+     42.51,
+     -396.49
+    ],
+    [
+     27.56,
+     -394.51
+    ],
+    [
+     -93.66,
+     -335.32
+    ]
+   ],
+   "zaun": {
+    "was": "Unterfuehrung unter der Zoobruecke; zur gamescom steht hier ein Zaun",
+    "kante": [
+     [
+      27.56,
+      -394.51
+     ],
+     [
+      -93.66,
+      -335.32
+     ]
+    ],
+    "laengeM": 134.9,
+    "tiefeGemessenM": 84.41,
+    "gefaelleGemessenM": 0.48,
+    "tiefeBeiM": 73.16,
+    "messlinie": [
+     [
+      -38.18,
+      -362.41
+     ],
+     [
+      -1.14,
+      -286.56
+     ]
+    ],
+    "quelle": "vor Ort gemessen (dz.nrw), horizontal"
+   }
+  },
+  {
+   "id": "platz-915040712",
+   "name": "P20a",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 915040712,
+   "vonM": -142.84,
+   "bisM": -79.44,
+   "qVonM": -226.16,
+   "qBisM": -98.48,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": "asphalt",
+   "beleuchtet": true,
+   "polygon": [
+    [
+     121.39,
+     -267.17
+    ],
+    [
+     222.99,
+     -186.94
+    ],
+    [
+     196.43,
+     -153.61
+    ],
+    [
+     183.75,
+     -162.14
+    ],
+    [
+     179.28,
+     -169.68
+    ],
+    [
+     121.39,
+     -267.17
+    ]
+   ]
+  },
+  {
+   "id": "platz-39484847",
+   "name": "Sonderparkplatz",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 39484847,
+   "vonM": -118.69,
+   "bisM": -13.13,
+   "qVonM": -216.1,
+   "qBisM": -76.59,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     78.38,
+     -234.32
+    ],
+    [
+     102.79,
+     -249.83
+    ],
+    [
+     179.1,
+     -127.92
+    ],
+    [
+     155.27,
+     -101.0
+    ],
+    [
+     152.58,
+     -102.05
+    ],
+    [
+     124.38,
+     -157.36
+    ],
+    [
+     133.85,
+     -162.09
+    ],
+    [
+     125.87,
+     -175.42
+    ],
+    [
+     116.4,
+     -170.71
+    ],
+    [
+     108.21,
+     -186.37
+    ],
+    [
+     118.46,
+     -190.5
+    ],
+    [
+     90.88,
+     -236.6
+    ],
+    [
+     82.67,
+     -232.9
+    ],
+    [
+     78.38,
+     -234.32
+    ]
+   ]
+  },
+  {
+   "id": "platz-688396159",
+   "name": "P 7A",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 688396159,
+   "vonM": -53.36,
+   "bisM": 17.4,
+   "qVonM": 138.88,
+   "qBisM": 194.63,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -210.32,
+     -272.08
+    ],
+    [
+     -203.68,
+     -262.9
+    ],
+    [
+     -192.11,
+     -256.89
+    ],
+    [
+     -169.05,
+     -244.91
+    ],
+    [
+     -150.42,
+     -275.41
+    ],
+    [
+     -146.45,
+     -273.17
+    ],
+    [
+     -129.73,
+     -303.01
+    ],
+    [
+     -138.64,
+     -307.04
+    ],
+    [
+     -210.32,
+     -272.08
+    ]
+   ]
+  },
+  {
+   "id": "platz-39270289",
+   "name": "Messeplatz",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 39270289,
+   "vonM": -47.94,
+   "bisM": 3.54,
+   "qVonM": -227.82,
+   "qBisM": -78.68,
+   "hoeheM": 0.0,
+   "art": "platz",
+   "nutzung": null,
+   "belag": "paving_stones",
+   "beleuchtet": true,
+   "polygon": [
+    [
+     38.4,
+     -157.21
+    ],
+    [
+     39.5,
+     -158.55
+    ],
+    [
+     40.66,
+     -159.83
+    ],
+    [
+     42.34,
+     -161.47
+    ],
+    [
+     49.07,
+     -166.69
+    ],
+    [
+     56.74,
+     -170.95
+    ],
+    [
+     70.02,
+     -173.9
+    ],
+    [
+     80.28,
+     -174.5
+    ],
+    [
+     90.49,
+     -173.25
+    ],
+    [
+     100.31,
+     -170.19
+    ],
+    [
+     109.42,
+     -165.47
+    ],
+    [
+     111.6,
+     -163.8
+    ],
+    [
+     116.59,
+     -159.34
+    ],
+    [
+     119.44,
+     -156.23
+    ],
+    [
+     121.04,
+     -154.25
+    ],
+    [
+     122.27,
+     -152.62
+    ],
+    [
+     123.67,
+     -150.6
+    ],
+    [
+     126.5,
+     -145.73
+    ],
+    [
+     129.26,
+     -140.75
+    ],
+    [
+     149.17,
+     -99.89
+    ],
+    [
+     152.58,
+     -102.05
+    ],
+    [
+     155.27,
+     -101.0
+    ],
+    [
+     160.25,
+     -94.87
+    ],
+    [
+     168.63,
+     -84.5
+    ],
+    [
+     165.46,
+     -79.33
+    ],
+    [
+     157.75,
+     -80.2
+    ],
+    [
+     153.41,
+     -84.19
+    ],
+    [
+     117.72,
+     -148.72
+    ],
+    [
+     114.22,
+     -152.47
+    ],
+    [
+     109.88,
+     -155.15
+    ],
+    [
+     104.63,
+     -156.04
+    ],
+    [
+     95.13,
+     -162.46
+    ],
+    [
+     86.78,
+     -165.12
+    ],
+    [
+     77.5,
+     -165.0
+    ],
+    [
+     69.41,
+     -162.49
+    ],
+    [
+     62.74,
+     -157.78
+    ],
+    [
+     57.32,
+     -152.17
+    ],
+    [
+     54.09,
+     -146.74
+    ],
+    [
+     38.4,
+     -157.21
+    ]
+   ]
+  },
+  {
+   "id": "platz-688393766",
+   "name": "P 7B",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 688393766,
+   "vonM": 75.74,
+   "bisM": 136.42,
+   "qVonM": 212.29,
+   "qBisM": 240.33,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -310.0,
+     -185.54
+    ],
+    [
+     -296.44,
+     -178.07
+    ],
+    [
+     -285.43,
+     -172.02
+    ],
+    [
+     -256.37,
+     -225.29
+    ],
+    [
+     -261.66,
+     -227.6
+    ],
+    [
+     -288.77,
+     -204.01
+    ],
+    [
+     -310.0,
+     -185.54
+    ]
+   ]
+  },
+  {
+   "id": "platz-688414444",
+   "name": "P9",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 688414444,
+   "vonM": 160.56,
+   "bisM": 174.26,
+   "qVonM": -195.33,
+   "qBisM": -8.25,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     53.76,
+     57.13
+    ],
+    [
+     -110.34,
+     -32.67
+    ],
+    [
+     -103.76,
+     -44.68
+    ],
+    [
+     58.01,
+     44.18
+    ],
+    [
+     53.76,
+     57.13
+    ]
+   ]
+  },
+  {
+   "id": "platz-688392471",
+   "name": "P 6",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 688392471,
+   "vonM": 252.63,
+   "bisM": 272.85,
+   "qVonM": 229.01,
+   "qBisM": 258.87,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -386.43,
+     -83.64
+    ],
+    [
+     -390.98,
+     -76.62
+    ],
+    [
+     -366.81,
+     -61.06
+    ],
+    [
+     -356.06,
+     -78.16
+    ],
+    [
+     -381.53,
+     -92.21
+    ],
+    [
+     -386.43,
+     -83.64
+    ]
+   ]
+  },
+  {
+   "id": "platz-699888891",
+   "name": "P10",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 699888891,
+   "vonM": 312.98,
+   "bisM": 477.53,
+   "qVonM": -159.81,
+   "qBisM": -45.37,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -98.06,
+     132.35
+    ],
+    [
+     -47.11,
+     161.44
+    ],
+    [
+     -123.52,
+     306.1
+    ],
+    [
+     -222.08,
+     250.43
+    ],
+    [
+     -144.94,
+     107.4
+    ],
+    [
+     -98.06,
+     132.35
+    ]
+   ]
+  },
+  {
+   "id": "platz-899864213",
+   "name": "P1",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 899864213,
+   "vonM": 318.51,
+   "bisM": 469.78,
+   "qVonM": 218.17,
+   "qBisM": 288.75,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -378.25,
+     -15.25
+    ],
+    [
+     -427.53,
+     -40.1
+    ],
+    [
+     -512.94,
+     83.36
+    ],
+    [
+     -450.47,
+     115.71
+    ],
+    [
+     -378.25,
+     -15.25
+    ]
+   ]
+  },
+  {
+   "id": "platz-915868925",
+   "name": "Piazza",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 915868925,
+   "vonM": 495.31,
+   "bisM": 533.73,
+   "qVonM": 56.34,
+   "qBisM": 122.3,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -378.96,
+     186.08
+    ],
+    [
+     -321.81,
+     218.15
+    ],
+    [
+     -340.14,
+     251.23
+    ],
+    [
+     -366.93,
+     236.24
+    ],
+    [
+     -397.57,
+     219.05
+    ],
+    [
+     -378.96,
+     186.08
+    ]
+   ]
+  },
+  {
+   "id": "platz-1063920313",
+   "name": "Confex",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 1063920313,
+   "vonM": 518.98,
+   "bisM": 652.18,
+   "qVonM": 214.99,
+   "qBisM": 291.34,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -472.96,
+     161.45
+    ],
+    [
+     -539.29,
+     125.95
+    ],
+    [
+     -602.03,
+     242.52
+    ],
+    [
+     -535.71,
+     278.04
+    ],
+    [
+     -472.96,
+     161.45
+    ]
+   ]
+  },
+  {
+   "id": "platz-699889799",
+   "name": "P11",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 699889799,
+   "vonM": 549.86,
+   "bisM": 681.63,
+   "qVonM": -166.5,
+   "qBisM": -26.8,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -273.27,
+     306.38
+    ],
+    [
+     -338.36,
+     420.96
+    ],
+    [
+     -215.78,
+     487.4
+    ],
+    [
+     -153.07,
+     373.82
+    ],
+    [
+     -190.27,
+     352.95
+    ],
+    [
+     -273.27,
+     306.38
+    ]
+   ]
+  },
+  {
+   "id": "platz-915868926",
+   "name": "P2",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 915868926,
+   "vonM": 549.97,
+   "bisM": 681.91,
+   "qVonM": 105.0,
+   "qBisM": 190.38,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -464.24,
+     201.66
+    ],
+    [
+     -391.33,
+     241.64
+    ],
+    [
+     -453.99,
+     357.71
+    ],
+    [
+     -528.84,
+     316.65
+    ],
+    [
+     -464.24,
+     201.66
+    ]
+   ]
+  },
+  {
+   "id": "platz-914720480",
+   "name": "Behindertenparkplatz Süd",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 914720480,
+   "vonM": 709.67,
+   "bisM": 725.57,
+   "qVonM": -21.03,
+   "qBisM": 9.24,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": true,
+   "polygon": [
+    [
+     -383.42,
+     428.2
+    ],
+    [
+     -375.54,
+     432.84
+    ],
+    [
+     -364.36,
+     440.24
+    ],
+    [
+     -359.78,
+     444.62
+    ],
+    [
+     -358.75,
+     446.1
+    ],
+    [
+     -364.76,
+     456.59
+    ],
+    [
+     -377.35,
+     449.48
+    ],
+    [
+     -391.01,
+     441.95
+    ],
+    [
+     -383.42,
+     428.2
+    ]
+   ]
+  }
+ ],
+ "aussen9_10": {
+  "id": "aussen-9-10",
+  "was": "Aussengelaende zwischen Halle 9 und Halle 10",
+  "quelle": "vor Ort gemessen (dz.nrw); verortet ueber die amtlichen Hallenkanten",
+  "grenzeM": 300.0,
+  "versatzM": 29.95,
+  "streckeZurRampeM": 40.85,
+  "streckeZurRampeHerkunft": "vor Ort gemessen: ein Stueck auf Ebene 1 in Richtung Rampe. Nebenmessung, bestimmt die Geometrie nicht.",
+  "versatzHerkunft": "An der Ostseite sind von Sueden aus 29,95 m von Halle 10 nicht mit Ebene 1 ueberbaut. Der Wert steht als Zahl und ist nicht aus der Platte herausgeschnitten -- die Platte bleibt bewusst ein Viereck, auf dem die Halle steht.",
+  "form": {
+   "ebene1": {
+    "traegt": "10.2",
+    "offenNach": "sued",
+    "streifenZumBoulevardM": 20.0
+   },
+   "ebene0": {
+    "traegt": "9.1",
+    "offenNach": "west",
+    "streifenZumBoulevardM": 0.0
+   }
+  },
+  "ueberlappM": 2.0,
+  "ebene1": {
+   "id": "aussen-9-10:ebene1",
+   "vonM": 300.0,
+   "bisM": 488.1,
+   "qVonM": -194.56,
+   "qBisM": -16.46,
+   "hoeheM": 7.45,
+   "polygon": [
+    [
+     -165.45,
+     80.52
+    ],
+    [
+     -256.97,
+     247.14
+    ],
+    [
+     -99.11,
+     333.85
+    ],
+    [
+     -7.59,
+     167.23
+    ]
+   ],
+   "herkunft": "188,10 x 178,93 m gemessen; Hoehe = Fussboden Halle 10.2"
+  },
+  "schraege": {
+   "id": "aussen-9-10:schraege",
+   "vonM": 215.41,
+   "bisM": 300.0,
+   "qVonM": -194.56,
+   "qBisM": -16.46,
+   "obenM": 7.45,
+   "untenM": 0.0,
+   "laufM": 84.59,
+   "hoeheGemessenM": 8.33,
+   "steigungProzent": 8.81,
+   "polygon": [
+    [
+     -124.72,
+     6.38
+    ],
+    [
+     -165.45,
+     80.52
+    ],
+    [
+     -7.59,
+     167.23
+    ],
+    [
+     33.13,
+     93.09
+    ]
+   ],
+   "dreiecke": [
+    [
+     [
+      -124.72,
+      6.38,
+      0.0
+     ],
+     [
+      -165.45,
+      80.52,
+      7.45
+     ],
+     [
+      -7.59,
+      167.23,
+      7.45
+     ]
+    ],
+    [
+     [
+      -124.72,
+      6.38,
+      0.0
+     ],
+     [
+      -7.59,
+      167.23,
+      7.45
+     ],
+     [
+      33.13,
+      93.09,
+      0.0
+     ]
+    ]
+   ],
+   "herkunft": "Grundriss 84,59 m gemessen; Hoehe aus den Hallenboeden. Vor Ort wurden 8,33 m gemessen -- die amtlichen Boeden geben 7,45 m, und die Fuge am Hallenboden waere sonst sichtbar."
+  },
+  "ebene0": {
+   "id": "aussen-9-10:ebene0",
+   "vonM": 179.8,
+   "bisM": 300.0,
+   "qVonM": -220.46,
+   "qBisM": -7.456,
+   "hoeheM": 0.0,
+   "polygon": [
+    [
+     -114.51,
+     -30.92
+    ],
+    [
+     -173.34,
+     76.19
+    ],
+    [
+     15.11,
+     179.7
+    ],
+    [
+     73.94,
+     72.59
+    ]
+   ],
+   "herkunft": "213,00 x 120,18 m gemessen; Hoehe = Fussboden Halle 9.1"
+  }
+ },
+ "nordknoten": {
+  "id": "nordknoten",
+  "featureId": "DENW37AL100063v9",
+  "was": "Knick am Nordende -- Uebergang zu Congress-Centrum Nord und Eingang Nord",
+  "vonM": -99.62,
+  "bisM": 22.5,
+  "qVonM": -166.33,
+  "qBisM": -7.46,
+  "flaecheSqm": 4826,
+  "bodenM": 0.0,
+  "deckeM": 11.0,
+  "bodenHerkunft": "ebenerdig und stufenlos, beobachtet am Referenzfoto des Knicks",
+  "deckeHerkunft": "Vorgabe wie im Gang; 19,4 m ist die amtliche Dachkante",
+  "anschlussM": [
+   -0.02,
+   22.5
+  ],
+  "quelle": "LoD2 Geobasis NRW (Umriss), Referenzfoto (Ebene)",
+  "polygon": [
+   [
+    123.6,
+    -150.66
+   ],
+   [
+    122.41,
+    -152.38
+   ],
+   [
+    121.16,
+    -154.05
+   ],
+   [
+    119.86,
+    -155.68
+   ],
+   [
+    118.49,
+    -157.26
+   ],
+   [
+    117.07,
+    -158.79
+   ],
+   [
+    115.66,
+    -160.2
+   ],
+   [
+    114.21,
+    -161.55
+   ],
+   [
+    112.71,
+    -162.86
+   ],
+   [
+    111.17,
+    -164.11
+   ],
+   [
+    109.58,
+    -165.31
+   ],
+   [
+    107.39,
+    -166.66
+   ],
+   [
+    105.15,
+    -167.91
+   ],
+   [
+    102.85,
+    -169.06
+   ],
+   [
+    100.5,
+    -170.1
+   ],
+   [
+    98.11,
+    -171.04
+   ],
+   [
+    95.67,
+    -171.87
+   ],
+   [
+    93.21,
+    -172.58
+   ],
+   [
+    90.88,
+    -173.15
+   ],
+   [
+    88.53,
+    -173.62
+   ],
+   [
+    86.17,
+    -173.99
+   ],
+   [
+    83.79,
+    -174.26
+   ],
+   [
+    81.4,
+    -174.44
+   ],
+   [
+    78.96,
+    -174.51
+   ],
+   [
+    76.51,
+    -174.48
+   ],
+   [
+    74.06,
+    -174.35
+   ],
+   [
+    71.63,
+    -174.11
+   ],
+   [
+    69.2,
+    -173.76
+   ],
+   [
+    66.8,
+    -173.31
+   ],
+   [
+    64.53,
+    -172.79
+   ],
+   [
+    62.29,
+    -172.17
+   ],
+   [
+    60.08,
+    -171.47
+   ],
+   [
+    57.9,
+    -170.67
+   ],
+   [
+    55.75,
+    -169.78
+   ],
+   [
+    53.64,
+    -168.81
+   ],
+   [
+    51.57,
+    -167.75
+   ],
+   [
+    49.55,
+    -166.61
+   ],
+   [
+    48.12,
+    -165.74
+   ],
+   [
+    46.73,
+    -164.83
+   ],
+   [
+    45.36,
+    -163.87
+   ],
+   [
+    44.02,
+    -162.88
+   ],
+   [
+    42.66,
+    -161.73
+   ],
+   [
+    41.35,
+    -160.52
+   ],
+   [
+    40.12,
+    -159.23
+   ],
+   [
+    38.95,
+    -157.88
+   ],
+   [
+    37.86,
+    -156.48
+   ],
+   [
+    36.84,
+    -155.01
+   ],
+   [
+    35.91,
+    -153.5
+   ],
+   [
+    35.49,
+    -152.75
+   ],
+   [
+    37.37,
+    -151.72
+   ],
+   [
+    30.66,
+    -139.5
+   ],
+   [
+    29.19,
+    -140.27
+   ],
+   [
+    29.53,
+    -140.88
+   ],
+   [
+    -37.96,
+    -166.07
+   ],
+   [
+    -37.98,
+    -166.07
+   ],
+   [
+    -27.14,
+    -185.8
+   ],
+   [
+    19.37,
+    -160.26
+   ],
+   [
+    19.64,
+    -160.75
+   ],
+   [
+    25.79,
+    -157.41
+   ],
+   [
+    69.11,
+    -236.36
+   ],
+   [
+    68.84,
+    -236.51
+   ],
+   [
+    78.05,
+    -241.66
+   ],
+   [
+    130.96,
+    -146.54
+   ],
+   [
+    127.4,
+    -144.56
+   ],
+   [
+    129.42,
+    -140.84
+   ],
+   [
+    129.25,
+    -140.75
+   ],
+   [
+    124.72,
+    -148.9
+   ]
+  ]
+ },
+ "durchgaenge": [
+  {
+   "id": "tor-ost-9_1-1",
+   "seite": "ost",
+   "hallKey": "9.1",
+   "featureId": "DENW37AL100065KW",
+   "abschnittVonM": 174.25,
+   "abschnittBisM": 249.5,
+   "stationM": 194.56,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  },
+  {
+   "id": "tor-ost-9_1-2",
+   "seite": "ost",
+   "hallKey": "9.1",
+   "featureId": "DENW37AL100065KW",
+   "abschnittVonM": 174.25,
+   "abschnittBisM": 249.5,
+   "stationM": 229.19,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  },
+  {
+   "id": "tor-west-7_1-1",
+   "seite": "west",
+   "hallKey": "7.1",
+   "featureId": "DENW37AL1000660R",
+   "abschnittVonM": 29.0,
+   "abschnittBisM": 120.0,
+   "stationM": 53.25,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  },
+  {
+   "id": "tor-west-7_1-2",
+   "seite": "west",
+   "hallKey": "7.1",
+   "featureId": "DENW37AL1000660R",
+   "abschnittVonM": 29.0,
+   "abschnittBisM": 120.0,
+   "stationM": 95.75,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  },
+  {
+   "id": "tor-west-6_1-1",
+   "seite": "west",
+   "hallKey": "6.1",
+   "featureId": "DENW37AL100064lq",
+   "abschnittVonM": 159.0,
+   "abschnittBisM": 249.75,
+   "stationM": 183.19,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  },
+  {
+   "id": "tor-west-6_1-2",
+   "seite": "west",
+   "hallKey": "6.1",
+   "featureId": "DENW37AL100064lq",
+   "abschnittVonM": 159.0,
+   "abschnittBisM": 249.75,
+   "stationM": 225.56,
+   "breiteM": 6.0,
+   "hoeheM": 4.0,
+   "gemessen": false,
+   "herkunft": "abgeleitet aus der gemessenen Fassadenlaenge; Anzahl und Groesse sind Vorgabe"
+  },
+  {
+   "id": "tor-ost-nordknoten",
+   "seite": "ost",
+   "hallKey": null,
+   "featureId": "DENW37AL100063v9",
+   "abschnittVonM": -0.02,
+   "abschnittBisM": 22.5,
+   "stationM": 11.24,
+   "breiteM": 22.52,
+   "hoeheM": 4.0,
+   "gemessen": true,
+   "herkunft": "Anschlussfuge am amtlichen Umriss gemessen; die lichte Hoehe ist Vorgabe"
+  }
+ ],
+ "sued": {
+  "vonM": 304.47,
+  "bisM": 377.65,
+  "laengeGerechnetM": 73.18,
+  "laengeGemessenM": 183.81,
+  "laengeHerkunft": "gerechnet als kleinste gemeinsame Ausdehnung von Halle 5 und Halle 10; vor Ort ab Treppenkopf 183,81 m gemessen. Die Messung endet bei Station 487,6, Halle 10.2 amtlich bei 486,95 -- der gerechnete Wert ist zu kurz.",
+  "seitenQ": {
+   "ost": -36.46,
+   "west": 8.803
+  },
+  "breiteM": 45.26,
+  "obenM": 7.6,
+  "untenM": 0.0,
+  "kanteM": 311.2,
+  "seiten": {
+   "ost": [
+    {
+     "von": 304.47,
+     "bis": 377.47,
+     "art": "wand",
+     "was": "Halle 10.2",
+     "featureId": "DENW37AL100064Zs",
+     "hallKey": "10.2"
+    }
+   ],
+   "west": [
+    {
+     "von": 304.47,
+     "bis": 377.47,
+     "art": "wand",
+     "was": "Halle 5.2",
+     "featureId": "DENW37AL1000644Q",
+     "hallKey": "5.2"
+    }
+   ]
+  }
+ },
+ "treppe": {
+  "vonM": 285.0,
+  "bisM": 303.8,
+  "untenM": 0.0,
+  "obenM": 7.6
+ },
+ "hallen": {
+  "9.1": {
+   "featureId": "DENW37AL100065KW",
+   "vonM": 174.27,
+   "bisM": 249.56,
+   "amGangM": 75.28,
+   "tiefeM": 187.9,
+   "abstandM": 0.0,
+   "flaecheSqm": 14140
+  },
+  "6.1": {
+   "featureId": "DENW37AL100064lq",
+   "vonM": 158.98,
+   "bisM": 322.77,
+   "amGangM": 163.79,
+   "tiefeM": 247.63,
+   "abstandM": 0.0,
+   "flaecheSqm": 22918
+  },
+  "8.1": {
+   "featureId": "DENW37AL100063oN",
+   "vonM": -91.09,
+   "bisM": -0.0,
+   "amGangM": 91.09,
+   "tiefeM": 188.43,
+   "abstandM": 67.98,
+   "flaecheSqm": 17153
+  }
+ },
+ "hinweis": "Stationen in Metern ab der Stirnseite von Halle 8 (Norden), Richtung Sueden. Laenge und Hoehe sind Vorgabe, alles andere gemessen."
+}
