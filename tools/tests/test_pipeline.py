@@ -155,7 +155,17 @@ class TestHallRegistrations:
         constrained = [item["constraint"] for item in registrations if item["constraint"]]
         assert all(item["coverageAfterPct"] >= item["coverageBeforePct"]
                    for item in constrained)
-        assert all(item["searchRadiusM"] == 30 for item in constrained)
+        # Zwei Suchweiten, und sie unterscheiden zwei Faelle: Hallen werden in
+        # ihr Gebaeude gelegt (30 m), Freiflaechen zwischen die Gebaeude (20 m,
+        # mit umgekehrtem Ziel). Wer das zusammenzieht, verliert die
+        # Unterscheidung.
+        hallen = [item for item in constrained if not item.get("frei")]
+        freie = [item for item in constrained if item.get("frei")]
+        assert all(item["searchRadiusM"] == 30 for item in hallen)
+        assert all(item["searchRadiusM"] == 20 for item in freie)
+        assert len(freie) >= 2, "die Freiflaechen brauchen eine eigene Passung"
+        # Und die Winkelkorrektur gilt fuer alle, auch fuer die ohne Zielfeature.
+        assert all(abs(item["rotationDeg"]) > 1.0 for item in constrained)
 
     def test_draft_transform_erhaelt_relative_distanzen(self):
         from build_hall_registrations import draft_transform, transform_point
