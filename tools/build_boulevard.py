@@ -217,6 +217,30 @@ P8_WAY = 39353363
 P8_TIEFE_GEMESSEN_M = 84.41
 P8_GEFAELLE_GEMESSEN_M = 0.48
 
+# Der zur Messe abgesperrte Bereich hinter Halle 8.
+#
+# Vor Ort als Dreieck gemessen: die lange Seite liegt an der Nordwand von
+# Halle 8, die beiden anderen sind 104 m (West) und 118 m (Ost). Damit ist die
+# Figur vollstaendig bestimmt -- drei Laengen an einer liegenden Kante lassen
+# nur noch die Frage offen, auf welcher Seite die Spitze liegt, und die ist
+# draussen.
+#
+# Zwei Zahlen gehen nicht auf und stehen deshalb hier statt in einem Kommentar
+# im Code:
+#
+# 1. Die Nordwand ist im amtlichen Umriss 188,43 m lang, gemessen sind 175 m --
+#    13,4 m Unterschied. Die Grundkante ist also kuerzer als die Wand. An
+#    welchem Ende sie beginnt, ist nicht gemessen; hier liegt sie mittig, und
+#    das ist eine Setzung, keine Messung.
+# 2. Das Dreieck ist senkrecht zur Wand 68,1 m tief. Die frueher gemessenen
+#    84,41 m bis zur Unterfuehrung laufen ab etwa 16 m noerdlich der Wand, also
+#    rund 100 m ab der Wand. Der Zaun stuende damit 32 m vor der Unterfuehrung
+#    und nicht an ihr.
+HALLE8_BASIS_GEMESSEN_M = 175.0
+HALLE8_WEST_GEMESSEN_M = 104.0
+HALLE8_OST_GEMESSEN_M = 118.0
+HALLE8_FEATURE = "8.1"
+
 # Gebaeude, die den Gang zwar begrenzen, dort aber verglast sind.
 # Beobachtung vor Ort, nicht aus der Geometrie ableitbar: ein Grundriss sagt,
 # **dass** dort etwas steht, nicht **woraus** die Wand ist.
@@ -265,6 +289,36 @@ class Rahmen:
     def wandlinie(self, seite: str) -> float:
         """Das Quermass der Wandlinie einer Seite, relativ zur Achse."""
         return (self.wand_west if seite == "west" else self.wand_ost) - self.achse_q
+
+
+def dreieck_aus_kanten(a: tuple[float, float], b: tuple[float, float],
+                       ac: float, bc: float,
+                       weg_von: tuple[float, float]) -> tuple[float, float]:
+    """Die dritte Ecke aus einer liegenden Grundkante und zwei Laengen.
+
+    Anders als beim Viereck ist hier nichts zu waehlen: drei Laengen legen ein
+    Dreieck bis auf die Spiegelung fest. Uebrig bleibt die Frage, auf welcher
+    Seite der Grundkante die Spitze liegt, und die beantwortet `weg_von` --
+    genommen wird der Schnittpunkt, der weiter davon entfernt ist. Fuer die
+    Flaeche hinter einer Halle ist das die Hallenmitte: die Spitze liegt
+    draussen, nicht im Gebaeude.
+    """
+    ax, ay = a
+    bx, by = b
+    basis = math.hypot(bx - ax, by - ay)
+    if basis < 1e-9:
+        raise ValueError("Grundkante hat keine Laenge")
+    if basis > ac + bc or basis < abs(ac - bc):
+        raise ValueError(
+            f"Kanten passen nicht zusammen: Basis={basis:.2f}, ac={ac}, bc={bc}")
+    ex, ey = (bx - ax) / basis, (by - ay) / basis
+    lot = (ac * ac - bc * bc + basis * basis) / (2 * basis)
+    hoehe = math.sqrt(max(0.0, ac * ac - lot * lot))
+    px, py = ax + ex * lot, ay + ey * lot
+    kandidaten = [(px - ey * hoehe, py + ex * hoehe),
+                  (px + ey * hoehe, py - ex * hoehe)]
+    return max(kandidaten,
+               key=lambda c: math.dist(c, weg_von))
 
 
 def viereck_aus_kanten(a: tuple[float, float], b: tuple[float, float],
@@ -599,6 +653,9 @@ def main() -> int:
         # Das Aussengelaende zwischen Halle 9 und Halle 10: zwei Ebenen und
         # eine Rampe, zusammen eine begehbare Oberflaeche.
         "aussen9_10": aussen_neun_zehn(rahmen, hallenhoehen()),
+        # Der abgesperrte Bereich hinter Halle 8 -- ein Dreieck an ihrer
+        # Nordwand, drei Seiten vor Ort gemessen.
+        "aussenHalle8": aussen_halle_acht(gebaeude),
         # Der Knick am Nordende -- dort geht es zum Eingang Nord weiter.
         "nordknoten": knick,
         # Die Zugaenge von den Hallen in den Gang. Abgeleitet, nicht gemessen
@@ -1219,6 +1276,91 @@ def zaun_hinter_halle_acht(ring: list[tuple[float, float]]) -> dict:
         "messlinie": [[round(fuss[0], 2), round(fuss[1], 2)],
                       [round(kopf[0], 2), round(kopf[1], 2)]],
         "quelle": "vor Ort gemessen (dz.nrw), horizontal",
+    }
+
+
+def nordwand(bau: Gebaeude) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Die Nordwand eines Baukoerpers: die laengste Kante noerdlich der Mitte.
+
+    Zurueck kommt sie von West nach Ost, damit "links" und "rechts" in den
+    Messungen eine feste Bedeutung haben.
+    """
+    ecken = bau.poly[:-1] if bau.poly[0] == bau.poly[-1] else list(bau.poly)
+    mitte_y = sum(p[1] for p in ecken) / len(ecken)
+    beste = None
+    for i in range(len(ecken)):
+        a, b = ecken[i], ecken[(i + 1) % len(ecken)]
+        # Kleineres y ist weiter noerdlich -- die Gelaendemeter sind gespiegelt.
+        if (a[1] + b[1]) / 2 >= mitte_y:
+            continue
+        laenge = math.dist(a, b)
+        if beste is None or laenge > beste[0]:
+            beste = (laenge, a, b)
+    if beste is None:
+        raise ValueError(f"{bau.id} hat keine Nordkante")
+    _laenge, a, b = beste
+    return (a, b) if a[0] <= b[0] else (b, a)
+
+
+def aussen_halle_acht(gebaeude: dict[str, Gebaeude]) -> dict | None:
+    """Der zur Messe abgesperrte Bereich hinter Halle 8.
+
+    Gemessen sind die drei Seiten; verortet wird ueber die Nordwand von Halle 8,
+    auf der die lange Seite liegt. Die Grundkante ist kuerzer als die Wand und
+    wird mittig gelegt -- siehe die Notiz bei HALLE8_BASIS_GEMESSEN_M, warum das
+    eine Setzung ist.
+    """
+    bau = next((b for b in gebaeude.values() if b.hall_key == HALLE8_FEATURE), None)
+    if bau is None:
+        return None
+    west, ost = nordwand(bau)
+    wand = math.dist(west, ost)
+    ueberhang = wand - HALLE8_BASIS_GEMESSEN_M
+    ex, ey = (ost[0] - west[0]) / wand, (ost[1] - west[1]) / wand
+    a = (west[0] + ex * ueberhang / 2, west[1] + ey * ueberhang / 2)
+    b = (a[0] + ex * HALLE8_BASIS_GEMESSEN_M, a[1] + ey * HALLE8_BASIS_GEMESSEN_M)
+
+    ecken = bau.poly[:-1] if bau.poly[0] == bau.poly[-1] else list(bau.poly)
+    hallenmitte = (sum(p[0] for p in ecken) / len(ecken),
+                   sum(p[1] for p in ecken) / len(ecken))
+    spitze = dreieck_aus_kanten(a, b, HALLE8_WEST_GEMESSEN_M,
+                                HALLE8_OST_GEMESSEN_M, hallenmitte)
+
+    # Hoehe ueber der Grundkante -- nicht gemessen, sondern das, was die drei
+    # Laengen ergeben. Steht in der Datei, damit der Widerspruch zu den 84,41 m
+    # nachrechenbar bleibt und nicht nur im Kommentar behauptet wird.
+    halb = (HALLE8_BASIS_GEMESSEN_M + HALLE8_WEST_GEMESSEN_M
+            + HALLE8_OST_GEMESSEN_M) / 2
+    flaeche = math.sqrt(max(0.0, halb * (halb - HALLE8_BASIS_GEMESSEN_M)
+                            * (halb - HALLE8_WEST_GEMESSEN_M)
+                            * (halb - HALLE8_OST_GEMESSEN_M)))
+    tiefe = 2 * flaeche / HALLE8_BASIS_GEMESSEN_M
+
+    ring = [a, b, spitze]
+    return {
+        "id": "aussen-halle-8",
+        "was": "Aussenbereich hinter Halle 8 -- zur gamescom abgesperrt",
+        "featureId": bau.id,
+        "basisM": HALLE8_BASIS_GEMESSEN_M,
+        "westM": HALLE8_WEST_GEMESSEN_M,
+        "ostM": HALLE8_OST_GEMESSEN_M,
+        "wandM": round(wand, 2),
+        "ueberhangM": round(ueberhang, 2),
+        "tiefeM": round(tiefe, 2),
+        "flaecheSqm": round(flaeche),
+        "hoeheM": 0.0,
+        "grundkante": [[round(a[0], 2), round(a[1], 2)],
+                       [round(b[0], 2), round(b[1], 2)]],
+        "spitze": [round(spitze[0], 2), round(spitze[1], 2)],
+        "polygon": [[round(x, 2), round(y, 2)] for x, y in ring],
+        "herkunft": ("Drei Seiten vor Ort gemessen (175 / 104 / 118 m), die "
+                     "lange an der Nordwand von Halle 8. Die Lage der "
+                     "Grundkante auf der Wand ist gesetzt, nicht gemessen: "
+                     "sie liegt mittig, weil die Wand 13,4 m laenger ist."),
+        "offen": ("Senkrecht zur Wand ist das Dreieck 68,1 m tief. Die frueher "
+                  "gemessenen 84,41 m bis zur Unterfuehrung beginnen rund 16 m "
+                  "noerdlich der Wand, also etwa 100 m ab ihr -- 32 m mehr, als "
+                  "das Dreieck reicht."),
     }
 
 

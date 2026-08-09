@@ -1252,6 +1252,49 @@
    "herkunft": "213,00 x 120,18 m gemessen; Hoehe = Fussboden Halle 9.1"
   }
  },
+ "aussenHalle8": {
+  "id": "aussen-halle-8",
+  "was": "Aussenbereich hinter Halle 8 -- zur gamescom abgesperrt",
+  "featureId": "DENW37AL100063oN",
+  "basisM": 175.0,
+  "westM": 104.0,
+  "ostM": 118.0,
+  "wandM": 188.43,
+  "ueberhangM": 13.43,
+  "tiefeM": 68.08,
+  "flaecheSqm": 5957,
+  "hoeheM": 0.0,
+  "grundkante": [
+   [
+    -96.1,
+    -327.49
+   ],
+   [
+    57.32,
+    -243.31
+   ]
+  ],
+  "spitze": [
+   5.57,
+   -349.36
+  ],
+  "polygon": [
+   [
+    -96.1,
+    -327.49
+   ],
+   [
+    57.32,
+    -243.31
+   ],
+   [
+    5.57,
+    -349.36
+   ]
+  ],
+  "herkunft": "Drei Seiten vor Ort gemessen (175 / 104 / 118 m), die lange an der Nordwand von Halle 8. Die Lage der Grundkante auf der Wand ist gesetzt, nicht gemessen: sie liegt mittig, weil die Wand 13,4 m laenger ist.",
+  "offen": "Senkrecht zur Wand ist das Dreieck 68,1 m tief. Die frueher gemessenen 84,41 m bis zur Unterfuehrung beginnen rund 16 m noerdlich der Wand, also etwa 100 m ab ihr -- 32 m mehr, als das Dreieck reicht."
+ },
  "nordknoten": {
   "id": "nordknoten",
   "featureId": "DENW37AL100063v9",
