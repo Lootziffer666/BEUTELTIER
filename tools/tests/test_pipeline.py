@@ -165,13 +165,21 @@ class TestHallRegistrations:
         assert all(item["searchRadiusM"] == 20 for item in freie)
         assert len(freie) >= 2, "die Freiflaechen brauchen eine eigene Passung"
         # Und die Winkelkorrektur gilt fuer alle, auch fuer die ohne Zielfeature.
-        # Alle drehen um denselben Winkel: er ist eine Eigenschaft des ganzen
-        # Hallenplans. Mit freier Suche je Halle drifteten Halle 2 und 4 auf
-        # 0,96 Grad und Halle 10.2 auf 4,11 Grad -- eine knappe Passung laesst
-        # sich durch Kippen "verbessern", ohne dass die Halle richtiger steht.
-        winkel = {item["rotationDeg"] for item in constrained}
-        assert len(winkel) == 1, winkel
-        assert abs(next(iter(winkel))) > 1.0
+        # Jede Halle sucht ihren Winkel selbst, aber nur in einem schmalen Band
+        # um den erwarteten. Frei drifteten sie auf 0,96 und 4,11 Grad -- eine
+        # knappe Passung laesst sich durch Kippen "verbessern", ohne dass die
+        # Halle richtiger steht. Was innerhalb des Bandes bleibt, ist erlaubt;
+        # was die Schwelle reisst, wird gemeldet.
+        from build_hall_registrations import DREHUNG_BAND_GRAD, DREHUNG_SCHWELLE_GRAD
+
+        for item in constrained:
+            assert abs(item["drehungAbweichungDeg"]) <= DREHUNG_BAND_GRAD + 1e-6, item
+        auffaellig = [r for r in registrations
+                      if abs((r["constraint"] or {}).get("drehungAbweichungDeg", 0.0))
+                      > DREHUNG_SCHWELLE_GRAD]
+        # Wer abweicht, muss auch gemeldet sein -- sonst ist die Abweichung
+        # wieder stillschweigend akzeptiert.
+        assert all(r["befund"]["reviewRequired"] for r in auffaellig)
 
     def test_draft_transform_erhaelt_relative_distanzen(self):
         from build_hall_registrations import draft_transform, transform_point
@@ -1631,11 +1639,22 @@ class TestHalleneinpassung:
             if (r["constraint"] or {}).get("frei"):
                 assert r["constraint"]["scale"] == 1.0
 
-    def test_wer_verkleinert_wurde_passt_danach(self):
+    def test_wer_mehr_braucht_wird_gemeldet_statt_gequetscht(self):
+        """Der Massstab ist kein Universalheilmittel.
+
+        Eine Halle, die mehr als die erlaubten fuenf Prozent schrumpfen
+        muesste, wird **nicht** verkleinert. Sie bekommt einen Befund -- der
+        Fehler steht dann in den Daten statt in der Geometrie.
+        """
+        from build_hall_registrations import SKALA_GRENZE
+
         for r in self._reg()["registrations"]:
-            skala = (r["constraint"] or {}).get("scale", 1.0)
-            if skala < 1.0:
-                assert r["befund"]["outsideCornerCount"] == 0, r["hallKey"]
+            c = r["constraint"] or {}
+            noetig = c.get("benoetigteSkala", 1.0)
+            if noetig < SKALA_GRENZE:
+                assert c.get("scale", 1.0) == 1.0, r["hallKey"]
+                assert r["befund"]["reviewRequired"], r["hallKey"]
+                assert "Datenkonflikt" in (r["befund"]["reviewReason"] or ""), r["hallKey"]
 
     def test_staende_folgen_ihrer_halle(self):
         """Dieselbe Abbildung fuer Umriss und Staende.

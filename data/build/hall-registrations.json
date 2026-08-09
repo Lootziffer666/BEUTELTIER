@@ -49,8 +49,10 @@
         "coverageAfterPct": 100.0,
         "samples": 131,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": 0.0,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 1.0,
         "shiftM": 13.502
       },
       "befund": {
@@ -59,7 +61,13 @@
         "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.209,
+        "rotationDeviationDeg": 0.0,
+        "appliedScale": 1.0,
+        "requiredScale": 1.0,
         "geometryMismatch": false,
+        "reviewRequired": false,
         "reviewReason": null
       },
       "notes": [
@@ -74,18 +82,18 @@
         "DENW37AL100064Zs"
       ],
       "transform": {
-        "rotationDeg": -28.8036,
+        "rotationDeg": -29.5786,
         "scale": 1.0,
         "translation": [
-          -1150.993,
-          232.476
+          -1211.959,
+          218.75
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8271173023,
-          0.4547792632,
-          0.4547792632,
-          -0.8271173023
+          0.8696793564,
+          0.4936170754,
+          0.4936170754,
+          -0.8696793564
         ]
       },
       "floorZ": 0.49,
@@ -97,31 +105,39 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -10.0,
-          8.5
+          -10.5,
+          9.0
         ],
-        "rotationDeg": 2.209,
-        "scale": 0.9439,
+        "rotationDeg": 1.434,
+        "scale": 1.0,
         "pivot": [
           931.969,
           544.025
         ],
         "coverageBeforePct": 81.82,
-        "coverageAfterPct": 100.0,
+        "coverageAfterPct": 93.82,
         "samples": 275,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
-        "shiftM": 13.124
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": -0.775,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 0.9432,
+        "shiftM": 13.829
       },
       "befund": {
         "transformVersion": 3,
         "targetFeatureCount": 1,
-        "fitPercent": 100.0,
-        "outsideCornerCount": 0,
-        "maxOutsideDistanceM": 0.0,
-        "geometryMismatch": false,
-        "reviewReason": null
+        "fitPercent": 93.82,
+        "outsideCornerCount": 5,
+        "maxOutsideDistanceM": 3.02,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 1.434,
+        "rotationDeviationDeg": -0.775,
+        "appliedScale": 1.0,
+        "requiredScale": 0.9432,
+        "geometryMismatch": true,
+        "reviewRequired": true,
+        "reviewReason": "Winkel weicht um -0.78 Grad vom erwarteten ab -- Bauungenauigkeit oder falsches Zielfeature; muesste auf 0.9432 verkleinert werden, erlaubt sind 0.95 -- Datenkonflikt: fehlendes Zielfeature, Auskragung oder ein anderer baulicher Zustand als im Plan; Ecke liegt 3.02 m ausserhalb"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -135,18 +151,18 @@
         "DENW37AL100064Zs"
       ],
       "transform": {
-        "rotationDeg": -28.8036,
+        "rotationDeg": -28.7036,
         "scale": 1.0,
         "translation": [
-          -1214.801,
-          236.443
+          -1214.739,
+          238.32
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8762764089,
-          0.4818087331,
-          0.4818087331,
-          -0.8762764089
+          0.8771159887,
+          0.4802786092,
+          0.4802786092,
+          -0.8771159887
         ]
       },
       "floorZ": 7.94,
@@ -161,28 +177,36 @@
           -11.75,
           4.5
         ],
-        "rotationDeg": 2.209,
+        "rotationDeg": 2.309,
         "scale": 1.0,
         "pivot": [
           925.904,
           548.676
         ],
         "coverageBeforePct": 71.87,
-        "coverageAfterPct": 77.68,
+        "coverageAfterPct": 77.98,
         "samples": 327,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": 0.1,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 0.7054,
         "shiftM": 12.582
       },
       "befund": {
         "transformVersion": 3,
         "targetFeatureCount": 1,
-        "fitPercent": 77.68,
+        "fitPercent": 77.98,
         "outsideCornerCount": 12,
-        "maxOutsideDistanceM": 24.62,
+        "maxOutsideDistanceM": 24.61,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.309,
+        "rotationDeviationDeg": 0.1,
+        "appliedScale": 1.0,
+        "requiredScale": 0.7054,
         "geometryMismatch": true,
-        "reviewReason": "Planflaeche passt nicht vollstaendig in den amtlichen Umriss -- moeglicherweise fehlt ein Zielkoerper; Ecke liegt 24.62 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
+        "reviewRequired": true,
+        "reviewReason": "muesste auf 0.7054 verkleinert werden, erlaubt sind 0.95 -- Datenkonflikt: fehlendes Zielfeature, Auskragung oder ein anderer baulicher Zustand als im Plan; Ecke liegt 24.61 m ausserhalb"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -196,18 +220,18 @@
         "DENW37AL100064wf"
       ],
       "transform": {
-        "rotationDeg": -28.8036,
+        "rotationDeg": -29.6036,
         "scale": 1.0,
         "translation": [
-          -1211.316,
-          232.966
+          -1210.001,
+          221.084
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8762764089,
-          0.4818087331,
-          0.4818087331,
-          -0.8762764089
+          0.8694638925,
+          0.4939964976,
+          0.4939964976,
+          -0.8694638925
         ]
       },
       "floorZ": 0.49,
@@ -219,10 +243,10 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -1.5,
-          0.0
+          -1.75,
+          1.5
         ],
-        "rotationDeg": 2.209,
+        "rotationDeg": 1.409,
         "scale": 1.0,
         "pivot": [
           680.816,
@@ -232,9 +256,11 @@
         "coverageAfterPct": 100.0,
         "samples": 132,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
-        "shiftM": 1.5
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": -0.8,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 1.0,
+        "shiftM": 2.305
       },
       "befund": {
         "transformVersion": 3,
@@ -242,8 +268,14 @@
         "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
-        "geometryMismatch": false,
-        "reviewReason": null
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 1.409,
+        "rotationDeviationDeg": -0.8,
+        "appliedScale": 1.0,
+        "requiredScale": 1.0,
+        "geometryMismatch": true,
+        "reviewRequired": true,
+        "reviewReason": "Winkel weicht um -0.80 Grad vom erwarteten ab -- Bauungenauigkeit oder falsches Zielfeature"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -257,18 +289,18 @@
         "DENW37AL100064wf"
       ],
       "transform": {
-        "rotationDeg": -28.8036,
+        "rotationDeg": -29.6036,
         "scale": 1.0,
         "translation": [
-          -1201.991,
-          239.754
+          -1201.827,
+          229.138
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8762764089,
-          0.4818087331,
-          0.4818087331,
-          -0.8762764089
+          0.8694638925,
+          0.4939964976,
+          0.4939964976,
+          -0.8694638925
         ]
       },
       "floorZ": 8.24,
@@ -280,10 +312,10 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          9.75,
+          9.25,
           -1.5
         ],
-        "rotationDeg": 2.209,
+        "rotationDeg": 1.409,
         "scale": 1.0,
         "pivot": [
           668.321,
@@ -293,9 +325,11 @@
         "coverageAfterPct": 100.0,
         "samples": 130,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
-        "shiftM": 9.865
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": -0.8,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 1.0,
+        "shiftM": 9.371
       },
       "befund": {
         "transformVersion": 3,
@@ -303,8 +337,14 @@
         "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
-        "geometryMismatch": false,
-        "reviewReason": null
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 1.409,
+        "rotationDeviationDeg": -0.8,
+        "appliedScale": 1.0,
+        "requiredScale": 1.0,
+        "geometryMismatch": true,
+        "reviewRequired": true,
+        "reviewReason": "Winkel weicht um -0.80 Grad vom erwarteten ab -- Bauungenauigkeit oder falsches Zielfeature"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -354,8 +394,10 @@
         "coverageAfterPct": 100.0,
         "samples": 120,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": 0.0,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 1.0,
         "shiftM": 1.5
       },
       "befund": {
@@ -364,7 +406,13 @@
         "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.209,
+        "rotationDeviationDeg": 0.0,
+        "appliedScale": 1.0,
+        "requiredScale": 1.0,
         "geometryMismatch": false,
+        "reviewRequired": false,
         "reviewReason": null
       },
       "notes": [
@@ -379,18 +427,18 @@
         "DENW37AL10006612"
       ],
       "transform": {
-        "rotationDeg": -28.8036,
+        "rotationDeg": -29.5036,
         "scale": 1.0,
         "translation": [
-          -1211.629,
-          233.117
+          -1202.974,
+          222.314
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8762764089,
-          0.4818087331,
-          0.4818087331,
-          -0.8762764089
+          0.8610122795,
+          0.487208728,
+          0.487208728,
+          -0.8610122795
         ]
       },
       "floorZ": 0.49,
@@ -402,11 +450,11 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -8.5,
-          1.5
+          -8.0,
+          1.0
         ],
-        "rotationDeg": 2.209,
-        "scale": 1.0,
+        "rotationDeg": 1.509,
+        "scale": 0.9893,
         "pivot": [
           730.671,
           494.199
@@ -415,9 +463,11 @@
         "coverageAfterPct": 100.0,
         "samples": 191,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
-        "shiftM": 8.631
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": -0.7,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 0.9893,
+        "shiftM": 8.062
       },
       "befund": {
         "transformVersion": 3,
@@ -425,8 +475,14 @@
         "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
-        "geometryMismatch": false,
-        "reviewReason": null
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 1.509,
+        "rotationDeviationDeg": -0.7,
+        "appliedScale": 0.9893,
+        "requiredScale": 0.9893,
+        "geometryMismatch": true,
+        "reviewRequired": true,
+        "reviewReason": "Winkel weicht um -0.70 Grad vom erwarteten ab -- Bauungenauigkeit oder falsches Zielfeature"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -440,18 +496,18 @@
         "DENW37AL10006612"
       ],
       "transform": {
-        "rotationDeg": -28.8036,
+        "rotationDeg": -28.3036,
         "scale": 1.0,
         "translation": [
-          -1211.78,
-          233.859
+          -1202.496,
+          240.394
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8762764089,
-          0.4818087331,
-          0.4818087331,
-          -0.8762764089
+          0.8723474464,
+          0.4697814097,
+          0.4697814097,
+          -0.8723474464
         ]
       },
       "floorZ": 8.09,
@@ -463,31 +519,39 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -8.25,
-          0.75
+          -8.0,
+          1.25
         ],
-        "rotationDeg": 2.209,
-        "scale": 1.0,
+        "rotationDeg": 2.709,
+        "scale": 0.9908,
         "pivot": [
           729.731,
           494.295
         ],
         "coverageBeforePct": 85.05,
-        "coverageAfterPct": 100.0,
+        "coverageAfterPct": 99.48,
         "samples": 194,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
-        "shiftM": 8.284
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": 0.5,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 0.9908,
+        "shiftM": 8.097
       },
       "befund": {
         "transformVersion": 3,
         "targetFeatureCount": 1,
-        "fitPercent": 100.0,
-        "outsideCornerCount": 0,
+        "fitPercent": 99.48,
+        "outsideCornerCount": 1,
         "maxOutsideDistanceM": 0.0,
-        "geometryMismatch": false,
-        "reviewReason": null
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.709,
+        "rotationDeviationDeg": 0.5,
+        "appliedScale": 0.9908,
+        "requiredScale": 0.9908,
+        "geometryMismatch": true,
+        "reviewRequired": true,
+        "reviewReason": "Planflaeche passt nicht vollstaendig in den verfuegbaren Innenraum -- moeglicherweise fehlt ein Zielkoerper"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -502,18 +566,18 @@
         "DENW37AL1000644Q"
       ],
       "transform": {
-        "rotationDeg": -28.8036,
+        "rotationDeg": -28.9036,
         "scale": 1.0,
         "translation": [
-          -1208.854,
-          234.631
+          -1208.678,
+          232.715
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8762764089,
-          0.4818087331,
-          0.4818087331,
-          -0.8762764089
+          0.8754341598,
+          0.4833373894,
+          0.4833373894,
+          -0.8754341598
         ]
       },
       "floorZ": 0.49,
@@ -525,10 +589,10 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -9.25,
-          1.5
+          -9.0,
+          2.0
         ],
-        "rotationDeg": 2.209,
+        "rotationDeg": 2.109,
         "scale": 1.0,
         "pivot": [
           729.193,
@@ -538,9 +602,11 @@
         "coverageAfterPct": 100.0,
         "samples": 170,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
-        "shiftM": 9.371
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": -0.1,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 1.0,
+        "shiftM": 9.22
       },
       "befund": {
         "transformVersion": 3,
@@ -548,7 +614,13 @@
         "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.109,
+        "rotationDeviationDeg": -0.1,
+        "appliedScale": 1.0,
+        "requiredScale": 1.0,
         "geometryMismatch": false,
+        "reviewRequired": false,
         "reviewReason": null
       },
       "notes": [
@@ -600,8 +672,10 @@
         "coverageAfterPct": 83.24,
         "samples": 179,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": 0.0,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 0.8511,
         "shiftM": 9.25
       },
       "befund": {
@@ -610,8 +684,14 @@
         "fitPercent": 83.24,
         "outsideCornerCount": 4,
         "maxOutsideDistanceM": 6.58,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.209,
+        "rotationDeviationDeg": 0.0,
+        "appliedScale": 1.0,
+        "requiredScale": 0.8511,
         "geometryMismatch": true,
-        "reviewReason": "Planflaeche passt nicht vollstaendig in den amtlichen Umriss -- moeglicherweise fehlt ein Zielkoerper; Ecke liegt 6.58 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
+        "reviewRequired": true,
+        "reviewReason": "muesste auf 0.8511 verkleinert werden, erlaubt sind 0.95 -- Datenkonflikt: fehlendes Zielfeature, Auskragung oder ein anderer baulicher Zustand als im Plan; Ecke liegt 6.58 m ausserhalb"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -661,8 +741,10 @@
         "coverageAfterPct": 100.0,
         "samples": 234,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": 0.0,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 1.0,
         "shiftM": 4.5
       },
       "befund": {
@@ -671,7 +753,13 @@
         "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.209,
+        "rotationDeviationDeg": 0.0,
+        "appliedScale": 1.0,
+        "requiredScale": 1.0,
         "geometryMismatch": false,
+        "reviewRequired": false,
         "reviewReason": null
       },
       "notes": [
@@ -722,8 +810,10 @@
         "coverageAfterPct": 100.0,
         "samples": 187,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": 0.0,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 1.0,
         "shiftM": 9.0
       },
       "befund": {
@@ -732,7 +822,13 @@
         "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.209,
+        "rotationDeviationDeg": 0.0,
+        "appliedScale": 1.0,
+        "requiredScale": 1.0,
         "geometryMismatch": false,
+        "reviewRequired": false,
         "reviewReason": null
       },
       "notes": [
@@ -783,8 +879,10 @@
         "coverageAfterPct": 100.0,
         "samples": 186,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": 0.0,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 1.0,
         "shiftM": 19.775
       },
       "befund": {
@@ -793,7 +891,13 @@
         "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.209,
+        "rotationDeviationDeg": 0.0,
+        "appliedScale": 1.0,
+        "requiredScale": 1.0,
         "geometryMismatch": false,
+        "reviewRequired": false,
         "reviewReason": null
       },
       "notes": [
@@ -844,8 +948,10 @@
         "coverageAfterPct": 100.0,
         "samples": 164,
         "searchRadiusM": 30,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": 0.0,
+        "drehungBandGrad": 1.0,
+        "benoetigteSkala": 1.0,
         "shiftM": 14.23
       },
       "befund": {
@@ -854,7 +960,13 @@
         "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.209,
+        "rotationDeviationDeg": 0.0,
+        "appliedScale": 1.0,
+        "requiredScale": 1.0,
         "geometryMismatch": false,
+        "reviewRequired": false,
         "reviewReason": null
       },
       "notes": [
@@ -903,8 +1015,10 @@
         "coverageAfterPct": 100.0,
         "samples": 97,
         "searchRadiusM": 20,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": 0.0,
+        "drehungBandGrad": 0.0,
+        "benoetigteSkala": 1.0,
         "shiftM": 18.75,
         "note": "Freiflaeche: zwischen die Gebaeude gelegt, nicht in eines hinein.",
         "frei": true
@@ -915,7 +1029,13 @@
         "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.209,
+        "rotationDeviationDeg": 0.0,
+        "appliedScale": 1.0,
+        "requiredScale": 1.0,
         "geometryMismatch": true,
+        "reviewRequired": true,
         "reviewReason": "kein amtliches Zielfeature zugeordnet"
       },
       "notes": [
@@ -964,8 +1084,10 @@
         "coverageAfterPct": 100.0,
         "samples": 161,
         "searchRadiusM": 20,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": 0.0,
+        "drehungBandGrad": 0.0,
+        "benoetigteSkala": 1.0,
         "shiftM": 0.0,
         "note": "Freiflaeche: zwischen die Gebaeude gelegt, nicht in eines hinein.",
         "frei": true
@@ -976,7 +1098,13 @@
         "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.209,
+        "rotationDeviationDeg": 0.0,
+        "appliedScale": 1.0,
+        "requiredScale": 1.0,
         "geometryMismatch": true,
+        "reviewRequired": true,
         "reviewReason": "kein amtliches Zielfeature zugeordnet"
       },
       "notes": [
@@ -1025,8 +1153,10 @@
         "coverageAfterPct": 77.78,
         "samples": 99,
         "searchRadiusM": 20,
-        "maxRotationDeg": 5.0,
-        "vordrehungDeg": 2.209,
+        "erwarteteDrehungDeg": 2.209,
+        "drehungAbweichungDeg": 0.0,
+        "drehungBandGrad": 0.0,
+        "benoetigteSkala": 1.0,
         "shiftM": 23.724,
         "note": "Freiflaeche: zwischen die Gebaeude gelegt, nicht in eines hinein.",
         "frei": true
@@ -1037,14 +1167,396 @@
         "fitPercent": 77.78,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
+        "expectedRotationDeg": 2.209,
+        "actualRotationDeg": 2.209,
+        "rotationDeviationDeg": 0.0,
+        "appliedScale": 1.0,
+        "requiredScale": 1.0,
         "geometryMismatch": true,
-        "reviewReason": "kein amtliches Zielfeature zugeordnet; Planflaeche passt nicht vollstaendig in den amtlichen Umriss -- moeglicherweise fehlt ein Zielkoerper"
+        "reviewRequired": true,
+        "reviewReason": "kein amtliches Zielfeature zugeordnet; Planflaeche passt nicht vollstaendig in den verfuegbaren Innenraum -- moeglicherweise fehlt ein Zielkoerper"
       },
       "notes": [
         "Noch keine amtlichen Zielfeatures dieser Hallenebene -- nur die globale Winkelkorrektur angewandt.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
+    }
+  ],
+  "beziehungen": [
+    {
+      "hallen": [
+        "5.1",
+        "FB"
+      ],
+      "imPlanM": 40.43,
+      "registriertM": 16.53,
+      "unterschiedM": -23.9,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "9.1",
+        "FB"
+      ],
+      "imPlanM": 47.36,
+      "registriertM": 27.34,
+      "unterschiedM": -20.02,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "5.2",
+        "FB"
+      ],
+      "imPlanM": 25.97,
+      "registriertM": 6.96,
+      "unterschiedM": -19.01,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "6.1",
+        "F2"
+      ],
+      "imPlanM": 39.54,
+      "registriertM": 27.62,
+      "unterschiedM": -11.92,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "2.2",
+        "3.2"
+      ],
+      "imPlanM": 26.11,
+      "registriertM": 15.56,
+      "unterschiedM": -10.55,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "6.1",
+        "9.1"
+      ],
+      "imPlanM": 47.08,
+      "registriertM": 37.82,
+      "unterschiedM": -9.27,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "7.1",
+        "F2"
+      ],
+      "imPlanM": 13.03,
+      "registriertM": 3.87,
+      "unterschiedM": -9.16,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "1.2",
+        "5.2"
+      ],
+      "imPlanM": 27.81,
+      "registriertM": 34.77,
+      "unterschiedM": 6.96,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "1.2",
+        "5.1"
+      ],
+      "imPlanM": 27.81,
+      "registriertM": 34.59,
+      "unterschiedM": 6.78,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "2.1",
+        "2.2"
+      ],
+      "imPlanM": 5.84,
+      "registriertM": 0.69,
+      "unterschiedM": -5.15,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "1.2",
+        "4.2"
+      ],
+      "imPlanM": 26.76,
+      "registriertM": 31.56,
+      "unterschiedM": 4.8,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "4.1",
+        "5.2"
+      ],
+      "imPlanM": 24.12,
+      "registriertM": 19.76,
+      "unterschiedM": -4.36,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "1.2",
+        "4.1"
+      ],
+      "imPlanM": 27.25,
+      "registriertM": 31.48,
+      "unterschiedM": 4.23,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "10.2",
+        "5.2"
+      ],
+      "imPlanM": 31.4,
+      "registriertM": 27.47,
+      "unterschiedM": -3.93,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "5.2",
+        "6.1"
+      ],
+      "imPlanM": 50.59,
+      "registriertM": 54.52,
+      "unterschiedM": 3.93,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "4.2",
+        "5.2"
+      ],
+      "imPlanM": 24.09,
+      "registriertM": 20.27,
+      "unterschiedM": -3.82,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "10.1",
+        "5.2"
+      ],
+      "imPlanM": 51.76,
+      "registriertM": 48.0,
+      "unterschiedM": -3.76,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "7.1",
+        "8.1"
+      ],
+      "imPlanM": 38.8,
+      "registriertM": 35.23,
+      "unterschiedM": -3.58,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "10.1",
+        "5.1"
+      ],
+      "imPlanM": 51.42,
+      "registriertM": 48.24,
+      "unterschiedM": -3.17,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "6.1",
+        "FB"
+      ],
+      "imPlanM": 0.76,
+      "registriertM": 3.03,
+      "unterschiedM": 2.27,
+      "reviewRequired": true,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "8.1",
+        "F8"
+      ],
+      "imPlanM": 25.15,
+      "registriertM": 26.62,
+      "unterschiedM": 1.47,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "10.2",
+        "4.1"
+      ],
+      "imPlanM": 24.19,
+      "registriertM": 23.14,
+      "unterschiedM": -1.05,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "4.2",
+        "5.1"
+      ],
+      "imPlanM": 24.13,
+      "registriertM": 25.12,
+      "unterschiedM": 0.99,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "6.1",
+        "7.1"
+      ],
+      "imPlanM": 46.02,
+      "registriertM": 45.31,
+      "unterschiedM": -0.71,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "10.1",
+        "4.2"
+      ],
+      "imPlanM": 49.49,
+      "registriertM": 48.84,
+      "unterschiedM": -0.66,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "4.1",
+        "5.1"
+      ],
+      "imPlanM": 24.16,
+      "registriertM": 24.82,
+      "unterschiedM": 0.66,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "10.2",
+        "5.1"
+      ],
+      "imPlanM": 31.0,
+      "registriertM": 30.48,
+      "unterschiedM": -0.52,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "10.2",
+        "4.2"
+      ],
+      "imPlanM": 23.43,
+      "registriertM": 22.95,
+      "unterschiedM": -0.48,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "2.1",
+        "3.2"
+      ],
+      "imPlanM": 13.61,
+      "registriertM": 14.07,
+      "unterschiedM": 0.46,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "10.2",
+        "9.1"
+      ],
+      "imPlanM": 53.79,
+      "registriertM": 53.44,
+      "unterschiedM": -0.35,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "5.1",
+        "5.2"
+      ],
+      "imPlanM": 0.0,
+      "registriertM": 0.19,
+      "unterschiedM": 0.19,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "10.1",
+        "10.2"
+      ],
+      "imPlanM": 0.2,
+      "registriertM": 0.03,
+      "unterschiedM": -0.17,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "10.1",
+        "4.1"
+      ],
+      "imPlanM": 48.59,
+      "registriertM": 48.44,
+      "unterschiedM": -0.15,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
+    },
+    {
+      "hallen": [
+        "4.1",
+        "4.2"
+      ],
+      "imPlanM": 0.0,
+      "registriertM": 0.01,
+      "unterschiedM": 0.01,
+      "reviewRequired": false,
+      "hinweis": "Geprueft, nicht erzwungen: die Hallen sind einzeln registriert, dieser Abstand ist ihr Ergebnis."
     }
   ],
   "counts": {

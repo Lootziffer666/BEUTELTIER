@@ -69,15 +69,41 @@ def sample_polygon(polygon: list[list[float]], step: float = 10.0) -> list[tuple
     return (samples + rand) or [tuple(polygon[0])]
 
 
-MAX_DREHUNG_GRAD = 5.0
-"""Wie weit die Suche drehen darf.
+DREHUNG_BAND_GRAD = 1.0
+"""Wie weit eine Halle vom erwarteten Winkel abweichen darf.
 
-Der bekannte Fehler ist rund 2,2 Grad und stammt aus `buildings.json`: der
-Hallenplan wurde mit dem Drehwinkel des alten Modellfits (-31,0126 Grad) ins
-Gelaende gelegt statt mit der Ausrichtung der Gebaeude, die bei 28,78 Grad
-liegt. Fuenf Grad lassen dafuer Luft, ohne dass eine Halle in die Nachbarhalle
-kippen kann -- ab etwa acht Grad findet die Suche bei laenglichen Hallen
-Scheinloesungen quer zur eigentlichen Achse.
+Der erwartete Winkel ist ein **starker Vorwert**, kein Zwang: er kommt aus
+allen vierzehn Hallen zusammen und ist damit besser belegt als jede einzelne.
+Eine Halle darf davon abweichen -- ein Grad ist reichlich fuer echte
+Bauungenauigkeit --, aber nicht beliebig.
+
+Ohne diese Schranke drifteten Halle 2 und 4 auf 0,96 Grad und Halle 10.2 auf
+4,11 Grad. Nicht weil sie dort richtiger stuenden, sondern weil sich eine
+knappe Passung durch Kippen rechnerisch verbessern laesst. Halle 4.1 brauchte
+danach ueberhaupt keine Verkleinerung mehr -- die Drift hatte sie erst
+noetig gemacht.
+"""
+
+DREHUNG_SCHWELLE_GRAD = 0.5
+"""Ab wann eine Winkelabweichung als Befund gemeldet wird.
+
+Die einzeln gemessenen Winkel der sauber geschnittenen Hallen streuen um
+0,33 Grad. Ein halbes Grad liegt darueber und darunter bleibt Rauschen --
+wer mehr abweicht, hat einen Grund, und der gehoert benannt.
+"""
+
+SKALA_GRENZE = 0.95
+"""Wie weit die Registrierung verkleinern darf.
+
+Fuenf Prozent. Darueber ist es kein gelungener Fit mehr, sondern ein
+Datenkonflikt -- und der gehoert gemeldet, nicht weggerechnet. Eine Halle, die
+zehn Prozent schrumpfen muss, um in ihr Gebaeude zu passen, sagt etwas ueber
+die Daten und nicht ueber ihre Lage.
+
+Ausdruecklich getrennt davon: die drei Prozent, um die **Staende** kleiner
+gezeichnet werden. Das ist eine Darstellungsentscheidung fuer die Lesbarkeit
+der Gaenge und passiert nach der Registrierung. Die Registrierung selbst darf
+Datenprobleme nicht durch Skalieren verstecken.
 """
 
 
@@ -254,8 +280,8 @@ def containment_fit(hall_polygon: list[list[float]], target_polygons: list[list[
     # Grob ueber Drehung und Verschiebung zugleich -- getrennt zu suchen fuehrt
     # in ein falsches Optimum, weil die beste Verschiebung ohne Drehung eine
     # andere ist als die mit.
-    schritt_grad = 0.5
-    schritte = int(MAX_DREHUNG_GRAD / schritt_grad) if drehsuche else 0
+    schritt_grad = 0.1
+    schritte = int(DREHUNG_BAND_GRAD / schritt_grad) if drehsuche else 0
     for i in range(-schritte, schritte + 1):
         grad = vordrehung + i * schritt_grad
         for dx in range(-radius, radius + 1, 3):
@@ -265,8 +291,8 @@ def containment_fit(hall_polygon: list[list[float]], target_polygons: list[list[
                     best = kandidat
     # Dann um den Sieger herum auf 25 cm und 0,05 Grad verfeinern.
     coarse = best
-    for ig in (range(-5, 6) if drehsuche else (0,)):
-        grad = coarse[3] + ig * 0.05
+    for ig in (range(-4, 5) if drehsuche else (0,)):
+        grad = coarse[3] + ig * 0.025
         for ix in range(-6, 7):
             for iy in range(-6, 7):
                 dx, dy = coarse[1] + ix * 0.25, coarse[2] + iy * 0.25
@@ -279,30 +305,31 @@ def containment_fit(hall_polygon: list[list[float]], target_polygons: list[list[
     # geht -- die Lage der Staende zueinander bleibt dabei unveraendert, es
     # aendert sich nur der Massstab.
     skala = 1.0
+    benoetigte_skala = 1.0
     if not frei and coverage(best[1], best[2], best[3]) < 100.0:
-        # Wie weit verkleinert werden darf. Zehn Prozent sind die Grenze
-        # zwischen Orientierungshilfe und Massstabsaenderung: darunter waere
-        # eine Halle sichtbar zu klein, und der Fehler gehoert dann gemeldet
-        # statt weggerechnet.
-        UNTERGRENZE = 0.90
-        # Erst pruefen, ob Verkleinern ueberhaupt hilft. Tut es das nicht, ist
-        # die Flaeche schlicht groesser als der Raum -- dann bleibt der
-        # Massstab bei 1,0 und der Befund meldet den Rest. Ohne diese Pruefung
-        # liefe die Halbierung ins Leere und gaebe eine Zahl zurueck, die nichts
-        # erreicht: Halle 5.2 kam so auf 0,8511 bei 99,4 Prozent.
-        if coverage(best[1], best[2], best[3], UNTERGRENZE) >= 100.0:
+        # Erst herausfinden, welcher Massstab ueberhaupt reichen wuerde --
+        # unabhaengig davon, ob er erlaubt ist. Die Zahl ist die eigentliche
+        # Diagnose: "diese Halle muesste um X Prozent schrumpfen".
+        SUCHBODEN = 0.70
+        if coverage(best[1], best[2], best[3], SUCHBODEN) >= 100.0:
             # Gesucht ist der **groesste** Massstab, der noch passt -- also so
             # wenig verkleinern wie noetig. `passt` waechst monoton mit dem
             # Verkleinern, deshalb genuegt eine Halbierung.
-            passt, zu_gross = UNTERGRENZE, 1.0
+            passt, zu_gross = SUCHBODEN, 1.0
             for _ in range(24):
                 mitte_s = (passt + zu_gross) / 2
                 if coverage(best[1], best[2], best[3], mitte_s) >= 100.0:
                     passt = mitte_s
                 else:
                     zu_gross = mitte_s
-            skala = round(passt, 4)
-            best = (coverage(best[1], best[2], best[3], skala), best[1], best[2], best[3])
+            benoetigte_skala = round(passt, 4)
+            # Angewandt wird sie nur, wenn sie klein bleibt. Darueber ist es
+            # kein gelungener Fit, sondern ein Datenkonflikt -- und der gehoert
+            # gemeldet, nicht weggerechnet.
+            if benoetigte_skala >= SKALA_GRENZE:
+                skala = benoetigte_skala
+                best = (coverage(best[1], best[2], best[3], skala),
+                        best[1], best[2], best[3])
 
     return {"translation": [round(best[1], 3), round(best[2], 3)],
             "rotationDeg": round(best[3], 3),
@@ -310,8 +337,10 @@ def containment_fit(hall_polygon: list[list[float]], target_polygons: list[list[
             "pivot": [round(schwerpunkt[0], 3), round(schwerpunkt[1], 3)],
             "coverageBeforePct": round(before, 2), "coverageAfterPct": round(best[0], 2),
             "samples": len(samples), "searchRadiusM": radius,
-            "maxRotationDeg": MAX_DREHUNG_GRAD,
-            "vordrehungDeg": round(vordrehung, 3),
+            "erwarteteDrehungDeg": round(vordrehung, 3),
+            "drehungAbweichungDeg": round(best[3] - vordrehung, 3),
+            "drehungBandGrad": DREHUNG_BAND_GRAD if drehsuche else 0.0,
+            "benoetigteSkala": benoetigte_skala,
             "shiftM": round(math.hypot(best[1], best[2]), 3)}
 
 
@@ -377,25 +406,93 @@ def passungsbefund(hall_polygon: list[list[float]], target_polygons: list[list[l
             continue
         draussen.append(min(abstand_zur_kante(p, ring) for ring in ringe))
 
+    c = constraint or {}
+    noetig = c.get("benoetigteSkala", 1.0)
+    abweichung = c.get("drehungAbweichungDeg", 0.0)
     befund = {
         "transformVersion": TRANSFORM_VERSION,
         "targetFeatureCount": len(ringe),
-        "fitPercent": (constraint or {}).get("coverageAfterPct"),
+        "fitPercent": c.get("coverageAfterPct"),
         "outsideCornerCount": len(draussen),
         "maxOutsideDistanceM": round(max(draussen), 2) if draussen else 0.0,
+        "expectedRotationDeg": c.get("erwarteteDrehungDeg"),
+        "actualRotationDeg": c.get("rotationDeg"),
+        "rotationDeviationDeg": abweichung,
+        "appliedScale": c.get("scale", 1.0),
+        "requiredScale": noetig,
     }
     gruende = []
     if not ringe:
         gruende.append("kein amtliches Zielfeature zugeordnet")
-    if befund["fitPercent"] is not None and befund["fitPercent"] < 99.5:
-        gruende.append("Planflaeche passt nicht vollstaendig in den amtlichen Umriss "
-                       "-- moeglicherweise fehlt ein Zielkoerper")
+    if abs(abweichung) > DREHUNG_SCHWELLE_GRAD:
+        gruende.append(f"Winkel weicht um {abweichung:+.2f} Grad vom erwarteten ab "
+                       "-- Bauungenauigkeit oder falsches Zielfeature")
+    if noetig < SKALA_GRENZE:
+        # Der wichtigste Befund: die Halle passt nicht, und zwar nicht knapp.
+        gruende.append(
+            f"muesste auf {noetig:.4f} verkleinert werden, erlaubt sind "
+            f"{SKALA_GRENZE:.2f} -- Datenkonflikt: fehlendes Zielfeature, "
+            "Auskragung oder ein anderer baulicher Zustand als im Plan")
+    elif befund["fitPercent"] is not None and befund["fitPercent"] < 99.5:
+        gruende.append("Planflaeche passt nicht vollstaendig in den verfuegbaren "
+                       "Innenraum -- moeglicherweise fehlt ein Zielkoerper")
     if befund["maxOutsideDistanceM"] > MELDEGRENZE_M:
-        gruende.append(f"Ecke liegt {befund['maxOutsideDistanceM']} m ausserhalb; "
-                       "Planumriss ist einfacher geschnitten als das Gebaeude")
+        gruende.append(f"Ecke liegt {befund['maxOutsideDistanceM']} m ausserhalb")
     befund["geometryMismatch"] = bool(gruende)
+    befund["reviewRequired"] = bool(gruende)
     befund["reviewReason"] = "; ".join(gruende) or None
     return befund
+
+
+BEZIEHUNG_SCHWELLE_M = 2.0
+"""Ab wann eine Nachbarbeziehung als Befund gemeldet wird."""
+
+
+def abstand_polygone(a: list[list[float]], b: list[list[float]]) -> float:
+    """Kleinster Abstand zweier Polygonraender."""
+    return min(abstand_zur_kante(tuple(p), b[:-1] if b[0] == b[-1] else b) for p in a)
+
+
+def beziehungen(vorher: dict[str, list], nachher: dict[str, list],
+                naehe_m: float = 60.0) -> list[dict]:
+    """Prueft, ob die Registrierung die Nachbarschaften erhalten hat.
+
+    Verglichen wird der Abstand zweier Hallen **vor** und **nach** ihrer
+    einzelnen Registrierung. Der Hallenplan ist in sich stimmig -- er stammt
+    aus einer Quelle --, also darf die Registrierung diese Abstaende nicht
+    nennenswert veraendern. Tut sie es doch, ist eine der beiden Hallen weit
+    gewandert, und das gehoert gemeldet.
+
+    Nicht verglichen wird gegen den Abstand der amtlichen Umrisse: die belegte
+    Flaeche fuellt ihr Gebaeude nicht aus, deshalb ist der Abstand zweier
+    belegter Flaechen naturgemaess groesser als der ihrer Gebaeude. Dieser
+    Vergleich meldete 38 von 43 Beziehungen als auffaellig und war damit
+    nutzlos.
+
+    Und ausdruecklich **keine** Stellschraube: was hier herauskommt, aendert
+    keine Registrierung. Wuerde man Halle 6 verschieben, bis der Hof wieder
+    39 m breit ist, haenge sie wieder an Halle 7 -- eine neue globale
+    Abhaengigkeit anstelle der alten.
+    """
+    out = []
+    schluessel = sorted(k for k in vorher if k in nachher)
+    for i, a in enumerate(schluessel):
+        for b in schluessel[i + 1:]:
+            davor = abstand_polygone(vorher[a], vorher[b])
+            if davor > naehe_m:
+                continue
+            danach = abstand_polygone(nachher[a], nachher[b])
+            unterschied = round(danach - davor, 2)
+            out.append({
+                "hallen": [a, b],
+                "imPlanM": round(davor, 2),
+                "registriertM": round(danach, 2),
+                "unterschiedM": unterschied,
+                "reviewRequired": abs(unterschied) > BEZIEHUNG_SCHWELLE_M,
+                "hinweis": ("Geprueft, nicht erzwungen: die Hallen sind einzeln "
+                            "registriert, dieser Abstand ist ihr Ergebnis."),
+            })
+    return sorted(out, key=lambda e: -abs(e["unterschiedM"]))
 
 
 def shifted_transform(base: dict, constraint: dict) -> dict:
@@ -489,14 +586,13 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
         target_polygons = [nach_innen(building_by_id[feature_id]["footprint"])
                            for feature_id in target_ids
                            if feature_id in building_by_id and building_by_id[feature_id].get("footprint")]
-        # Ohne eigene Drehsuche: der Winkel ist eine Eigenschaft des ganzen
-        # Hallenplans, nicht der einzelnen Halle. Mit freier Suche drifteten
-        # Halle 2 und 4 auf 0,96 Grad und Halle 10.2 auf 4,11 Grad, weil sich
-        # eine knappe Passung durch Kippen "verbessern" laesst -- ohne dass die
-        # Halle richtiger stuende. Eine Halle, die einen eigenen Winkel
-        # braeuchte, ist ein Befund und keine Passung.
+        # Jede Halle sucht ihren Winkel selbst -- aber in einem schmalen Band
+        # um den erwarteten. Frei drifteten sie auf 0,96 und 4,11 Grad, weil
+        # sich eine knappe Passung durch Kippen rechnerisch verbessern laesst.
+        # Was innerhalb des Bandes gefunden wird, steht als Abweichung im
+        # Befund und wird ab einer halben Grad gemeldet.
         constraint = containment_fit(hall["footprint"], target_polygons,
-                                     vordrehung=vordrehung, drehsuche=False)
+                                     vordrehung=vordrehung, drehsuche=True)
         if constraint is None and alle_umrisse:
             # Freiflaeche: gegen *alle* Gebaeude einpassen, mit umgedrehtem
             # Ziel -- sie soll moeglichst wenig davon treffen.
@@ -556,11 +652,23 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
                 "Portale wurden nicht als Registrierungsanker verwendet.",
             ],
         })
+    # Nachbarschaften: gemessen nach der Registrierung, nicht davor.
+    registrierte = {}
+    im_plan = {}
+    for eintrag, hall in zip(registrations, sorted(site["halls"], key=lambda i: i["key"])):
+        registrierte[hall["key"]] = [list(transform_point(tuple(p), eintrag["transform"]))
+                                     for p in hall["footprint"]]
+        # Derselbe Umriss ohne die hallenweise Registrierung -- nur die
+        # gemeinsame Grundabbildung. So ist der Vergleich einer gegen einen.
+        im_plan[hall["key"]] = [list(transform_point(tuple(p), transform))
+                                for p in hall["footprint"]]
+
     return {
         "schema": "beuteltier.hall-registrations.v1",
         "coordinatePlane": "sceneX/sceneZ",
         "origin": origin,
         "registrations": registrations,
+        "beziehungen": beziehungen(im_plan, registrierte),
         "counts": {
             "total": len(registrations),
             "draft": sum(item["status"] == "draft" for item in registrations),
