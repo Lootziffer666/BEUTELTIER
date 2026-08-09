@@ -202,6 +202,21 @@ NUTZUNG = {
            "Halle 8 Nord -- Zuschnitt siehe hallKey F8 in registered-site.json"),
 }
 
+# Der Zaun hinter Halle 8.
+#
+# Nach Nordwesten endet die Flaeche an der Unterfuehrung unter der Zoobruecke;
+# zur gamescom steht dort ein Zaun. Das ist zugleich die laengste Kante des
+# OSM-Umrisses, weshalb sie sich ohne Eckennummern finden laesst -- die
+# Nummerierung eines OSM-Rings ist nichts, worauf man bauen sollte.
+#
+# Gemessen wurde die Tiefe der Flaeche bis dorthin (dz.nrw): 84,41 m
+# horizontal bei 0,48 m Hoehenunterschied. Die Zahl schneidet nichts weg, sie
+# prueft: senkrecht zur Zaunkante ist der Umriss genau dort 84,41 m tief, wo
+# gemessen wurde. Der Umriss bleibt also, wie OSM ihn fuehrt.
+P8_WAY = 39353363
+P8_TIEFE_GEMESSEN_M = 84.41
+P8_GEFAELLE_GEMESSEN_M = 0.48
+
 # Gebaeude, die den Gang zwar begrenzen, dort aber verglast sind.
 # Beobachtung vor Ort, nicht aus der Geometrie ableitbar: ein Grundriss sagt,
 # **dass** dort etwas steht, nicht **woraus** die Wand ist.
@@ -1131,6 +1146,82 @@ def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
     }
 
 
+def tiefe_senkrecht(ring: list[tuple[float, float]],
+                    start: tuple[float, float],
+                    normale: tuple[float, float]) -> float:
+    """Wie tief das Polygon von `start` aus in Richtung `normale` reicht.
+
+    Ein Strahl, kein Huellquader: gesucht ist der am weitesten entfernte
+    Schnittpunkt mit dem Umriss. Bei einem Keil waechst dieser Wert entlang der
+    Kante linear, und genau daran laesst sich eine Tiefenmessung pruefen.
+    """
+    weit = 0.0
+    for i in range(len(ring)):
+        a, b = ring[i], ring[(i + 1) % len(ring)]
+        d = (b[0] - a[0], b[1] - a[1])
+        nenner = normale[0] * d[1] - normale[1] * d[0]
+        if abs(nenner) < 1e-9:          # Kante parallel zum Strahl
+            continue
+        w = (a[0] - start[0], a[1] - start[1])
+        t = (w[0] * d[1] - w[1] * d[0]) / nenner          # auf dem Strahl
+        u = (normale[1] * w[0] - normale[0] * w[1]) / nenner   # auf der Kante
+        if -1e-9 <= u <= 1.0 + 1e-9 and t > weit:
+            weit = t
+    return weit
+
+
+def zaun_hinter_halle_acht(ring: list[tuple[float, float]]) -> dict:
+    """Die Nordwestseite von P8 -- dort steht zur gamescom der Zaun.
+
+    Gesucht wird die laengste Kante des Umrisses. Sie liegt an der
+    Unterfuehrung unter der Zoobruecke und ist mit rund 135 m gut ein Viertel
+    laenger als die zweitlaengste; eine Verwechslung ist damit ausgeschlossen.
+    Ueber Eckennummern zu gehen waere schlechter -- die Nummerierung eines
+    OSM-Rings ist nichts, worauf man bauen sollte.
+
+    Die gemessene Tiefe wird nicht uebernommen, sondern verortet: gesucht ist
+    die Stelle auf der Kante, an der der Umriss senkrecht dazu genau so tief
+    ist wie gemessen. Liegt sie im Umriss, bestaetigt die Messung ihn.
+    """
+    ecken = ring[:-1] if ring[0] == ring[-1] else list(ring)
+    _, i = max((math.dist(ecken[k], ecken[(k + 1) % len(ecken)]), k)
+               for k in range(len(ecken)))
+    a, b = ecken[i], ecken[(i + 1) % len(ecken)]
+    laenge = math.dist(a, b)
+    laengs = ((b[0] - a[0]) / laenge, (b[1] - a[1]) / laenge)
+    normale = (-laengs[1], laengs[0])
+    mitte = (sum(p[0] for p in ecken) / len(ecken),
+             sum(p[1] for p in ecken) / len(ecken))
+    if (mitte[0] - a[0]) * normale[0] + (mitte[1] - a[1]) * normale[1] < 0:
+        normale = (-normale[0], -normale[1])
+
+    def tiefe(entlang: float) -> float:
+        return tiefe_senkrecht(ecken, (a[0] + laengs[0] * entlang,
+                                       a[1] + laengs[1] * entlang), normale)
+
+    # Die Tiefe faellt entlang der Kante monoton -- Halbierung genuegt.
+    unten, oben = 0.0, laenge
+    for _ in range(60):
+        mitte_e = (unten + oben) / 2
+        unten, oben = ((mitte_e, oben) if tiefe(mitte_e) > P8_TIEFE_GEMESSEN_M
+                       else (unten, mitte_e))
+    fuss = (a[0] + laengs[0] * oben, a[1] + laengs[1] * oben)
+    kopf = (fuss[0] + normale[0] * P8_TIEFE_GEMESSEN_M,
+            fuss[1] + normale[1] * P8_TIEFE_GEMESSEN_M)
+    return {
+        "was": ("Unterfuehrung unter der Zoobruecke; zur gamescom steht hier "
+                "ein Zaun"),
+        "kante": [[round(a[0], 2), round(a[1], 2)], [round(b[0], 2), round(b[1], 2)]],
+        "laengeM": round(laenge, 2),
+        "tiefeGemessenM": P8_TIEFE_GEMESSEN_M,
+        "gefaelleGemessenM": P8_GEFAELLE_GEMESSEN_M,
+        "tiefeBeiM": round(oben, 2),
+        "messlinie": [[round(fuss[0], 2), round(fuss[1], 2)],
+                      [round(kopf[0], 2), round(kopf[1], 2)]],
+        "quelle": "vor Ort gemessen (dz.nrw), horizontal",
+    }
+
+
 def plaetze(osm_plaetze: list, rahmen: Rahmen) -> list[dict]:
     """Die benannten Plaetze am Gelaende, als Polygone in Geländemetern.
 
@@ -1155,7 +1246,7 @@ def plaetze(osm_plaetze: list, rahmen: Rahmen) -> list[dict]:
         # Nur was am Gelaende liegt; die Abfrage reicht weiter als der Gang.
         if not (-320.0 < mitte_s < 760.0 and abs(mitte_q) < 320.0):
             continue
-        out.append({
+        eintrag = {
             "id": f"platz-{way_id}",
             "name": name,
             "quelle": "OpenStreetMap (ODbL)",
@@ -1172,7 +1263,10 @@ def plaetze(osm_plaetze: list, rahmen: Rahmen) -> list[dict]:
             # Der volle Umriss in Geländemetern -- die Kollision liest ihn
             # unveraendert, damit der Platz seine Form behaelt.
             "polygon": [[round(x, 2), round(y, 2)] for x, y in ring],
-        })
+        }
+        if way_id == P8_WAY:
+            eintrag["zaun"] = zaun_hinter_halle_acht(ring)
+        out.append(eintrag)
     return sorted(out, key=lambda p: p["vonM"])
 
 

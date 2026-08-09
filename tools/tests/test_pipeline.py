@@ -1242,3 +1242,90 @@ class TestViereckAusKanten:
         with pytest.raises(ValueError):
             # Zwei kurze Seiten koennen eine sehr lange Grundkante nicht schliessen.
             viereck_aus_kanten((0.0, 0.0), (500.0, 0.0), 10.0, 10.0, 10.0)
+
+
+class TestZaunHinterHalleAcht:
+    """Die Flaeche hinter Halle 8 endet an der Unterfuehrung.
+
+    Vor Ort gemessen wurde ihre Tiefe bis dorthin: 84,41 m. Die Zahl schneidet
+    nichts weg -- sie prueft den OSM-Umriss. Faende sie sich darin nicht wieder,
+    waere entweder der Umriss zu gross oder die Messung anderswo gemacht.
+    """
+
+    @staticmethod
+    def _p8():
+        plan = json.loads((ROOT / "app/public/data/boulevard.json").read_text(encoding="utf-8"))
+        treffer = [p for p in plan["plaetze"] if p.get("osmWayId") == 39353363]
+        assert len(treffer) == 1, "P8 muss genau einmal vorkommen"
+        return treffer[0]
+
+    def test_p8_fuehrt_den_zaun(self):
+        zaun = self._p8()["zaun"]
+        assert zaun["tiefeGemessenM"] == 84.41
+        # 0,48 m auf 84 m -- die Flaeche ist eben und braucht keine Neigung.
+        assert abs(zaun["gefaelleGemessenM"]) < 1.0
+
+    def test_zaun_liegt_auf_der_laengsten_kante(self):
+        p8 = self._p8()
+        ring = [tuple(p) for p in p8["polygon"]]
+        ecken = ring[:-1] if ring[0] == ring[-1] else ring
+        laengen = sorted(math.dist(ecken[i], ecken[(i + 1) % len(ecken)])
+                         for i in range(len(ecken)))
+        assert p8["zaun"]["laengeM"] == pytest.approx(laengen[-1], abs=0.01)
+        # Und sie ist deutlich laenger als die zweitlaengste -- sonst waere die
+        # Auswahl ueber die Laenge eine Muenzwurf-Entscheidung.
+        assert laengen[-1] > laengen[-2] * 1.2
+
+    def test_die_messlinie_liegt_im_umriss(self):
+        """Beide Enden auf dem Rand, die Mitte drin -- sonst passt die Zahl nicht."""
+        from build_boulevard import punkt_in_polygon
+
+        p8 = self._p8()
+        ring = [tuple(p) for p in p8["polygon"]]
+        fuss, kopf = [tuple(p) for p in p8["zaun"]["messlinie"]]
+        assert math.dist(fuss, kopf) == pytest.approx(84.41, abs=0.01)
+        for anteil in (0.1, 0.25, 0.5, 0.75, 0.9):
+            punkt = (fuss[0] + (kopf[0] - fuss[0]) * anteil,
+                     fuss[1] + (kopf[1] - fuss[1]) * anteil)
+            assert punkt_in_polygon(punkt, ring), anteil
+
+    def test_die_messlinie_steht_senkrecht_auf_der_zaunkante(self):
+        zaun = self._p8()["zaun"]
+        (ax, ay), (bx, by) = zaun["kante"]
+        (fx, fy), (kx, ky) = zaun["messlinie"]
+        kante = (bx - ax, by - ay)
+        linie = (kx - fx, ky - fy)
+        kosinus = ((kante[0] * linie[0] + kante[1] * linie[1])
+                   / (math.hypot(*kante) * math.hypot(*linie)))
+        # Die Ecken stehen auf Zentimeter gerundet in der Datei -- daraus folgt
+        # ein Winkelfehler in der Groessenordnung 1e-4, nicht mehr.
+        assert abs(kosinus) < 2e-3
+
+    def test_die_gemessene_tiefe_kommt_nur_an_einer_stelle_vor(self):
+        """Sonst waere die Halbierungssuche nach der Messstelle Gluecksache.
+
+        Die Tiefe faellt nicht ueberall monoton -- bei etwa 40 m liegt eine
+        kleine Ausbuchtung im OSM-Umriss. Sie liegt aber weit ueber der
+        gemessenen Tiefe, sodass 84,41 m dennoch genau einmal erreicht wird.
+        """
+        from build_boulevard import tiefe_senkrecht
+
+        p8 = self._p8()
+        ring = [tuple(p) for p in p8["polygon"]]
+        ecken = ring[:-1] if ring[0] == ring[-1] else ring
+        (ax, ay), (bx, by) = p8["zaun"]["kante"]
+        laenge = math.dist((ax, ay), (bx, by))
+        laengs = ((bx - ax) / laenge, (by - ay) / laenge)
+        normale = (-laengs[1], laengs[0])
+        mitte = (sum(p[0] for p in ecken) / len(ecken),
+                 sum(p[1] for p in ecken) / len(ecken))
+        if (mitte[0] - ax) * normale[0] + (mitte[1] - ay) * normale[1] < 0:
+            normale = (-normale[0], -normale[1])
+        werte = [tiefe_senkrecht(ecken, (ax + laengs[0] * e, ay + laengs[1] * e), normale)
+                 for e in range(0, int(laenge) + 1)]
+        wechsel = sum(1 for a, b in zip(werte, werte[1:])
+                      if (a - 84.41) * (b - 84.41) < 0)
+        assert wechsel == 1, werte
+        # Und die Stelle, die der Bau gefunden hat, liegt genau dort.
+        assert werte[int(p8["zaun"]["tiefeBeiM"])] > 84.41
+        assert werte[int(p8["zaun"]["tiefeBeiM"]) + 1] < 84.41

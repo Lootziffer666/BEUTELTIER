@@ -275,6 +275,24 @@ export interface BoulevardPlatz {
   beleuchtet: boolean;
   /** Der volle Umriss in Geländemetern. */
   polygon: [number, number][];
+  /**
+   * Eine abgesperrte Kante des Platzes. Bisher nur bei P8: nach Nordwesten
+   * endet die Flaeche an der Unterfuehrung unter der Zoobruecke, und zur
+   * gamescom steht dort ein Zaun.
+   *
+   * `tiefeGemessenM` schneidet nichts weg -- die Zahl prueft den Umriss:
+   * senkrecht zur Kante ist er bei `tiefeBeiM` genau so tief wie gemessen.
+   */
+  zaun?: {
+    was: string;
+    kante: [[number, number], [number, number]];
+    laengeM: number;
+    tiefeGemessenM: number;
+    gefaelleGemessenM: number;
+    tiefeBeiM: number;
+    messlinie: [[number, number], [number, number]];
+    quelle: string;
+  };
 }
 
 /**

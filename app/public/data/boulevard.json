@@ -327,7 +327,35 @@
      -93.66,
      -335.32
     ]
-   ]
+   ],
+   "zaun": {
+    "was": "Unterfuehrung unter der Zoobruecke; zur gamescom steht hier ein Zaun",
+    "kante": [
+     [
+      27.56,
+      -394.51
+     ],
+     [
+      -93.66,
+      -335.32
+     ]
+    ],
+    "laengeM": 134.9,
+    "tiefeGemessenM": 84.41,
+    "gefaelleGemessenM": 0.48,
+    "tiefeBeiM": 73.16,
+    "messlinie": [
+     [
+      -38.18,
+      -362.41
+     ],
+     [
+      -1.14,
+      -286.56
+     ]
+    ],
+    "quelle": "vor Ort gemessen (dz.nrw), horizontal"
+   }
   },
   {
    "id": "platz-915040712",
