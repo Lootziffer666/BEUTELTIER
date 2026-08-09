@@ -141,9 +141,16 @@ NORD_KNICK = "DENW37AL100063v9"
 # (-36,8). Dass sich dabei alle acht gemessenen Laengen wiederfinden, ist die
 # eigentliche Bestaetigung.
 AUSSEN_GRENZE_M = 300.0        # Nordkante Ebene 1 = Suedkante Ebene 0
-AUSSEN_WEST_Q = -36.8          # Ostflanke des Suedboulevards
-AUSSEN_E1 = {"suedM": 488.1, "ostQ": -214.9}   # 188,10 x 178,93 gemessen
-AUSSEN_E0 = {"nordM": 179.8, "ostQ": -249.8}   # 120,18 x 213,00 gemessen
+# Die Westkanten liegen am Boulevard -- aber der Boulevard ist auf beiden
+# Hoehen ein anderer. Bei den Stationen der Ebene 1 ist es der Suedteil
+# (Ostkante q -36,8), bei denen der Ebene 0 der Nordgang (Ostwand q -7,46).
+# Zwischen beiden springt er um 29,34 m nach Osten -- und genau das ist der
+# vor Ort gemessene Versatz von 29,95 m. Die beiden Zahlen kommen aus
+# voellig getrennten Quellen und treffen sich auf 61 Zentimeter.
+AUSSEN_WEST_E1_Q = -36.8       # Ostflanke des Suedboulevards
+AUSSEN_WEST_E0_Q = -7.456      # Ostwand des Nordgangs
+AUSSEN_E1 = {"suedM": 488.1, "breiteQ": 178.1}   # 188,10 x 178,93 gemessen
+AUSSEN_E0 = {"nordM": 179.8, "breiteQ": 213.0}   # 120,18 x 213,00 gemessen
 # In den ersten rund 30 m ab Sueden gibt es die obere Ebene noch nicht.
 AUSSEN_VERSATZ_M = 29.95
 # Die Rampe: gemessen 85,00 m direkt, 84,59 m im Grundriss, 8,33 m Hoehe.
@@ -970,14 +977,16 @@ def durchgaenge(seiten: dict[str, list[dict]], knick: dict | None = None) -> lis
 
 
 
-def dreiecke_der_rampe(rahmen: Rahmen, von: float, bis: float, ost_q: float,
-                       oben: float, unten: float, u: float) -> list[list[list[float]]]:
+def dreiecke_der_rampe(rahmen: Rahmen, von: float, bis: float, west_q: float,
+                       breite: float, oben: float, unten: float,
+                       u: float) -> list[list[list[float]]]:
     """Die Rampe als zwei Dreiecke, mit Hoehe an jeder Ecke.
 
     Die Neigung steckt damit in den Eckhoehen und nirgends sonst -- wer sie
     spaeter aendert, aendert sie an einer Stelle.
     """
-    west = AUSSEN_WEST_Q + u
+    west = west_q + u
+    ost_q = west_q - breite
     ecken = [(von, west, unten), (bis, west, oben),
              (bis, ost_q, oben), (von, ost_q, unten)]
     punkte = []
@@ -1006,10 +1015,11 @@ def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
         return None
     u = AUSSEN_UEBERLAPP_M
 
-    def flaeche(von: float, bis: float, ost_q: float) -> list[list[float]]:
+    def flaeche(von: float, bis: float, west_q: float,
+                breite: float) -> list[list[float]]:
         """Ein Viereck in Station/Quermass, als Geländemeter-Ring."""
-        ecken = [(von, AUSSEN_WEST_Q + u), (bis, AUSSEN_WEST_Q + u),
-                 (bis, ost_q), (von, ost_q)]
+        ost_q = west_q - breite
+        ecken = [(von, west_q + u), (bis, west_q + u), (bis, ost_q), (von, ost_q)]
         return [[round(x, 2), round(y, 2)]
                 for x, y in (rahmen.ort(s, q) for s, q in ecken)]
 
@@ -1021,28 +1031,37 @@ def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
         "quelle": "vor Ort gemessen (dz.nrw); verortet ueber die amtlichen Hallenkanten",
         "grenzeM": grenze,
         "versatzM": AUSSEN_VERSATZ_M,
+        "versatzGerechnetM": round(abs(AUSSEN_WEST_E0_Q - AUSSEN_WEST_E1_Q), 2),
+        "versatzHerkunft": ("Sprung der Boulevard-Ostflanke zwischen Nordgang "
+                            "(-7,46) und Suedteil (-36,8); vor Ort mit 29,95 m "
+                            "gemessen"),
         "ueberlappM": u,
         "ebene1": {
             "id": "aussen-9-10:ebene1",
             "vonM": grenze, "bisM": AUSSEN_E1["suedM"],
-            "qVonM": AUSSEN_E1["ostQ"], "qBisM": AUSSEN_WEST_Q,
+            "qVonM": round(AUSSEN_WEST_E1_Q - AUSSEN_E1["breiteQ"], 2),
+            "qBisM": AUSSEN_WEST_E1_Q,
             "hoeheM": round(oben, 2),
-            "polygon": flaeche(grenze - u, AUSSEN_E1["suedM"] + u, AUSSEN_E1["ostQ"]),
+            "polygon": flaeche(grenze - u, AUSSEN_E1["suedM"] + u,
+                               AUSSEN_WEST_E1_Q, AUSSEN_E1["breiteQ"]),
             "herkunft": "188,10 x 178,93 m gemessen; Hoehe = Fussboden Halle 10.2",
         },
         "schraege": {
             "id": "aussen-9-10:schraege",
             "vonM": round(rampe_bis, 2), "bisM": grenze,
-            "qVonM": AUSSEN_E1["ostQ"], "qBisM": AUSSEN_WEST_Q,
+            "qVonM": round(AUSSEN_WEST_E1_Q - AUSSEN_E1["breiteQ"], 2),
+            "qBisM": AUSSEN_WEST_E1_Q,
             "obenM": round(oben, 2), "untenM": round(unten, 2),
             "laufM": AUSSEN_RAMPE_M,
             "hoeheGemessenM": AUSSEN_RAMPE_GEMESSEN_M,
             "steigungProzent": round(100 * (oben - unten) / AUSSEN_RAMPE_M, 2),
-            "polygon": flaeche(rampe_bis, grenze, AUSSEN_E1["ostQ"]),
+            "polygon": flaeche(rampe_bis, grenze,
+                               AUSSEN_WEST_E1_Q, AUSSEN_E1["breiteQ"]),
             # Zwei Dreiecke mit Hoehe je Ecke -- die Kollision interpoliert
             # darin, statt die Neigung ein zweites Mal zu rechnen.
             "dreiecke": dreiecke_der_rampe(rahmen, rampe_bis, grenze,
-                                           AUSSEN_E1["ostQ"], oben, unten, u),
+                                           AUSSEN_WEST_E1_Q,
+                                           AUSSEN_E1["breiteQ"], oben, unten, u),
             "herkunft": ("Grundriss 84,59 m gemessen; Hoehe aus den Hallenboeden. "
                          "Vor Ort wurden 8,33 m gemessen -- die amtlichen Boeden "
                          "geben 7,45 m, und die Fuge am Hallenboden waere sonst "
@@ -1051,9 +1070,11 @@ def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
         "ebene0": {
             "id": "aussen-9-10:ebene0",
             "vonM": AUSSEN_E0["nordM"], "bisM": grenze,
-            "qVonM": AUSSEN_E0["ostQ"], "qBisM": AUSSEN_WEST_Q,
+            "qVonM": round(AUSSEN_WEST_E0_Q - AUSSEN_E0["breiteQ"], 2),
+            "qBisM": AUSSEN_WEST_E0_Q,
             "hoeheM": round(unten, 2),
-            "polygon": flaeche(AUSSEN_E0["nordM"] - u, grenze, AUSSEN_E0["ostQ"]),
+            "polygon": flaeche(AUSSEN_E0["nordM"] - u, grenze,
+                               AUSSEN_WEST_E0_Q, AUSSEN_E0["breiteQ"]),
             "herkunft": "213,00 x 120,18 m gemessen; Hoehe = Fussboden Halle 9.1",
         },
     }

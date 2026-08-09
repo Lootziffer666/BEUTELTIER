@@ -558,3 +558,39 @@ describe('Aussengelaende 9/10', () => {
     expect(auf(aussen.grenzeM + 1, -120).z).toBeCloseTo(7.45, 2);
   });
 });
+
+/**
+ * Der Versatz zwischen den beiden Westkanten.
+ *
+ * Beide liegen am Boulevard -- aber der Boulevard ist auf beiden Hoehen ein
+ * anderer: bei den Stationen der Ebene 1 der Suedteil, bei denen der Ebene 0
+ * der Nordgang. Zwischen beiden springt seine Ostflanke, und dieser Sprung ist
+ * der vor Ort gemessene Versatz. Zwei Quellen, die nichts voneinander wissen.
+ */
+describe('Versatz der Westkanten', () => {
+  const aussen = plan.aussen9_10!;
+
+  it('legt die Westkanten auf die jeweilige Boulevardflanke', () => {
+    expect(aussen.ebene0.qBisM).toBeCloseTo(plan.seitenQ.ost, 2);
+    expect(aussen.ebene1.qBisM).toBeCloseTo(plan.sued!.seitenQ.ost, 0);
+  });
+
+  it('trifft den gemessenen Versatz auf unter einen Meter', () => {
+    // Gerechnet 29,34 m aus den amtlichen Umrissen, gemessen 29,95 m vor Ort.
+    // 61 cm Rest zwischen zwei Quellen, die nichts voneinander wissen -- die
+    // Toleranz steht hier als Zahl und nicht in einer Rundungsstelle.
+    const gerechnet = Math.abs(aussen.ebene0.qBisM - aussen.ebene1.qBisM);
+    expect(Math.abs(gerechnet - aussen.versatzM)).toBeLessThan(1.0);
+  });
+
+  it('haelt die gemessenen Breiten beider Ebenen ein', () => {
+    expect(aussen.ebene1.qBisM - aussen.ebene1.qVonM).toBeCloseTo(178.1, 1);
+    expect(aussen.ebene0.qBisM - aussen.ebene0.qVonM).toBeCloseTo(213.0, 1);
+  });
+
+  it('deckt Halle 9 jetzt bis an die Gangwand ab', () => {
+    // Vorher endete Ebene 0 auf der Linie des Suedboulevards und liess einen
+    // Streifen von 29 m zur Wand des Nordgangs offen.
+    expect(aussen.ebene0.qBisM).toBeGreaterThan(-28.4);
+  });
+});

@@ -1086,6 +1086,8 @@
   "quelle": "vor Ort gemessen (dz.nrw); verortet ueber die amtlichen Hallenkanten",
   "grenzeM": 300.0,
   "versatzM": 29.95,
+  "versatzGerechnetM": 29.34,
+  "versatzHerkunft": "Sprung der Boulevard-Ostflanke zwischen Nordgang (-7,46) und Suedteil (-36,8); vor Ort mit 29,95 m gemessen",
   "ueberlappM": 2.0,
   "ebene1": {
    "id": "aussen-9-10:ebene1",
@@ -1185,25 +1187,25 @@
    "id": "aussen-9-10:ebene0",
    "vonM": 179.8,
    "bisM": 300.0,
-   "qVonM": -249.8,
-   "qBisM": -36.8,
+   "qVonM": -220.46,
+   "qBisM": -7.456,
    "hoeheM": 0.0,
    "polygon": [
     [
-     -88.79,
-     -16.79
+     -114.51,
+     -30.92
     ],
     [
-     -147.62,
-     90.32
+     -173.34,
+     76.19
     ],
     [
-     40.83,
-     193.83
+     15.11,
+     179.7
     ],
     [
-     99.66,
-     86.72
+     73.94,
+     72.59
     ]
    ],
    "herkunft": "213,00 x 120,18 m gemessen; Hoehe = Fussboden Halle 9.1"
