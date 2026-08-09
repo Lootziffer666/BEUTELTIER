@@ -19,19 +19,25 @@ import type { Dataset } from '../data/load';
 import { siteCentre } from '../data/load';
 import type { Ortho } from '../data/load';
 import type { Route } from '../routing/route';
-import { mergePolygons, polygonCentre, toScene } from './geometry';
+import { mergePolygons, polygonCentre, projiziereUV, toScene } from './geometry';
 import { EYE_HEIGHT_M } from './walk';
 import {
   ceilingSurface,
   disposeSurface,
   facadeSurface,
   floorSurface,
+  hallenbodenSurface,
+  hallendeckeSurface,
   orthoTexture,
   standSurface,
+  WELT_KACHEL_M,
   type Surface,
 } from './materials';
 import { Beleuchtung } from './lighting';
-import { Deckenleuchten } from './interior';
+import { Deckenleuchten, Hallenhuelle, Hallenlicht } from './interior';
+import { Boulevard } from './boulevard';
+import { Markenstaende } from './Markenstaende';
+import { MARKEN_STAND_IDS } from './marken';
 import { Vertikalverbindungen } from './vertical';
 import type { CameraSnapshot } from './survey';
 
@@ -49,6 +55,8 @@ export interface SceneProps {
   onSelectStand: (standId: string | null) => void;
   /** Verlässt die Ego-Perspektive, wenn der Nutzer Escape drückt. */
   onLeaveEgo?: () => void;
+  /** Sparsames Glas: keine Transmission, kein Durchblick -- dafür schnell. */
+  previewSafe?: boolean;
   /** Vermessungsmodus: Kollision aus, um Referenzfoto-Perspektiven zu erreichen. */
   noClip?: boolean;
   /** Bewegung und Umsehen pausiert, während ein Referenzfoto ausgerichtet wird. */
@@ -71,6 +79,11 @@ const COLOURS = {
   standLower: '#3f7dd6',
   standUpper: '#d98a3f',
   standOccupied: '#f0b23c',
+  // Von oben trennt Farbe die Ebenen. Auf Augenhöhe steht man dagegen im
+  // Messebau, und der ist weiß bis hellgrau -- ein blauer Klotz neben dem
+  // LEGO-Stand sähe aus wie ein Spielzeug, nicht wie eine Halle.
+  standInterior: '#c6cad2',
+  standInteriorOccupied: '#e6dcc6',
   selected: '#ff5c8a',
   route: '#4ade80',
   routeUnconfirmed: '#facc15',
@@ -298,82 +311,164 @@ function Gelaende({
   return <primitive object={model} position={[-centre[0], 0, centre[1]]} />;
 }
 
+/**
+ * Welcher Bauteil eine Fläche des amtlichen Modells ist.
+ *
+ * Es steht im Materialnamen, den build_buildings.py schreibt:
+ * `UUID|<Building|BuildingPart>|<teil>|<index>|<klasse>`. Beide Schreibweisen
+ * kommen im Modell vor -- ein Gebäude ohne Gebäudeteile heisst `Building`,
+ * eines mit heisst `BuildingPart`. Wer nur eine davon kennt, lässt knapp ein
+ * Drittel der Flächen unbehandelt stehen; genau daran blieb der Hallenboden
+ * eine graue Fläche ohne Textur.
+ */
+function bauteil(name: string): 'roof' | 'ground' | 'wall' | null {
+  const parts = (name ?? '').split('|');
+  if (parts.length < 3) return null;
+  if (parts[1] !== 'Building' && parts[1] !== 'BuildingPart') return null;
+  if (parts[2] === 'roof') return 'roof';
+  if (parts[2] === 'ground') return 'ground';
+  return 'wall';
+}
+
+/**
+ * Fertig behandelte Weltmodelle, nach Datei und Blickrichtung.
+ *
+ * Das Modell hat 490 Flächen; es bei jedem Rendern neu zu klonen kostet
+ * spürbar und bringt nichts, denn das Ergebnis hängt nur an zwei Dingen --
+ * welche Datei und ob man drinnen oder draussen steht. Zwei Einträge je
+ * Datei, den Rest der Sitzung wiederverwendet.
+ */
+const weltCache = new Map<string, THREE.Object3D>();
+
+/**
+ * Die Oberflächen des Weltmodells, ebenfalls je Blickrichtung einmal.
+ *
+ * Sie hängen an den zwischengespeicherten Modellen; würden sie beim
+ * Aushängen der Szene freigegeben, zeigte das nächste Betreten der Halle
+ * leere Texturen. Zwei Sätze Leinwandtexturen für die ganze Sitzung.
+ */
+const weltFlaechenCache = new Map<string, { boden: Surface; decke: Surface; wand: Surface }>();
+
+function weltFlaechen(interior: boolean) {
+  const schluessel = String(interior);
+  let satz = weltFlaechenCache.get(schluessel);
+  if (!satz) {
+    satz = {
+      boden: hallenbodenSurface(),
+      decke: hallendeckeSurface(),
+      wand: facadeSurface(interior),
+    };
+    weltFlaechenCache.set(schluessel, satz);
+  }
+  return satz;
+}
+
+/**
+ * Wie deckend die amtlichen Weltpakete je Preset stehen.
+ *
+ * Aus der Übersicht ist das Modell eine Karte: die Hülle bleibt als Andeutung
+ * stehen, sonst verdeckt sie genau die Stände, wegen derer man hinsieht. Auf
+ * Augenhöhe ist sie das Gebäude und steht undurchsichtig.
+ *
+ * Der Kern bleibt im Ego-Blick bei 1,0 und nicht bei den vorgeschlagenen 0,92:
+ * drinnen kommen die Wände aus `Hallenhuelle`, und ein Schleier darauf liesse
+ * die Nachbarhalle durchscheinen. Draussen hat das Modell keine Meinung, dort
+ * gelten die gemessenen Profile.
+ */
+const WELT_DECKKRAFT: Record<CameraPreset, { kern: number; umgebung: number }> = {
+  uebersicht: { kern: 0.18, umgebung: 0.35 },
+  halle: { kern: 0.35, umgebung: 0.25 },
+  laufmodus: { kern: 0.18, umgebung: 0.3 },
+  ego: { kern: 1.0, umgebung: 0.15 },
+};
+
+/** Legt den Preset-Schleier auf ein Material. 1,0 lässt es unberührt. */
+function schleier(material: THREE.Material, deckkraft: number) {
+  if (deckkraft > 0.99) return;
+  material.transparent = true;
+  material.opacity = deckkraft;
+  // Ohne das schreibt eine durchsichtige Wand ihre Tiefe und schneidet aus,
+  // was hinter ihr steht -- man saehe durch die Halle hindurch ins Nichts.
+  material.depthWrite = false;
+}
+
 function OfficialPackage({
   uri,
-  packageId,
-  opacity,
   interior,
+  surfaces,
+  behandeln,
+  deckkraft,
 }: {
   uri: string;
-  packageId: string;
-  opacity: number;
   interior: boolean;
+  surfaces: { boden: Surface; decke: Surface; wand: Surface } | null;
+  /** Nur der Hallenkern wird umgebaut; die Umgebung bleibt, wie sie kommt. */
+  behandeln: boolean;
+  /** Deckkraft dieses Pakets im aktuellen Preset. */
+  deckkraft: number;
 }) {
   const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
 
-  const surfaces = useMemo<Record<string, Surface>>(
-    () => ({
-      facade: facadeSurface(false),
-      interior: facadeSurface(true),
-      floor: floorSurface(),
-      ceiling: ceilingSurface(),
-    }),
-    [],
-  );
-  useEffect(
-    () => () => Object.values(surfaces).forEach(disposeSurface),
-    [surfaces],
-  );
-
-  const isSurroundings = packageId.startsWith('surroundings');
   const model = useMemo(() => {
-    // Geometrien und Materialien müssen unabhängig sein
-    const clone = scene.clone(true);
-    const materialsToDispose: THREE.Material[] = [];
+    // Umgebaut wird nur, was man von drinnen sieht -- von aussen bleibt das
+    // Weltmodell inhaltlich, wie es geliefert wird.
+    const umbauen = behandeln && !!surfaces && interior;
+    // Ohne Umbau und ohne Schleier gibt es nichts zu tun; dann ist die
+    // gelieferte Szene das Ergebnis und wird nicht einmal geklont.
+    if (!umbauen && deckkraft > 0.99) return scene;
 
+    const schluessel = `${uri}|${interior}|${deckkraft.toFixed(2)}`;
+    const fertig = weltCache.get(schluessel);
+    if (fertig) return fertig;
+
+    const clone = scene.clone(true);
     clone.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
-      const source = node.material as THREE.MeshStandardMaterial;
-      const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide });
-
-      // Erbe Texturen und Basis-Eigenschaften aus den GLBs
-      if (source.map) material.map = source.map;
-      if (source.normalMap) material.normalMap = source.normalMap;
-      if (source.roughnessMap) material.roughnessMap = source.roughnessMap;
-      material.color.copy(source.color);
-      material.roughness = source.roughness;
-      material.metalness = source.metalness;
-
-      // Für Umgebungsgebäude: matter und weniger prominent
-      if (isSurroundings) {
-        material.roughness = Math.max(material.roughness, 0.85);
-        material.metalness = Math.min(material.metalness, 0.15);
+      const quelle = node.material as THREE.MeshStandardMaterial;
+      const teil = bauteil(quelle.name);
+      if (!umbauen || !teil || !surfaces) {
+        // Nur der Schleier. Das Material wird geklont, weil die Vorlage aus
+        // dem GLB-Cache kommt und von anderen Presets weiterbenutzt wird --
+        // sie hier zu veraendern faerbte auch die Übersicht ein.
+        if (deckkraft <= 0.99) {
+          const kopie = quelle.clone();
+          schleier(kopie, deckkraft);
+          node.material = kopie;
+        }
+        return;
       }
 
-      material.normalScale = new THREE.Vector2(1.1, 1.1);
-      material.transparent = opacity < 0.99;
-      material.opacity = opacity;
-      material.depthWrite = opacity > 0.9;
+      const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide });
+      // Von innen ist das Dach die Decke und der Boden der Hallenboden. Von
+      // aussen bleibt beides, wie das Geländemodell es meint.
+      // Innen tragen Boden und Decke ein anderes Höhendatum als die
+      // begehbare Ebene -- die Bodenplatte des Modells läge über dem Kopf
+      // des Besuchers. Drinnen kommen beide deshalb aus `Hallenhuelle`,
+      // und die Flächen des Modells bleiben aus.
+      // Boden und Decke tragen im Modell ein anderes Höhendatum als die
+      // begehbare Ebene -- seine Bodenplatte läge über dem Kopf des
+      // Besuchers. Drinnen kommen beide deshalb aus `Hallenhuelle`.
+      if (teil !== 'wall') {
+        node.visible = false;
+        return;
+      }
+      projiziereUV(node.geometry, WELT_KACHEL_M.wand);
+      material.map = surfaces.wand.map;
+      material.normalMap = surfaces.wand.normalMap;
+      material.roughnessMap = surfaces.wand.roughnessMap;
+      material.color.copy(quelle.color ?? new THREE.Color('#ffffff'));
+      material.metalness = 0.18;
+      material.envMapIntensity = 0.9;
+      material.normalScale = new THREE.Vector2(1.0, 1.0);
+      schleier(material, deckkraft);
       node.material = material;
-      node.castShadow = !interior && !isSurroundings;
       node.receiveShadow = true;
-      materialsToDispose.push(material);
+      node.castShadow = false;
     });
 
-    // Speichere die erzeugten Materialien für Cleanup
-    (clone as any).__materials = materialsToDispose;
+    weltCache.set(schluessel, clone);
     return clone;
-  }, [scene, opacity, interior, isSurroundings, surfaces]);
-
-  useEffect(
-    () => () => {
-      if (model && (model as any).__materials) {
-        const materials = (model as any).__materials as THREE.Material[];
-        materials.forEach((m) => m.dispose());
-      }
-    },
-    [model],
-  );
+  }, [scene, interior, surfaces, behandeln, uri, deckkraft]);
 
   return <primitive object={model} />;
 }
@@ -387,51 +482,34 @@ function OfficialWorld({
   centre: [number, number];
   preset: CameraPreset;
 }) {
+  const interior = preset === 'ego';
+  const surfaces = weltFlaechen(interior);
+  const deckkraft = WELT_DECKKRAFT[preset];
+
   const packages = data.world?.manifest.packages.filter(
     (entry) => entry.available && entry.role === 'render',
   ) ?? [];
   if (!packages.length) return null;
-
-  // Opazitätsprofile je Preset
-  const getOpacity = (packageId: string) => {
-    const isSurroundings = packageId.startsWith('surroundings');
-    if (!isSurroundings) {
-      // Kernmesse
-      switch (preset) {
-        case 'uebersicht':
-        case 'laufmodus':
-          return 0.18;
-        case 'halle':
-          return 0.35;
-        case 'ego':
-          return 0.92;
-      }
-    } else {
-      // Umgebung
-      switch (preset) {
-        case 'uebersicht':
-          return 0.35;
-        case 'halle':
-          return 0.25;
-        case 'laufmodus':
-          return 0.3;
-        case 'ego':
-          return 0.15;
-      }
-    }
-  };
-
+  // GLBs verwenden echtes Three.js sceneZ. Die registrierten 2D-Inhalte
+  // laufen noch durch toScene(), das ihre zweite Achse negiert.
   return (
     <group position={[-centre[0], 0, centre[1]]} scale={[1, 1, -1]}>
-      {packages.map((entry) => (
-        <OfficialPackage
-          key={entry.id}
-          uri={entry.uri}
-          packageId={entry.id}
-          opacity={getOpacity(entry.id)}
-          interior={preset === 'ego'}
-        />
-      ))}
+      {packages.map((entry) => {
+        // Der Kern ist die Messe selbst, alles andere ist Umgebung. Die
+        // Kollisionspakete kommen hier gar nicht an -- sie sind oben schon
+        // ueber `role === 'render'` ausgesiebt.
+        const kern = entry.id.startsWith('core/');
+        return (
+          <OfficialPackage
+            key={entry.id}
+            uri={entry.uri}
+            interior={interior}
+            surfaces={surfaces}
+            behandeln={kern}
+            deckkraft={kern ? deckkraft.kern : deckkraft.umgebung}
+          />
+        );
+      })}
     </group>
   );
 }
@@ -523,6 +601,9 @@ function Stands({
     // in einer anderen Halle und verdeckt den halben Blick. Was nicht genau
     // genug verortet ist, um daneben zu stehen, wird hier nicht gezeichnet.
     const shown = data.site.stands.filter((stand) => {
+      // Markenstände tragen eine eigene Fassade und dürfen nicht zusätzlich
+      // im Sammelkörper stecken -- zwei deckungsgleiche Wände flackern.
+      if (MARKEN_STAND_IDS.has(stand.id)) return false;
       if (!interior) return true;
       const hall = data.hallsByKey.get(stand.hallKey);
       return !hall || hall.placement.source !== 'geschaetzt';
@@ -555,8 +636,16 @@ function Stands({
     const geometry = group.geometry;
     const count = geometry.getAttribute('position').count;
     const colours = new Float32Array(count * 3);
-    const base = new THREE.Color(level === 'lower' ? COLOURS.standLower : COLOURS.standUpper);
-    const occupied = new THREE.Color(COLOURS.standOccupied);
+    const base = new THREE.Color(
+      interior
+        ? COLOURS.standInterior
+        : level === 'lower'
+          ? COLOURS.standLower
+          : COLOURS.standUpper,
+    );
+    const occupied = new THREE.Color(
+      interior ? COLOURS.standInteriorOccupied : COLOURS.standOccupied,
+    );
     const selected = new THREE.Color(COLOURS.selected);
     const onRoute = new THREE.Color(COLOURS.route);
 
@@ -597,6 +686,8 @@ function Stands({
     <group>
       <mesh
         geometry={lowerGeometry}
+        castShadow
+        receiveShadow
         onClick={(event) => {
           event.stopPropagation();
           pick(merged.lower)(event.faceIndex);
@@ -615,6 +706,8 @@ function Stands({
       {upperOpacity > 0.02 && (
         <mesh
           geometry={upperGeometry}
+          castShadow
+          receiveShadow
           onClick={(event) => {
             event.stopPropagation();
             pick(merged.upper)(event.faceIndex);
@@ -811,9 +904,46 @@ function WalkControls({
     const site = start
       ? { x: start.x + centre[0], y: centre[1] - start.z, z: start.y }
       : null;
-    const footing = site && !data.walk.footingAt(site.x, site.y, site.z).blocked
-      ? { x: site.x, y: site.y, z: data.walk.footingAt(site.x, site.y, site.z).z }
-      : data.walk.spawn();
+    // Der Mittelpunkt einer Halle liegt oft mitten in einem Stand -- in Halle 9
+    // genau im LEGO-Block. Dann ist der nächstgelegene freie Punkt derselben
+    // Halle gemeint und nicht der erste begehbare Punkt des ganzen Geländes,
+    // der irgendwo im Obergeschoss von Halle 10 liegt.
+    // Der Mittelpunkt einer Halle liegt oft mitten in einem Stand -- in Halle 9
+    // genau im LEGO-Block. Gesucht ist dann nicht irgendein freier Punkt, sondern
+    // der Gang: wer mit der Nase an der Standwand startet, sieht von der Halle
+    // nichts. Deshalb zählt nicht „frei", sondern wie viel Platz ringsum ist.
+    const luft = (x: number, y: number, z: number) => {
+      if (data.walk.footingAt(x, y, z).blocked) return -1;
+      let weite = 0;
+      for (const abstand of [2, 4, 6]) {
+        const offen = [[abstand, 0], [-abstand, 0], [0, abstand], [0, -abstand]].every(
+          ([dx, dy]) => !data.walk.footingAt(x + dx, y + dy, z).blocked,
+        );
+        if (!offen) break;
+        weite = abstand;
+      }
+      return weite;
+    };
+
+    let footing: { x: number; y: number; z: number } | null = null;
+    if (site) {
+      let beste = -1;
+      for (let radius = 0; radius <= 40 && beste < 6; radius += 2) {
+        const schritte = radius === 0 ? 1 : 24;
+        for (let step = 0; step < schritte; step += 1) {
+          const winkel = (step / schritte) * Math.PI * 2;
+          const x = site.x + Math.cos(winkel) * radius;
+          const y = site.y + Math.sin(winkel) * radius;
+          const weite = luft(x, y, site.z);
+          if (weite > beste) {
+            beste = weite;
+            footing = { x, y, z: data.walk.footingAt(x, y, site.z).z };
+          }
+          if (beste >= 6) break;
+        }
+      }
+    }
+    if (!footing) footing = data.walk.spawn();
     if (footing) position.current = footing;
     look.current = { yaw: 0, pitch: 0 };
   }, [active, start, data, centre]);
@@ -943,6 +1073,18 @@ function WalkControls({
         pitch: look.current.pitch,
         hallKey: data.walk.footingAt(x, y, z).hallKey,
       });
+    }
+    // Nur im Entwicklungsbetrieb: die Kamera von aussen setzen. Der
+    // Bilderpruefer (`gang-check.mjs`) braucht in Sekunden, wofuer Laufen
+    // unter dem Software-Renderer Minuten braucht. `import.meta.env.DEV` ist
+    // im gebauten Stand false, der ausgelieferte Code hat den Haken nicht.
+    if (import.meta.env.DEV) {
+      (globalThis as unknown as { __SETZEN?: unknown }).__SETZEN =
+        (px: number, py: number, pz: number, yaw: number) => {
+          position.current = { x: px, y: py, z: pz };
+          look.current.yaw = yaw;
+          look.current.pitch = 0;
+        };
     }
     camera.position.set(x - centre[0], z + EYE_HEIGHT_M, -(y - centre[1]));
     camera.rotation.set(0, 0, 0);
@@ -1080,7 +1222,21 @@ export function SiteScene(props: SceneProps) {
         interior={preset === 'ego'}
         onSelectStand={props.onSelectStand}
       />
+      <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
+      <Hallenhuelle data={data} centre={centre} visible={preset === 'ego'} />
+      <Boulevard
+        data={data}
+        centre={centre}
+        visible={preset === 'ego'}
+        previewSafe={props.previewSafe ?? true}
+      />
       <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
+      <Hallenlicht
+        data={data}
+        centre={centre}
+        hallKey={focusHallKey}
+        active={preset === 'ego'}
+      />
       <Vertikalverbindungen data={data} centre={centre} />
       <RouteRibbon data={data} route={route} centre={centre} />
       {preset !== 'ego' && (

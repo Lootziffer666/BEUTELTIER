@@ -61,6 +61,127 @@ export class ArchitectureGenerator {
     return group;
   }
 
+  /**
+   * Rolltreppe: Fachwerkkasten, Stufenband, Glasbalustrade, Handlauf.
+   *
+   * Gebaut wird sie am Fusspunkt beginnend entlang der lokalen +Z-Achse und
+   * dabei steigend. Der Aufrufer muss sie damit nur noch um die Hochachse
+   * drehen -- eine Neigung von aussen war der Grund, warum sie zuletzt in die
+   * falsche Richtung fiel.
+   *
+   * Die Stufen bleiben waagerecht, auch wenn das Band steigt. Genau daran
+   * erkennt man eine Rolltreppe und nicht eine Rampe.
+   */
+  static createEscalator(run = 18, rise = 7.45, width = 1.4, stepDepth = 0.42) {
+    const group = new THREE.Group();
+    const angle = Math.atan2(rise, run);
+    const length = Math.hypot(run, rise);
+    const steps = Math.max(2, Math.round(length / stepDepth));
+
+    // Fachwerkkasten unter dem Band.
+    const truss = new THREE.Mesh(
+      new THREE.BoxGeometry(width + 0.16, 0.8, length),
+      materials.get('darkMetal')
+    );
+    truss.position.set(0, rise / 2 - 0.5, run / 2);
+    truss.rotation.x = -angle;
+    truss.castShadow = true;
+    group.add(truss);
+
+    // Stufenband: waagerechte Tritte mit senkrechten Setzstufen dazwischen.
+    const tread = new THREE.BoxGeometry(width - 0.06, 0.05, stepDepth * 0.92);
+    const riser = new THREE.BoxGeometry(width - 0.06, rise / steps, 0.05);
+    for (let i = 0; i < steps; i++) {
+      const t = (i + 0.5) / steps;
+      const y = t * rise;
+      const z = t * run;
+      const step = new THREE.Mesh(tread, materials.get('brushedAlu'));
+      step.position.set(0, y, z);
+      step.castShadow = true;
+      group.add(step);
+
+      const back = new THREE.Mesh(riser, materials.get('chrome'));
+      back.position.set(0, y - rise / steps / 2, z - (stepDepth * 0.92) / 2);
+      group.add(back);
+    }
+
+    // Balustrade aus Glas, darauf der dunkle Handlauf.
+    for (const side of [-1, 1]) {
+      const glass = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, 0.95, length),
+        materials.get('balustradeGlass')
+      );
+      glass.position.set(side * (width / 2 + 0.06), rise / 2 + 0.42, run / 2);
+      glass.rotation.x = -angle;
+      group.add(glass);
+
+      const rail = new THREE.Mesh(
+        new THREE.BoxGeometry(0.14, 0.09, length),
+        materials.get('darkMetal')
+      );
+      rail.position.set(side * (width / 2 + 0.06), rise / 2 + 0.94, run / 2);
+      rail.rotation.x = -angle;
+      group.add(rail);
+    }
+
+    // Kammplatten an beiden Enden -- der Übergang auf den festen Boden.
+    for (const [y, z] of [[0.03, -0.35], [rise + 0.03, run + 0.35]]) {
+      const comb = new THREE.Mesh(
+        new THREE.BoxGeometry(width + 0.16, 0.06, 0.7),
+        materials.get('chrome')
+      );
+      comb.position.set(0, y, z);
+      group.add(comb);
+    }
+
+    return group;
+  }
+
+  /**
+   * Doppelglastuer: zwei Fluegel in einem Rahmen, mit Mittelpfosten.
+   *
+   * Gebaut in der lokalen XY-Ebene, Fusspunkt bei y = 0, Blickrichtung +Z.
+   */
+  static createDoubleGlassDoor(width = 2.4, height = 2.5) {
+    const group = new THREE.Group();
+    const rahmen = materials.get('brushedAlu');
+    const glas = materials.get('balustradeGlass');
+    const profil = 0.09;
+
+    // Zarge: zwei Pfosten und ein Sturz.
+    for (const side of [-1, 1]) {
+      const post = new THREE.Mesh(
+        new THREE.BoxGeometry(profil, height, 0.16), rahmen);
+      post.position.set(side * (width / 2), height / 2, 0);
+      group.add(post);
+    }
+    const lintel = new THREE.Mesh(
+      new THREE.BoxGeometry(width + profil, profil, 0.16), rahmen);
+    lintel.position.set(0, height, 0);
+    group.add(lintel);
+
+    // Mittelpfosten zwischen den beiden Fluegeln.
+    const mullion = new THREE.Mesh(
+      new THREE.BoxGeometry(profil * 0.7, height, 0.14), rahmen);
+    mullion.position.set(0, height / 2, 0);
+    group.add(mullion);
+
+    // Die Fluegel selbst.
+    for (const side of [-1, 1]) {
+      const leaf = new THREE.Mesh(
+        new THREE.PlaneGeometry(width / 2 - profil, height - profil), glas);
+      leaf.position.set(side * (width / 4), height / 2, 0);
+      group.add(leaf);
+
+      const handle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.04, 0.9, 0.04), materials.get('chrome'));
+      handle.position.set(side * 0.12, height * 0.42, 0.09);
+      group.add(handle);
+    }
+
+    return group;
+  }
+
   static createCeilingTruss(width = 60, depth = 40, gridSize = 10, height = 13.5) {
     const group = new THREE.Group();
     const mat = materials.get('truss');

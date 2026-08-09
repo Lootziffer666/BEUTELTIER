@@ -6,6 +6,9 @@
     "module": "esnext",
     "types": ["vite/client"],
     "allowArbitraryExtensions": true,
+    /* Damit Tests gegen die echten Weltdaten pruefen koennen statt gegen
+       ausgedachte -- siehe boulevardSurfaces.test.ts. */
+    "resolveJsonModule": true,
     "skipLibCheck": true,
 
     /* Bundler mode */

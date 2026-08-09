@@ -1,0 +1,313 @@
+{
+ "schema": "beuteltier.feature-zuordnung.v1",
+ "inventar": "data/raw/dznrw/feature-inventar.json",
+ "regeln": [
+  "Hallen 1-11 sind vollstaendig vorhanden.",
+  "Halle 5 besteht aus ZWEI realen Features; bei beiden steht Name=5.",
+  "Halle 5 laesst sich in der Mitte teilen; BEIDE Teile haben zwei Ebenen.",
+  "Gleiche Fktkurz-Werte bedeuten NICHT dasselbe Objekt.",
+  "Ueberdachung_A und Ueberdachung_B sind zwei verschiedene Objekte.",
+  "Parkhaus_A und Parkhaus_B sind zwei verschiedene Objekte.",
+  "Halle 3, Halle 11 und Eingang Ost wurden mehrfach fotografiert, sind aber je ein Objekt.",
+  "AUX-Features nicht anhand aehnlicher Form oder gleicher Funktionsklasse zusammenlegen.",
+  "Rellage=Aufgestaendert explizit erhalten.",
+  "LoD2-zmin NICHT als Innenfussboden interpretieren.",
+  "Keine Hoehen aus Screenshots oder zmin neu ableiten.",
+  "Keine Gebaeudemasse aus dz.nrw-Screenshotmessungen uebernehmen.",
+  "Halle 1 und Halle 11 haben keine Standregistrierung, weil dort keine Messestaende liegen -- das ist erwartet und kein Datenfehler.",
+  "Von den AUX-Koerpern werden nur die Aussenmasse gebraucht -- sie muessen nicht einzeln identifiziert werden.",
+  "Eingang Ost besteht aus drei Teilen; nur einer traegt den Namen."
+ ],
+ "zugeordnet": [
+  {
+   "object": "Halle_2",
+   "featureIds": [
+    "DENW37AL100064wf"
+   ],
+   "ebenen": [
+    "2.1",
+    "2.2"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_3",
+   "featureIds": [
+    "DENW37AL100064yw"
+   ],
+   "ebenen": [
+    "3.2"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_4",
+   "featureIds": [
+    "DENW37AL10006612"
+   ],
+   "ebenen": [
+    "4.1",
+    "4.2"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_5_A",
+   "featureIds": [
+    "DENW37AL100065RJ"
+   ],
+   "ebenen": [
+    "5.1",
+    "5.2"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_5_B",
+   "featureIds": [
+    "DENW37AL1000644Q"
+   ],
+   "ebenen": [
+    "5.1",
+    "5.2"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_6",
+   "featureIds": [
+    "DENW37AL100064lq"
+   ],
+   "ebenen": [
+    "6.1"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_7",
+   "featureIds": [
+    "DENW37AL1000660R"
+   ],
+   "ebenen": [
+    "7.1"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_8",
+   "featureIds": [
+    "DENW37AL100063oN"
+   ],
+   "ebenen": [
+    "8.1"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_9",
+   "featureIds": [
+    "DENW37AL100065KW"
+   ],
+   "ebenen": [
+    "9.1"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Halle_10",
+   "featureIds": [
+    "DENW37AL100064Zs"
+   ],
+   "ebenen": [
+    "10.1",
+    "10.2"
+   ],
+   "quelle": "hall-registrations (official-footprint-containment)"
+  },
+  {
+   "object": "Boulevard_Nord",
+   "featureIds": [
+    "UUID_bec8e8e7-29eb-4eda-bc5a-6b825e96f224",
+    "UUID_8a5bca01-f6e6-4f45-8b8d-68308b2adeb8"
+   ],
+   "lage": "Gangkoerper auf der Achse, Station 0-250",
+   "quelle": "Nutzerangabe (dz.nrw Feature Info)"
+  },
+  {
+   "object": "Parkhaus_A",
+   "featureIds": [
+    "UUID_50088905-9994-4e77-89ea-02a587cee29a"
+   ],
+   "lage": "Parkhaus oestlich dahinter, Station 103-145",
+   "quelle": "Nutzerangabe (dz.nrw Feature Info)"
+  },
+  {
+   "object": "Ost_A",
+   "featureIds": [
+    "UUID_e3204ca6-6d8e-4d46-a631-80808442a1de"
+   ],
+   "lage": "schmaler Riegel an der Ostwand, Station 100-149",
+   "quelle": "Nutzerangabe (dz.nrw Feature Info)"
+  },
+  {
+   "object": "Ost_C",
+   "featureIds": [
+    "DENW37AL1000668A"
+   ],
+   "lage": "breiter Koerper suedlich Halle 8, Station 12-71",
+   "quelle": "Nutzerangabe (dz.nrw Feature Info)"
+  }
+ ],
+ "unresolved": [
+  {
+   "object": "Halle_1",
+   "grund": "keine Standregistrierung im Repo",
+   "erwartet": true,
+   "nutzung": "Bisher nur fuer ein Konzert benutzt, nicht fuer Messestaende."
+  },
+  {
+   "object": "Halle_11",
+   "grund": "keine Standregistrierung im Repo",
+   "erwartet": true,
+   "nutzung": "11.1 Einlass, 11.2 Signing Area, 11.3 unbekannt. Von Halle 11 fuehren Treppen und Rolltreppen hinauf zu Halle 10."
+  },
+  {
+   "object": "Eingang_Ost",
+   "grund": "210 Features mit 31001_2000 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 210,
+   "teile": 3
+  },
+  {
+   "object": "Parkhaus_B",
+   "grund": "10 Features mit 31001_2461 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 10,
+   "teile": null
+  },
+  {
+   "object": "Ueberdachung_A",
+   "grund": "25 Features mit 51009_1610 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 25,
+   "teile": null
+  },
+  {
+   "object": "Ueberdachung_B",
+   "grund": "25 Features mit 51009_1610 im Bestand; die Inventur nennt keinen Schluessel, der eines davon eindeutig benennt",
+   "kandidaten": 25,
+   "teile": null
+  },
+  {
+   "object": "AUX_01",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116313"
+  },
+  {
+   "object": "AUX_02",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116303"
+  },
+  {
+   "object": "AUX_03",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116319"
+  },
+  {
+   "object": "AUX_04",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116323"
+  },
+  {
+   "object": "AUX_05",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116325"
+  },
+  {
+   "object": "AUX_06",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116326"
+  },
+  {
+   "object": "AUX_07",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116328"
+  },
+  {
+   "object": "AUX_08",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116329"
+  },
+  {
+   "object": "AUX_09",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116332"
+  },
+  {
+   "object": "AUX_10",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116333"
+  },
+  {
+   "object": "AUX_11",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116334"
+  },
+  {
+   "object": "AUX_12",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116338"
+  },
+  {
+   "object": "AUX_13",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116339"
+  },
+  {
+   "object": "AUX_14",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116340"
+  },
+  {
+   "object": "AUX_15",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116341"
+  },
+  {
+   "object": "AUX_16",
+   "grund": "nicht einzeln zugeordnet; gebraucht werden nur die Aussenmasse, und die liegen im LoD2 vor",
+   "erwartet": true,
+   "sourceRef": "1000116342"
+  }
+ ],
+ "bestandNachFunktion": {
+  "31001_1000": 66,
+  "31001_1100": 8,
+  "31001_2000": 210,
+  "31001_2400": 8,
+  "31001_2460": 15,
+  "31001_2461": 10,
+  "31001_2500": 1,
+  "31001_3010": 6,
+  "31001_3014": 1,
+  "31001_3021": 16,
+  "31001_3030": 4,
+  "31001_3060": 1,
+  "31001_3200": 4,
+  "31001_3221": 4,
+  "51009_1610": 25,
+  "53001_1800": 5
+ }
+}

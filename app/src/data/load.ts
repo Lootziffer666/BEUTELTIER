@@ -7,7 +7,16 @@
  */
 
 import { RouteGraph, type CompactGraph } from '../routing/graph';
-import { WalkGrid } from '../scene/walk';
+import { LEGACY_OPEN_OUTSIDE, WalkGrid } from '../scene/walk';
+import { boulevardAchse } from '../scene/boulevard';
+import { BoulevardSurfaces } from '../scene/boulevardSurfaces';
+import {
+  FlatSurfaceProvider,
+  PrioritySurfaceProvider,
+  TriangleSurfaceProvider,
+  type SurfaceProvider,
+  type TriangleSurface,
+} from '../scene/surfaces';
 import type { Registry, Site } from './types';
 
 const BASE = `${import.meta.env.BASE_URL}data`;
@@ -176,6 +185,295 @@ export interface WorldDiagnostics {
   } | null;
 }
 
+/**
+ * Der Nordboulevard, aus den amtlichen Gebaeudeumrissen gerechnet.
+ *
+ * Gebaut von tools/build_boulevard.py. Stationen in Metern ab der Stirnseite
+ * von Halle 8, Richtung Sueden; `art` sagt, ob dort eine Wand steht oder Glas.
+ */
+export interface BoulevardAbschnitt {
+  von: number;
+  bis: number;
+  art: 'wand' | 'glas';
+  was: string;
+  featureId: string | null;
+  hallKey: string | null;
+}
+
+/**
+ * Eine Aussenflaeche neben dem Gang, in Station und Quermass.
+ *
+ * `endetAn` sagt, woran die Tiefe aufgehoert hat: an einem Gebaeude, am Ende
+ * des flacheren Nachbarn -- oder an einer Vorgabe. Die ersten beiden sind
+ * Messungen, die dritte ist keine, und `gekappt` macht den Unterschied
+ * unuebersehbar.
+ */
+export interface BoulevardAussen {
+  id: string;
+  seite: 'ost' | 'west' | 'nord';
+  vonM: number;
+  bisM: number;
+  qVonM: number;
+  qBisM: number;
+  tiefeM: number;
+  zwischen: (string | null)[];
+  endetAn: string;
+  gekappt: boolean;
+  herkunft: string;
+}
+
+/**
+ * Ein Zugang von einer Halle in den Gang.
+ *
+ * `gemessen` ist bei diesen Eintraegen immer false, und das ist keine
+ * Nachlaessigkeit: kein verfuegbarer Datensatz nennt die Hallentueren am
+ * Nordboulevard. Gemessen ist die Fassade, an der der Zugang liegt
+ * (`abschnittVonM`/`abschnittBisM`); abgeleitet ist seine Mitte, vorgegeben
+ * sind Anzahl und Groesse.
+ */
+export interface BoulevardDurchgang {
+  id: string;
+  seite: 'ost' | 'west';
+  /** null beim Uebergang in den Nordknoten -- der gehoert zu keiner Halle. */
+  hallKey: string | null;
+  featureId: string | null;
+  abschnittVonM: number;
+  abschnittBisM: number;
+  stationM: number;
+  breiteM: number;
+  hoeheM: number;
+  gemessen: boolean;
+  herkunft: string;
+}
+
+/**
+ * Ein benannter Platz am Gelaende.
+ *
+ * Aus OpenStreetMap und nicht aus LoD2 -- nicht aus Bequemlichkeit, sondern
+ * weil ein Gebaeudemodell Gebaeude fuehrt und ein Platz keines ist. Der Umriss
+ * wird uebernommen und nicht in ein Rechteck gepresst: der Messeplatz hat 39
+ * Ecken, und ein Huellquader um ihn herum wuerde Flaeche behaupten, die es
+ * nicht gibt.
+ */
+export interface BoulevardPlatz {
+  id: string;
+  name: string;
+  quelle: string;
+  osmWayId: number;
+  vonM: number;
+  bisM: number;
+  qVonM: number;
+  qBisM: number;
+  hoeheM: number;
+  art: 'platz' | 'parkplatz';
+  /**
+   * Was dort waehrend der Messe stattfindet -- Angabe vor Ort, nicht aus den
+   * Daten ableitbar. null, wo nichts bekannt ist.
+   */
+  nutzung: string | null;
+  belag: string | null;
+  beleuchtet: boolean;
+  /** Der volle Umriss in Geländemetern. */
+  polygon: [number, number][];
+  /**
+   * Eine abgesperrte Kante des Platzes. Bisher nur bei P8: nach Nordwesten
+   * endet die Flaeche an der Unterfuehrung unter der Zoobruecke, und zur
+   * gamescom steht dort ein Zaun.
+   *
+   * `tiefeGemessenM` schneidet nichts weg -- die Zahl prueft den Umriss:
+   * senkrecht zur Kante ist er bei `tiefeBeiM` genau so tief wie gemessen.
+   */
+  zaun?: {
+    was: string;
+    kante: [[number, number], [number, number]];
+    laengeM: number;
+    tiefeGemessenM: number;
+    gefaelleGemessenM: number;
+    tiefeBeiM: number;
+    messlinie: [[number, number], [number, number]];
+    quelle: string;
+  };
+}
+
+/**
+ * Der Knick am Nordende.
+ *
+ * Anders als der Suedknoten ist er nicht konstruiert, sondern uebernommen: der
+ * amtliche Umriss enthaelt den Knick bereits, mit allen 67 Ecken und der
+ * gerundeten Fassade zum Messeplatz. Gerundet wird sie hier nicht weggerechnet
+ * -- gerade sie ist die Seite, an der man auf den Platz hinaustritt.
+ */
+export interface BoulevardNordknoten {
+  id: string;
+  featureId: string;
+  was: string;
+  vonM: number;
+  bisM: number;
+  qVonM: number;
+  qBisM: number;
+  flaecheSqm: number;
+  bodenM: number;
+  deckeM: number;
+  bodenHerkunft: string;
+  deckeHerkunft: string;
+  /** Stationsbereich, in dem er die Ostwand des Gangs beruehrt. */
+  anschlussM: [number, number] | null;
+  quelle: string;
+  polygon: [number, number][];
+}
+
+/**
+ * Das Aussengelaende zwischen Halle 9 und Halle 10.
+ *
+ * Bewusst stark vereinfacht: zwei ebene Vierecke und eine Rampe dazwischen,
+ * kein Terrain. Von Sueden nach Norden Ebene 1 -> Schraege -> Ebene 0; die
+ * Nordkante der oberen ist die Suedkante der unteren. Fuer Kollision und
+ * Wegfindung sind die drei **eine** durchgehende Oberflaeche.
+ *
+ * Die Kantenlaengen sind vor Ort gemessen, die Lage ueber die amtlichen
+ * Hallenkanten verortet -- dass sich dabei alle acht Laengen wiederfinden,
+ * ist die Bestaetigung.
+ */
+export interface BoulevardAussenEbene {
+  id: string;
+  vonM: number;
+  bisM: number;
+  qVonM: number;
+  qBisM: number;
+  hoeheM: number;
+  polygon: [number, number][];
+  herkunft: string;
+}
+
+export interface BoulevardAussenSchraege {
+  id: string;
+  vonM: number;
+  bisM: number;
+  qVonM: number;
+  qBisM: number;
+  obenM: number;
+  untenM: number;
+  laufM: number;
+  hoeheGemessenM: number;
+  steigungProzent: number;
+  polygon: [number, number][];
+  /** Zwei Dreiecke mit Hoehe je Ecke; die Neigung steckt nur hier. */
+  dreiecke: [number, number, number][][];
+  herkunft: string;
+}
+
+export interface BoulevardAussen910 {
+  id: string;
+  was: string;
+  quelle: string;
+  grenzeM: number;
+  versatzM: number;
+  versatzHerkunft: string;
+  /** Nebenmessung auf Ebene 1; bestimmt die Geometrie nicht. */
+  streckeZurRampeM: number;
+  streckeZurRampeHerkunft: string;
+  ueberlappM: number;
+  /**
+   * Beide Flaechen sind Vierecke, auf denen die Halle steht -- so bleibt die
+   * Bodenplatte robust und verschwindet unter den Hallenkanten. Was draussen
+   * uebrig bleibt, ist ein U; `offenNach` sagt, wohin.
+   */
+  form: {
+    ebene1: { traegt: string; offenNach: string; streifenZumBoulevardM: number };
+    ebene0: { traegt: string; offenNach: string; streifenZumBoulevardM: number };
+  };
+  ebene1: BoulevardAussenEbene;
+  schraege: BoulevardAussenSchraege;
+  ebene0: BoulevardAussenEbene;
+}
+
+export interface BoulevardPlan {
+  schema: 'beuteltier.boulevard.v1';
+  achse: {
+    /** Station 0 auf der Mittelachse, in Geländemetern. */
+    x0: number;
+    y0: number;
+    /** Einheitsvektoren laengs (wachsende Station) und quer. */
+    laengs: [number, number];
+    quer: [number, number];
+    winkelDeg: number;
+  };
+  laengeM: number;
+  breiteM: number;
+  hoeheM: number;
+  /** Abstand der beiden Wandlinien von der Achse, quer gemessen. */
+  seitenQ: { ost: number; west: number };
+  /** Wie weit der Gang geometrisch reicht -- bis Halle 5 und Halle 10. */
+  geometrieLaengeM: number;
+  /** Was an den beiden Enden liegt, als Hallennummern -- fuer die Wegweiser. */
+  enden: { nord: string[]; sued: string[] };
+  seiten: { ost: BoulevardAbschnitt[]; west: BoulevardAbschnitt[] };
+  /**
+   * Das Aussengelaende: die Hoefe zwischen den Hallen und das freie Gelaende
+   * hinter Halle 8. Dort, wo der Gang "Aussenflaeche" meldet, liegt eine
+   * dieser Flaechen hinter dem Glas.
+   *
+   * Fehlt in aelteren Schnappschuessen -- deshalb erlaubt leer.
+   */
+  aussen?: BoulevardAussen[];
+  /**
+   * Die Zugaenge von den Hallen in den Gang -- abgeleitet, nicht gemessen.
+   *
+   * Fehlt in aelteren Schnappschuessen; dann bleibt der Gang geschlossen.
+   */
+  durchgaenge?: BoulevardDurchgang[];
+  /** Benannte Plaetze aus OpenStreetMap; fehlen in aelteren Schnappschuessen. */
+  plaetze?: BoulevardPlatz[];
+  /**
+   * Der Knick am Nordende: dort biegt der Gang nach Osten ab und fuehrt zum
+   * Congress-Centrum Nord und zum Eingang Nord. Der Umriss ist amtlich, die
+   * Ebene beobachtet -- siehe `bodenHerkunft`.
+   */
+  nordknoten?: BoulevardNordknoten | null;
+  /** Das Aussengelaende zwischen Halle 9 und Halle 10. */
+  aussen9_10?: BoulevardAussen910 | null;
+  /**
+   * Der Suedteil: dort weitet sich der Gang zwischen Halle 5 und Halle 10 und
+   * liegt eine Ebene hoeher. `kanteM` ist die gemessene Lage der senkrechten
+   * Verbindungen aus `portals.json`.
+   */
+  sued: {
+    vonM: number;
+    bisM: number;
+    /**
+     * Gerechnet aus den Hallenausdehnungen -- und zu kurz. Vor Ort sind ab
+     * dem Treppenkopf 183,81 m gemessen; die enden bei Station 487,6, und
+     * Halle 10.2 endet amtlich bei 486,95.
+     */
+    laengeGerechnetM?: number;
+    laengeGemessenM?: number;
+    laengeHerkunft?: string;
+    breiteM: number;
+    seitenQ: { ost: number; west: number };
+    obenM: number | null;
+    untenM: number;
+    kanteM: number | null;
+    seiten: { ost: BoulevardAbschnitt[]; west: BoulevardAbschnitt[] };
+  } | null;
+  /** Der Suedknoten: Querriegel, Treppe und Passage zur Piazza. */
+  knoten: {
+    riegel: { vonM: number; bisM: number; hoeheM: number };
+    treppeM: number;
+    /** Ostrand des Riegels und die Stufenzahl hinunter zu Halle 10.1. */
+    qOstM: number;
+    stufenOst: number;
+    piazzaVonM: number;
+    piazzaHoeheM: number;
+  } | null;
+  /** Die Treppenanlage zwischen beiden Teilen. */
+  treppe: {
+    vonM: number;
+    bisM: number;
+    untenM: number;
+    obenM: number | null;
+  } | null;
+}
+
 export interface Dataset {
   site: Site;
   registry: Registry;
@@ -188,6 +486,8 @@ export interface Dataset {
   footprints: Footprints | null;
   /** Migrations-/Diagnosedaten; fehlen in älteren Offline-Snapshots erlaubt. */
   world: WorldDiagnostics | null;
+  /** Der Nordboulevard; fehlt in älteren Offline-Snapshots. */
+  boulevard: BoulevardPlan | null;
   /** registered = Halleninhalte und Routing liegen im lokalen amtlichen Raum. */
   spatialMode: 'legacy' | 'registered';
   standsById: Map<string, Site['stands'][number]>;
@@ -195,10 +495,83 @@ export interface Dataset {
   exhibitorsById: Map<string, Registry['exhibitors'][number]>;
 }
 
+/**
+ * Nur die Geometrie des Gelaendes.
+ *
+ * Wer Hallen und Staende in Koerper umrechnet, braucht weder Wegenetz noch
+ * Registry. Als eigener Typ geschrieben, damit derselbe Rechenweg auch
+ * ausserhalb der laufenden App laeuft -- der Bauplan-Export fuer den
+ * Blockeditor hat nur die Standortdatei, aber dieselben Hallen.
+ */
+export type Gelaende = Pick<Dataset, 'site' | 'hallsByKey'>;
+
 async function fetchJson<T>(name: string): Promise<T> {
   const response = await fetch(`${BASE}/${name}`);
   if (!response.ok) throw new Error(`${name} konnte nicht geladen werden (${response.status})`);
   return (await response.json()) as T;
+}
+
+/**
+ * Was ausserhalb der Hallengitter unter den Fuessen liegt.
+ *
+ * Zuerst der Boulevard: er bringt eigene Fussboeden und eigene Waende mit.
+ * Was er nicht kennt, faellt weiter auf die alte Regel zurueck -- draussen ist
+ * offen. Die Reihenfolge ist der ganze Trick: `PrioritySurfaceProvider` nimmt
+ * den ersten Geber, der sich zustaendig erklaert, und der Boulevard erklaert
+ * sich nur dort zustaendig, wo er auch steht. Das uebrige Gelaende bleibt
+ * damit unveraendert begehbar.
+ *
+ * Ohne `boulevard.json` -- in aelteren Offline-Schnappschuessen -- bleibt alles
+ * beim Alten.
+ */
+function aussenraum(plan: BoulevardPlan | null): SurfaceProvider {
+  const achse = plan ? boulevardAchse({ boulevard: plan }) : null;
+  if (!plan || !achse) return LEGACY_OPEN_OUTSIDE;
+  // Die Plaetze liegen hinter dem Boulevard in der Reihenfolge: wo beide etwas
+  // sagen, gilt der Gang. Ihr Umriss kommt unveraendert aus dem Plan, deshalb
+  // reicht hier der vorhandene Polygongeber.
+  const knoten = plan.nordknoten;
+  const aussen = plan.aussen9_10;
+  // Die Rampe steht **vor** den ebenen Flaechen: sie ueberdeckt den Suedrand
+  // der unteren Ebene, und dort soll ihre geneigte Hoehe gelten und nicht die
+  // ebene darunter. Ein Hoehenvergleich wuerde das nicht entscheiden -- am
+  // Fusspunkt sind beide gleich hoch.
+  const rampe = new TriangleSurfaceProvider(
+    (aussen ? aussen.schraege.dreiecke : []).map((dreieck, index) => ({
+      id: `${aussen!.schraege.id}:${index}`,
+      triangle: dreieck as unknown as TriangleSurface['triangle'],
+      blocked: false,
+    })),
+  );
+  const flaechen = new FlatSurfaceProvider([
+    // Der Knick zuerst: er liegt innen und traegt einen eigenen Fussboden.
+    ...(knoten ? [{
+      id: knoten.id,
+      polygon: knoten.polygon,
+      z: knoten.bodenM,
+      blocked: false,
+      priority: 1,
+    }] : []),
+    ...(aussen ? [aussen.ebene1, aussen.ebene0].map((ebene) => ({
+      id: ebene.id,
+      polygon: ebene.polygon,
+      z: ebene.hoeheM,
+      blocked: false,
+      priority: 1,
+    })) : []),
+    ...(plan.plaetze ?? []).map((platz) => ({
+      id: platz.id,
+      polygon: platz.polygon,
+      z: platz.hoeheM,
+      blocked: false,
+    })),
+  ]);
+  return new PrioritySurfaceProvider([
+    new BoulevardSurfaces(plan, achse),
+    rampe,
+    flaechen,
+    LEGACY_OPEN_OUTSIDE,
+  ]);
 }
 
 export async function loadDataset(): Promise<Dataset> {
@@ -230,12 +603,13 @@ export async function loadDataset(): Promise<Dataset> {
     fetchJson<WorldDiagnostics['hallRegistrations']>('hall-registrations.json').catch(() => null),
     fetchJson<WorldDiagnostics['registeredLayout']>('registered-layout.json').catch(() => null),
   ]);
+  const boulevard = await fetchJson<BoulevardPlan>('boulevard.json').catch(() => null);
 
   return {
     site,
     registry,
     graph: RouteGraph.fromCompact(compact),
-    walk: WalkGrid.fromCompact(compact),
+    walk: WalkGrid.fromCompact(compact, aussenraum(boulevard)),
     ortho,
     surroundings,
     footprints,
@@ -244,6 +618,7 @@ export async function loadDataset(): Promise<Dataset> {
       worldPackages, visibilityAnalysis, surfaceClassification, collisionSurfaces, hallRegistrations,
       registeredLayout,
     } : null,
+    boulevard,
     spatialMode,
     standsById: new Map(site.stands.map((stand) => [stand.id, stand])),
     hallsByKey: new Map(site.halls.map((hall) => [hall.key, hall])),

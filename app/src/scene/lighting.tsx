@@ -162,8 +162,11 @@ export function Beleuchtung({ extent, interior }: { extent: number; interior: bo
     // kommt von oben aus den Leuchtenreihen -- der Rest aus der Umgebung.
     return (
       <>
-        <hemisphereLight args={['#fff3dd', '#3d3f45', 1.15]} position={[0, extent, 0]} />
-        <ambientLight intensity={0.16} color="#cfd7e2" />
+        {/* Grundhelligkeit, nicht Beleuchtung: was den Raum formt, sind die
+            Leuchtenfelder in der Decke und die Punktlichter darunter. Eine
+            starke Halbkugel würde beides wieder einebnen. */}
+        <hemisphereLight args={['#fff3dd', '#33353b', 0.6]} position={[0, extent, 0]} />
+        <ambientLight intensity={0.09} color="#cfd7e2" />
       </>
     );
   }
