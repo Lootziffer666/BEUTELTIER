@@ -31,7 +31,19 @@ def inside(polygon: list[list[float]], point: tuple[float, float]) -> bool:
 
 
 def sample_polygon(polygon: list[list[float]], step: float = 10.0) -> list[tuple[float, float]]:
-    """Regelmaessige Innenpunkte; unabhaengig von Stand- und Portalzahlen."""
+    """Innenpunkte **und** der Rand; unabhaengig von Stand- und Portalzahlen.
+
+    Der Rand muss mit hinein, sonst kann die Passung ihn nicht sehen. Ein
+    reines Innenraster von 10 m saettigt bei 100 Prozent, sobald die Halle
+    grob im Gebaeude liegt -- und meldet dann Erfolg, waehrend Ecken bis zu
+    8,8 m draussen stehen. Das Raster trifft sie schlicht nicht.
+
+    Danach gibt es keine Sattigung mehr: unter vielen gleich guten Lagen
+    gewinnt die, bei der auch die Ecken drin sind. Und weil die Planflaeche
+    meist kleiner ist als das Gebaeude (76 bis 96 Prozent), gibt es eine
+    solche Lage in aller Regel.
+    """
+    ecken = polygon[:-1] if polygon[0] == polygon[-1] else polygon
     xs = [point[0] for point in polygon]
     ys = [point[1] for point in polygon]
     samples = []
@@ -43,7 +55,18 @@ def sample_polygon(polygon: list[list[float]], step: float = 10.0) -> list[tuple
                 samples.append((x, y))
             y += step
         x += step
-    return samples or [tuple(polygon[0])]
+
+    # Die Ecken selbst, und der Rand dazwischen in denselben Schritten -- eine
+    # lange Kante darf nicht schlechter vertreten sein als eine kurze.
+    rand: list[tuple[float, float]] = []
+    for i in range(len(ecken)):
+        a, b = ecken[i], ecken[(i + 1) % len(ecken)]
+        rand.append((a[0], a[1]))
+        laenge = math.dist(a, b)
+        for k in range(1, int(laenge / step)):
+            t = k * step / laenge
+            rand.append((a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])))
+    return (samples + rand) or [tuple(polygon[0])]
 
 
 MAX_DREHUNG_GRAD = 5.0
