@@ -184,6 +184,88 @@ def containment_fit(hall_polygon: list[list[float]], target_polygons: list[list[
             "shiftM": round(math.hypot(best[1], best[2]), 3)}
 
 
+TRANSFORM_VERSION = 3
+"""Fassung der Verortung. Erhoehen, wenn sich das Ergebnis aendert.
+
+1 -- globale Passung, hallenweise nur verschoben.
+2 -- Drehung mitgesucht (brachte nichts, siehe `containment_fit`).
+3 -- globale Winkelkorrektur aus `winkelkorrektur()`, +2,21 Grad.
+"""
+
+# Wie weit eine Ecke draussen liegen darf, bevor die Halle zur Nachpruefung
+# gemeldet wird. Zwei Meter decken die Wandstaerke und das uebliche Spiel
+# zwischen Plan und amtlichem Umriss ab.
+MELDEGRENZE_M = 2.0
+
+
+def abstand_zur_kante(punkt: tuple[float, float], ring: list[list[float]]) -> float:
+    """Kuerzester Abstand eines Punktes zum Rand eines Polygons."""
+    best = float("inf")
+    for i in range(len(ring)):
+        a, b = ring[i], ring[(i + 1) % len(ring)]
+        vx, vy = b[0] - a[0], b[1] - a[1]
+        l2 = vx * vx + vy * vy
+        t = 0.0 if l2 == 0 else max(0.0, min(1.0,
+            ((punkt[0] - a[0]) * vx + (punkt[1] - a[1]) * vy) / l2))
+        best = min(best, math.dist(punkt, (a[0] + t * vx, a[1] + t * vy)))
+    return best
+
+
+def passungsbefund(hall_polygon: list[list[float]], target_polygons: list[list[list[float]]],
+                   constraint: dict | None) -> dict:
+    """Wie gut die Halle in ihre Zielgebaeude passt -- als Zahl, nicht als Urteil.
+
+    **Regel: aus einer schlechten Passung wird nichts abgeschnitten.** Eine
+    Halle, die nicht in ihren amtlichen Umriss passt, ist ein Hinweis auf ein
+    Daten- oder Transformproblem und kein Muell. Wer sie zurechtstutzt,
+    vernichtet genau die Staende, die den Hinweis gegeben haetten -- bei
+    Halle 10.2 waeren das 10 Prozent der Halle mitsamt ihrer Belegung.
+
+    Deshalb steht das Ergebnis hier als Befund in den Daten. Sichtbar,
+    nachrechenbar, und beim naechsten Blick vergleichbar.
+
+    Die Ecken werden getrennt von der Abdeckung gezaehlt, weil beide
+    verschiedene Fragen beantworten: die Abdeckung tastet Innenpunkte im
+    10-m-Raster ab und erreicht 100 Prozent, auch wenn Ecken herausstehen --
+    das Raster trifft sie nicht. Genau diese Luecke hat den Befund lange
+    verdeckt.
+    """
+    ringe = [t[:-1] if t[0] == t[-1] else t for t in target_polygons]
+    grad = (constraint or {}).get("rotationDeg", 0.0)
+    dx, dy = (constraint or {}).get("translation", [0.0, 0.0])
+    cx, cy = (constraint or {}).get("pivot", [0.0, 0.0])
+    bogen = math.radians(grad)
+    cos, sin = math.cos(bogen), math.sin(bogen)
+
+    draussen = []
+    for x, y in hall_polygon:
+        rx, ry = x - cx, y - cy
+        p = (cx + cos * rx - sin * ry + dx, cy + sin * rx + cos * ry + dy)
+        if not ringe or any(inside(ring, p) for ring in ringe):
+            continue
+        draussen.append(min(abstand_zur_kante(p, ring) for ring in ringe))
+
+    befund = {
+        "transformVersion": TRANSFORM_VERSION,
+        "targetFeatureCount": len(ringe),
+        "fitPercent": (constraint or {}).get("coverageAfterPct"),
+        "outsideCornerCount": len(draussen),
+        "maxOutsideDistanceM": round(max(draussen), 2) if draussen else 0.0,
+    }
+    gruende = []
+    if not ringe:
+        gruende.append("kein amtliches Zielfeature zugeordnet")
+    if befund["fitPercent"] is not None and befund["fitPercent"] < 99.5:
+        gruende.append("Planflaeche passt nicht vollstaendig in den amtlichen Umriss "
+                       "-- moeglicherweise fehlt ein Zielkoerper")
+    if befund["maxOutsideDistanceM"] > MELDEGRENZE_M:
+        gruende.append(f"Ecke liegt {befund['maxOutsideDistanceM']} m ausserhalb; "
+                       "Planumriss ist einfacher geschnitten als das Gebaeude")
+    befund["geometryMismatch"] = bool(gruende)
+    befund["reviewReason"] = "; ".join(gruende) or None
+    return befund
+
+
 def shifted_transform(base: dict, constraint: dict) -> dict:
     """Haengt Drehung und Verschiebung einer Halle an die globale Passung.
 
@@ -286,6 +368,7 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
             "status": "constrained" if constraint else "draft",
             "source": "official-footprint-containment" if constraint else "legacy-global-fit",
             "constraint": constraint,
+            "befund": passungsbefund(hall["footprint"], target_polygons, constraint),
             "notes": [
                 ("Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben."
                  if constraint else "Noch keine amtlichen Zielfeatures dieser Hallenebene."),

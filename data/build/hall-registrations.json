@@ -52,6 +52,15 @@
         "vordrehungDeg": 2.209,
         "shiftM": 8.591
       },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 1,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 2,
+        "maxOutsideDistanceM": 4.44,
+        "geometryMismatch": true,
+        "reviewReason": "Ecke liegt 4.44 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
+      },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
@@ -102,6 +111,15 @@
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
         "shiftM": 9.852
+      },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 1,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 6,
+        "maxOutsideDistanceM": 6.74,
+        "geometryMismatch": true,
+        "reviewReason": "Ecke liegt 6.74 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -154,6 +172,15 @@
         "vordrehungDeg": 2.209,
         "shiftM": 12.117
       },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 1,
+        "fitPercent": 89.67,
+        "outsideCornerCount": 12,
+        "maxOutsideDistanceM": 23.66,
+        "geometryMismatch": true,
+        "reviewReason": "Planflaeche passt nicht vollstaendig in den amtlichen Umriss -- moeglicherweise fehlt ein Zielkoerper; Ecke liegt 23.66 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
+      },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
@@ -204,6 +231,15 @@
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
         "shiftM": 0.0
+      },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 1,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 2,
+        "maxOutsideDistanceM": 0.41,
+        "geometryMismatch": false,
+        "reviewReason": null
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -256,6 +292,15 @@
         "vordrehungDeg": 2.209,
         "shiftM": 4.5
       },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 1,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 4,
+        "maxOutsideDistanceM": 4.57,
+        "geometryMismatch": true,
+        "reviewReason": "Ecke liegt 4.57 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
+      },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
@@ -306,6 +351,15 @@
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
         "shiftM": 0.0
+      },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 1,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 2,
+        "maxOutsideDistanceM": 0.98,
+        "geometryMismatch": false,
+        "reviewReason": null
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -358,6 +412,15 @@
         "vordrehungDeg": 2.209,
         "shiftM": 4.5
       },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 1,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 4,
+        "maxOutsideDistanceM": 3.2,
+        "geometryMismatch": true,
+        "reviewReason": "Ecke liegt 3.2 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
+      },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
@@ -408,6 +471,15 @@
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
         "shiftM": 4.5
+      },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 1,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 4,
+        "maxOutsideDistanceM": 3.18,
+        "geometryMismatch": true,
+        "reviewReason": "Ecke liegt 3.18 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -461,6 +533,15 @@
         "vordrehungDeg": 2.209,
         "shiftM": 8.25
       },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 2,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 2,
+        "maxOutsideDistanceM": 0.98,
+        "geometryMismatch": false,
+        "reviewReason": null
+      },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
@@ -513,6 +594,15 @@
         "vordrehungDeg": 2.209,
         "shiftM": 1.5
       },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 2,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 6,
+        "maxOutsideDistanceM": 8.5,
+        "geometryMismatch": true,
+        "reviewReason": "Ecke liegt 8.5 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
+      },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
@@ -563,6 +653,15 @@
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
         "shiftM": 0.0
+      },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 1,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 3,
+        "maxOutsideDistanceM": 3.05,
+        "geometryMismatch": true,
+        "reviewReason": "Ecke liegt 3.05 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -615,6 +714,15 @@
         "vordrehungDeg": 2.209,
         "shiftM": 0.0
       },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 1,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 3,
+        "maxOutsideDistanceM": 8.44,
+        "geometryMismatch": true,
+        "reviewReason": "Ecke liegt 8.44 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
+      },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
@@ -665,6 +773,15 @@
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
         "shiftM": 10.5
+      },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 1,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 3,
+        "maxOutsideDistanceM": 8.76,
+        "geometryMismatch": true,
+        "reviewReason": "Ecke liegt 8.76 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -717,6 +834,15 @@
         "vordrehungDeg": 2.209,
         "shiftM": 10.5
       },
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 1,
+        "fitPercent": 100.0,
+        "outsideCornerCount": 3,
+        "maxOutsideDistanceM": 3.76,
+        "geometryMismatch": true,
+        "reviewReason": "Ecke liegt 3.76 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
+      },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
@@ -749,6 +875,15 @@
       "status": "draft",
       "source": "legacy-global-fit",
       "constraint": null,
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 0,
+        "fitPercent": null,
+        "outsideCornerCount": 0,
+        "maxOutsideDistanceM": 0.0,
+        "geometryMismatch": true,
+        "reviewReason": "kein amtliches Zielfeature zugeordnet"
+      },
       "notes": [
         "Noch keine amtlichen Zielfeatures dieser Hallenebene.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
@@ -781,6 +916,15 @@
       "status": "draft",
       "source": "legacy-global-fit",
       "constraint": null,
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 0,
+        "fitPercent": null,
+        "outsideCornerCount": 0,
+        "maxOutsideDistanceM": 0.0,
+        "geometryMismatch": true,
+        "reviewReason": "kein amtliches Zielfeature zugeordnet"
+      },
       "notes": [
         "Noch keine amtlichen Zielfeatures dieser Hallenebene.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
@@ -813,6 +957,15 @@
       "status": "draft",
       "source": "legacy-global-fit",
       "constraint": null,
+      "befund": {
+        "transformVersion": 3,
+        "targetFeatureCount": 0,
+        "fitPercent": null,
+        "outsideCornerCount": 0,
+        "maxOutsideDistanceM": 0.0,
+        "geometryMismatch": true,
+        "reviewReason": "kein amtliches Zielfeature zugeordnet"
+      },
       "notes": [
         "Noch keine amtlichen Zielfeatures dieser Hallenebene.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
