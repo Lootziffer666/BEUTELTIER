@@ -81,6 +81,65 @@ Scheinloesungen quer zur eigentlichen Achse.
 """
 
 
+WANDSTAERKE_M = 0.5
+"""Wie weit der begehbare Innenraum hinter der Gebaeudekante zurueckliegt.
+
+Wand, Stuetzenvorlage und Technikstreifen. Eine Setzung, keine Messung -- die
+Konstruktion der Koelnmesse ist hier nicht erhoben; siehe den Vermerk in
+`hall-registrations.json`.
+
+Sie sitzt am **Gebaeude** und nicht am Planumriss: gesucht ist der Raum, der
+tatsaechlich zur Verfuegung steht, und das ist der amtliche Umriss abzueglich
+der Wand. Was hineinpasst, entscheidet sich daran.
+"""
+
+
+def nach_innen(polygon: list[list[float]], meter: float = WANDSTAERKE_M) -> list[list[float]]:
+    """Versetzt jede Kante eines Umrisses um `meter` nach innen.
+
+    Ein echter Versatz und kein Schrumpf um die Mitte: eine Wand ist ueberall
+    gleich dick, waehrend ein Schrumpf die langen Seiten viel weiter
+    hereinzoege als die kurzen. Jede Kante wird deshalb einzeln parallel
+    verschoben und mit ihren Nachbarn neu geschnitten.
+
+    Faellt der Umriss dabei in sich zusammen, bleibt er unveraendert -- lieber
+    ein Gebaeude ohne Wandstaerke als ein verdrehtes.
+    """
+    ecken = polygon[:-1] if polygon[0] == polygon[-1] else list(polygon)
+    if len(ecken) < 3:
+        return [list(p) for p in polygon]
+    flaeche2 = sum(ecken[i][0] * ecken[(i + 1) % len(ecken)][1]
+                   - ecken[(i + 1) % len(ecken)][0] * ecken[i][1]
+                   for i in range(len(ecken)))
+    vorzeichen = 1.0 if flaeche2 > 0 else -1.0
+    geraden = []
+    for i in range(len(ecken)):
+        a, b = ecken[i], ecken[(i + 1) % len(ecken)]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        laenge = math.hypot(dx, dy)
+        if laenge < 1e-9:
+            return [list(p) for p in polygon]
+        nx, ny = -dy / laenge * vorzeichen, dx / laenge * vorzeichen
+        geraden.append(((a[0] + nx * meter, a[1] + ny * meter), (dx / laenge, dy / laenge)))
+    neu = []
+    for i in range(len(geraden)):
+        (p1, r1), (p2, r2) = geraden[i - 1], geraden[i]
+        nenner = r1[0] * r2[1] - r1[1] * r2[0]
+        if abs(nenner) < 1e-9:
+            neu.append([p2[0], p2[1]])
+            continue
+        t = ((p2[0] - p1[0]) * r2[1] - (p2[1] - p1[1]) * r2[0]) / nenner
+        neu.append([p1[0] + r1[0] * t, p1[1] + r1[1] * t])
+    def flaeche(ring):
+        return abs(sum(ring[i][0] * ring[(i + 1) % len(ring)][1]
+                       - ring[(i + 1) % len(ring)][0] * ring[i][1]
+                       for i in range(len(ring)))) / 2
+    aussen, innen = flaeche(ecken), flaeche(neu)
+    if not (0.5 * aussen < innen < aussen):
+        return [list(p) for p in polygon]
+    return neu
+
+
 def polygon_mitte(polygon: list[list[float]]) -> tuple[float, float]:
     """Schwerpunkt der Ecken -- derselbe Drehpunkt wie in `containment_fit`."""
     ecken = polygon[:-1] if polygon[0] == polygon[-1] else polygon
@@ -157,9 +216,9 @@ def containment_fit(hall_polygon: list[list[float]], target_polygons: list[list[
                           max(p[0] for p in target), max(p[1] for p in target)))
                 for target in target_polygons]
 
-    def coverage(dx: float, dy: float, grad: float = 0.0) -> float:
+    def coverage(dx: float, dy: float, grad: float = 0.0, skala: float = 1.0) -> float:
         bogen = math.radians(grad)
-        cos, sin = math.cos(bogen), math.sin(bogen)
+        cos, sin = math.cos(bogen) * skala, math.sin(bogen) * skala
         cx, cy = schwerpunkt
         inside_count = 0
         for x, y in samples:
@@ -214,8 +273,40 @@ def containment_fit(hall_polygon: list[list[float]], target_polygons: list[list[
                 kandidat = (coverage(dx, dy, grad), dx, dy, grad)
                 if besser(kandidat, best):
                     best = kandidat
+    # Zum Schluss die Groesse: was jetzt noch herausragt, passt schlicht nicht
+    # hinein. Statt es stehen zu lassen oder abzuschneiden wird die ganze Halle
+    # samt Staenden so weit verkleinert, bis sie in den verfuegbaren Innenraum
+    # geht -- die Lage der Staende zueinander bleibt dabei unveraendert, es
+    # aendert sich nur der Massstab.
+    skala = 1.0
+    if not frei and coverage(best[1], best[2], best[3]) < 100.0:
+        # Wie weit verkleinert werden darf. Zehn Prozent sind die Grenze
+        # zwischen Orientierungshilfe und Massstabsaenderung: darunter waere
+        # eine Halle sichtbar zu klein, und der Fehler gehoert dann gemeldet
+        # statt weggerechnet.
+        UNTERGRENZE = 0.90
+        # Erst pruefen, ob Verkleinern ueberhaupt hilft. Tut es das nicht, ist
+        # die Flaeche schlicht groesser als der Raum -- dann bleibt der
+        # Massstab bei 1,0 und der Befund meldet den Rest. Ohne diese Pruefung
+        # liefe die Halbierung ins Leere und gaebe eine Zahl zurueck, die nichts
+        # erreicht: Halle 5.2 kam so auf 0,8511 bei 99,4 Prozent.
+        if coverage(best[1], best[2], best[3], UNTERGRENZE) >= 100.0:
+            # Gesucht ist der **groesste** Massstab, der noch passt -- also so
+            # wenig verkleinern wie noetig. `passt` waechst monoton mit dem
+            # Verkleinern, deshalb genuegt eine Halbierung.
+            passt, zu_gross = UNTERGRENZE, 1.0
+            for _ in range(24):
+                mitte_s = (passt + zu_gross) / 2
+                if coverage(best[1], best[2], best[3], mitte_s) >= 100.0:
+                    passt = mitte_s
+                else:
+                    zu_gross = mitte_s
+            skala = round(passt, 4)
+            best = (coverage(best[1], best[2], best[3], skala), best[1], best[2], best[3])
+
     return {"translation": [round(best[1], 3), round(best[2], 3)],
             "rotationDeg": round(best[3], 3),
+            "scale": skala,
             "pivot": [round(schwerpunkt[0], 3), round(schwerpunkt[1], 3)],
             "coverageBeforePct": round(before, 2), "coverageAfterPct": round(best[0], 2),
             "samples": len(samples), "searchRadiusM": radius,
@@ -272,10 +363,11 @@ def passungsbefund(hall_polygon: list[list[float]], target_polygons: list[list[l
     """
     ringe = [t[:-1] if t[0] == t[-1] else t for t in target_polygons]
     grad = (constraint or {}).get("rotationDeg", 0.0)
+    skala = (constraint or {}).get("scale", 1.0)
     dx, dy = (constraint or {}).get("translation", [0.0, 0.0])
     cx, cy = (constraint or {}).get("pivot", [0.0, 0.0])
     bogen = math.radians(grad)
-    cos, sin = math.cos(bogen), math.sin(bogen)
+    cos, sin = math.cos(bogen) * skala, math.sin(bogen) * skala
 
     draussen = []
     for x, y in hall_polygon:
@@ -323,9 +415,10 @@ def shifted_transform(base: dict, constraint: dict) -> dict:
                  "matrix2D": list(base["matrix2D"])}
     shift = constraint["translation"]
     grad = constraint.get("rotationDeg", 0.0)
+    skala = constraint.get("scale", 1.0)
     cx, cy = constraint.get("pivot", [0.0, 0.0])
     bogen = math.radians(grad)
-    cos, sin = math.cos(bogen), math.sin(bogen)
+    cos, sin = math.cos(bogen) * skala, math.sin(bogen) * skala
     a, b, c, d = transform["matrix2D"]
 
     # M * R
@@ -392,10 +485,18 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
         placement = hall["placement"]
         target = targets.get(hall["key"], {})
         target_ids = target.get("buildingIds", [])
-        target_polygons = [building_by_id[feature_id]["footprint"] for feature_id in target_ids
+        # Der verfuegbare Innenraum ist der amtliche Umriss abzueglich der Wand.
+        target_polygons = [nach_innen(building_by_id[feature_id]["footprint"])
+                           for feature_id in target_ids
                            if feature_id in building_by_id and building_by_id[feature_id].get("footprint")]
+        # Ohne eigene Drehsuche: der Winkel ist eine Eigenschaft des ganzen
+        # Hallenplans, nicht der einzelnen Halle. Mit freier Suche drifteten
+        # Halle 2 und 4 auf 0,96 Grad und Halle 10.2 auf 4,11 Grad, weil sich
+        # eine knappe Passung durch Kippen "verbessern" laesst -- ohne dass die
+        # Halle richtiger stuende. Eine Halle, die einen eigenen Winkel
+        # braeuchte, ist ein Befund und keine Passung.
         constraint = containment_fit(hall["footprint"], target_polygons,
-                                     vordrehung=vordrehung)
+                                     vordrehung=vordrehung, drehsuche=False)
         if constraint is None and alle_umrisse:
             # Freiflaeche: gegen *alle* Gebaeude einpassen, mit umgedrehtem
             # Ziel -- sie soll moeglichst wenig davon treffen.

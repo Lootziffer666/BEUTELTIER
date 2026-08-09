@@ -165,7 +165,13 @@ class TestHallRegistrations:
         assert all(item["searchRadiusM"] == 20 for item in freie)
         assert len(freie) >= 2, "die Freiflaechen brauchen eine eigene Passung"
         # Und die Winkelkorrektur gilt fuer alle, auch fuer die ohne Zielfeature.
-        assert all(abs(item["rotationDeg"]) > 1.0 for item in constrained)
+        # Alle drehen um denselben Winkel: er ist eine Eigenschaft des ganzen
+        # Hallenplans. Mit freier Suche je Halle drifteten Halle 2 und 4 auf
+        # 0,96 Grad und Halle 10.2 auf 4,11 Grad -- eine knappe Passung laesst
+        # sich durch Kippen "verbessern", ohne dass die Halle richtiger steht.
+        winkel = {item["rotationDeg"] for item in constrained}
+        assert len(winkel) == 1, winkel
+        assert abs(next(iter(winkel))) > 1.0
 
     def test_draft_transform_erhaelt_relative_distanzen(self):
         from build_hall_registrations import draft_transform, transform_point
@@ -185,6 +191,10 @@ class TestHallRegistrations:
             "halls": 17, "stands": 1027, "walkGrids": 17,
             "facilities": 28, "portalEnds": 76,
         }
+        # Der Inhalt einer Halle behaelt seine Verhaeltnisse: Staende, Wegegitter
+        # und Umriss teilen sich **eine** Abbildung. Wo eine Halle verkleinert
+        # wird, wird alles darin mitverkleinert -- relativ zueinander aendert
+        # sich nichts.
         assert product["policy"]["relativeHallContentScale"] == 1.0
         assert product["policy"]["portalsAreRegistrationAnchors"] is False
         assert all(not portal["usedAsRegistrationAnchor"] for portal in product["portalEnds"])
@@ -193,8 +203,17 @@ class TestHallRegistrations:
         assert graph["schema"] == "beuteltier.registered-graph.v1"
         assert len(graph["grids"]) == 17
         assert all("cellBasisX" in grid and "cellBasisY" in grid for grid in graph["grids"])
-        assert all(math.hypot(*grid["cellBasisX"]) == pytest.approx(graph["gridM"], abs=0.002)
-                   for grid in graph["grids"])
+        # Die Gitterzelle traegt den Massstab ihrer Halle mit. Eine Halle, die
+        # in ihren Innenraum verkleinert wurde, haette sonst ein Wegegitter in
+        # Originalgroesse -- und das laege am Rand ausserhalb der Halle.
+        skalen = {r["hallKey"]: (r["constraint"] or {}).get("scale", 1.0)
+                  for r in json.loads(
+                      (BUILD / "hall-registrations.json").read_text(encoding="utf-8")
+                  )["registrations"]}
+        for grid in graph["grids"]:
+            erwartet = graph["gridM"] * skalen.get(grid["key"], 1.0)
+            assert math.hypot(*grid["cellBasisX"]) == pytest.approx(erwartet, abs=0.002), \
+                grid["key"]
         registered_site = json.loads((BUILD / "registered-site.json").read_text(encoding="utf-8"))
         assert len(registered_site["stands"]) == 1027
         assert registered_site["registration"]["status"] == "constrained"
@@ -1532,7 +1551,7 @@ class TestWandstaerke:
 
     def test_versetzt_jede_kante_gleich_weit(self):
         """Der Unterschied zum Schrumpfen: eine Wand ist ueberall gleich dick."""
-        from build_registered_layout import nach_innen, WANDSTAERKE_M
+        from build_hall_registrations import nach_innen, WANDSTAERKE_M
 
         lang = nach_innen([[0, 0], [220, 0], [220, 80], [0, 80]])
         assert lang[0] == pytest.approx([WANDSTAERKE_M, WANDSTAERKE_M], abs=1e-9)
@@ -1545,7 +1564,7 @@ class TestWandstaerke:
 
     def test_funktioniert_in_beiden_umlaufrichtungen(self):
         """Sonst versetzt die halbe Messe nach aussen statt nach innen."""
-        from build_registered_layout import nach_innen
+        from build_hall_registrations import nach_innen
 
         rechts = [[0, 0], [100, 0], [100, 50], [0, 50]]
         links = list(reversed(rechts))
@@ -1554,20 +1573,105 @@ class TestWandstaerke:
 
     def test_laesst_einen_umriss_in_ruhe_statt_ihn_zu_verdrehen(self):
         """Bei zu schmalen Formen faellt der Versatz aus, statt zu kippen."""
-        from build_registered_layout import nach_innen
+        from build_hall_registrations import nach_innen
 
         schmal = [[0, 0], [100, 0], [100, 0.4], [0, 0.4]]
         assert nach_innen(schmal) == [[0, 0], [100, 0], [100, 0.4], [0, 0.4]]
 
     def test_bleibt_im_plausiblen(self):
-        from build_registered_layout import WANDSTAERKE_M
+        from build_hall_registrations import WANDSTAERKE_M
 
         assert 0.2 <= WANDSTAERKE_M <= 1.5
 
-    def test_die_abweichung_steht_in_den_daten(self):
-        layout = json.loads((BUILD / "registered-layout.json").read_text(encoding="utf-8"))
-        from build_registered_layout import WANDSTAERKE_M
+    def test_die_wandstaerke_sitzt_am_gebaeude(self):
+        """Nicht am Planumriss -- sonst zaehlt sie zweimal.
 
-        vermerk = layout["wandstaerke"]
-        assert vermerk["meter"] == WANDSTAERKE_M
-        assert vermerk["gemessen"] is False
+        Der verfuegbare Innenraum ist der amtliche Umriss abzueglich der Wand.
+        Gegen den wird die Halle eingepasst; ihr eigener Umriss bleibt, wie der
+        Plan ihn gibt.
+        """
+        from build_hall_registrations import WANDSTAERKE_M, nach_innen
+
+        buildings = json.loads(BUILDINGS_JSON.read_text(encoding="utf-8"))
+        umriss = next(b["footprint"] for b in buildings["buildings"] if b.get("footprint"))
+        assert self._flaeche(nach_innen(umriss)) < self._flaeche(umriss)
+        assert WANDSTAERKE_M > 0
+
+
+class TestHalleneinpassung:
+    """Die Halle wird als Ganzes in den verfuegbaren Innenraum gelegt.
+
+    Umriss und Staende teilen sich eine Abbildung: was die Halle verkleinert,
+    verkleinert die Staende mit, und ihre Lage zueinander bleibt. Der
+    Massstab ist die letzte Stellschraube -- erst Drehung, dann Verschiebung,
+    und nur wo das nicht reicht, die Groesse.
+    """
+
+    @staticmethod
+    def _reg():
+        return json.loads((BUILD / "hall-registrations.json").read_text(encoding="utf-8"))
+
+    def test_verkleinert_nur_wo_noetig(self):
+        skalen = {r["hallKey"]: (r["constraint"] or {}).get("scale", 1.0)
+                  for r in self._reg()["registrations"]}
+        # Die meisten Hallen passen unveraendert -- sonst waere die Passung
+        # davor kaputt und der Massstab wuerde es kaschieren.
+        unveraendert = [k for k, s in skalen.items() if s == 1.0]
+        assert len(unveraendert) >= 12, skalen
+
+    def test_bleibt_bei_wenigen_prozent(self):
+        """Orientierungshilfe, nicht Massstabsaenderung."""
+        for r in self._reg()["registrations"]:
+            skala = (r["constraint"] or {}).get("scale", 1.0)
+            assert 0.9 <= skala <= 1.0, (r["hallKey"], skala)
+
+    def test_verkleinert_nie_eine_freiflaeche(self):
+        """Eine Freiflaeche hat keinen Innenraum, in den sie passen muesste."""
+        for r in self._reg()["registrations"]:
+            if (r["constraint"] or {}).get("frei"):
+                assert r["constraint"]["scale"] == 1.0
+
+    def test_wer_verkleinert_wurde_passt_danach(self):
+        for r in self._reg()["registrations"]:
+            skala = (r["constraint"] or {}).get("scale", 1.0)
+            if skala < 1.0:
+                assert r["befund"]["outsideCornerCount"] == 0, r["hallKey"]
+
+    def test_staende_folgen_ihrer_halle(self):
+        """Dieselbe Abbildung fuer Umriss und Staende.
+
+        Sonst schrumpfte die Halle und die Staende blieben stehen -- und was
+        vorher knapp passte, staende hinterher draussen.
+        """
+        layout = json.loads((BUILD / "registered-layout.json").read_text(encoding="utf-8"))
+        plan = json.loads((BUILD / "site.json").read_text(encoding="utf-8"))
+        skalen = {r["hallKey"]: (r["constraint"] or {}).get("scale", 1.0)
+                  for r in self._reg()["registrations"]}
+        verkleinert = [k for k, s in skalen.items() if s < 1.0]
+        assert verkleinert, "ohne verkleinerte Halle prueft das hier nichts"
+
+        for key in verkleinert:
+            halle = next(h for h in layout["halls"] if h["hallKey"] == key)
+            plan_stands = {s["id"]: s["polygon"] for s in plan["stands"] if s["hallKey"] == key}
+            if not plan_stands:
+                continue
+            gebaut = {s["id"]: s["polygon"] for s in halle["stands"]}
+            # Der Abstand zweier Staende muss sich um denselben Faktor
+            # geaendert haben wie die Halle.
+            # Zwei Staende, die wirklich auseinanderliegen -- benachbarte
+            # koennen denselben Mittelpunkt haben, und dann teilt der Test
+            # durch null.
+            def mitte0(poly):
+                return (sum(p[0] for p in poly) / len(poly),
+                        sum(p[1] for p in poly) / len(poly))
+            paare = sorted(plan_stands, key=lambda i: mitte0(plan_stands[i]))
+            ids = [paare[0], paare[-1]] if len(paare) >= 2 else []
+            if len(ids) < 2 or math.dist(mitte0(plan_stands[ids[0]]),
+                                         mitte0(plan_stands[ids[1]])) < 1.0:
+                continue
+            def mitte(poly):
+                return (sum(p[0] for p in poly) / len(poly),
+                        sum(p[1] for p in poly) / len(poly))
+            vorher = math.dist(mitte(plan_stands[ids[0]]), mitte(plan_stands[ids[1]]))
+            nachher = math.dist(mitte(gebaut[ids[0]]), mitte(gebaut[ids[1]]))
+            assert nachher / vorher == pytest.approx(skalen[key], abs=0.02), key

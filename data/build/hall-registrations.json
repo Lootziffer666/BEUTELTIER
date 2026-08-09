@@ -16,8 +16,8 @@
         "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1212.434,
-          227.659
+          -1212.563,
+          227.874
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
@@ -37,20 +37,21 @@
       "constraint": {
         "translation": [
           -13.5,
-          0.0
+          -0.25
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           581.961,
           535.939
         ],
-        "coverageBeforePct": 73.28,
+        "coverageBeforePct": 72.52,
         "coverageAfterPct": 100.0,
         "samples": 131,
         "searchRadiusM": 30,
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
-        "shiftM": 13.5
+        "shiftM": 13.502
       },
       "befund": {
         "transformVersion": 3,
@@ -73,18 +74,18 @@
         "DENW37AL100064Zs"
       ],
       "transform": {
-        "rotationDeg": -28.5536,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1213.696,
-          238.22
+          -1150.993,
+          232.476
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8783703478,
-          0.4779806817,
-          0.4779806817,
-          -0.8783703478
+          0.8271173023,
+          0.4547792632,
+          0.4547792632,
+          -0.8271173023
         ]
       },
       "floorZ": 0.49,
@@ -96,30 +97,31 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -12.25,
-          7.75
+          -10.0,
+          8.5
         ],
-        "rotationDeg": 2.459,
+        "rotationDeg": 2.209,
+        "scale": 0.9439,
         "pivot": [
           931.969,
           544.025
         ],
-        "coverageBeforePct": 82.18,
-        "coverageAfterPct": 95.64,
+        "coverageBeforePct": 81.82,
+        "coverageAfterPct": 100.0,
         "samples": 275,
         "searchRadiusM": 30,
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
-        "shiftM": 14.496
+        "shiftM": 13.124
       },
       "befund": {
         "transformVersion": 3,
         "targetFeatureCount": 1,
-        "fitPercent": 95.64,
-        "outsideCornerCount": 4,
-        "maxOutsideDistanceM": 0.46,
-        "geometryMismatch": true,
-        "reviewReason": "Planflaeche passt nicht vollstaendig in den amtlichen Umriss -- moeglicherweise fehlt ein Zielkoerper"
+        "fitPercent": 100.0,
+        "outsideCornerCount": 0,
+        "maxOutsideDistanceM": 0.0,
+        "geometryMismatch": false,
+        "reviewReason": null
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -133,18 +135,18 @@
         "DENW37AL100064Zs"
       ],
       "transform": {
-        "rotationDeg": -28.7536,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1219.622,
-          244.966
+          -1214.801,
+          236.443
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8766965326,
-          0.4810438543,
-          0.4810438543,
-          -0.8766965326
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 7.94,
@@ -156,30 +158,31 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -12.0,
-          -4.5
+          -11.75,
+          4.5
         ],
-        "rotationDeg": 2.259,
+        "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           925.904,
           548.676
         ],
-        "coverageBeforePct": 72.78,
-        "coverageAfterPct": 81.35,
+        "coverageBeforePct": 71.87,
+        "coverageAfterPct": 77.68,
         "samples": 327,
         "searchRadiusM": 30,
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
-        "shiftM": 12.816
+        "shiftM": 12.582
       },
       "befund": {
         "transformVersion": 3,
         "targetFeatureCount": 1,
-        "fitPercent": 81.35,
-        "outsideCornerCount": 10,
-        "maxOutsideDistanceM": 24.7,
+        "fitPercent": 77.68,
+        "outsideCornerCount": 12,
+        "maxOutsideDistanceM": 24.62,
         "geometryMismatch": true,
-        "reviewReason": "Planflaeche passt nicht vollstaendig in den amtlichen Umriss -- moeglicherweise fehlt ein Zielkoerper; Ecke liegt 24.7 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
+        "reviewReason": "Planflaeche passt nicht vollstaendig in den amtlichen Umriss -- moeglicherweise fehlt ein Zielkoerper; Ecke liegt 24.62 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -193,18 +196,18 @@
         "DENW37AL100064wf"
       ],
       "transform": {
-        "rotationDeg": -29.0536,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1211.095,
-          229.694
+          -1211.316,
+          232.966
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8741657868,
-          0.4856276117,
-          0.4856276117,
-          -0.8741657868
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -219,7 +222,8 @@
           -1.5,
           0.0
         ],
-        "rotationDeg": 1.959,
+        "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           680.816,
           318.511
@@ -256,8 +260,8 @@
         "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1202.894,
-          242.712
+          -1201.991,
+          239.754
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
@@ -276,21 +280,22 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          10.5,
-          -4.5
+          9.75,
+          -1.5
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           668.321,
           324.953
         ],
-        "coverageBeforePct": 80.0,
+        "coverageBeforePct": 78.46,
         "coverageAfterPct": 100.0,
         "samples": 130,
         "searchRadiusM": 30,
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
-        "shiftM": 11.424
+        "shiftM": 9.865
       },
       "befund": {
         "transformVersion": 3,
@@ -340,11 +345,12 @@
           0.0
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           771.132,
           325.36
         ],
-        "coverageBeforePct": 93.33,
+        "coverageBeforePct": 92.5,
         "coverageAfterPct": 100.0,
         "samples": 120,
         "searchRadiusM": 30,
@@ -376,8 +382,8 @@
         "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1211.631,
-          234.575
+          -1211.629,
+          233.117
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
@@ -396,21 +402,22 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -7.75,
-          0.25
+          -8.5,
+          1.5
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           730.671,
           494.199
         ],
-        "coverageBeforePct": 85.86,
+        "coverageBeforePct": 84.29,
         "coverageAfterPct": 100.0,
         "samples": 191,
         "searchRadiusM": 30,
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
-        "shiftM": 7.754
+        "shiftM": 8.631
       },
       "befund": {
         "transformVersion": 3,
@@ -433,18 +440,18 @@
         "DENW37AL10006612"
       ],
       "transform": {
-        "rotationDeg": -29.0536,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1212.171,
-          230.586
+          -1211.78,
+          233.859
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8741657868,
-          0.4856276117,
-          0.4856276117,
-          -0.8741657868
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 8.09,
@@ -456,21 +463,22 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -8.0,
-          0.25
+          -8.25,
+          0.75
         ],
-        "rotationDeg": 1.959,
+        "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           729.731,
           494.295
         ],
-        "coverageBeforePct": 86.08,
+        "coverageBeforePct": 85.05,
         "coverageAfterPct": 100.0,
         "samples": 194,
         "searchRadiusM": 30,
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
-        "shiftM": 8.004
+        "shiftM": 8.284
       },
       "befund": {
         "transformVersion": 3,
@@ -497,8 +505,8 @@
         "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1208.425,
-          234.889
+          -1208.854,
+          234.631
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
@@ -517,21 +525,22 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -8.75,
+          -9.25,
           1.5
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           729.193,
           595.632
         ],
-        "coverageBeforePct": 86.47,
+        "coverageBeforePct": 85.88,
         "coverageAfterPct": 100.0,
         "samples": 170,
         "searchRadiusM": 30,
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
-        "shiftM": 8.878
+        "shiftM": 9.371
       },
       "befund": {
         "transformVersion": 3,
@@ -558,8 +567,8 @@
         "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1210.533,
-          239.69
+          -1210.575,
+          238.789
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
@@ -578,30 +587,31 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -8.25,
-          -3.75
+          -8.75,
+          -3.0
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           727.995,
           600.003
         ],
-        "coverageBeforePct": 77.09,
-        "coverageAfterPct": 83.8,
+        "coverageBeforePct": 75.42,
+        "coverageAfterPct": 83.24,
         "samples": 179,
         "searchRadiusM": 30,
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
-        "shiftM": 9.062
+        "shiftM": 9.25
       },
       "befund": {
         "transformVersion": 3,
         "targetFeatureCount": 2,
-        "fitPercent": 83.8,
+        "fitPercent": 83.24,
         "outsideCornerCount": 4,
-        "maxOutsideDistanceM": 5.31,
+        "maxOutsideDistanceM": 6.58,
         "geometryMismatch": true,
-        "reviewReason": "Planflaeche passt nicht vollstaendig in den amtlichen Umriss -- moeglicherweise fehlt ein Zielkoerper; Ecke liegt 5.31 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
+        "reviewReason": "Planflaeche passt nicht vollstaendig in den amtlichen Umriss -- moeglicherweise fehlt ein Zielkoerper; Ecke liegt 6.58 m ausserhalb; Planumriss ist einfacher geschnitten als das Gebaeude"
       },
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
@@ -618,8 +628,8 @@
         "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1199.897,
-          242.25
+          -1200.281,
+          239.977
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
@@ -638,21 +648,22 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -3.0,
-          -1.75
+          -4.5,
+          0.0
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           697.239,
           735.098
         ],
-        "coverageBeforePct": 94.44,
+        "coverageBeforePct": 93.16,
         "coverageAfterPct": 100.0,
         "samples": 234,
         "searchRadiusM": 30,
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
-        "shiftM": 3.473
+        "shiftM": 4.5
       },
       "befund": {
         "transformVersion": 3,
@@ -678,8 +689,8 @@
         "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1199.818,
-          241.061
+          -1200.247,
+          240.803
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
@@ -698,21 +709,22 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -8.5,
+          -9.0,
           0.0
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           717.629,
           863.254
         ],
-        "coverageBeforePct": 94.65,
+        "coverageBeforePct": 93.05,
         "coverageAfterPct": 100.0,
         "samples": 187,
         "searchRadiusM": 30,
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
-        "shiftM": 8.5
+        "shiftM": 9.0
       },
       "befund": {
         "transformVersion": 3,
@@ -738,8 +750,8 @@
         "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1206.658,
-          240.211
+          -1207.388,
+          240.939
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
@@ -758,21 +770,22 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -19.5,
-          0.0
+          -19.75,
+          -1.0
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           792.476,
           983.747
         ],
-        "coverageBeforePct": 84.95,
+        "coverageBeforePct": 83.87,
         "coverageAfterPct": 100.0,
         "samples": 186,
         "searchRadiusM": 30,
         "maxRotationDeg": 5.0,
         "vordrehungDeg": 2.209,
-        "shiftM": 19.5
+        "shiftM": 19.775
       },
       "befund": {
         "transformVersion": 3,
@@ -822,11 +835,12 @@
           4.5
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           936.068,
           728.983
         ],
-        "coverageBeforePct": 75.61,
+        "coverageBeforePct": 74.39,
         "coverageAfterPct": 100.0,
         "samples": 164,
         "searchRadiusM": 30,
@@ -880,6 +894,7 @@
           -18.75
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           693.943,
           820.609
@@ -940,6 +955,7 @@
           0.0
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           794.94,
           1092.134
@@ -1000,6 +1016,7 @@
           -20.75
         ],
         "rotationDeg": 2.209,
+        "scale": 1.0,
         "pivot": [
           736.108,
           691.654
