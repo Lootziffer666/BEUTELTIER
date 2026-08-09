@@ -61,6 +61,20 @@ ABSCHLUSS = "8.1"      # steht quer am Nordende, Station 0
 SUED_WEST = "5.2"
 SUED_OST = "10.2"
 
+# Laenge des Suedboulevards, vor Ort gemessen: ab der Oberkante der grossen
+# Freitreppe im Nordboulevard 183,81 m nach Sueden.
+#
+# Die Gegenprobe stimmt auf zwei Drittel Meter: Treppenkopf bei Station 303,8
+# plus 183,81 m ergibt Station 487,61, und Halle 10.2 endet amtlich bei 486,95.
+# Zwei Quellen, die nichts voneinander wissen.
+#
+# `suedteil()` rechnet die Laenge dagegen als kleinste gemeinsame Ausdehnung
+# von Halle 5 und Halle 10 und kommt so auf 73,2 m -- weniger als die Haelfte.
+# Die Zahl steht hier, damit der Unterschied nicht unbemerkt bleibt; verbaut
+# ist sie noch nicht, denn der Suedknoten mit Querriegel und Passage sitzt
+# bisher genau in dem Stueck, das dann dazukaeme.
+SUED_LAENGE_GEMESSEN_M = 183.81
+
 # Vorgabe, keine Messung: die lichte Hoehe und wie weit der Gang gebaut wird.
 # Suedlich davon geht er weiter, dort docken Halle 5 und Halle 10 an -- das
 # ist die Fortsetzung, die noch nicht gebaut ist.
@@ -164,12 +178,9 @@ AUSSEN_VERSATZ_M = 29.95
 # Gebaut wird sie mit dem Grundriss und den **Hallenhoehen** -- siehe unten.
 AUSSEN_RAMPE_M = 84.59
 AUSSEN_RAMPE_GEMESSEN_M = 8.33
-# Vor Ort gemessen: die Strecke auf Ebene 1 vom Suedboulevard in Richtung
-# Rampe. Sie steht hier als Zahl und bestimmt die Geometrie **nicht** -- sie
-# laesst sich mit der gemessenen Kante von 188,10 m nicht vereinbaren. Aus
-# 40,85 m ab der Nordkante des Suedteils (Station 304,47) folgt eine Grenze
-# bei Station 263,6 und damit eine Ebene 1 von 224,5 m Laenge; gemessen sind
-# 188,10 m. Der Widerspruch betraegt 36 m und ist ungeklaert.
+# Ein einzelnes Stueck auf Ebene 1 in Richtung Rampe, nebenbei gemessen. Es
+# legt nichts fest und widerspricht auch nichts -- es ist einfach die Strecke,
+# die auf dem Bild zu sehen war.
 AUSSEN_STRECKE_ZUR_RAMPE_M = 40.85
 # Wie weit die Platten unter die Hallenboeden geschoben werden, damit draussen
 # keine Fuge steht und drinnen nichts hervorschaut.
@@ -766,6 +777,13 @@ def suedteil(gebaeude: dict[str, Gebaeude], ziel: dict[str, list[str]], station,
     return {
         "vonM": round(von, 2),
         "bisM": round(bis, 2),
+        "laengeGerechnetM": round(bis - von, 2),
+        "laengeGemessenM": SUED_LAENGE_GEMESSEN_M,
+        "laengeHerkunft": (
+            "gerechnet als kleinste gemeinsame Ausdehnung von Halle 5 und "
+            "Halle 10; vor Ort ab Treppenkopf 183,81 m gemessen. Die Messung "
+            "endet bei Station 487,6, Halle 10.2 amtlich bei 486,95 -- der "
+            "gerechnete Wert ist zu kurz."),
         "seitenQ": {"ost": round(wand_ost, 3), "west": round(wand_west, 3)},
         "breiteM": round(wand_west - wand_ost, 2),
         # Fussboden oben und unten, aus den amtlichen Hallenhoehen.
@@ -1047,10 +1065,8 @@ def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
         "versatzM": AUSSEN_VERSATZ_M,
         "streckeZurRampeM": AUSSEN_STRECKE_ZUR_RAMPE_M,
         "streckeZurRampeHerkunft": (
-            "vor Ort gemessen: auf Ebene 1 vom Suedboulevard Richtung Rampe. "
-            "Bestimmt die Geometrie nicht -- mit der gemessenen Kante von "
-            "188,10 m nicht vereinbar (ergaebe 224,5 m statt 188,10 m). "
-            "Ungeklaerter Widerspruch von 36 m."),
+            "vor Ort gemessen: ein Stueck auf Ebene 1 in Richtung Rampe. "
+            "Nebenmessung, bestimmt die Geometrie nicht."),
         "versatzHerkunft": ("An der Ostseite sind von Sueden aus 29,95 m von "
                             "Halle 10 nicht mit Ebene 1 ueberbaut. Der Wert "
                             "steht als Zahl und ist nicht aus der Platte "

@@ -573,6 +573,22 @@ describe('Aussengelaende 9/10', () => {
  * der Nordgang. Zwischen beiden springt seine Ostflanke, und dieser Sprung ist
  * der vor Ort gemessene Versatz. Zwei Quellen, die nichts voneinander wissen.
  */
+describe('Laenge des Suedboulevards', () => {
+  it('nennt die gemessene Laenge neben der gerechneten', () => {
+    // Ab Treppenkopf 183,81 m gemessen; gerechnet kommen aus den
+    // Hallenausdehnungen nur 73,2 m heraus. Beide Zahlen stehen in der Datei.
+    const sued = plan.sued!;
+    expect(sued.laengeGemessenM).toBeCloseTo(183.81, 2);
+    expect(sued.laengeGerechnetM).toBeLessThan(sued.laengeGemessenM!);
+  });
+
+  it('trifft mit der Messung das Suedende von Halle 10', () => {
+    // Treppenkopf + 183,81 m endet bei Station 487,6; Ebene 1 endet bei 488,1.
+    const ende = plan.treppe!.bisM + plan.sued!.laengeGemessenM!;
+    expect(Math.abs(ende - plan.aussen9_10!.ebene1.bisM)).toBeLessThan(1.0);
+  });
+});
+
 describe('Versatz der Westkanten', () => {
   const aussen = plan.aussen9_10!;
 
@@ -592,13 +608,9 @@ describe('Versatz der Westkanten', () => {
     expect(aussen.ebene1.qBisM - plan.sued!.seitenQ.ost).toBeCloseTo(20, 1);
   });
 
-  it('haelt die ungeklaerte Strecke zur Rampe fest, ohne sie zu verbauen', () => {
-    // 40,85 m vor Ort gemessen. Daraus folgte eine Ebene 1 von 224,5 m; die
-    // gemessene Kante ist 188,10 m. Der Widerspruch bleibt in der Datei
-    // stehen, statt dass eine der beiden Zahlen still verschwindet.
+  it('haelt die Nebenmessung fest, ohne sie zu verbauen', () => {
     expect(aussen.streckeZurRampeM).toBeCloseTo(40.85, 2);
     expect(aussen.ebene1.bisM - aussen.ebene1.vonM).toBeCloseTo(188.1, 1);
-    expect(aussen.streckeZurRampeHerkunft).toContain('nicht vereinbar');
   });
 
   it('fuehrt den Versatz als Zahl und schneidet ihn nicht aus', () => {

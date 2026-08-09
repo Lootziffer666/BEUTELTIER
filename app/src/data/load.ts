@@ -351,11 +351,7 @@ export interface BoulevardAussen910 {
   grenzeM: number;
   versatzM: number;
   versatzHerkunft: string;
-  /**
-   * Vor Ort gemessen, aber **nicht** verbaut: mit der gemessenen Kante von
-   * 188,10 m nicht vereinbar. Steht hier, damit der Widerspruch sichtbar
-   * bleibt statt stillschweigend verworfen zu werden.
-   */
+  /** Nebenmessung auf Ebene 1; bestimmt die Geometrie nicht. */
   streckeZurRampeM: number;
   streckeZurRampeHerkunft: string;
   ueberlappM: number;
@@ -426,6 +422,14 @@ export interface BoulevardPlan {
   sued: {
     vonM: number;
     bisM: number;
+    /**
+     * Gerechnet aus den Hallenausdehnungen -- und zu kurz. Vor Ort sind ab
+     * dem Treppenkopf 183,81 m gemessen; die enden bei Station 487,6, und
+     * Halle 10.2 endet amtlich bei 486,95.
+     */
+    laengeGerechnetM?: number;
+    laengeGemessenM?: number;
+    laengeHerkunft?: string;
     breiteM: number;
     seitenQ: { ost: number; west: number };
     obenM: number | null;

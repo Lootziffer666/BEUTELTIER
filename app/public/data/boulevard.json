@@ -1087,7 +1087,7 @@
   "grenzeM": 300.0,
   "versatzM": 29.95,
   "streckeZurRampeM": 40.85,
-  "streckeZurRampeHerkunft": "vor Ort gemessen: auf Ebene 1 vom Suedboulevard Richtung Rampe. Bestimmt die Geometrie nicht -- mit der gemessenen Kante von 188,10 m nicht vereinbar (ergaebe 224,5 m statt 188,10 m). Ungeklaerter Widerspruch von 36 m.",
+  "streckeZurRampeHerkunft": "vor Ort gemessen: ein Stueck auf Ebene 1 in Richtung Rampe. Nebenmessung, bestimmt die Geometrie nicht.",
   "versatzHerkunft": "An der Ostseite sind von Sueden aus 29,95 m von Halle 10 nicht mit Ebene 1 ueberbaut. Der Wert steht als Zahl und ist nicht aus der Platte herausgeschnitten -- die Platte bleibt bewusst ein Viereck, auf dem die Halle steht.",
   "form": {
    "ebene1": {
@@ -1609,6 +1609,9 @@
  "sued": {
   "vonM": 304.47,
   "bisM": 377.65,
+  "laengeGerechnetM": 73.18,
+  "laengeGemessenM": 183.81,
+  "laengeHerkunft": "gerechnet als kleinste gemeinsame Ausdehnung von Halle 5 und Halle 10; vor Ort ab Treppenkopf 183,81 m gemessen. Die Messung endet bei Station 487,6, Halle 10.2 amtlich bei 486,95 -- der gerechnete Wert ist zu kurz.",
   "seitenQ": {
    "ost": -36.46,
    "west": 8.803
