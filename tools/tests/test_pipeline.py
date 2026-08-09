@@ -1452,3 +1452,65 @@ class TestDreieckAusKanten:
 
         with pytest.raises(ValueError):
             dreieck_aus_kanten((0.0, 0.0), (500.0, 0.0), 10.0, 10.0, (0.0, 1.0))
+
+
+class TestStandSchrumpf:
+    """Die Staende werden bewusst drei Prozent kleiner gezeichnet.
+
+    Eine benannte Abweichung von den Plandaten, damit der Gang zwischen
+    benachbarten Staenden sichtbar bleibt. Diese Pruefungen halten fest, was
+    dabei **nicht** passieren darf: kein Stand verschwindet, keiner wandert,
+    und aus drei Prozent werden nicht unbemerkt dreissig.
+    """
+
+    @staticmethod
+    def _flaeche(poly):
+        n = len(poly)
+        return abs(sum(poly[i][0] * poly[(i + 1) % n][1] - poly[(i + 1) % n][0] * poly[i][1]
+                       for i in range(n))) / 2
+
+    @staticmethod
+    def _mitte(poly):
+        return (sum(p[0] for p in poly) / len(poly), sum(p[1] for p in poly) / len(poly))
+
+    def test_verkleinert_um_die_eigene_mitte(self):
+        from build_registered_layout import STAND_SCHRUMPF, geschrumpft
+
+        poly = [[10.0, 10.0], [30.0, 10.0], [30.0, 20.0], [10.0, 20.0]]
+        klein = geschrumpft(poly)
+        assert self._mitte(klein) == pytest.approx(self._mitte(poly), abs=1e-9)
+        assert (self._flaeche(klein) / self._flaeche(poly)
+                == pytest.approx(STAND_SCHRUMPF ** 2, abs=1e-9))
+
+    def test_bleibt_bei_wenigen_prozent(self):
+        """Orientierungshilfe, nicht Massstabsaenderung."""
+        from build_registered_layout import STAND_SCHRUMPF
+
+        assert 0.93 <= STAND_SCHRUMPF < 1.0
+
+    def test_kein_stand_geht_verloren(self):
+        gebaut = json.loads((BUILD / "registered-site.json").read_text(encoding="utf-8"))
+        plan = json.loads((BUILD / "site.json").read_text(encoding="utf-8"))
+        assert len(gebaut["stands"]) == len(plan["stands"])
+        assert {s["id"] for s in gebaut["stands"]} == {s["id"] for s in plan["stands"]}
+
+    def test_die_abweichung_steht_in_den_daten(self):
+        """Sonst haelt sie beim naechsten Blick jemand fuer eine Messung."""
+        layout = json.loads((BUILD / "registered-layout.json").read_text(encoding="utf-8"))
+        from build_registered_layout import STAND_SCHRUMPF
+
+        vermerk = layout["standSchrumpf"]
+        assert vermerk["faktor"] == STAND_SCHRUMPF
+        assert vermerk["gemessen"] is False
+        assert "Mitte" in vermerk["bezug"]
+
+    def test_jeder_stand_bleibt_an_seinem_platz(self):
+        """Geschrumpft heisst nicht verschoben."""
+        gebaut = {s["id"]: s["polygon"]
+                  for s in json.loads((BUILD / "registered-site.json").read_text(encoding="utf-8"))["stands"]}
+        layout = json.loads((BUILD / "registered-layout.json").read_text(encoding="utf-8"))
+        # Dieselben Staende, einmal ueber die Halle und einmal flach -- beide
+        # Wege muessen dasselbe Polygon liefern.
+        for hall in layout["halls"]:
+            for stand in hall["stands"]:
+                assert gebaut[stand["id"]] == stand["polygon"]

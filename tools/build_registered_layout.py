@@ -28,6 +28,37 @@ def rounded(point) -> list[float]:
     return [round(point[0], 3), round(point[1], 3)]
 
 
+STAND_SCHRUMPF = 0.97
+"""Wie gross ein Stand gezeichnet wird, im Verhaeltnis zu seinem Planmass.
+
+Drei Prozent, um die eigene Mitte. Eine bewusste Abweichung von den Daten und
+deshalb hier benannt statt stillschweigend eingebaut.
+
+Warum ueberhaupt: BEUTELTIER ist ein Orientierungswerkzeug. Aneinander
+stossende Standflaechen lassen den Gang dazwischen verschwinden -- und der Gang
+ist genau das, was man beim Laufen sucht. Drei Prozent oeffnen bei einem Stand
+von 10 m eine Fuge von 15 cm je Seite, bei 30 m eine von 45 cm. Sichtbar genug,
+um den Gang zu lesen, klein genug, um keine Strecke zu verfaelschen.
+
+Was es **nicht** ist: ein Ersatz fuer eine Passung. Geschrumpft wird um die
+eigene Mitte, jeder Stand bleibt an seinem Platz und keiner faellt weg. Eine
+Halle, die nicht in ihr Gebaeude passt, passt danach immer noch nicht -- das
+meldet der Befund in `hall-registrations.json`, und dort gehoert es hin.
+"""
+
+
+def geschrumpft(polygon: list[list[float]], faktor: float = STAND_SCHRUMPF) -> list[list[float]]:
+    """Verkleinert ein Polygon um seine eigene Mitte.
+
+    Um die eigene Mitte und nicht um einen gemeinsamen Punkt: sonst wandern
+    die Staende zusaetzlich, und aus einer Darstellungsentscheidung wuerde
+    eine Ortsveraenderung.
+    """
+    mx = sum(p[0] for p in polygon) / len(polygon)
+    my = sum(p[1] for p in polygon) / len(polygon)
+    return [[mx + (p[0] - mx) * faktor, my + (p[1] - my) * faktor] for p in polygon]
+
+
 def build() -> dict:
     site = json.loads(SITE.read_text())
     graph = json.loads(GRAPH.read_text())
@@ -68,7 +99,7 @@ def build() -> dict:
             "stands": [{
                 "id": stand["id"],
                 "polygon": [rounded(transform_point(tuple(point), transform))
-                            for point in stand["polygon"]],
+                            for point in geschrumpft(stand["polygon"])],
             } for stand in hall_stands],
             "walkGrid": transformed_grid,
             "facilities": [{
@@ -96,6 +127,15 @@ def build() -> dict:
         "schema": "beuteltier.registered-layout.v1",
         "coordinatePlane": "sceneX/sceneZ",
         "origin": registration_product["origin"],
+        # Benannte Abweichung von den Plandaten, damit sie niemand fuer eine
+        # Messung haelt: die Staende sind gezeichnet, nicht vermessen.
+        "standSchrumpf": {
+            "faktor": STAND_SCHRUMPF,
+            "bezug": "eigene Mitte je Stand",
+            "grund": ("Fuge zwischen benachbarten Staenden, damit der Gang "
+                      "dazwischen sichtbar bleibt"),
+            "gemessen": False,
+        },
         "halls": halls,
         "portalEnds": portal_ends,
         "counts": {
