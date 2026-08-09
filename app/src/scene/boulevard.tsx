@@ -748,6 +748,33 @@ function knickflaeche(
   return geometry;
 }
 
+/**
+ * Die Rampe des Aussengelaendes, aus ihren zwei Dreiecken.
+ *
+ * Anders als die ebenen Flaechen kann sie nicht flach gelegt und angehoben
+ * werden -- ihre Hoehe steht an jeder Ecke einzeln. Genommen wird sie deshalb
+ * direkt aus dem Plan; hier wird nichts nachgerechnet, was dort schon steht.
+ */
+function rampenflaeche(
+  dreiecke: readonly (readonly (readonly [number, number, number])[])[],
+  centre: [number, number],
+  kachelM: number,
+): THREE.BufferGeometry {
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  for (const dreieck of dreiecke) {
+    for (const [x, y, h] of dreieck) {
+      positions.push(x - centre[0], h, -(y - centre[1]));
+      uvs.push(x / kachelM, y / kachelM);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 export function Boulevard({
   data,
   centre,
@@ -974,6 +1001,25 @@ export function Boulevard({
     knick?.decke.dispose();
   }, [knick]);
 
+  /** Das Aussengelaende 9/10: zwei Ebenen und die Rampe dazwischen. */
+  const aussen = useMemo(() => {
+    const a = plan?.aussen9_10;
+    if (!a) return null;
+    return {
+      ebene1: knickflaeche(a.ebene1.polygon, centre, WELT_KACHEL_M.boden),
+      ebene1Y: a.ebene1.hoeheM,
+      ebene0: knickflaeche(a.ebene0.polygon, centre, WELT_KACHEL_M.boden),
+      ebene0Y: a.ebene0.hoeheM,
+      schraege: rampenflaeche(a.schraege.dreiecke, centre, WELT_KACHEL_M.boden),
+    };
+  }, [centre, plan]);
+
+  useEffect(() => () => {
+    aussen?.ebene1.dispose();
+    aussen?.ebene0.dispose();
+    aussen?.schraege.dispose();
+  }, [aussen]);
+
   const treppe = useMemo(
     () => (achse && plan?.treppe ? treppenteile(achse, centre, plan.treppe.vonM) : null),
     [achse, centre, plan],
@@ -1077,6 +1123,26 @@ export function Boulevard({
       <mesh geometry={flaechen.wandOstMassivUnten} material={material.wandMassiv} receiveShadow />
       <mesh geometry={flaechen.wandWestGlasUnten} material={material.wand} />
       <mesh geometry={flaechen.wandOstGlasUnten} material={material.wand} />
+      {/* Aussengelaende 9/10: Ebene 1, Schraege, Ebene 0 -- eine Oberflaeche. */}
+      {aussen && (
+        <group>
+          <mesh
+            geometry={aussen.ebene1}
+            material={material.boden}
+            position={[0, aussen.ebene1Y, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            receiveShadow
+          />
+          <mesh geometry={aussen.schraege} material={material.boden} receiveShadow />
+          <mesh
+            geometry={aussen.ebene0}
+            material={material.boden}
+            position={[0, aussen.ebene0Y, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            receiveShadow
+          />
+        </group>
+      )}
       {/* Der Knick am Nordende -- ebenerdig, stufenlos an den Gang anschliessend. */}
       {knick && (
         <group>

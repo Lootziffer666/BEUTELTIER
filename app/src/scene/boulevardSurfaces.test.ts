@@ -16,7 +16,12 @@ import {
 } from './boulevard';
 import { BoulevardSurfaces } from './boulevardSurfaces';
 import { LEGACY_OPEN_OUTSIDE, WalkGrid } from './walk';
-import { FlatSurfaceProvider, PrioritySurfaceProvider } from './surfaces';
+import {
+  FlatSurfaceProvider,
+  PrioritySurfaceProvider,
+  TriangleSurfaceProvider,
+  type TriangleSurface,
+} from './surfaces';
 
 // Der JSON-Import kommt als weit gefasster Typ herein ("art" ist dort jeder
 // String); dass die Datei wirklich zum Schema passt, prueft der Ladepfad.
@@ -476,5 +481,80 @@ describe('Nordknoten', () => {
     }
     const [, q] = flaechen.stationUndQuer(stand.x, stand.y);
     expect(q).toBeGreaterThanOrEqual(plan.seitenQ.ost - 1e-6);
+  });
+});
+
+/**
+ * Das Aussengelaende zwischen Halle 9 und Halle 10.
+ *
+ * Drei Flaechen, aber eine Oberflaeche: Ebene 1 -> Schraege -> Ebene 0. Der
+ * entscheidende Test ist nicht, ob jede fuer sich stimmt, sondern ob man ohne
+ * Absatz und ohne Loch von der oberen auf die untere kommt.
+ */
+describe('Aussengelaende 9/10', () => {
+  const aussen = plan.aussen9_10!;
+  const kette = new PrioritySurfaceProvider([
+    new TriangleSurfaceProvider(aussen.schraege.dreiecke.map((dreieck, index) => ({
+      id: `${aussen.schraege.id}:${index}`,
+      triangle: dreieck as unknown as TriangleSurface['triangle'],
+      blocked: false,
+    }))),
+    new FlatSurfaceProvider([aussen.ebene1, aussen.ebene0].map((ebene) => ({
+      id: ebene.id,
+      polygon: ebene.polygon,
+      z: ebene.hoeheM,
+      blocked: false,
+    }))),
+  ]);
+  const auf = (s: number, q: number) => {
+    const [x, y] = ort(s, q);
+    return kette.footingAt(x, y, 0);
+  };
+
+  it('legt die obere Ebene auf den Fussboden von Halle 10.2', () => {
+    expect(aussen.ebene1.hoeheM).toBeCloseTo(7.45, 2);
+    expect(auf(400, -120).z).toBeCloseTo(7.45, 2);
+  });
+
+  it('legt die untere Ebene auf Hallenniveau', () => {
+    expect(aussen.ebene0.hoeheM).toBe(0);
+    expect(auf(195, -180).z).toBeCloseTo(0, 6);
+  });
+
+  it('behaelt die vor Ort gemessene Hoehe als Zahl, auch wenn sie nicht gilt', () => {
+    // Gemessen 8,33 m, gebaut 7,45 m nach den amtlichen Hallenboeden. Die
+    // Abweichung darf nicht stillschweigend verschwinden.
+    expect(aussen.schraege.hoeheGemessenM).toBeCloseTo(8.33, 2);
+    expect(aussen.schraege.obenM - aussen.schraege.untenM).toBeCloseTo(7.45, 2);
+  });
+
+  it('faellt ueber die Schraege gleichmaessig ab', () => {
+    const grenze = aussen.grenzeM;
+    const lauf = aussen.schraege.laufM;
+    const hoehen = [0, 0.25, 0.5, 0.75, 1].map(
+      (teil) => auf(grenze - lauf * teil, -120).z,
+    );
+    for (let i = 1; i < hoehen.length; i += 1) {
+      expect(hoehen[i]).toBeLessThan(hoehen[i - 1] + 1e-6);
+    }
+    expect(hoehen[0]).toBeCloseTo(7.45, 1);
+    expect(hoehen[hoehen.length - 1]).toBeCloseTo(0, 1);
+  });
+
+  it('traegt zwischen oberer Ebene und unterer keinen Absatz und kein Loch', () => {
+    // Von Sueden nach Norden durchgehen und auf Spruenge achten.
+    let vorher: number | null = null;
+    for (let s = aussen.ebene1.bisM - 1; s > aussen.ebene0.vonM + 1; s -= 1) {
+      const fuss = auf(s, -120);
+      expect(fuss.surfaceId).not.toBeNull();
+      if (vorher !== null) expect(Math.abs(fuss.z - vorher)).toBeLessThan(0.2);
+      vorher = fuss.z;
+    }
+  });
+
+  it('schiebt die Platten unter die Hallenkanten', () => {
+    expect(aussen.ueberlappM).toBeGreaterThan(0);
+    // Ein Meter innerhalb der Grenze traegt die obere Ebene noch.
+    expect(auf(aussen.grenzeM + 1, -120).z).toBeCloseTo(7.45, 2);
   });
 });

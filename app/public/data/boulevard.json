@@ -1080,6 +1080,135 @@
    ]
   }
  ],
+ "aussen9_10": {
+  "id": "aussen-9-10",
+  "was": "Aussengelaende zwischen Halle 9 und Halle 10",
+  "quelle": "vor Ort gemessen (dz.nrw); verortet ueber die amtlichen Hallenkanten",
+  "grenzeM": 300.0,
+  "versatzM": 29.95,
+  "ueberlappM": 2.0,
+  "ebene1": {
+   "id": "aussen-9-10:ebene1",
+   "vonM": 300.0,
+   "bisM": 488.1,
+   "qVonM": -214.9,
+   "qBisM": -36.8,
+   "hoeheM": 7.45,
+   "polygon": [
+    [
+     -146.65,
+     88.56
+    ],
+    [
+     -239.14,
+     256.94
+    ],
+    [
+     -81.28,
+     343.64
+    ],
+    [
+     11.2,
+     175.27
+    ]
+   ],
+   "herkunft": "188,10 x 178,93 m gemessen; Hoehe = Fussboden Halle 10.2"
+  },
+  "schraege": {
+   "id": "aussen-9-10:schraege",
+   "vonM": 215.41,
+   "bisM": 300.0,
+   "qVonM": -214.9,
+   "qBisM": -36.8,
+   "obenM": 7.45,
+   "untenM": 0.0,
+   "laufM": 84.59,
+   "hoeheGemessenM": 8.33,
+   "steigungProzent": 8.81,
+   "polygon": [
+    [
+     -106.89,
+     16.18
+    ],
+    [
+     -147.62,
+     90.32
+    ],
+    [
+     10.24,
+     177.02
+    ],
+    [
+     50.96,
+     102.88
+    ]
+   ],
+   "dreiecke": [
+    [
+     [
+      -106.89,
+      16.18,
+      0.0
+     ],
+     [
+      -147.62,
+      90.32,
+      7.45
+     ],
+     [
+      10.24,
+      177.02,
+      7.45
+     ]
+    ],
+    [
+     [
+      -106.89,
+      16.18,
+      0.0
+     ],
+     [
+      10.24,
+      177.02,
+      7.45
+     ],
+     [
+      50.96,
+      102.88,
+      0.0
+     ]
+    ]
+   ],
+   "herkunft": "Grundriss 84,59 m gemessen; Hoehe aus den Hallenboeden. Vor Ort wurden 8,33 m gemessen -- die amtlichen Boeden geben 7,45 m, und die Fuge am Hallenboden waere sonst sichtbar."
+  },
+  "ebene0": {
+   "id": "aussen-9-10:ebene0",
+   "vonM": 179.8,
+   "bisM": 300.0,
+   "qVonM": -249.8,
+   "qBisM": -36.8,
+   "hoeheM": 0.0,
+   "polygon": [
+    [
+     -88.79,
+     -16.79
+    ],
+    [
+     -147.62,
+     90.32
+    ],
+    [
+     40.83,
+     193.83
+    ],
+    [
+     99.66,
+     86.72
+    ]
+   ],
+   "herkunft": "213,00 x 120,18 m gemessen; Hoehe = Fussboden Halle 9.1"
+  }
+ },
  "nordknoten": {
   "id": "nordknoten",
   "featureId": "DENW37AL100063v9",

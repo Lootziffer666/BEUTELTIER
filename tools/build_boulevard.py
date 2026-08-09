@@ -125,6 +125,35 @@ DURCHGANG_RAND_M = 3.0
 # hier und wird in der Ergebnisdatei als solche ausgewiesen.
 NORD_KNICK = "DENW37AL100063v9"
 
+# Das Aussengelaende zwischen Halle 9 und Halle 10.
+#
+# Vor Ort gemessen (dz.nrw, Strecke messen) und bewusst stark vereinfacht: zwei
+# ebene Vierecke und eine Rampe dazwischen, kein Terrain. Von Sueden nach
+# Norden: Ebene 1 -> Schraege -> Ebene 0. Die Nordkante der oberen ist die
+# Suedkante der unteren; an dieser Grenze ersetzt die Rampe den Hoehensprung.
+#
+# Die Kantenlaengen sind gemessen, die **Lage** war es nicht -- vier Laengen
+# legen ein Viereck nicht fest. Verortet wurde deshalb ueber die amtlichen
+# Hallenkanten, und die Gegenprobe stimmt auf ein bis zwei Meter an jeder
+# Kante: Ebene 0 beginnt dort, wo Halle 9 beginnt (180 gegen 181,0), die Grenze
+# liegt am Nordrand von Halle 10.2 (300 gegen 297,9), Ebene 1 endet an deren
+# Suedrand (488 gegen 488,7), und im Westen stossen beide an den Suedboulevard
+# (-36,8). Dass sich dabei alle acht gemessenen Laengen wiederfinden, ist die
+# eigentliche Bestaetigung.
+AUSSEN_GRENZE_M = 300.0        # Nordkante Ebene 1 = Suedkante Ebene 0
+AUSSEN_WEST_Q = -36.8          # Ostflanke des Suedboulevards
+AUSSEN_E1 = {"suedM": 488.1, "ostQ": -214.9}   # 188,10 x 178,93 gemessen
+AUSSEN_E0 = {"nordM": 179.8, "ostQ": -249.8}   # 120,18 x 213,00 gemessen
+# In den ersten rund 30 m ab Sueden gibt es die obere Ebene noch nicht.
+AUSSEN_VERSATZ_M = 29.95
+# Die Rampe: gemessen 85,00 m direkt, 84,59 m im Grundriss, 8,33 m Hoehe.
+# Gebaut wird sie mit dem Grundriss und den **Hallenhoehen** -- siehe unten.
+AUSSEN_RAMPE_M = 84.59
+AUSSEN_RAMPE_GEMESSEN_M = 8.33
+# Wie weit die Platten unter die Hallenboeden geschoben werden, damit draussen
+# keine Fuge steht und drinnen nichts hervorschaut.
+AUSSEN_UEBERLAPP_M = 2.0
+
 # Was auf einer Flaeche waehrend der Messe stattfindet.
 #
 # Nicht aus den Daten ableitbar, sondern Angabe vor Ort. OSM kennt P8 als
@@ -520,6 +549,9 @@ def main() -> int:
         # dort sind Rechtecke aus amtlichen Umrissen gerechnet, hier sind
         # Polygone aus einer anderen Quelle uebernommen.
         "plaetze": plaetze(osm_roh, rahmen),
+        # Das Aussengelaende zwischen Halle 9 und Halle 10: zwei Ebenen und
+        # eine Rampe, zusammen eine begehbare Oberflaeche.
+        "aussen9_10": aussen_neun_zehn(rahmen, hallenhoehen()),
         # Der Knick am Nordende -- dort geht es zum Eingang Nord weiter.
         "nordknoten": knick,
         # Die Zugaenge von den Hallen in den Gang. Abgeleitet, nicht gemessen
@@ -572,6 +604,16 @@ def main() -> int:
               f"q {knick['qVonM']}..{knick['qBisM']}, {knick['flaecheSqm']} m2, "
               f"{len(knick['polygon'])} Ecken")
         print(f"  Anschluss an den Gang bei Station {knick['anschlussM']}")
+    a910 = plan["aussen9_10"]
+    if a910:
+        print("\nAUSSENGELAENDE 9/10:")
+        for schluessel in ("ebene1", "schraege", "ebene0"):
+            t = a910[schluessel]
+            hoehe = (f"{t['hoeheM']:.2f} m" if "hoeheM" in t
+                     else f"{t['obenM']:.2f} -> {t['untenM']:.2f} m"
+                       f"  ({t['steigungProzent']:.2f} %)")
+            print(f"  {schluessel:9s} Station {t['vonM']:7.1f}..{t['bisM']:7.1f}"
+                  f"  q {t['qVonM']:7.1f}..{t['qBisM']:7.1f}   {hoehe}")
     print("\nPLAETZE (OSM):")
     for platz in plan["plaetze"]:
         print(f"  {platz['vonM']:7.1f} .. {platz['bisM']:7.1f}  "
@@ -926,6 +968,95 @@ def durchgaenge(seiten: dict[str, list[dict]], knick: dict | None = None) -> lis
         })
     return out
 
+
+
+def dreiecke_der_rampe(rahmen: Rahmen, von: float, bis: float, ost_q: float,
+                       oben: float, unten: float, u: float) -> list[list[list[float]]]:
+    """Die Rampe als zwei Dreiecke, mit Hoehe an jeder Ecke.
+
+    Die Neigung steckt damit in den Eckhoehen und nirgends sonst -- wer sie
+    spaeter aendert, aendert sie an einer Stelle.
+    """
+    west = AUSSEN_WEST_Q + u
+    ecken = [(von, west, unten), (bis, west, oben),
+             (bis, ost_q, oben), (von, ost_q, unten)]
+    punkte = []
+    for s, q, h in ecken:
+        x, y = rahmen.ort(s, q)
+        punkte.append([round(x, 2), round(y, 2), round(h, 3)])
+    return [[punkte[0], punkte[1], punkte[2]], [punkte[0], punkte[2], punkte[3]]]
+
+
+def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
+    """Das Aussengelaende zwischen Halle 9 und Halle 10.
+
+    Drei Flaechen und keine einzige mehr: die obere Ebene um Halle 10, die
+    Rampe, die untere Ebene um Halle 9. Zusammen sind sie **eine** begehbare
+    Oberflaeche -- getrennt gefuehrt nur, weil die mittlere geneigt ist.
+
+    Die Hoehen kommen aus den Hallenboeden und nicht aus dem Bandmass. Die
+    Vorgabe war ausdruecklich, dass die Platten ohne sichtbare Fuge an die
+    Hallenboeden anschliessen -- dann muessen sie auch auf deren Hoehe liegen.
+    Gemessen wurden 8,33 m Unterschied, die amtlichen Boeden geben 7,45 m her.
+    Beide Zahlen stehen in der Ausgabe; die Rampe faehrt die amtliche.
+    """
+    oben = hoehen.get("10.2")
+    unten = hoehen.get("9.1", 0.0)
+    if oben is None:
+        return None
+    u = AUSSEN_UEBERLAPP_M
+
+    def flaeche(von: float, bis: float, ost_q: float) -> list[list[float]]:
+        """Ein Viereck in Station/Quermass, als Geländemeter-Ring."""
+        ecken = [(von, AUSSEN_WEST_Q + u), (bis, AUSSEN_WEST_Q + u),
+                 (bis, ost_q), (von, ost_q)]
+        return [[round(x, 2), round(y, 2)]
+                for x, y in (rahmen.ort(s, q) for s, q in ecken)]
+
+    grenze = AUSSEN_GRENZE_M
+    rampe_bis = grenze - AUSSEN_RAMPE_M
+    return {
+        "id": "aussen-9-10",
+        "was": "Aussengelaende zwischen Halle 9 und Halle 10",
+        "quelle": "vor Ort gemessen (dz.nrw); verortet ueber die amtlichen Hallenkanten",
+        "grenzeM": grenze,
+        "versatzM": AUSSEN_VERSATZ_M,
+        "ueberlappM": u,
+        "ebene1": {
+            "id": "aussen-9-10:ebene1",
+            "vonM": grenze, "bisM": AUSSEN_E1["suedM"],
+            "qVonM": AUSSEN_E1["ostQ"], "qBisM": AUSSEN_WEST_Q,
+            "hoeheM": round(oben, 2),
+            "polygon": flaeche(grenze - u, AUSSEN_E1["suedM"] + u, AUSSEN_E1["ostQ"]),
+            "herkunft": "188,10 x 178,93 m gemessen; Hoehe = Fussboden Halle 10.2",
+        },
+        "schraege": {
+            "id": "aussen-9-10:schraege",
+            "vonM": round(rampe_bis, 2), "bisM": grenze,
+            "qVonM": AUSSEN_E1["ostQ"], "qBisM": AUSSEN_WEST_Q,
+            "obenM": round(oben, 2), "untenM": round(unten, 2),
+            "laufM": AUSSEN_RAMPE_M,
+            "hoeheGemessenM": AUSSEN_RAMPE_GEMESSEN_M,
+            "steigungProzent": round(100 * (oben - unten) / AUSSEN_RAMPE_M, 2),
+            "polygon": flaeche(rampe_bis, grenze, AUSSEN_E1["ostQ"]),
+            # Zwei Dreiecke mit Hoehe je Ecke -- die Kollision interpoliert
+            # darin, statt die Neigung ein zweites Mal zu rechnen.
+            "dreiecke": dreiecke_der_rampe(rahmen, rampe_bis, grenze,
+                                           AUSSEN_E1["ostQ"], oben, unten, u),
+            "herkunft": ("Grundriss 84,59 m gemessen; Hoehe aus den Hallenboeden. "
+                         "Vor Ort wurden 8,33 m gemessen -- die amtlichen Boeden "
+                         "geben 7,45 m, und die Fuge am Hallenboden waere sonst "
+                         "sichtbar."),
+        },
+        "ebene0": {
+            "id": "aussen-9-10:ebene0",
+            "vonM": AUSSEN_E0["nordM"], "bisM": grenze,
+            "qVonM": AUSSEN_E0["ostQ"], "qBisM": AUSSEN_WEST_Q,
+            "hoeheM": round(unten, 2),
+            "polygon": flaeche(AUSSEN_E0["nordM"] - u, grenze, AUSSEN_E0["ostQ"]),
+            "herkunft": "213,00 x 120,18 m gemessen; Hoehe = Fussboden Halle 9.1",
+        },
+    }
 
 
 def plaetze(osm_plaetze: list, rahmen: Rahmen) -> list[dict]:

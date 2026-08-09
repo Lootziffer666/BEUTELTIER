@@ -13,7 +13,9 @@ import { BoulevardSurfaces } from '../scene/boulevardSurfaces';
 import {
   FlatSurfaceProvider,
   PrioritySurfaceProvider,
+  TriangleSurfaceProvider,
   type SurfaceProvider,
+  type TriangleSurface,
 } from '../scene/surfaces';
 import type { Registry, Site } from './types';
 
@@ -302,6 +304,58 @@ export interface BoulevardNordknoten {
   polygon: [number, number][];
 }
 
+/**
+ * Das Aussengelaende zwischen Halle 9 und Halle 10.
+ *
+ * Bewusst stark vereinfacht: zwei ebene Vierecke und eine Rampe dazwischen,
+ * kein Terrain. Von Sueden nach Norden Ebene 1 -> Schraege -> Ebene 0; die
+ * Nordkante der oberen ist die Suedkante der unteren. Fuer Kollision und
+ * Wegfindung sind die drei **eine** durchgehende Oberflaeche.
+ *
+ * Die Kantenlaengen sind vor Ort gemessen, die Lage ueber die amtlichen
+ * Hallenkanten verortet -- dass sich dabei alle acht Laengen wiederfinden,
+ * ist die Bestaetigung.
+ */
+export interface BoulevardAussenEbene {
+  id: string;
+  vonM: number;
+  bisM: number;
+  qVonM: number;
+  qBisM: number;
+  hoeheM: number;
+  polygon: [number, number][];
+  herkunft: string;
+}
+
+export interface BoulevardAussenSchraege {
+  id: string;
+  vonM: number;
+  bisM: number;
+  qVonM: number;
+  qBisM: number;
+  obenM: number;
+  untenM: number;
+  laufM: number;
+  hoeheGemessenM: number;
+  steigungProzent: number;
+  polygon: [number, number][];
+  /** Zwei Dreiecke mit Hoehe je Ecke; die Neigung steckt nur hier. */
+  dreiecke: [number, number, number][][];
+  herkunft: string;
+}
+
+export interface BoulevardAussen910 {
+  id: string;
+  was: string;
+  quelle: string;
+  grenzeM: number;
+  versatzM: number;
+  ueberlappM: number;
+  ebene1: BoulevardAussenEbene;
+  schraege: BoulevardAussenSchraege;
+  ebene0: BoulevardAussenEbene;
+}
+
 export interface BoulevardPlan {
   schema: 'beuteltier.boulevard.v1';
   achse: {
@@ -345,6 +399,8 @@ export interface BoulevardPlan {
    * Ebene beobachtet -- siehe `bodenHerkunft`.
    */
   nordknoten?: BoulevardNordknoten | null;
+  /** Das Aussengelaende zwischen Halle 9 und Halle 10. */
+  aussen9_10?: BoulevardAussen910 | null;
   /**
    * Der Suedteil: dort weitet sich der Gang zwischen Halle 5 und Halle 10 und
    * liegt eine Ebene hoeher. `kanteM` ist die gemessene Lage der senkrechten
@@ -436,6 +492,18 @@ function aussenraum(plan: BoulevardPlan | null): SurfaceProvider {
   // sagen, gilt der Gang. Ihr Umriss kommt unveraendert aus dem Plan, deshalb
   // reicht hier der vorhandene Polygongeber.
   const knoten = plan.nordknoten;
+  const aussen = plan.aussen9_10;
+  // Die Rampe steht **vor** den ebenen Flaechen: sie ueberdeckt den Suedrand
+  // der unteren Ebene, und dort soll ihre geneigte Hoehe gelten und nicht die
+  // ebene darunter. Ein Hoehenvergleich wuerde das nicht entscheiden -- am
+  // Fusspunkt sind beide gleich hoch.
+  const rampe = new TriangleSurfaceProvider(
+    (aussen ? aussen.schraege.dreiecke : []).map((dreieck, index) => ({
+      id: `${aussen!.schraege.id}:${index}`,
+      triangle: dreieck as unknown as TriangleSurface['triangle'],
+      blocked: false,
+    })),
+  );
   const flaechen = new FlatSurfaceProvider([
     // Der Knick zuerst: er liegt innen und traegt einen eigenen Fussboden.
     ...(knoten ? [{
@@ -445,6 +513,13 @@ function aussenraum(plan: BoulevardPlan | null): SurfaceProvider {
       blocked: false,
       priority: 1,
     }] : []),
+    ...(aussen ? [aussen.ebene1, aussen.ebene0].map((ebene) => ({
+      id: ebene.id,
+      polygon: ebene.polygon,
+      z: ebene.hoeheM,
+      blocked: false,
+      priority: 1,
+    })) : []),
     ...(plan.plaetze ?? []).map((platz) => ({
       id: platz.id,
       polygon: platz.polygon,
@@ -454,6 +529,7 @@ function aussenraum(plan: BoulevardPlan | null): SurfaceProvider {
   ]);
   return new PrioritySurfaceProvider([
     new BoulevardSurfaces(plan, achse),
+    rampe,
     flaechen,
     LEGACY_OPEN_OUTSIDE,
   ]);
