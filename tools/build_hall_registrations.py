@@ -577,6 +577,32 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
     print(f"  Winkelkorrektur des Hallenplans: {vordrehung:+.2f} Grad "
           f"(aus {len(paare)} Hallen)")
 
+    # Ebenen eines Gebaeudes sind **ein** Modul. Halle 10.1 und 10.2 tragen
+    # dasselbe Aussenmass (187,50 x 156,64 m) -- sie sind dasselbe Haus, einmal
+    # unten und einmal oben. Registrierten sie sich einzeln, wanderten sie
+    # gegeneinander: bei Halle 2 waren es 5,15 m, gemessen von der
+    # Nachbarschaftspruefung.
+    #
+    # Deshalb bekommt jede Ebene die Registrierung ihres Gebaeudes, und die
+    # kommt von der Ebene, die am besten passt. Bei Halle 10 ist das die 10.1
+    # mit 100 Prozent gegen 78 Prozent der 10.2 -- deren Umriss ist mit
+    # 26.605 m2 groesser als das ganze Gebaeude mit 23.443 m2 und damit
+    # nachweislich falsch vermessen.
+    je_gebaeude: dict[str, dict] = {}
+    for hall in sorted(site["halls"], key=lambda item: item["key"]):
+        ziel = targets.get(hall["key"], {}).get("buildingIds", [])
+        ringe = [nach_innen(building_by_id[f]["footprint"]) for f in ziel
+                 if f in building_by_id and building_by_id[f].get("footprint")]
+        if not ringe:
+            continue
+        gefunden = containment_fit(hall["footprint"], ringe,
+                                   vordrehung=vordrehung, drehsuche=True)
+        if gefunden is None:
+            continue
+        bisher = je_gebaeude.get(hall["hall"])
+        if bisher is None or gefunden["coverageAfterPct"] > bisher["passung"]["coverageAfterPct"]:
+            je_gebaeude[hall["hall"]] = {"passung": gefunden, "vonEbene": hall["key"]}
+
     registrations = []
     for hall in sorted(site["halls"], key=lambda item: item["key"]):
         placement = hall["placement"]
@@ -586,13 +612,27 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
         target_polygons = [nach_innen(building_by_id[feature_id]["footprint"])
                            for feature_id in target_ids
                            if feature_id in building_by_id and building_by_id[feature_id].get("footprint")]
-        # Jede Halle sucht ihren Winkel selbst -- aber in einem schmalen Band
-        # um den erwarteten. Frei drifteten sie auf 0,96 und 4,11 Grad, weil
-        # sich eine knappe Passung durch Kippen rechnerisch verbessern laesst.
-        # Was innerhalb des Bandes gefunden wird, steht als Abweichung im
-        # Befund und wird ab einer halben Grad gemeldet.
-        constraint = containment_fit(hall["footprint"], target_polygons,
-                                     vordrehung=vordrehung, drehsuche=True)
+        # Die Registrierung des Gebaeudes, nicht der einzelnen Ebene.
+        gebaeude = je_gebaeude.get(hall["hall"])
+        constraint = None
+        if gebaeude is not None:
+            constraint = dict(gebaeude["passung"])
+            constraint["vonEbene"] = gebaeude["vonEbene"]
+            if gebaeude["vonEbene"] != hall["key"]:
+                constraint["note"] = (
+                    f"Registrierung der Ebene {gebaeude['vonEbene']} uebernommen "
+                    "-- Ebenen eines Gebaeudes sind ein Modul.")
+                # Die Passung dieser Ebene mit **ihrem** Umriss nachrechnen,
+                # sonst meldete der Befund die Zahlen der anderen Ebene.
+                eigene = containment_fit(hall["footprint"], target_polygons,
+                                         vordrehung=vordrehung, drehsuche=False)
+                if eigene is not None:
+                    # Beide Zahlen dieser Ebene, nicht der anderen: sonst stuende
+                    # ein "vorher" der Nachbarebene neben einem "nachher" dieser,
+                    # und der Vergleich waere sinnlos.
+                    constraint["coverageBeforePct"] = eigene["coverageBeforePct"]
+                    constraint["coverageAfterPct"] = eigene["coverageAfterPct"]
+                    constraint["benoetigteSkala"] = eigene["benoetigteSkala"]
         if constraint is None and alle_umrisse:
             # Freiflaeche: gegen *alle* Gebaeude einpassen, mit umgedrehtem
             # Ziel -- sie soll moeglichst wenig davon treffen.
