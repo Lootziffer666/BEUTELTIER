@@ -232,7 +232,8 @@ export interface BoulevardAussen {
 export interface BoulevardDurchgang {
   id: string;
   seite: 'ost' | 'west';
-  hallKey: string;
+  /** null beim Uebergang in den Nordknoten -- der gehoert zu keiner Halle. */
+  hallKey: string | null;
   featureId: string | null;
   abschnittVonM: number;
   abschnittBisM: number;
@@ -265,6 +266,33 @@ export interface BoulevardPlatz {
   belag: string | null;
   beleuchtet: boolean;
   /** Der volle Umriss in Geländemetern. */
+  polygon: [number, number][];
+}
+
+/**
+ * Der Knick am Nordende.
+ *
+ * Anders als der Suedknoten ist er nicht konstruiert, sondern uebernommen: der
+ * amtliche Umriss enthaelt den Knick bereits, mit allen 67 Ecken und der
+ * gerundeten Fassade zum Messeplatz. Gerundet wird sie hier nicht weggerechnet
+ * -- gerade sie ist die Seite, an der man auf den Platz hinaustritt.
+ */
+export interface BoulevardNordknoten {
+  id: string;
+  featureId: string;
+  was: string;
+  vonM: number;
+  bisM: number;
+  qVonM: number;
+  qBisM: number;
+  flaecheSqm: number;
+  bodenM: number;
+  deckeM: number;
+  bodenHerkunft: string;
+  deckeHerkunft: string;
+  /** Stationsbereich, in dem er die Ostwand des Gangs beruehrt. */
+  anschlussM: [number, number] | null;
+  quelle: string;
   polygon: [number, number][];
 }
 
@@ -305,6 +333,12 @@ export interface BoulevardPlan {
   durchgaenge?: BoulevardDurchgang[];
   /** Benannte Plaetze aus OpenStreetMap; fehlen in aelteren Schnappschuessen. */
   plaetze?: BoulevardPlatz[];
+  /**
+   * Der Knick am Nordende: dort biegt der Gang nach Osten ab und fuehrt zum
+   * Congress-Centrum Nord und zum Eingang Nord. Der Umriss ist amtlich, die
+   * Ebene beobachtet -- siehe `bodenHerkunft`.
+   */
+  nordknoten?: BoulevardNordknoten | null;
   /**
    * Der Suedteil: dort weitet sich der Gang zwischen Halle 5 und Halle 10 und
    * liegt eine Ebene hoeher. `kanteM` ist die gemessene Lage der senkrechten
@@ -395,17 +429,26 @@ function aussenraum(plan: BoulevardPlan | null): SurfaceProvider {
   // Die Plaetze liegen hinter dem Boulevard in der Reihenfolge: wo beide etwas
   // sagen, gilt der Gang. Ihr Umriss kommt unveraendert aus dem Plan, deshalb
   // reicht hier der vorhandene Polygongeber.
-  const plaetze = new FlatSurfaceProvider(
-    (plan.plaetze ?? []).map((platz) => ({
+  const knoten = plan.nordknoten;
+  const flaechen = new FlatSurfaceProvider([
+    // Der Knick zuerst: er liegt innen und traegt einen eigenen Fussboden.
+    ...(knoten ? [{
+      id: knoten.id,
+      polygon: knoten.polygon,
+      z: knoten.bodenM,
+      blocked: false,
+      priority: 1,
+    }] : []),
+    ...(plan.plaetze ?? []).map((platz) => ({
       id: platz.id,
       polygon: platz.polygon,
       z: platz.hoeheM,
       blocked: false,
     })),
-  );
+  ]);
   return new PrioritySurfaceProvider([
     new BoulevardSurfaces(plan, achse),
-    plaetze,
+    flaechen,
     LEGACY_OPEN_OUTSIDE,
   ]);
 }

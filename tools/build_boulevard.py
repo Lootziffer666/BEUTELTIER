@@ -116,6 +116,20 @@ DURCHGANG_ABSTAND_M = 45.0
 # Wieviel Wand neben einem Durchgang mindestens stehen bleibt.
 DURCHGANG_RAND_M = 3.0
 
+# Der Knick am Nordende.
+#
+# Am Ende der 285 m hoert der Gang nicht auf, er biegt ab: bei Station 0 dreht
+# der Baukoerper um 90 Grad nach Osten, laeuft neunzig Meter nach Norden und
+# oeffnet sich ueber eine gerundete Fassade zum Messeplatz. Dort liegt Eingang
+# Nord, und dorthin fuehrt auch der Weg zum Congress-Centrum Nord.
+#
+# In LoD2 ist das ein eigenes Feature mit 4826 m2 Grundflaeche und 19,4 m
+# Hoehe -- dasselbe, das am Gang als "Zwischenbereich, verglast" gefuehrt wird.
+# Der Umriss ist amtlich; dass man dort **ebenerdig und stufenlos** durchgeht,
+# ist eine Beobachtung am Referenzfoto und keine Messung. Sie steht deshalb
+# hier und wird in der Ergebnisdatei als solche ausgewiesen.
+NORD_KNICK = "DENW37AL100063v9"
+
 # Gebaeude, die den Gang zwar begrenzen, dort aber verglast sind.
 # Beobachtung vor Ort, nicht aus der Geometrie ableitbar: ein Grundriss sagt,
 # **dass** dort etwas steht, nicht **woraus** die Wand ist.
@@ -381,6 +395,7 @@ def main() -> int:
     # liegen Parkhaus, Eingang Ost und der Messeplatz ineinander, und das ist
     # ein eigener Schritt.
     _osm_bauten, osm_roh = osm_flaechen(origin)
+    knick = nordknoten(gebaeude, rahmen)
     aussen = hoefe(seiten["west"], gebaeude, rahmen, "west")
     hinterhof = hinter(gebaeude, rahmen, ABSCHLUSS, ziel)
     if hinterhof:
@@ -452,9 +467,11 @@ def main() -> int:
         # dort sind Rechtecke aus amtlichen Umrissen gerechnet, hier sind
         # Polygone aus einer anderen Quelle uebernommen.
         "plaetze": plaetze(osm_roh, rahmen),
+        # Der Knick am Nordende -- dort geht es zum Eingang Nord weiter.
+        "nordknoten": knick,
         # Die Zugaenge von den Hallen in den Gang. Abgeleitet, nicht gemessen
         # -- siehe durchgaenge().
-        "durchgaenge": durchgaenge(seiten),
+        "durchgaenge": durchgaenge(seiten, knick),
         "sued": sued,
         # Die Treppe liegt zwischen beiden Teilen: sie beginnt am Ende der
         # gebauten Laenge und endet dort, wo Halle 5 und Halle 10 anfangen.
@@ -491,10 +508,17 @@ def main() -> int:
         for teil in seiten[seite]:
             print(f"  {teil['von']:7.1f} .. {teil['bis']:7.1f} "
                   f"({teil['bis'] - teil['von']:6.1f} m)  {teil['art']:5s}  {teil['was']}")
-    print("\nDURCHGAENGE (abgeleitet):")
+    print("\nDURCHGAENGE:")
     for tor in plan["durchgaenge"]:
-        print(f"  {tor['stationM']:7.1f}  {tor['seite']:4s}  Halle {tor['hallKey']:5s} "
-              f"{tor['breiteM']:.1f} m breit   {tor['id']}")
+        ziel = f"Halle {tor['hallKey']}" if tor["hallKey"] else "Nordknoten"
+        print(f"  {tor['stationM']:7.1f}  {tor['seite']:4s}  {ziel:12s} "
+              f"{tor['breiteM']:5.1f} m breit  "
+              f"{'gemessen' if tor['gemessen'] else 'abgeleitet'}  {tor['id']}")
+    if knick:
+        print(f"\nNORDKNOTEN: Station {knick['vonM']}..{knick['bisM']}, "
+              f"q {knick['qVonM']}..{knick['qBisM']}, {knick['flaecheSqm']} m2, "
+              f"{len(knick['polygon'])} Ecken")
+        print(f"  Anschluss an den Gang bei Station {knick['anschlussM']}")
     print("\nPLAETZE (OSM):")
     for platz in plan["plaetze"]:
         print(f"  {platz['vonM']:7.1f} .. {platz['bisM']:7.1f}  "
@@ -836,7 +860,7 @@ def hinter(gebaeude: dict[str, Gebaeude], rahmen: Rahmen,
     }
 
 
-def durchgaenge(seiten: dict[str, list[dict]]) -> list[dict]:
+def durchgaenge(seiten: dict[str, list[dict]], knick: dict | None = None) -> list[dict]:
     """Die Zugaenge von den Hallen in den Gang.
 
     Kein Datensatz nennt sie: OSM hat am Nordgang keinen einzigen Eingangs-
@@ -877,6 +901,27 @@ def durchgaenge(seiten: dict[str, list[dict]]) -> list[dict]:
                     "herkunft": ("abgeleitet aus der gemessenen Fassadenlaenge; "
                                  "Anzahl und Groesse sind Vorgabe"),
                 })
+
+    # Der Uebergang in den Knick am Nordende ist der einzige, der nicht
+    # abgeleitet ist: wie breit er ist, steht im amtlichen Umriss -- es ist die
+    # Fuge, an der der Baukoerper die Ostwand des Gangs beruehrt. Dass man dort
+    # stufenlos hinuebergeht, zeigt das Referenzfoto des Knicks.
+    if knick and knick.get("anschlussM"):
+        von, bis = knick["anschlussM"]
+        out.append({
+            "id": "tor-ost-nordknoten",
+            "seite": "ost",
+            "hallKey": None,
+            "featureId": knick["featureId"],
+            "abschnittVonM": von,
+            "abschnittBisM": bis,
+            "stationM": round((von + bis) / 2, 2),
+            "breiteM": round(bis - von, 2),
+            "hoeheM": DURCHGANG_HOEHE_M,
+            "gemessen": True,
+            "herkunft": ("Anschlussfuge am amtlichen Umriss gemessen; "
+                         "die lichte Hoehe ist Vorgabe"),
+        })
     return out
 
 
@@ -921,6 +966,54 @@ def plaetze(osm_plaetze: list, rahmen: Rahmen) -> list[dict]:
             "polygon": [[round(x, 2), round(y, 2)] for x, y in ring],
         })
     return sorted(out, key=lambda p: p["vonM"])
+
+
+def nordknoten(gebaeude: dict[str, Gebaeude], rahmen: Rahmen) -> dict | None:
+    """Der Knick am Nordende, ueber den es zum Eingang Nord geht.
+
+    Anders als beim Suedknoten wird hier nichts konstruiert: der Baukoerper
+    liegt als amtlicher Umriss vor, und der Umriss **enthaelt** den Knick
+    bereits. Uebernommen wird er deshalb wie er ist, mit allen 67 Ecken --
+    auch der gerundeten Fassade zum Messeplatz. Ein Rechteck darum herum waere
+    hier besonders falsch, denn gerade die Rundung ist die Seite, an der man
+    hinaus auf den Platz kommt.
+
+    Gerechnet wird nur, wo er den Gang beruehrt: das ist die Stelle, an der
+    der Besucher aus den 285 m herauskommt.
+    """
+    bau = gebaeude.get(NORD_KNICK)
+    if not bau:
+        return None
+    stationen = [rahmen.station(x * rahmen.laengs[0] + y * rahmen.laengs[1])
+                 for x, y in bau.poly]
+    quer = [x * rahmen.quer[0] + y * rahmen.quer[1] - rahmen.achse_q
+            for x, y in bau.poly]
+
+    # Die Anschlussfuge: alle Ecken, die auf der Ostwand des Gangs liegen.
+    wand = rahmen.wandlinie("ost")
+    auf_der_wand = [s for s, q in zip(stationen, quer) if abs(q - wand) < 0.5]
+    return {
+        "id": "nordknoten",
+        "featureId": NORD_KNICK,
+        "was": "Knick am Nordende -- Uebergang zu Congress-Centrum Nord und Eingang Nord",
+        "vonM": round(min(stationen), 2),
+        "bisM": round(max(stationen), 2),
+        "qVonM": round(min(quer), 2),
+        "qBisM": round(max(quer), 2),
+        "flaecheSqm": round(bau.flaeche),
+        # Fussboden und Decke. Der Boden ist beobachtet (ebenerdig, stufenlos),
+        # die Decke ist dieselbe Vorgabe wie im Gang -- der Baukoerper ist
+        # aussen 19,4 m hoch, das ist aber die Dachkante und nicht die lichte
+        # Hoehe darunter.
+        "bodenM": 0.0,
+        "deckeM": HOEHE_M,
+        "bodenHerkunft": "ebenerdig und stufenlos, beobachtet am Referenzfoto des Knicks",
+        "deckeHerkunft": "Vorgabe wie im Gang; 19,4 m ist die amtliche Dachkante",
+        "anschlussM": ([round(min(auf_der_wand), 2), round(max(auf_der_wand), 2)]
+                       if auf_der_wand else None),
+        "quelle": "LoD2 Geobasis NRW (Umriss), Referenzfoto (Ebene)",
+        "polygon": [[round(x, 2), round(y, 2)] for x, y in bau.poly],
+    }
 
 
 def hallenhoehen() -> dict[str, float]:

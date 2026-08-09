@@ -1092,6 +1092,8 @@ class TestNordboulevard:
     def test_kein_durchgang_fuehrt_ins_leere(self, boulevard):
         """Jeder abgeleitete Zugang liegt in der Fassade, aus der er stammt."""
         for tor in boulevard.get("durchgaenge", []):
+            if tor["hallKey"] is None:
+                continue  # der Uebergang in den Knick, siehe eigene Pruefung
             traeger = [
                 teil for teil in boulevard["seiten"][tor["seite"]]
                 if teil["art"] == "wand" and teil["hallKey"] == tor["hallKey"]
@@ -1102,9 +1104,29 @@ class TestNordboulevard:
 
     def test_durchgaenge_geben_sich_als_abgeleitet_zu_erkennen(self, boulevard):
         """Kein Datensatz nennt die Hallentueren -- das muss die Datei sagen."""
-        tore = boulevard.get("durchgaenge", [])
+        tore = [t for t in boulevard.get("durchgaenge", []) if t["hallKey"]]
         assert tore
         assert all(tor["gemessen"] is False for tor in tore)
+
+    def test_uebergang_in_den_knick_ist_gemessen(self, boulevard):
+        """Seine Breite ist die Fuge am amtlichen Umriss, keine Vorgabe."""
+        knoten = boulevard.get("nordknoten")
+        if not knoten:
+            pytest.skip("kein Nordknoten in dieser Fassung")
+        tor = next(t for t in boulevard["durchgaenge"] if t["id"] == "tor-ost-nordknoten")
+        assert tor["gemessen"] is True
+        assert tor["abschnittVonM"] == pytest.approx(knoten["anschlussM"][0], abs=0.01)
+        assert tor["abschnittBisM"] == pytest.approx(knoten["anschlussM"][1], abs=0.01)
+
+    def test_nordknoten_trennt_gemessenes_vom_beobachteten(self, boulevard):
+        """Der Umriss ist amtlich, die Ebene ist ein Foto -- beides benannt."""
+        knoten = boulevard.get("nordknoten")
+        if not knoten:
+            pytest.skip("kein Nordknoten in dieser Fassung")
+        assert len(knoten["polygon"]) > 20, "die gerundete Fassade muss erhalten bleiben"
+        assert "LoD2" in knoten["quelle"]
+        assert "beobachtet" in knoten["bodenHerkunft"]
+        assert "Vorgabe" in knoten["deckeHerkunft"]
 
     def test_gekappte_flaechen_sind_als_vorgabe_ausgewiesen(self, boulevard):
         """Eine Kante aus einer Vorgabe darf nicht wie eine Messung aussehen."""

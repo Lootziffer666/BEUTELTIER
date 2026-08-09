@@ -717,6 +717,37 @@ function suedknoten(
   };
 }
 
+/**
+ * Boden oder Decke des Nordknicks, aus seinem amtlichen Umriss.
+ *
+ * Der Knick ist kein Band entlang der Achse, sondern eine Flaeche mit 67
+ * Ecken -- inklusive der gerundeten Fassade zum Messeplatz. `band()` kann das
+ * nicht, `THREE.Shape` schon: es zerlegt das Vieleck selbst in Dreiecke.
+ *
+ * Der Umweg ueber die Drehung ist beabsichtigt. `ShapeGeometry` legt die
+ * Flaeche in die XY-Ebene; eine Drehung um -90 Grad um X bildet (u, v, 0) auf
+ * (u, 0, -v) ab -- und genau das ist die Umrechnung von Geländemetern in
+ * Szenenkoordinaten, die der ganze Rest der Datei von Hand macht.
+ */
+function knickflaeche(
+  polygon: readonly (readonly [number, number])[],
+  centre: [number, number],
+  kachelM: number,
+): THREE.BufferGeometry {
+  const shape = new THREE.Shape(
+    polygon.map(([x, y]) => new THREE.Vector2(x - centre[0], y - centre[1])),
+  );
+  const geometry = new THREE.ShapeGeometry(shape);
+  // ShapeGeometry legt die UV in Metern an; ohne Teilung wiederholt sich die
+  // Textur je Meter und der Boden wird zum Flimmern.
+  const uv = geometry.getAttribute('uv');
+  for (let i = 0; i < uv.count; i += 1) {
+    uv.setXY(i, uv.getX(i) / kachelM, uv.getY(i) / kachelM);
+  }
+  uv.needsUpdate = true;
+  return geometry;
+}
+
 export function Boulevard({
   data,
   centre,
@@ -926,6 +957,23 @@ export function Boulevard({
 
   useEffect(() => () => bauzaun?.textur.dispose(), [bauzaun]);
 
+  /** Der Knick am Nordende: Boden und Decke aus dem amtlichen Umriss. */
+  const knick = useMemo(() => {
+    const knoten = plan?.nordknoten;
+    if (!knoten) return null;
+    return {
+      boden: knickflaeche(knoten.polygon, centre, WELT_KACHEL_M.boden),
+      decke: knickflaeche(knoten.polygon, centre, WELT_KACHEL_M.decke),
+      bodenY: knoten.bodenM,
+      deckeY: knoten.deckeM,
+    };
+  }, [centre, plan]);
+
+  useEffect(() => () => {
+    knick?.boden.dispose();
+    knick?.decke.dispose();
+  }, [knick]);
+
   const treppe = useMemo(
     () => (achse && plan?.treppe ? treppenteile(achse, centre, plan.treppe.vonM) : null),
     [achse, centre, plan],
@@ -1029,6 +1077,24 @@ export function Boulevard({
       <mesh geometry={flaechen.wandOstMassivUnten} material={material.wandMassiv} receiveShadow />
       <mesh geometry={flaechen.wandWestGlasUnten} material={material.wand} />
       <mesh geometry={flaechen.wandOstGlasUnten} material={material.wand} />
+      {/* Der Knick am Nordende -- ebenerdig, stufenlos an den Gang anschliessend. */}
+      {knick && (
+        <group>
+          <mesh
+            geometry={knick.boden}
+            material={material.boden}
+            position={[0, knick.bodenY, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            receiveShadow
+          />
+          <mesh
+            geometry={knick.decke}
+            material={material.dach}
+            position={[0, knick.deckeY, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+          />
+        </group>
+      )}
       {/* Der Suedteil, eine Ebene hoeher. */}
       {flaechen.suedBoden && (
         <mesh geometry={flaechen.suedBoden} material={material.boden} receiveShadow />

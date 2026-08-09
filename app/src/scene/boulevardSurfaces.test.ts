@@ -16,7 +16,7 @@ import {
 } from './boulevard';
 import { BoulevardSurfaces } from './boulevardSurfaces';
 import { LEGACY_OPEN_OUTSIDE, WalkGrid } from './walk';
-import { PrioritySurfaceProvider } from './surfaces';
+import { FlatSurfaceProvider, PrioritySurfaceProvider } from './surfaces';
 
 // Der JSON-Import kommt als weit gefasster Typ herein ("art" ist dort jeder
 // String); dass die Datei wirklich zum Schema passt, prueft der Ladepfad.
@@ -337,8 +337,20 @@ describe('Hallenzugaenge', () => {
     }
   });
 
-  it('gibt sich als abgeleitet zu erkennen', () => {
-    for (const tor of tore) expect(tor.gemessen).toBe(false);
+  it('gibt die Hallenzugaenge als abgeleitet zu erkennen', () => {
+    const hallentore = tore.filter((tor) => tor.hallKey !== null);
+    expect(hallentore.length).toBeGreaterThan(0);
+    for (const tor of hallentore) expect(tor.gemessen).toBe(false);
+  });
+
+  it('fuehrt den Uebergang in den Knick dagegen als gemessen', () => {
+    // Seine Breite steht im amtlichen Umriss -- es ist die Fuge, an der der
+    // Baukoerper die Ostwand beruehrt. Nur die lichte Hoehe ist Vorgabe.
+    const knick = tore.find((tor) => tor.id === 'tor-ost-nordknoten');
+    expect(knick).toBeDefined();
+    expect(knick!.gemessen).toBe(true);
+    expect(knick!.hallKey).toBeNull();
+    expect(knick!.breiteM).toBeGreaterThan(20);
   });
 });
 
@@ -393,4 +405,65 @@ describe('Wandausschnitt und Kollision stimmen ueberein', () => {
       }
     });
   }
+});
+
+/**
+ * Der Uebergang in den Knick am Nordende.
+ *
+ * Geprueft wird mit derselben Kette, die `load.ts` zusammensteckt -- der
+ * Boulevard zuerst, dahinter die Flaechen. Nur so zeigt sich, ob die
+ * Anschlussfuge wirklich durchlaessig ist: die Huelle des Gangs liegt genau
+ * dort, und ohne die Oeffnung waere sie eine Wand.
+ */
+describe('Nordknoten', () => {
+  const knoten = plan.nordknoten!;
+  const kette = new PrioritySurfaceProvider([
+    flaechen,
+    new FlatSurfaceProvider([{
+      id: knoten.id,
+      polygon: knoten.polygon,
+      z: knoten.bodenM,
+      blocked: false,
+      priority: 1,
+    }]),
+    LEGACY_OPEN_OUTSIDE,
+  ]);
+  const walk = new WalkGrid(2, [], [], kette);
+
+  it('behaelt seine gerundete Fassade zum Messeplatz', () => {
+    expect(knoten.polygon.length).toBeGreaterThan(20);
+  });
+
+  it('traegt einen Fussboden auf Gangniveau', () => {
+    const [x, y] = ort(8, -20);
+    const fuss = kette.footingAt(x, y, 0);
+    expect(fuss.surfaceId).toBe(knoten.id);
+    expect(fuss.blocked).toBe(false);
+    expect(fuss.z).toBeCloseTo(knoten.bodenM, 6);
+  });
+
+  it('laesst einen aus dem Gang hinuebergehen', () => {
+    const tor = (plan.durchgaenge ?? []).find((t) => t.id === 'tor-ost-nordknoten')!;
+    const [x, y] = ort(tor.stationM, 0);
+    // Nach Osten, also in Richtung fallender Quermasse.
+    const richtung: [number, number] = [-achse.quer[0], -achse.quer[1]];
+    let stand = { x, y, z: BODEN_Y };
+    for (let i = 0; i < 150; i += 1) {
+      stand = walk.move(stand, richtung[0] * 0.2, richtung[1] * 0.2);
+    }
+    const [, q] = flaechen.stationUndQuer(stand.x, stand.y);
+    expect(q).toBeLessThan(plan.seitenQ.ost - 5);
+  });
+
+  it('haelt einen dort auf, wo keine Fuge ist', () => {
+    // Weit suedlich der Anschlussfuge steht die Ostwand des Gangs.
+    const [x, y] = ort(140, 0);
+    const richtung: [number, number] = [-achse.quer[0], -achse.quer[1]];
+    let stand = { x, y, z: BODEN_Y };
+    for (let i = 0; i < 150; i += 1) {
+      stand = walk.move(stand, richtung[0] * 0.2, richtung[1] * 0.2);
+    }
+    const [, q] = flaechen.stationUndQuer(stand.x, stand.y);
+    expect(q).toBeGreaterThanOrEqual(plan.seitenQ.ost - 1e-6);
+  });
 });
