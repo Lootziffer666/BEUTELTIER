@@ -592,6 +592,15 @@ describe('Versatz der Westkanten', () => {
     expect(aussen.ebene1.qBisM - plan.sued!.seitenQ.ost).toBeCloseTo(20, 1);
   });
 
+  it('haelt die ungeklaerte Strecke zur Rampe fest, ohne sie zu verbauen', () => {
+    // 40,85 m vor Ort gemessen. Daraus folgte eine Ebene 1 von 224,5 m; die
+    // gemessene Kante ist 188,10 m. Der Widerspruch bleibt in der Datei
+    // stehen, statt dass eine der beiden Zahlen still verschwindet.
+    expect(aussen.streckeZurRampeM).toBeCloseTo(40.85, 2);
+    expect(aussen.ebene1.bisM - aussen.ebene1.vonM).toBeCloseTo(188.1, 1);
+    expect(aussen.streckeZurRampeHerkunft).toContain('nicht vereinbar');
+  });
+
   it('fuehrt den Versatz als Zahl und schneidet ihn nicht aus', () => {
     // An der Ostseite sind von Sueden aus 29,95 m von Halle 10 nicht mit
     // Ebene 1 ueberbaut. Die Platte bleibt trotzdem ein Viereck -- so war es

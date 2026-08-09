@@ -164,6 +164,13 @@ AUSSEN_VERSATZ_M = 29.95
 # Gebaut wird sie mit dem Grundriss und den **Hallenhoehen** -- siehe unten.
 AUSSEN_RAMPE_M = 84.59
 AUSSEN_RAMPE_GEMESSEN_M = 8.33
+# Vor Ort gemessen: die Strecke auf Ebene 1 vom Suedboulevard in Richtung
+# Rampe. Sie steht hier als Zahl und bestimmt die Geometrie **nicht** -- sie
+# laesst sich mit der gemessenen Kante von 188,10 m nicht vereinbaren. Aus
+# 40,85 m ab der Nordkante des Suedteils (Station 304,47) folgt eine Grenze
+# bei Station 263,6 und damit eine Ebene 1 von 224,5 m Laenge; gemessen sind
+# 188,10 m. Der Widerspruch betraegt 36 m und ist ungeklaert.
+AUSSEN_STRECKE_ZUR_RAMPE_M = 40.85
 # Wie weit die Platten unter die Hallenboeden geschoben werden, damit draussen
 # keine Fuge steht und drinnen nichts hervorschaut.
 AUSSEN_UEBERLAPP_M = 2.0
@@ -1038,6 +1045,12 @@ def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
         "quelle": "vor Ort gemessen (dz.nrw); verortet ueber die amtlichen Hallenkanten",
         "grenzeM": grenze,
         "versatzM": AUSSEN_VERSATZ_M,
+        "streckeZurRampeM": AUSSEN_STRECKE_ZUR_RAMPE_M,
+        "streckeZurRampeHerkunft": (
+            "vor Ort gemessen: auf Ebene 1 vom Suedboulevard Richtung Rampe. "
+            "Bestimmt die Geometrie nicht -- mit der gemessenen Kante von "
+            "188,10 m nicht vereinbar (ergaebe 224,5 m statt 188,10 m). "
+            "Ungeklaerter Widerspruch von 36 m."),
         "versatzHerkunft": ("An der Ostseite sind von Sueden aus 29,95 m von "
                             "Halle 10 nicht mit Ebene 1 ueberbaut. Der Wert "
                             "steht als Zahl und ist nicht aus der Platte "

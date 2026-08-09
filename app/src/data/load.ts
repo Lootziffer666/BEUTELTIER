@@ -351,6 +351,13 @@ export interface BoulevardAussen910 {
   grenzeM: number;
   versatzM: number;
   versatzHerkunft: string;
+  /**
+   * Vor Ort gemessen, aber **nicht** verbaut: mit der gemessenen Kante von
+   * 188,10 m nicht vereinbar. Steht hier, damit der Widerspruch sichtbar
+   * bleibt statt stillschweigend verworfen zu werden.
+   */
+  streckeZurRampeM: number;
+  streckeZurRampeHerkunft: string;
   ueberlappM: number;
   /**
    * Beide Flaechen sind Vierecke, auf denen die Halle steht -- so bleibt die
