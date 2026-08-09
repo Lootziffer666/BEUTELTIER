@@ -9,6 +9,7 @@ verwendet.
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -59,6 +60,80 @@ def geschrumpft(polygon: list[list[float]], faktor: float = STAND_SCHRUMPF) -> l
     return [[mx + (p[0] - mx) * faktor, my + (p[1] - my) * faktor] for p in polygon]
 
 
+WANDSTAERKE_M = 0.5
+"""Wie weit der begehbare Innenraum hinter der Hallenkante zurueckliegt.
+
+Der Hallenplan gibt das **Aussenmass**. Begehbar ist das Innenmass: dazwischen
+liegen Wand, Stuetzenvorlagen und der Technikstreifen davor. Im Modell kam das
+bisher gar nicht vor -- die Standflaechen reichten bis an die Aussenkante, und
+wer an der Wand stand, stand rechnerisch in ihr.
+
+Ein halber Meter ist eine **Setzung**, keine Messung: die Konstruktion der
+Koelnmesse ist hier nicht erhoben. Er liegt bewusst am unteren Rand des
+Plausiblen -- lieber zu wenig abziehen als Flaeche behaupten, die es nicht
+gibt, und umgekehrt lieber zu wenig als Gaenge kuenstlich breit rechnen.
+
+Was es nicht leistet: die verbliebenen Ueberstaende von Halle 5.2 und 10.2
+verschwinden dadurch nicht. Die sind um ein Vielfaches groesser als jede
+plausible Wandstaerke und bleiben ein Zielfeature-Problem.
+"""
+
+
+def nach_innen(polygon: list[list[float]], meter: float = WANDSTAERKE_M) -> list[list[float]]:
+    """Versetzt jede Kante um `meter` nach innen.
+
+    Ein echter Versatz und kein Schrumpf um die Mitte: bei einer 220 m langen
+    Halle zoege ein Prozent Schrumpf die Enden um gut einen Meter herein und
+    die Laengsseiten um vier Zentimeter -- eine Wand ist aber ueberall gleich
+    dick. Deshalb wird jede Kante einzeln parallel verschoben und mit ihren
+    Nachbarn neu geschnitten.
+
+    Faellt der Umriss dabei in sich zusammen -- moeglich bei sehr spitzen
+    Ecken --, bleibt er unveraendert. Lieber eine Halle ohne Wandstaerke als
+    eine verdrehte.
+    """
+    ecken = polygon[:-1] if polygon[0] == polygon[-1] else list(polygon)
+    if len(ecken) < 3:
+        return [list(p) for p in polygon]
+
+    # Umlaufsinn: nur so zeigt die Normale zuverlaessig nach innen.
+    flaeche2 = sum(ecken[i][0] * ecken[(i + 1) % len(ecken)][1]
+                   - ecken[(i + 1) % len(ecken)][0] * ecken[i][1]
+                   for i in range(len(ecken)))
+    vorzeichen = 1.0 if flaeche2 > 0 else -1.0
+
+    geraden = []
+    for i in range(len(ecken)):
+        a, b = ecken[i], ecken[(i + 1) % len(ecken)]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        laenge = math.hypot(dx, dy)
+        if laenge < 1e-9:
+            return [list(p) for p in polygon]
+        nx, ny = -dy / laenge * vorzeichen, dx / laenge * vorzeichen
+        geraden.append(((a[0] + nx * meter, a[1] + ny * meter), (dx / laenge, dy / laenge)))
+
+    neu = []
+    for i in range(len(geraden)):
+        (p1, r1), (p2, r2) = geraden[i - 1], geraden[i]
+        nenner = r1[0] * r2[1] - r1[1] * r2[0]
+        if abs(nenner) < 1e-9:      # parallele Nachbarkanten
+            neu.append([p2[0], p2[1]])
+            continue
+        t = ((p2[0] - p1[0]) * r2[1] - (p2[1] - p1[1]) * r2[0]) / nenner
+        neu.append([p1[0] + r1[0] * t, p1[1] + r1[1] * t])
+
+    # Sicherung: der Innenraum muss kleiner sein als das Aussenmass und darf
+    # sich nicht verschlungen haben.
+    def flaeche(ring):
+        return abs(sum(ring[i][0] * ring[(i + 1) % len(ring)][1]
+                       - ring[(i + 1) % len(ring)][0] * ring[i][1]
+                       for i in range(len(ring)))) / 2
+    aussen, innen = flaeche(ecken), flaeche(neu)
+    if not (0.5 * aussen < innen < aussen):
+        return [list(p) for p in polygon]
+    return neu
+
+
 def build() -> dict:
     site = json.loads(SITE.read_text())
     graph = json.loads(GRAPH.read_text())
@@ -91,7 +166,9 @@ def build() -> dict:
             "status": registration["status"],
             "targetFeatureIds": registration["targetFeatureIds"],
             "floorZ": registration["floorZ"],
-            "footprint": [rounded(transform_point(tuple(point), transform)) for point in hall["footprint"]],
+            # Begehbar ist das Innenmass, nicht das Aussenmass des Plans.
+            "footprint": [rounded(transform_point(tuple(point), transform))
+                          for point in nach_innen(hall["footprint"])],
             "label": rounded(transform_point((
                 sum(p[0] for p in hall["footprint"]) / len(hall["footprint"]),
                 sum(p[1] for p in hall["footprint"]) / len(hall["footprint"]),
@@ -129,6 +206,13 @@ def build() -> dict:
         "origin": registration_product["origin"],
         # Benannte Abweichung von den Plandaten, damit sie niemand fuer eine
         # Messung haelt: die Staende sind gezeichnet, nicht vermessen.
+        "wandstaerke": {
+            "meter": WANDSTAERKE_M,
+            "bezug": "jede Hallenkante nach innen versetzt",
+            "grund": ("Der Plan gibt das Aussenmass; begehbar ist das Innenmass "
+                      "hinter Wand, Stuetzenvorlage und Technikstreifen"),
+            "gemessen": False,
+        },
         "standSchrumpf": {
             "faktor": STAND_SCHRUMPF,
             "bezug": "eigene Mitte je Stand",

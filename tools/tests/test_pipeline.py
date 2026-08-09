@@ -1514,3 +1514,60 @@ class TestStandSchrumpf:
         for hall in layout["halls"]:
             for stand in hall["stands"]:
                 assert gebaut[stand["id"]] == stand["polygon"]
+
+
+class TestWandstaerke:
+    """Der Plan gibt das Aussenmass, begehbar ist das Innenmass.
+
+    Wand, Stuetzenvorlage und Technikstreifen kamen im Modell nie vor -- die
+    Standflaechen reichten bis an die Aussenkante, und wer an der Wand stand,
+    stand rechnerisch in ihr.
+    """
+
+    @staticmethod
+    def _flaeche(ring):
+        n = len(ring)
+        return abs(sum(ring[i][0] * ring[(i + 1) % n][1] - ring[(i + 1) % n][0] * ring[i][1]
+                       for i in range(n))) / 2
+
+    def test_versetzt_jede_kante_gleich_weit(self):
+        """Der Unterschied zum Schrumpfen: eine Wand ist ueberall gleich dick."""
+        from build_registered_layout import nach_innen, WANDSTAERKE_M
+
+        lang = nach_innen([[0, 0], [220, 0], [220, 80], [0, 80]])
+        assert lang[0] == pytest.approx([WANDSTAERKE_M, WANDSTAERKE_M], abs=1e-9)
+        assert lang[2] == pytest.approx([220 - WANDSTAERKE_M, 80 - WANDSTAERKE_M], abs=1e-9)
+        # Ein Schrumpf um die Mitte zoege die lange Seite viel weiter herein als
+        # die kurze -- genau das soll hier nicht passieren.
+        breite = 80 - 2 * WANDSTAERKE_M
+        laenge = 220 - 2 * WANDSTAERKE_M
+        assert (220 - laenge) == pytest.approx(80 - breite, abs=1e-9)
+
+    def test_funktioniert_in_beiden_umlaufrichtungen(self):
+        """Sonst versetzt die halbe Messe nach aussen statt nach innen."""
+        from build_registered_layout import nach_innen
+
+        rechts = [[0, 0], [100, 0], [100, 50], [0, 50]]
+        links = list(reversed(rechts))
+        assert self._flaeche(nach_innen(rechts)) < self._flaeche(rechts)
+        assert self._flaeche(nach_innen(links)) < self._flaeche(links)
+
+    def test_laesst_einen_umriss_in_ruhe_statt_ihn_zu_verdrehen(self):
+        """Bei zu schmalen Formen faellt der Versatz aus, statt zu kippen."""
+        from build_registered_layout import nach_innen
+
+        schmal = [[0, 0], [100, 0], [100, 0.4], [0, 0.4]]
+        assert nach_innen(schmal) == [[0, 0], [100, 0], [100, 0.4], [0, 0.4]]
+
+    def test_bleibt_im_plausiblen(self):
+        from build_registered_layout import WANDSTAERKE_M
+
+        assert 0.2 <= WANDSTAERKE_M <= 1.5
+
+    def test_die_abweichung_steht_in_den_daten(self):
+        layout = json.loads((BUILD / "registered-layout.json").read_text(encoding="utf-8"))
+        from build_registered_layout import WANDSTAERKE_M
+
+        vermerk = layout["wandstaerke"]
+        assert vermerk["meter"] == WANDSTAERKE_M
+        assert vermerk["gemessen"] is False
