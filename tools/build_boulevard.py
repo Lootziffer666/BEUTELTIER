@@ -191,6 +191,51 @@ class Rahmen:
         return (self.wand_west if seite == "west" else self.wand_ost) - self.achse_q
 
 
+def viereck_aus_kanten(a: tuple[float, float], b: tuple[float, float],
+                       bc: float, cd: float, da: float,
+                       links: bool = True) -> list[tuple[float, float]]:
+    """Ein Viereck aus einer liegenden Grundkante und drei Laengen.
+
+    Vier Kantenlaengen allein legen kein Viereck fest -- es laesst sich in der
+    Ebene verbiegen wie ein Gelenkviereck. Erst eine **liegende** Kante macht
+    es eindeutig: A und B sind gegeben, D ergibt sich aus `da` senkrecht dazu,
+    und C ist der Schnitt zweier Kreise -- um B mit `bc`, um D mit `cd`.
+
+    Zwei Schnittpunkte gibt es immer; `links` waehlt den auf der Seite, auf der
+    auch D liegt. Waere es der andere, klappte das Viereck ueber die Grundkante
+    zurueck und schnitte sich selbst.
+
+    Gebraucht fuer das Aussengelaende zwischen Halle 9 und Halle 10: dort sind
+    die Aussenmasse vor Ort gemessen, die Lage aber nur als Kante bekannt.
+    """
+    ax, ay = a
+    bx, by = b
+    basis = math.hypot(bx - ax, by - ay)
+    if basis < 1e-9:
+        raise ValueError("Grundkante hat keine Laenge")
+    ex, ey = (bx - ax) / basis, (by - ay) / basis
+    # Einheitsnormale, per `links` auf die gewuenschte Seite gedreht.
+    nx, ny = (-ey, ex) if links else (ey, -ex)
+
+    dx, dy = ax + nx * da, ay + ny * da
+    # Schnitt der Kreise um B (Radius bc) und um D (Radius cd).
+    mx, my = dx - bx, dy - by
+    abstand = math.hypot(mx, my)
+    if abstand > bc + cd or abstand < abs(bc - cd) or abstand < 1e-9:
+        raise ValueError(
+            f"Kanten passen nicht zusammen: |BD|={abstand:.2f}, bc={bc}, cd={cd}")
+    lot = (abstand * abstand + bc * bc - cd * cd) / (2 * abstand)
+    hoehe = math.sqrt(max(0.0, bc * bc - lot * lot))
+    ux, uy = mx / abstand, my / abstand
+    px, py = bx + ux * lot, by + uy * lot
+    # Der Schnittpunkt auf derselben Seite wie D -- also in Normalenrichtung.
+    for zeichen in (1.0, -1.0):
+        cx, cy = px - uy * hoehe * zeichen, py + ux * hoehe * zeichen
+        if (cx - ax) * nx + (cy - ay) * ny > 0:
+            return [(ax, ay), (bx, by), (cx, cy), (dx, dy)]
+    raise ValueError("kein Schnittpunkt auf der gewuenschten Seite")
+
+
 def ring_richtung(poly: list[tuple[float, float]]) -> float:
     """Richtung der laengsten Kante -- die Laengsachse des Baukoerpers."""
     best, winkel = 0.0, 0.0

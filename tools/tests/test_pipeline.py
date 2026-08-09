@@ -1184,3 +1184,61 @@ class TestNordboulevard:
                             getroffen = True
                             break
                     assert getroffen, (seite, teil["was"], round(laengs_station, 1))
+
+
+class TestViereckAusKanten:
+    """Das Aussengelaende 9/10 ist vor Ort gemessen, aber nicht verortet.
+
+    Vier Kantenlaengen legen kein Viereck fest -- es laesst sich verbiegen wie
+    ein Gelenkviereck. Erst eine liegende Grundkante macht es eindeutig. Diese
+    Pruefungen halten fest, dass die Konstruktion die gemessenen Laengen auch
+    wirklich einhaelt, statt sie nur ungefaehr zu treffen.
+    """
+
+    @staticmethod
+    def _kanten(poly):
+        return [math.dist(poly[i], poly[(i + 1) % len(poly)]) for i in range(len(poly))]
+
+    def test_haelt_alle_vier_gemessenen_laengen_ein(self):
+        from build_boulevard import viereck_aus_kanten
+
+        # Die vor Ort gemessenen Aussenmasse der Ebene 1 (Bereich 10.2).
+        grund, bc, cd, da = 188.10, 178.57, 178.93, 175.62
+        poly = viereck_aus_kanten((0.0, 0.0), (grund, 0.0), bc, cd, da)
+        assert len(poly) == 4
+        assert self._kanten(poly) == pytest.approx([grund, bc, cd, da], abs=1e-6)
+
+    def test_haelt_auch_die_masse_der_unteren_ebene_ein(self):
+        from build_boulevard import viereck_aus_kanten
+
+        grund, bc, cd, da = 213.00, 120.18, 206.95, 117.61
+        poly = viereck_aus_kanten((0.0, 0.0), (grund, 0.0), bc, cd, da)
+        assert self._kanten(poly) == pytest.approx([grund, bc, cd, da], abs=1e-6)
+
+    def test_dreht_sich_mit_der_grundkante(self):
+        """Dieselben Masse, gedrehte Grundkante -- dieselbe Figur."""
+        from build_boulevard import viereck_aus_kanten
+
+        gerade = viereck_aus_kanten((0.0, 0.0), (100.0, 0.0), 80.0, 100.0, 80.0)
+        schraeg = viereck_aus_kanten((0.0, 0.0), (60.0, 80.0), 80.0, 100.0, 80.0)
+        assert self._kanten(gerade) == pytest.approx(self._kanten(schraeg), abs=1e-6)
+
+    def test_klappt_nicht_ueber_die_grundkante_zurueck(self):
+        """Von zwei Schnittpunkten ist einer immer falsch -- er faltet die Figur."""
+        from build_boulevard import viereck_aus_kanten
+
+        poly = viereck_aus_kanten((0.0, 0.0), (188.10, 0.0), 178.57, 178.93, 175.62)
+        # Alle vier Ecken liegen auf derselben Seite der Grundkante oder darauf.
+        assert all(y >= -1e-9 for _x, y in poly)
+        # Und die Flaeche ist positiv, also ist der Ring nicht verschlungen.
+        flaeche = 0.5 * abs(sum(
+            poly[i][0] * poly[(i + 1) % 4][1] - poly[(i + 1) % 4][0] * poly[i][1]
+            for i in range(4)))
+        assert flaeche > 20_000
+
+    def test_meldet_unmoegliche_masse_statt_stillzuschweigen(self):
+        from build_boulevard import viereck_aus_kanten
+
+        with pytest.raises(ValueError):
+            # Zwei kurze Seiten koennen eine sehr lange Grundkante nicht schliessen.
+            viereck_aus_kanten((0.0, 0.0), (500.0, 0.0), 10.0, 10.0, 10.0)
