@@ -296,6 +296,41 @@ export interface BoulevardPlatz {
 }
 
 /**
+ * Der zur Messe abgesperrte Bereich hinter Halle 8.
+ *
+ * Ein Dreieck: die lange Seite liegt an der Nordwand von Halle 8, die beiden
+ * anderen sind 104 m (West) und 118 m (Ost). Drei Laengen an einer liegenden
+ * Kante legen die Figur fest -- offen bleibt nur die Seite, und die ist
+ * draussen.
+ *
+ * Zwei Felder halten fest, was **nicht** gemessen ist: `ueberhangM` ist der
+ * Rest der Wand, den die Grundkante nicht bedeckt (sie liegt mittig, das ist
+ * eine Setzung), und `tiefeM` ist die Hoehe ueber der Grundkante, die sich aus
+ * den drei Laengen ergibt -- sie widerspricht der frueher gemessenen Tiefe bis
+ * zur Unterfuehrung, siehe `offen`.
+ */
+export interface BoulevardAussenHalle8 {
+  id: string;
+  was: string;
+  featureId: string;
+  basisM: number;
+  westM: number;
+  ostM: number;
+  /** Die Nordwand im amtlichen Umriss -- laenger als die Grundkante. */
+  wandM: number;
+  ueberhangM: number;
+  /** Hoehe ueber der Grundkante, gerechnet und nicht gemessen. */
+  tiefeM: number;
+  flaecheSqm: number;
+  hoeheM: number;
+  grundkante: [[number, number], [number, number]];
+  spitze: [number, number];
+  polygon: [number, number][];
+  herkunft: string;
+  offen: string;
+}
+
+/**
  * Der Knick am Nordende.
  *
  * Anders als der Suedknoten ist er nicht konstruiert, sondern uebernommen: der
@@ -432,6 +467,8 @@ export interface BoulevardPlan {
   nordknoten?: BoulevardNordknoten | null;
   /** Das Aussengelaende zwischen Halle 9 und Halle 10. */
   aussen9_10?: BoulevardAussen910 | null;
+  /** Der zur Messe abgesperrte Bereich hinter Halle 8. */
+  aussenHalle8?: BoulevardAussenHalle8 | null;
   /**
    * Der Suedteil: dort weitet sich der Gang zwischen Halle 5 und Halle 10 und
    * liegt eine Ebene hoeher. `kanteM` ist die gemessene Lage der senkrechten
@@ -559,6 +596,16 @@ function aussenraum(plan: BoulevardPlan | null): SurfaceProvider {
       blocked: false,
       priority: 1,
     })) : []),
+    // Vor den Plaetzen: das Dreieck hinter Halle 8 liegt in P8 und ist der
+    // gemessene Zuschnitt, waehrend P8 der Parkplatz des ganzen Jahres ist.
+    // Wer dort steht, steht im Messebereich -- deshalb soll er ihn melden.
+    ...(plan.aussenHalle8 ? [{
+      id: plan.aussenHalle8.id,
+      polygon: plan.aussenHalle8.polygon,
+      z: plan.aussenHalle8.hoeheM,
+      blocked: false,
+      priority: 1,
+    }] : []),
     ...(plan.plaetze ?? []).map((platz) => ({
       id: platz.id,
       polygon: platz.polygon,

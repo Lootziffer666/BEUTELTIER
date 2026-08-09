@@ -1329,3 +1329,116 @@ class TestZaunHinterHalleAcht:
         # Und die Stelle, die der Bau gefunden hat, liegt genau dort.
         assert werte[int(p8["zaun"]["tiefeBeiM"])] > 84.41
         assert werte[int(p8["zaun"]["tiefeBeiM"]) + 1] < 84.41
+
+
+class TestDreieckHinterHalleAcht:
+    """Der abgesperrte Bereich hinter Halle 8, aus drei gemessenen Seiten.
+
+    Die Konstruktion darf die Messung nicht nur ungefaehr treffen: 175 / 104 /
+    118 m sind vor Ort abgelesen, und wenn die Figur sie nicht einhaelt, ist
+    nicht die Messung falsch, sondern die Verortung.
+    """
+
+    @staticmethod
+    def _dreieck():
+        plan = json.loads((ROOT / "app/public/data/boulevard.json").read_text(encoding="utf-8"))
+        d = plan["aussenHalle8"]
+        assert d is not None
+        return d
+
+    def test_haelt_die_drei_gemessenen_laengen_ein(self):
+        d = self._dreieck()
+        ring = [tuple(p) for p in d["polygon"]]
+        assert len(ring) == 3
+        basis = math.dist(ring[0], ring[1])
+        west = math.dist(ring[0], ring[2])
+        ost = math.dist(ring[1], ring[2])
+        assert basis == pytest.approx(175.0, abs=0.02)
+        assert west == pytest.approx(104.0, abs=0.02)
+        assert ost == pytest.approx(118.0, abs=0.02)
+
+    def test_die_grundkante_liegt_auf_der_nordwand(self):
+        """Beide Ecken auf der Wandgeraden, und zwar innerhalb der Wand."""
+        from build_boulevard import lade_gebaeude, nordwand, REGISTRATIONS
+
+        reg = json.loads(REGISTRATIONS.read_text(encoding="utf-8"))
+        gebaeude = lade_gebaeude((reg["origin"][0], reg["origin"][1]))
+        bau = next(b for b in gebaeude.values() if b.hall_key == "8.1")
+        west, ost = nordwand(bau)
+        laenge = math.dist(west, ost)
+        richtung = ((ost[0] - west[0]) / laenge, (ost[1] - west[1]) / laenge)
+        normale = (-richtung[1], richtung[0])
+        for ecke in self._dreieck()["grundkante"]:
+            abweichung = ((ecke[0] - west[0]) * normale[0]
+                          + (ecke[1] - west[1]) * normale[1])
+            entlang = ((ecke[0] - west[0]) * richtung[0]
+                       + (ecke[1] - west[1]) * richtung[1])
+            assert abs(abweichung) < 0.02, ecke
+            assert 0.0 <= entlang <= laenge, ecke
+
+    def test_die_spitze_liegt_draussen_und_nicht_in_der_halle(self):
+        from build_boulevard import lade_gebaeude, punkt_in_polygon, REGISTRATIONS
+
+        reg = json.loads(REGISTRATIONS.read_text(encoding="utf-8"))
+        gebaeude = lade_gebaeude((reg["origin"][0], reg["origin"][1]))
+        bau = next(b for b in gebaeude.values() if b.hall_key == "8.1")
+        spitze = tuple(self._dreieck()["spitze"])
+        assert not punkt_in_polygon(spitze, bau.poly)
+        # Und noerdlich der Wand -- kleineres y ist weiter noerdlich.
+        mitte_y = sum(p[1] for p in bau.poly) / len(bau.poly)
+        assert spitze[1] < mitte_y
+
+    def test_haelt_den_widerspruch_zur_frueheren_messung_fest(self):
+        """68,1 m tief gegen 84,41 m bis zur Unterfuehrung -- das steht in der
+        Datei, damit es nicht stillschweigend verschwindet."""
+        d = self._dreieck()
+        assert d["tiefeM"] == pytest.approx(68.08, abs=0.05)
+        assert d["ueberhangM"] == pytest.approx(13.43, abs=0.05)
+        assert "84,41" in d["offen"]
+
+    def test_liegt_zum_grossen_teil_im_parkplatz_p8(self):
+        """P8 ist die Flaeche des ganzen Jahres, das Dreieck der Zuschnitt zur
+        Messe. Es muss also im Wesentlichen darin liegen -- nicht vollstaendig,
+        weil P8 den Streifen an der Hallenwand nicht mitfuehrt."""
+        from build_boulevard import punkt_in_polygon
+
+        plan = json.loads((ROOT / "app/public/data/boulevard.json").read_text(encoding="utf-8"))
+        p8 = [tuple(p) for p in next(
+            pl for pl in plan["plaetze"] if pl.get("osmWayId") == 39353363)["polygon"]]
+        a, b, c = [tuple(p) for p in self._dreieck()["polygon"]]
+        drin = 0
+        proben = 0
+        for i in range(1, 40):
+            for j in range(1, 40 - i):
+                u, v = i / 40, j / 40
+                punkt = (a[0] + u * (b[0] - a[0]) + v * (c[0] - a[0]),
+                         a[1] + u * (b[1] - a[1]) + v * (c[1] - a[1]))
+                proben += 1
+                if punkt_in_polygon(punkt, p8):
+                    drin += 1
+        assert 0.6 < drin / proben < 0.95, drin / proben
+
+
+class TestDreieckAusKanten:
+    def test_baut_das_gemessene_dreieck(self):
+        from build_boulevard import dreieck_aus_kanten
+
+        spitze = dreieck_aus_kanten((0.0, 0.0), (175.0, 0.0), 104.0, 118.0, (87.5, 50.0))
+        assert math.dist((0.0, 0.0), spitze) == pytest.approx(104.0, abs=1e-9)
+        assert math.dist((175.0, 0.0), spitze) == pytest.approx(118.0, abs=1e-9)
+        # Weg von (87.5, 50) heisst: auf die andere Seite der Grundkante.
+        assert spitze[1] < 0
+
+    def test_waehlt_die_seite_und_nicht_die_naechste_loesung(self):
+        from build_boulevard import dreieck_aus_kanten
+
+        oben = dreieck_aus_kanten((0.0, 0.0), (100.0, 0.0), 80.0, 80.0, (50.0, -30.0))
+        unten = dreieck_aus_kanten((0.0, 0.0), (100.0, 0.0), 80.0, 80.0, (50.0, 30.0))
+        assert oben[1] > 0 and unten[1] < 0
+        assert oben[0] == pytest.approx(unten[0], abs=1e-9)
+
+    def test_meldet_unmoegliche_laengen(self):
+        from build_boulevard import dreieck_aus_kanten
+
+        with pytest.raises(ValueError):
+            dreieck_aus_kanten((0.0, 0.0), (500.0, 0.0), 10.0, 10.0, (0.0, 1.0))
