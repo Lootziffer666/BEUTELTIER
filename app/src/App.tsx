@@ -27,6 +27,7 @@ import type { LayoutPatch, LayoutPatchState } from './scene/walk';
 import { Vermessung } from './ui/Vermessung';
 import { ProceduralMesse } from './ui/ProceduralMesse';
 import { WorldDiagnostics } from './ui/WorldDiagnostics';
+import { ProceduralStagingNotice } from './scene/ProceduralStagingNotice';
 
 type Tab = 'karte' | 'epix' | 'funkwache' | 'register' | 'diagnose' | 'messe';
 
@@ -55,6 +56,7 @@ export default function App() {
   const [preset, setPreset] = useState<CameraPreset>('uebersicht');
   const [selectedStandId, setSelectedStandId] = useState<string | null>(null);
   const [focusHallKey, setFocusHallKey] = useState<string | null>(null);
+  const [stagingObjectCount, setStagingObjectCount] = useState(0);
   /**
    * Glas im Boulevard: sparsam oder echt.
    *
@@ -306,6 +308,16 @@ export default function App() {
           onToggleViewfinder={() => setViewfinderOpen((v) => !v)}
           onMark={handleMark}
           onCameraSnapshot={setCameraSnapshot}
+          onStagingObjectCount={setStagingObjectCount}
+        />
+
+        <ProceduralStagingNotice
+          visible={
+            tab === 'karte' &&
+            Boolean(focusHallKey) &&
+            (preset === 'halle' || preset === 'ego') &&
+            stagingObjectCount > 0
+          }
         />
 
         {preset === 'ego' && !pendingMark && (

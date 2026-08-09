@@ -40,6 +40,7 @@ import { Markenstaende } from './Markenstaende';
 import { MARKEN_STAND_IDS } from './marken';
 import { Vertikalverbindungen } from './vertical';
 import type { CameraSnapshot } from './survey';
+import { ProceduralStaging } from './ProceduralStaging';
 
 export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
@@ -69,6 +70,9 @@ export interface SceneProps {
   /** Aktueller Kamerazustand wird an den Aufrufer gereicht, keine Beschreibung nötig. */
   onMark?: (snapshot: CameraSnapshot) => void;
   onCameraSnapshot?: (snapshot: CameraSnapshot) => void;
+  /** Meldet die Zahl tatsächlich erzeugter ProceduralStaging-Objekte --
+   * bestimmt, ob der Inszenierungs-Hinweis angezeigt werden darf. */
+  onStagingObjectCount?: (count: number) => void;
 }
 
 const COLOURS = {
@@ -489,6 +493,7 @@ function OfficialWorld({
   const packages = data.world?.manifest.packages.filter(
     (entry) => entry.available && entry.role === 'render',
   ) ?? [];
+
   if (!packages.length) return null;
   // GLBs verwenden echtes Three.js sceneZ. Die registrierten 2D-Inhalte
   // laufen noch durch toScene(), das ihre zweite Achse negiert.
@@ -574,6 +579,10 @@ function Halls({
   );
 }
 
+/** Höhe der Standfläche, wenn sie in der fokussierten Halle nur noch als
+ * Bodenkontur dient statt als massiver Platzhalterkörper. */
+const STAND_FLOOR_HEIGHT_M = 0.04;
+
 function Stands({
   data,
   centre,
@@ -581,6 +590,7 @@ function Stands({
   selectedStandId,
   routeStandIds,
   interior,
+  reduceHallKey,
   onSelectStand,
 }: {
   data: Dataset;
@@ -590,6 +600,9 @@ function Stands({
   routeStandIds: string[];
   /** Steht der Betrachter mitten drin? Dann gelten andere Regeln. */
   interior: boolean;
+  /** Halle, deren Standkörper auf eine Bodenkontur reduziert werden -- die
+   * fokussierte Halle in Halle/Ego, sonst null (Übersicht bleibt unverändert). */
+  reduceHallKey: string | null;
   onSelectStand: (standId: string | null) => void;
 }) {
   const surface = useMemo(() => standSurface(), []);
@@ -608,31 +621,45 @@ function Stands({
       const hall = data.hallsByKey.get(stand.hallKey);
       return !hall || hall.placement.source !== 'geschaetzt';
     });
-    const build = (level: 'lower' | 'upper') =>
+    // Die fokussierte Halle bekommt eine flache Bodenkontur statt eines
+    // massiven Platzhalterkörpers -- der verdeckt sonst jede Inszenierung
+    // vollständig, egal wie transparent er ist.
+    const reduced = reduceHallKey ? shown.filter((stand) => stand.hallKey === reduceHallKey) : [];
+    const full = reduceHallKey ? shown.filter((stand) => stand.hallKey !== reduceHallKey) : shown;
+
+    const build = (items: typeof shown, level: 'lower' | 'upper', height: number) =>
       mergePolygons(
-        shown
+        items
           .filter((stand) => (level === 'lower' ? stand.level <= 1 : stand.level > 1))
           .map((stand) => ({
             id: stand.id,
             polygon: stand.polygon,
             baseY: stand.baseY + 0.05,
-            height: STAND_HEIGHT_M,
+            height,
           })),
         centre,
       );
-    return { lower: build('lower'), upper: build('upper') };
-  }, [data, centre, interior]);
+
+    return {
+      fullLower: build(full, 'lower', STAND_HEIGHT_M),
+      fullUpper: build(full, 'upper', STAND_HEIGHT_M),
+      reducedLower: build(reduced, 'lower', STAND_FLOOR_HEIGHT_M),
+      reducedUpper: build(reduced, 'upper', STAND_FLOOR_HEIGHT_M),
+    };
+  }, [data, centre, interior, reduceHallKey]);
 
   useEffect(
     () => () => {
-      merged.lower.geometry.dispose();
-      merged.upper.geometry.dispose();
+      merged.fullLower.geometry.dispose();
+      merged.fullUpper.geometry.dispose();
+      merged.reducedLower.geometry.dispose();
+      merged.reducedUpper.geometry.dispose();
     },
     [merged],
   );
 
   /** Belegte Stände heben sich ab -- ein leerer Stand ist kein Ziel. */
-  const paint = (group: typeof merged.lower, level: 'lower' | 'upper') => {
+  const paint = (group: typeof merged.fullLower, level: 'lower' | 'upper') => {
     const geometry = group.geometry;
     const count = geometry.getAttribute('position').count;
     const colours = new Float32Array(count * 3);
@@ -664,16 +691,24 @@ function Stands({
     return geometry;
   };
 
-  const lowerGeometry = useMemo(
-    () => paint(merged.lower, 'lower'),
+  const fullLowerGeometry = useMemo(
+    () => paint(merged.fullLower, 'lower'),
     [merged, selectedStandId, routeStandIds, data],
   );
-  const upperGeometry = useMemo(
-    () => paint(merged.upper, 'upper'),
+  const fullUpperGeometry = useMemo(
+    () => paint(merged.fullUpper, 'upper'),
+    [merged, selectedStandId, routeStandIds, data],
+  );
+  const reducedLowerGeometry = useMemo(
+    () => paint(merged.reducedLower, 'lower'),
+    [merged, selectedStandId, routeStandIds, data],
+  );
+  const reducedUpperGeometry = useMemo(
+    () => paint(merged.reducedUpper, 'upper'),
     [merged, selectedStandId, routeStandIds, data],
   );
 
-  const pick = (group: typeof merged.lower) => (faceIndex: number | null | undefined) => {
+  const pick = (group: typeof merged.fullLower) => (faceIndex: number | null | undefined) => {
     if (faceIndex === null || faceIndex === undefined) return;
     const vertex = faceIndex * 3;
     const hit = group.ranges.find(
@@ -685,12 +720,62 @@ function Stands({
   return (
     <group>
       <mesh
-        geometry={lowerGeometry}
+        geometry={fullLowerGeometry}
         castShadow
         receiveShadow
         onClick={(event) => {
           event.stopPropagation();
-          pick(merged.lower)(event.faceIndex);
+          pick(merged.fullLower)(event.faceIndex);
+        }}
+      >
+        <meshStandardMaterial
+          vertexColors
+          map={surface.map}
+          normalMap={surface.normalMap}
+          roughnessMap={surface.roughnessMap}
+          roughness={0.82}
+          metalness={0.04}
+          envMapIntensity={0.7}
+          // Andere Hallen als die fokussierte bleiben vereinfachte Körper --
+          // in Ego zurückhaltend transparent, sie stehen nicht im Weg.
+          transparent={interior}
+          opacity={interior ? 0.5 : 1}
+          depthWrite={!interior}
+        />
+      </mesh>
+      {upperOpacity > 0.02 && (
+        <mesh
+          geometry={fullUpperGeometry}
+          castShadow
+          receiveShadow
+          onClick={(event) => {
+            event.stopPropagation();
+            pick(merged.fullUpper)(event.faceIndex);
+          }}
+        >
+          <meshStandardMaterial
+            vertexColors
+            map={surface.map}
+            normalMap={surface.normalMap}
+            roughnessMap={surface.roughnessMap}
+            roughness={0.82}
+            metalness={0.04}
+            envMapIntensity={0.7}
+            transparent={upperOpacity < 0.99}
+            opacity={upperOpacity}
+          />
+        </mesh>
+      )}
+      {/* Fokussierte Halle: keine massiven Platzhalterkörper mehr, nur eine
+          flache, undurchsichtige Bodenkontur -- Fläche bleibt farblich
+          zuordenbar (belegt/Route/ausgewählt) und anklickbar, verdeckt aber
+          nichts mehr, das darüber steht. */}
+      <mesh
+        geometry={reducedLowerGeometry}
+        receiveShadow
+        onClick={(event) => {
+          event.stopPropagation();
+          pick(merged.reducedLower)(event.faceIndex);
         }}
       >
         <meshStandardMaterial
@@ -705,12 +790,11 @@ function Stands({
       </mesh>
       {upperOpacity > 0.02 && (
         <mesh
-          geometry={upperGeometry}
-          castShadow
+          geometry={reducedUpperGeometry}
           receiveShadow
           onClick={(event) => {
             event.stopPropagation();
-            pick(merged.upper)(event.faceIndex);
+            pick(merged.reducedUpper)(event.faceIndex);
           }}
         >
           <meshStandardMaterial
@@ -1188,8 +1272,10 @@ export function SiteScene(props: SceneProps) {
       />
       <Beleuchtung extent={extent} interior={preset === 'ego'} />
 
-      <Ground extent={extent} centre={centre} ortho={registered ? null : data.ortho} />
-      {!registered && <Umgebung data={data} centre={centre} />}
+      {/* Das Orthofoto bleibt Bodenreferenz, solange kein amtlicher Boden aus
+          den Weltpaketen zur Verfügung steht -- auch im registrierten Modus. */}
+      <Ground extent={extent} centre={centre} ortho={data.ortho} />
+      <Umgebung data={data} centre={centre} />
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
           tragen sie weiterhin. Deshalb Suspense ohne Ersatzdarstellung. */}
       {!registered && (
@@ -1206,6 +1292,15 @@ export function SiteScene(props: SceneProps) {
           <OfficialWorld data={data} centre={centre} preset={preset} />
         </Suspense>
       )}
+      {(preset === 'halle' || preset === 'ego') && focusHallKey && (
+        <ProceduralStaging
+          data={data}
+          centre={centre}
+          preset={preset}
+          focusHallKey={focusHallKey}
+          onObjectCount={props.onStagingObjectCount}
+        />
+      )}
       {/* Hallenkörper und Schilder sind Hilfsmittel der Übersicht. Auf
           Augenhöhe stehen sie als farbiger Schleier vor der Nase und legen
           sich über genau das, was man sehen will -- dort sind die Wände des
@@ -1220,6 +1315,7 @@ export function SiteScene(props: SceneProps) {
         selectedStandId={props.selectedStandId}
         routeStandIds={props.routeStandIds}
         interior={preset === 'ego'}
+        reduceHallKey={(preset === 'halle' || preset === 'ego') ? focusHallKey : null}
         onSelectStand={props.onSelectStand}
       />
       <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
