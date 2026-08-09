@@ -46,52 +46,177 @@ def sample_polygon(polygon: list[list[float]], step: float = 10.0) -> list[tuple
     return samples or [tuple(polygon[0])]
 
 
+MAX_DREHUNG_GRAD = 5.0
+"""Wie weit die Suche drehen darf.
+
+Der bekannte Fehler ist rund 2,2 Grad und stammt aus `buildings.json`: der
+Hallenplan wurde mit dem Drehwinkel des alten Modellfits (-31,0126 Grad) ins
+Gelaende gelegt statt mit der Ausrichtung der Gebaeude, die bei 28,78 Grad
+liegt. Fuenf Grad lassen dafuer Luft, ohne dass eine Halle in die Nachbarhalle
+kippen kann -- ab etwa acht Grad findet die Suche bei laenglichen Hallen
+Scheinloesungen quer zur eigentlichen Achse.
+"""
+
+
+def laengste_kante(polygon: list[list[float]]) -> float:
+    """Richtung der laengsten Kante in Grad, modulo 90.
+
+    Bei Hallen ist das die Hauptfassade. Modulo 90, weil ein Rechteck seine
+    Ausrichtung viermal wiederholt -- ohne das waere jede zweite Halle um
+    90 Grad daneben.
+    """
+    ecken = polygon[:-1] if polygon[0] == polygon[-1] else polygon
+    beste = (0.0, 0.0)
+    for i in range(len(ecken)):
+        a, b = ecken[i], ecken[(i + 1) % len(ecken)]
+        d = math.dist(a, b)
+        if d > beste[0]:
+            beste = (d, math.degrees(math.atan2(b[1] - a[1], b[0] - a[0])) % 90)
+    return beste[1]
+
+
+def winkelkorrektur(paare: list[tuple[list, list]]) -> float:
+    """Wie schief der ganze Hallenplan gegen die amtlichen Gebaeude steht.
+
+    Der Winkelfehler ist global und nicht hallenweise: er stammt aus der
+    Drehung in `buildings.json`, mit der der Plan ins Gelaende gelegt wurde.
+    Deshalb wird er einmal ueber alle Hallen bestimmt und nicht je Halle
+    geraten -- eine einzelne Halle koennte auch aus anderen Gruenden schief
+    liegen, alle zusammen nicht.
+
+    Genommen wird der **Median**: L-foermige Grundrisse wie Halle 2 liefern
+    eine laengste Kante, die nicht die Hauptachse ist, und ein Mittelwert
+    liesse sich davon ziehen.
+    """
+    unterschiede = []
+    for hall_polygon, target_polygon in paare:
+        d = (laengste_kante(target_polygon) - laengste_kante(hall_polygon) + 45) % 90 - 45
+        unterschiede.append(d)
+    if not unterschiede:
+        return 0.0
+    unterschiede.sort()
+    return unterschiede[len(unterschiede) // 2]
+
+
 def containment_fit(hall_polygon: list[list[float]], target_polygons: list[list[list[float]]],
-                    radius: int = 30) -> dict | None:
-    """Sucht hallenweise die kleinste Verschiebung mit maximaler Gebaeudeabdeckung."""
+                    radius: int = 30, vordrehung: float = 0.0) -> dict | None:
+    """Sucht hallenweise Drehung und Verschiebung mit maximaler Abdeckung.
+
+    Frueher wurde nur verschoben. Damit liess sich der Winkelfehler nicht
+    einholen: eine verdrehte Halle deckt ihr Gebaeude in der Mitte, steht aber
+    an beiden Enden heraus, und jede Verschiebung macht das eine Ende besser
+    und das andere schlechter. Auf 220 m Hallenlaenge sind 2,2 Grad an den
+    Enden gut 4 m -- genug, um in den Boulevard zu ragen.
+
+    Gedreht wird um den **eigenen Schwerpunkt**: die Halle soll sich an Ort
+    und Stelle geraderuecken und nicht um einen fremden Punkt wandern.
+    """
     if not target_polygons:
         return None
     samples = sample_polygon(hall_polygon)
+    schwerpunkt = (sum(p[0] for p in samples) / len(samples),
+                   sum(p[1] for p in samples) / len(samples))
     prepared = [(target, (min(p[0] for p in target), min(p[1] for p in target),
                           max(p[0] for p in target), max(p[1] for p in target)))
                 for target in target_polygons]
 
-    def coverage(dx: float, dy: float) -> float:
+    def coverage(dx: float, dy: float, grad: float = 0.0) -> float:
+        bogen = math.radians(grad)
+        cos, sin = math.cos(bogen), math.sin(bogen)
+        cx, cy = schwerpunkt
         inside_count = 0
         for x, y in samples:
-            px, py = x + dx, y + dy
+            rx, ry = x - cx, y - cy
+            px = cx + cos * rx - sin * ry + dx
+            py = cy + sin * rx + cos * ry + dy
             if any(bounds[0] <= px <= bounds[2] and bounds[1] <= py <= bounds[3]
                    and inside(target, (px, py)) for target, bounds in prepared):
                 inside_count += 1
         return 100.0 * inside_count / len(samples)
 
+    def besser(kandidat, bisher) -> bool:
+        """Mehr Abdeckung gewinnt; bei Gleichstand die kleinere Bewegung.
+
+        Ohne die zweite Bedingung waehlt die Suche bei mehreren gleich guten
+        Loesungen die zuerst gefundene -- also eine, die zufaellig am Rand des
+        Suchfensters liegt.
+        """
+        if kandidat[0] != bisher[0]:
+            return kandidat[0] > bisher[0]
+        return (math.hypot(kandidat[1], kandidat[2]) + abs(kandidat[3] - vordrehung) * 10
+                < math.hypot(bisher[1], bisher[2]) + abs(bisher[3] - vordrehung) * 10)
+
     before = coverage(0, 0)
-    best = (before, 0.0, 0.0)
-    # Erst grob, dann um den Sieger auf 25 cm verfeinern.
-    for dx in range(-radius, radius + 1, 2):
-        for dy in range(-radius, radius + 1, 2):
-            score = coverage(dx, dy)
-            if score > best[0] or (score == best[0] and math.hypot(dx, dy) < math.hypot(best[1], best[2])):
-                best = (score, float(dx), float(dy))
+    # Gestartet wird auf der globalen Winkelkorrektur, nicht bei null: die
+    # Abdeckung saettigt bei 100 Prozent, sobald die Halle ganz im Gebaeude
+    # liegt, und kann die Drehung deshalb nicht selbst finden. Gesucht wird
+    # nur noch, was darueber hinaus noetig ist.
+    best = (coverage(0.0, 0.0, vordrehung), 0.0, 0.0, vordrehung)
+    # Grob ueber Drehung und Verschiebung zugleich -- getrennt zu suchen fuehrt
+    # in ein falsches Optimum, weil die beste Verschiebung ohne Drehung eine
+    # andere ist als die mit.
+    schritt_grad = 0.5
+    schritte = int(MAX_DREHUNG_GRAD / schritt_grad)
+    for i in range(-schritte, schritte + 1):
+        grad = vordrehung + i * schritt_grad
+        for dx in range(-radius, radius + 1, 3):
+            for dy in range(-radius, radius + 1, 3):
+                kandidat = (coverage(dx, dy, grad), float(dx), float(dy), grad)
+                if besser(kandidat, best):
+                    best = kandidat
+    # Dann um den Sieger herum auf 25 cm und 0,05 Grad verfeinern.
     coarse = best
-    for ix in range(-4, 5):
-        for iy in range(-4, 5):
-            dx, dy = coarse[1] + ix * 0.25, coarse[2] + iy * 0.25
-            score = coverage(dx, dy)
-            if score > best[0] or (score == best[0] and math.hypot(dx, dy) < math.hypot(best[1], best[2])):
-                best = (score, dx, dy)
+    for ig in range(-5, 6):
+        grad = coarse[3] + ig * 0.05
+        for ix in range(-6, 7):
+            for iy in range(-6, 7):
+                dx, dy = coarse[1] + ix * 0.25, coarse[2] + iy * 0.25
+                kandidat = (coverage(dx, dy, grad), dx, dy, grad)
+                if besser(kandidat, best):
+                    best = kandidat
     return {"translation": [round(best[1], 3), round(best[2], 3)],
+            "rotationDeg": round(best[3], 3),
+            "pivot": [round(schwerpunkt[0], 3), round(schwerpunkt[1], 3)],
             "coverageBeforePct": round(before, 2), "coverageAfterPct": round(best[0], 2),
             "samples": len(samples), "searchRadiusM": radius,
+            "maxRotationDeg": MAX_DREHUNG_GRAD,
+            "vordrehungDeg": round(vordrehung, 3),
             "shiftM": round(math.hypot(best[1], best[2]), 3)}
 
 
-def shifted_transform(base: dict, shift: list[float]) -> dict:
+def shifted_transform(base: dict, constraint: dict) -> dict:
+    """Haengt Drehung und Verschiebung einer Halle an die globale Passung.
+
+    Die Halle wird zuerst im Planbild um ihren Schwerpunkt gedreht und
+    verschoben, danach greift die globale Abbildung. Als eine Matrix:
+
+        q = M * (R * (p - c) + c + s) + t
+          = (M * R) * p  +  M * (c - R * c + s) + t
+
+    Ausgerechnet wird beides hier, damit `transform_point` weiterhin eine
+    einzige Matrix und eine einzige Verschiebung anwendet -- der Rest der
+    Pipeline muss von der Drehung nichts wissen.
+    """
     transform = {**base, "translation": list(base["translation"]),
                  "matrix2D": list(base["matrix2D"])}
+    shift = constraint["translation"]
+    grad = constraint.get("rotationDeg", 0.0)
+    cx, cy = constraint.get("pivot", [0.0, 0.0])
+    bogen = math.radians(grad)
+    cos, sin = math.cos(bogen), math.sin(bogen)
     a, b, c, d = transform["matrix2D"]
-    transform["translation"][0] = round(transform["translation"][0] + a * shift[0] + b * shift[1], 3)
-    transform["translation"][1] = round(transform["translation"][1] + c * shift[0] + d * shift[1], 3)
+
+    # M * R
+    transform["matrix2D"] = [
+        round(a * cos + b * sin, 10), round(-a * sin + b * cos, 10),
+        round(c * cos + d * sin, 10), round(-c * sin + d * cos, 10),
+    ]
+    # c - R*c + s, noch im Planbild
+    ox = cx - (cos * cx - sin * cy) + shift[0]
+    oy = cy - (sin * cx + cos * cy) + shift[1]
+    transform["translation"][0] = round(transform["translation"][0] + a * ox + b * oy, 3)
+    transform["translation"][1] = round(transform["translation"][1] + c * ox + d * oy, 3)
+    transform["rotationDeg"] = round(base["rotationDeg"] + grad, 4)
     return transform
 
 
@@ -126,6 +251,18 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
     targets = buildings.get("hallBuildings", {})
     building_by_id = {item["id"]: item for item in buildings.get("buildings", [])}
     ground_reference = buildings["source"]["groundReferenceM"]
+    # Erst die globale Schieflage bestimmen, dann jede Halle darauf setzen.
+    paare = []
+    for hall in site["halls"]:
+        ziel = targets.get(hall["key"], {}).get("buildingIds", [])
+        umrisse = [building_by_id[f]["footprint"] for f in ziel
+                   if f in building_by_id and building_by_id[f].get("footprint")]
+        if umrisse:
+            paare.append((hall["footprint"], max(umrisse, key=len)))
+    vordrehung = winkelkorrektur(paare)
+    print(f"  Winkelkorrektur des Hallenplans: {vordrehung:+.2f} Grad "
+          f"(aus {len(paare)} Hallen)")
+
     registrations = []
     for hall in sorted(site["halls"], key=lambda item: item["key"]):
         placement = hall["placement"]
@@ -133,8 +270,9 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
         target_ids = target.get("buildingIds", [])
         target_polygons = [building_by_id[feature_id]["footprint"] for feature_id in target_ids
                            if feature_id in building_by_id and building_by_id[feature_id].get("footprint")]
-        constraint = containment_fit(hall["footprint"], target_polygons)
-        hall_transform = shifted_transform(transform, constraint["translation"]) if constraint else dict(transform)
+        constraint = containment_fit(hall["footprint"], target_polygons,
+                                     vordrehung=vordrehung)
+        hall_transform = shifted_transform(transform, constraint) if constraint else dict(transform)
         floor_world = ground_reference + hall["baseY"]
         registrations.append({
             "hallKey": hall["key"],
@@ -149,7 +287,7 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
             "source": "official-footprint-containment" if constraint else "legacy-global-fit",
             "constraint": constraint,
             "notes": [
-                ("Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben."
+                ("Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben."
                  if constraint else "Noch keine amtlichen Zielfeatures dieser Hallenebene."),
                 "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
                 "Portale wurden nicht als Registrierungsanker verwendet.",

@@ -13,18 +13,18 @@
         "DENW37AL2hU0008y"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1217.143,
-          199.412
+          -1208.792,
+          231.303
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -36,17 +36,24 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -11.0,
-          -0.25
+          -8.5,
+          -1.25
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          581.858,
+          535.916
         ],
         "coverageBeforePct": 80.65,
         "coverageAfterPct": 100.0,
         "samples": 93,
         "searchRadiusM": 30,
-        "shiftM": 11.003
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 8.591
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -57,18 +64,18 @@
         "DENW37AL100064Zs"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1210.277,
-          191.872
+          -1208.124,
+          236.65
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -80,17 +87,24 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -9.0,
-          9.75
+          -5.75,
+          8.0
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          931.98,
+          544.14
         ],
         "coverageBeforePct": 90.95,
         "coverageAfterPct": 100.0,
         "samples": 221,
         "searchRadiusM": 30,
-        "shiftM": 13.269
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 9.852
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -101,18 +115,18 @@
         "DENW37AL100064Zs"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1213.066,
-          194.57
+          -1214.403,
+          236.667
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 7.94,
@@ -124,17 +138,24 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -10.0,
-          6.0
+          -11.25,
+          4.5
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          925.542,
+          547.573
         ],
         "coverageBeforePct": 82.29,
-        "coverageAfterPct": 85.61,
+        "coverageAfterPct": 89.67,
         "samples": 271,
         "searchRadiusM": 30,
-        "shiftM": 11.662
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 12.117
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -145,18 +166,18 @@
         "DENW37AL100064wf"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1207.587,
-          204.865
+          -1210.016,
+          233.701
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -171,14 +192,21 @@
           0.0,
           0.0
         ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          679.788,
+          318.349
+        ],
         "coverageBeforePct": 100.0,
         "coverageAfterPct": 100.0,
         "samples": 95,
         "searchRadiusM": 30,
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
         "shiftM": 0.0
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -189,18 +217,18 @@
         "DENW37AL100064wf"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1201.929,
-          207.099
+          -1205.728,
+          235.733
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 8.24,
@@ -212,17 +240,24 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          6.0,
-          1.0
+          4.5,
+          0.0
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          667.758,
+          324.319
         ],
         "coverageBeforePct": 88.42,
         "coverageAfterPct": 100.0,
         "samples": 95,
         "searchRadiusM": 30,
-        "shiftM": 6.083
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 4.5
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -233,18 +268,18 @@
         "DENW37AL100064yw"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1207.587,
-          204.865
+          -1211.521,
+          236.895
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 6.99,
@@ -259,14 +294,21 @@
           0.0,
           0.0
         ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          771.05,
+          325.81
+        ],
         "coverageBeforePct": 100.0,
         "coverageAfterPct": 100.0,
         "samples": 84,
         "searchRadiusM": 30,
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
         "shiftM": 0.0
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -277,18 +319,18 @@
         "DENW37AL10006612"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1211.872,
-          202.289
+          -1208.968,
+          236.441
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -300,17 +342,24 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -5.0,
+          -4.5,
           0.0
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          730.094,
+          494.045
         ],
         "coverageBeforePct": 94.41,
         "coverageAfterPct": 100.0,
         "samples": 143,
         "searchRadiusM": 30,
-        "shiftM": 5.0
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 4.5
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -321,18 +370,18 @@
         "DENW37AL10006612"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1211.872,
-          202.289
+          -1208.972,
+          236.43
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 8.09,
@@ -344,17 +393,24 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -5.0,
+          -4.5,
           0.0
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          729.88,
+          493.8
         ],
         "coverageBeforePct": 94.44,
         "coverageAfterPct": 100.0,
         "samples": 144,
         "searchRadiusM": 30,
-        "shiftM": 5.0
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 4.5
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -366,18 +422,18 @@
         "DENW37AL1000644Q"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1215.3,
-          200.228
+          -1208.78,
+          236.439
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -389,17 +445,24 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -9.0,
+          -8.25,
           0.0
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          729.469,
+          595.497
         ],
         "coverageBeforePct": 95.97,
         "coverageAfterPct": 100.0,
         "samples": 124,
         "searchRadiusM": 30,
-        "shiftM": 9.0
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 8.25
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -411,18 +474,18 @@
         "DENW37AL1000644Q"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1208.959,
-          205.207
+          -1202.289,
+          241.994
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 8.09,
@@ -434,17 +497,24 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -1.0,
-          -1.0
+          0.0,
+          -1.5
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          727.409,
+          600.071
         ],
         "coverageBeforePct": 94.74,
-        "coverageAfterPct": 96.24,
+        "coverageAfterPct": 100.0,
         "samples": 133,
         "searchRadiusM": 30,
-        "shiftM": 1.414
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 1.5
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -455,18 +525,18 @@
         "DENW37AL100064lq"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1207.587,
-          204.865
+          -1196.428,
+          242.277
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -481,14 +551,21 @@
           0.0,
           0.0
         ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          696.87,
+          734.76
+        ],
         "coverageBeforePct": 100.0,
         "coverageAfterPct": 100.0,
         "samples": 176,
         "searchRadiusM": 30,
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
         "shiftM": 0.0
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -499,18 +576,18 @@
         "DENW37AL1000660R"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1208.444,
-          204.35
+          -1192.546,
+          245.427
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -522,17 +599,24 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -1.0,
+          0.0,
           0.0
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          717.5,
+          862.8
         ],
         "coverageBeforePct": 99.26,
         "coverageAfterPct": 100.0,
         "samples": 136,
         "searchRadiusM": 30,
-        "shiftM": 1.0
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 0.0
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -543,18 +627,18 @@
         "DENW37AL100063oN"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1217.443,
-          198.94
+          -1198.946,
+          244.823
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -566,17 +650,24 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -11.5,
+          -10.5,
           0.0
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          791.93,
+          983.4
         ],
         "coverageBeforePct": 91.18,
         "coverageAfterPct": 100.0,
         "samples": 136,
         "searchRadiusM": 30,
-        "shiftM": 11.5
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 10.5
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -587,18 +678,18 @@
         "DENW37AL100065KW"
       ],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1216.541,
-          197.44
+          -1210.226,
+          244.787
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -610,17 +701,24 @@
       "source": "official-footprint-containment",
       "constraint": {
         "translation": [
-          -11.5,
-          1.75
+          -10.5,
+          0.0
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          937.0,
+          729.3
         ],
         "coverageBeforePct": 86.55,
         "coverageAfterPct": 100.0,
         "samples": 119,
         "searchRadiusM": 30,
-        "shiftM": 11.632
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 10.5
       },
       "notes": [
-        "Hallenweise gegen amtliche Zielfeature-Grundrisse verschoben.",
+        "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
