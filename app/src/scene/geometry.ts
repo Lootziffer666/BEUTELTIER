@@ -88,13 +88,50 @@ export function polygonCentre(points: Placement2D[]): [number, number] {
   return [sum[0] / points.length, sum[1] / points.length];
 }
 
+/**
+ * Geländemeter nach Three.js. **Die einzige Stelle, an der das passieren darf.**
+ *
+ * Die Geländemeter sind ein gespiegeltes System: `ins_gelaende()` in der
+ * Pipeline rechnet `y = -(nord - ursprung)`, y waechst also nach Sueden. Die
+ * Szene uebernimmt das unveraendert -- X nach Osten, Y nach oben, Z nach
+ * Sueden. Das ist rechtshaendig und deckt sich mit dem, was
+ * `world-origin.json` als verbindliche Achsenordnung fuehrt und was in den
+ * amtlichen GLB-Paketen steht.
+ *
+ * Hier stand lange `-(y - centre[1])`, also Z nach **Norden**. Zusammen mit X
+ * nach Osten und Y nach oben ist das linkshaendig, und die ganze Messe wurde
+ * spiegelverkehrt gezeichnet: Halle 1 stand oestlich von Halle 9 statt
+ * westlich. Aufgefallen ist es lange nicht, weil die Formel fuer den alten,
+ * ungespiegelten Datensatz richtig war -- und beide Datensaetze durch dieselbe
+ * Zeile liefen.
+ *
+ * Wer hier ein Vorzeichen aendert, spiegelt das Gelaende. `geometry.test.ts`
+ * haelt mit Himmelsrichtungen dagegen.
+ */
 export function toScene(
   x: number,
   y: number,
   z: number,
   centre: [number, number],
 ): THREE.Vector3 {
-  return new THREE.Vector3(x - centre[0], z, -(y - centre[1]));
+  return new THREE.Vector3(x - centre[0], z, y - centre[1]);
+}
+
+/**
+ * Dasselbe fuer die Faelle, in denen ein Tripel statt eines Vektors gebraucht
+ * wird -- Positionen von React-Knoten, Punktlisten fuer Puffergeometrien.
+ *
+ * Es gibt sie, damit niemand die Umrechnung noch einmal von Hand hinschreibt.
+ * Genau daran lag der Spiegelungsfehler so lange unentdeckt: die Formel stand
+ * siebenundzwanzigmal ausgeschrieben in vier Dateien.
+ */
+export function nachSzene(
+  x: number,
+  y: number,
+  hoehe: number,
+  centre: [number, number],
+): [number, number, number] {
+  return [x - centre[0], hoehe, y - centre[1]];
 }
 
 /**

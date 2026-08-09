@@ -28,7 +28,9 @@ const centre = [
 ];
 const { x0, y0, laengs } = plan.achse;
 const ort = (s) => [x0 + laengs[0] * s, y0 + laengs[1] * s];
-const blickrichtung = (vor) => Math.atan2(-laengs[0] * vor, laengs[1] * vor);
+// Blickrichtung aus einem Gelaendemeter-Vektor: die Kamera schaut nach -Z,
+// und Szenen-Z zeigt nach Sueden -- der Blick geht also nach kleinerem y.
+const blickrichtung = (vor) => Math.atan2(-laengs[0] * vor, -laengs[1] * vor);
 
 const browser = await chromium.launch({
   executablePath: CHROME,

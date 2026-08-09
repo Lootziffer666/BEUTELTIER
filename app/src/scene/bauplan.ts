@@ -134,7 +134,7 @@ function hallenplatten(data: Gelaende, centre: [number, number]): BauplanObjekt[
     if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
     const hoehe = hall.height?.clearHeightM ?? 8;
     const x = lage.mx - centre[0];
-    const z = -(lage.my - centre[1]);
+    const z = lage.my - centre[1];
     const drehung = grad(lage.winkel);
 
     out.push(eintrag({
@@ -224,7 +224,7 @@ function boulevardbloecke(achse: Achse, plan: BoulevardPlan,
   const ort = (s: number, q: number, h: number): [number, number, number] => {
     const x = achse.x0 + achse.laengs[0] * s + achse.quer[0] * q;
     const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * q;
-    return [x - centre[0], h, -(y - centre[1])];
+    return [x - centre[0], h, y - centre[1]];
   };
   const drehung = grad(Math.atan2(achse.laengs[0], -achse.laengs[1]));
 

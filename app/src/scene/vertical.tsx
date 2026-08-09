@@ -80,7 +80,7 @@ function buildFlights(data: Dataset, centre: [number, number]): Flight[] {
     flights.push({
       id: node.id,
       kind: sub,
-      base: new THREE.Vector3(node.x - centre[0], lower.z, -(node.y - centre[1])),
+      base: new THREE.Vector3(node.x - centre[0], lower.z, node.y - centre[1]),
       dirX,
       dirY,
       riseM: Math.min(riseM, MAX_RISE_PER_FLIGHT_M),

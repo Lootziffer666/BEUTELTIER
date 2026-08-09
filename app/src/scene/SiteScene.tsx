@@ -155,7 +155,7 @@ function Ground({
   const width = extentM[2] - extentM[0];
   const height = extentM[3] - extentM[1];
   const midX = (extentM[0] + extentM[2]) / 2 - centre[0];
-  const midZ = -((extentM[1] + extentM[3]) / 2 - centre[1]);
+  const midZ = (extentM[1] + extentM[3]) / 2 - centre[1];
 
   return (
     <group>
@@ -179,7 +179,7 @@ function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] })
     for (const road of data.surroundings?.roads ?? []) {
       for (let index = 1; index < road.points.length; index += 1) {
         for (const point of [road.points[index - 1], road.points[index]]) {
-          positions.push(point[0] - centre[0], -0.24, -(point[1] - centre[1]));
+          positions.push(point[0] - centre[0], -0.24, point[1] - centre[1]);
         }
       }
     }
@@ -189,7 +189,7 @@ function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] })
   }, [data.surroundings, centre]);
   const markers = useMemo(() => {
     const positions = (data.surroundings?.markers ?? []).flatMap(({ point }) =>
-      [point[0] - centre[0], 0.15, -(point[1] - centre[1])]);
+      [point[0] - centre[0], 0.15, point[1] - centre[1]]);
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     return geometry;
@@ -198,7 +198,7 @@ function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] })
     .filter((one) => !one.lod2Covered)
     .map((one) => {
       const shape = new THREE.Shape(one.footprint.map(([x, y]) =>
-        new THREE.Vector2(x - centre[0], -(y - centre[1]))));
+        new THREE.Vector2(x - centre[0], y - centre[1])));
       return { id: one.id, geometry: new THREE.ShapeGeometry(shape) };
     }), [data.footprints, centre]);
   useEffect(() => () => {
@@ -334,7 +334,7 @@ function Gelaende({
     [model],
   );
 
-  return <primitive object={model} position={[-centre[0], 0, centre[1]]} />;
+  return <primitive object={model} position={[-centre[0], 0, -centre[1]]} />;
 }
 
 /**
@@ -574,10 +574,14 @@ function OfficialWorld({
   ) ?? [];
 
   if (!packages.length) return null;
-  // GLBs verwenden echtes Three.js sceneZ. Die registrierten 2D-Inhalte
-  // laufen noch durch toScene(), das ihre zweite Achse negiert.
+  // Die GLB-Pakete stehen im selben rechtshaendigen System wie alles andere:
+  // `world-origin.json` fuehrt sceneZ = -(worldY - originY), also Z nach
+  // Sueden -- und die Gelaendemeter zaehlen y ebenfalls nach Sueden. Hier
+  // stand deshalb lange `scale={[1, 1, -1]}`: eine Spiegelung, die die
+  // korrekten Pakete in die damals falsche 2D-Ebene drehte. Mit dem richtigen
+  // Vorzeichen in `toScene` faellt sie ersatzlos weg.
   return (
-    <group position={[-centre[0], 0, centre[1]]} scale={[1, 1, -1]}>
+    <group position={[-centre[0], 0, -centre[1]]}>
       {packages.map((entry) => {
         // Der Kern ist die Messe selbst, alles andere ist Umgebung. Die
         // Kollisionspakete kommen hier gar nicht an -- sie sind oben schon
@@ -1065,7 +1069,7 @@ function WalkControls({
   useEffect(() => {
     if (!active) return;
     const site = start
-      ? { x: start.x + centre[0], y: centre[1] - start.z, z: start.y }
+      ? { x: start.x + centre[0], y: start.z + centre[1], z: start.y }
       : null;
     // Der Mittelpunkt einer Halle liegt oft mitten in einem Stand -- in Halle 9
     // genau im LEGO-Block. Dann ist der nächstgelegene freie Punkt derselben
@@ -1206,10 +1210,12 @@ function WalkControls({
       if (forward || strafe) {
         const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
         const { yaw } = look.current;
-        // Karten-Y zeigt nach Norden, die Szene nach -Z. Deshalb hier und nicht
-        // erst beim Zeichnen umrechnen -- sonst läuft man seitwärts.
-        const dx = (Math.sin(-yaw) * forward + Math.cos(-yaw) * strafe) * speed;
-        const dy = (Math.cos(-yaw) * forward - Math.sin(-yaw) * strafe) * speed;
+        // Die Kamera blickt nach -Z, und Szenen-Z zeigt nach Sueden -- der
+        // Blick geht also nach Norden, und Norden ist in Gelaendemetern das
+        // kleinere y. Deshalb steht vor dy ein Minus und vor dx keines.
+        // Wer das hier verwechselt, laeuft seitwaerts statt geradeaus.
+        const dx = (-Math.sin(yaw) * forward + Math.cos(yaw) * strafe) * speed;
+        const dy = (-Math.cos(yaw) * forward - Math.sin(yaw) * strafe) * speed;
         position.current = noClipRef.current
           ? { ...position.current, x: position.current.x + dx, y: position.current.y + dy }
           : data.walk.move(position.current, dx, dy);
@@ -1249,7 +1255,7 @@ function WalkControls({
           look.current.pitch = 0;
         };
     }
-    camera.position.set(x - centre[0], z + EYE_HEIGHT_M, -(y - centre[1]));
+    camera.position.set(x - centre[0], z + EYE_HEIGHT_M, y - centre[1]);
     camera.rotation.set(0, 0, 0);
     camera.rotateY(look.current.yaw);
     camera.rotateX(look.current.pitch);
