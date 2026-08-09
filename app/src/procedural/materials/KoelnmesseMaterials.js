@@ -45,6 +45,18 @@ class KoelnmesseMaterials {
       envMapIntensity: 2.0
     }));
 
+    // Balustradenglas: durchsichtig, aber ohne `transmission`. Ein echtes
+    // Transmissionsmaterial rendert je Bild ein eigenes Ziel -- an zwei
+    // Rolltreppen aus naechster Naehe steht der Renderer damit still.
+    this.set('balustradeGlass', new THREE.MeshStandardMaterial({
+      color: 0xdfeaf4,
+      roughness: 0.06,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.3,
+      side: THREE.DoubleSide
+    }));
+
     // OUTDOOR
     this.set('asphalt', new THREE.MeshStandardMaterial({ color: 0x333338, roughness: 0.95 }));
     this.set('grass', new THREE.MeshStandardMaterial({ color: 0x2d5a1e, roughness: 1.0 }));

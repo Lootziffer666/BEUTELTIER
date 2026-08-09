@@ -1037,3 +1037,295 @@ class TestBuildingModel:
         assert "Geobasis NRW" in source["provider"]
         assert "Zero" in source["licence"]
         assert "UTM32" in source["crs"]
+
+
+BOULEVARD_JSON = BUILD / "boulevard.json"
+
+
+@pytest.fixture(scope="module")
+def boulevard():
+    if not BOULEVARD_JSON.exists():
+        pytest.skip("boulevard.json fehlt -- tools/build_boulevard.py laeuft nicht")
+    return json.loads(BOULEVARD_JSON.read_text(encoding="utf-8"))
+
+
+class TestNordboulevard:
+    """Der Gang und was an ihm haengt.
+
+    Die Wandabschnitte wurden lange aus den **Huellquadern** der Hallen
+    zugeteilt. In der Gangebene ist aber kein Gebaeude ein Rechteck -- der Gang
+    laeuft schraeg zu ihren Kanten --, und so standen 51 m Wand dort, wo nichts
+    steht: Halle 7 bis Station 136 statt 120, Halle 6 bis 285 statt 250. Der
+    Hof dazwischen kam 23 m breit heraus statt 39 m, und ein abgeleiteter
+    Durchgang fuehrte in ein Gebaeude, das es nicht gibt.
+
+    Diese Pruefungen halten die Stellen fest, an denen das auffallen muss.
+    """
+
+    def test_abschnitte_decken_den_gang_lueckenlos(self, boulevard):
+        for seite in ("ost", "west"):
+            teile = boulevard["seiten"][seite]
+            assert teile, seite
+            assert teile[0]["von"] == pytest.approx(0.0, abs=0.3)
+            assert teile[-1]["bis"] == pytest.approx(boulevard["laengeM"], abs=0.3)
+            for links, rechts in zip(teile, teile[1:]):
+                assert links["bis"] == pytest.approx(rechts["von"], abs=1e-6), seite
+
+    def test_jeder_hof_ist_ein_offener_wandabschnitt(self, boulevard):
+        """Hofbreite und Wandluecke sind dieselbe Zahl, nicht zwei aehnliche."""
+        for hof in boulevard.get("aussen", []):
+            if hof["seite"] not in ("ost", "west"):
+                continue
+            passend = [
+                teil for teil in boulevard["seiten"][hof["seite"]]
+                if teil["art"] == "glas" and teil["featureId"] is None
+                and teil["von"] == pytest.approx(hof["vonM"], abs=0.01)
+                and teil["bis"] == pytest.approx(hof["bisM"], abs=0.01)
+            ]
+            assert passend, (hof["id"], hof["vonM"], hof["bisM"])
+
+    def test_hof_zwischen_halle_7_und_6_ist_neununddreissig_meter_breit(self, boulevard):
+        """Vor Ort auf etwa 37 m geschaetzt -- der Huellquader sagte 23 m."""
+        hof = next(h for h in boulevard["aussen"] if h["id"] == "hof-7_1-6_1")
+        assert hof["bisM"] - hof["vonM"] == pytest.approx(39.0, abs=2.0)
+
+    def test_kein_durchgang_fuehrt_ins_leere(self, boulevard):
+        """Jeder abgeleitete Zugang liegt in der Fassade, aus der er stammt."""
+        for tor in boulevard.get("durchgaenge", []):
+            if tor["hallKey"] is None:
+                continue  # der Uebergang in den Knick, siehe eigene Pruefung
+            traeger = [
+                teil for teil in boulevard["seiten"][tor["seite"]]
+                if teil["art"] == "wand" and teil["hallKey"] == tor["hallKey"]
+                and teil["von"] <= tor["stationM"] - tor["breiteM"] / 2
+                and teil["bis"] >= tor["stationM"] + tor["breiteM"] / 2
+            ]
+            assert traeger, (tor["id"], tor["stationM"])
+
+    def test_durchgaenge_geben_sich_als_abgeleitet_zu_erkennen(self, boulevard):
+        """Kein Datensatz nennt die Hallentueren -- das muss die Datei sagen."""
+        tore = [t for t in boulevard.get("durchgaenge", []) if t["hallKey"]]
+        assert tore
+        assert all(tor["gemessen"] is False for tor in tore)
+
+    def test_uebergang_in_den_knick_ist_gemessen(self, boulevard):
+        """Seine Breite ist die Fuge am amtlichen Umriss, keine Vorgabe."""
+        knoten = boulevard.get("nordknoten")
+        if not knoten:
+            pytest.skip("kein Nordknoten in dieser Fassung")
+        tor = next(t for t in boulevard["durchgaenge"] if t["id"] == "tor-ost-nordknoten")
+        assert tor["gemessen"] is True
+        assert tor["abschnittVonM"] == pytest.approx(knoten["anschlussM"][0], abs=0.01)
+        assert tor["abschnittBisM"] == pytest.approx(knoten["anschlussM"][1], abs=0.01)
+
+    def test_nordknoten_trennt_gemessenes_vom_beobachteten(self, boulevard):
+        """Der Umriss ist amtlich, die Ebene ist ein Foto -- beides benannt."""
+        knoten = boulevard.get("nordknoten")
+        if not knoten:
+            pytest.skip("kein Nordknoten in dieser Fassung")
+        assert len(knoten["polygon"]) > 20, "die gerundete Fassade muss erhalten bleiben"
+        assert "LoD2" in knoten["quelle"]
+        assert "beobachtet" in knoten["bodenHerkunft"]
+        assert "Vorgabe" in knoten["deckeHerkunft"]
+
+    def test_gekappte_flaechen_sind_als_vorgabe_ausgewiesen(self, boulevard):
+        """Eine Kante aus einer Vorgabe darf nicht wie eine Messung aussehen."""
+        for flaeche in boulevard.get("aussen", []):
+            assert isinstance(flaeche["gekappt"], bool)
+            if flaeche["gekappt"]:
+                assert flaeche["endetAn"] == "Vorgabe"
+
+    def test_plaetze_nennen_ihre_quelle(self, boulevard):
+        """Plaetze kommen aus OSM, Gebaeude aus LoD2 -- das steht am Eintrag."""
+        for platz in boulevard.get("plaetze", []):
+            assert "OpenStreetMap" in platz["quelle"]
+            assert len(platz["polygon"]) >= 4
+
+    def test_wandabschnitte_stehen_wirklich_auf_einem_gebaeude(self, boulevard):
+        """Die haerteste Pruefung: gegen den amtlichen Umriss selbst.
+
+        Braucht die LoD2-Rohkacheln; ohne sie greifen nur die Pruefungen oben.
+        """
+        import build_boulevard as bb
+        from beuteltier import lod2
+
+        if not list(bb.LOD2_DIR.glob("*.gml")):
+            pytest.skip("LoD2-Kacheln fehlen -- python3 tools/fetch_lod2.py")
+
+        origin = tuple(boulevard["origin"])
+        achse = boulevard["achse"]
+        laengs, quer = tuple(achse["laengs"]), tuple(achse["quer"])
+        umrisse = {}
+        for tile in sorted(bb.LOD2_DIR.glob("*.gml")):
+            for bau in lod2.read_buildings(tile, bb.BOUNDS):
+                ring = bau.footprint()
+                if len(ring) >= 3:
+                    umrisse[bau.id] = [bb.ins_gelaende(x, y, origin) for x, y in ring]
+
+        for seite in ("ost", "west"):
+            wand_q = boulevard["seitenQ"][seite]
+            nach_aussen = 1.0 if seite == "west" else -1.0
+            for teil in boulevard["seiten"][seite]:
+                if teil["art"] != "wand" or teil["featureId"] not in umrisse:
+                    continue
+                ring = umrisse[teil["featureId"]]
+                # Nicht nur in der Mitte pruefen: der Fehler sass an den
+                # **Enden**. Halle 6 stand bis Station 285 in der Datei und
+                # hoert bei 250 auf -- die Mitte des falschen Abschnitts lag
+                # bei 222 und war gedeckt. Wer nur dort hinsieht, findet nichts.
+                for anteil in (0.05, 0.25, 0.5, 0.75, 0.95):
+                    laengs_station = teil["von"] + (teil["bis"] - teil["von"]) * anteil
+                    getroffen = False
+                    for schritt in range(int(bb.FRONT_M) + 1):
+                        q = wand_q + nach_aussen * schritt
+                        x = achse["x0"] + laengs[0] * laengs_station + quer[0] * q
+                        y = achse["y0"] + laengs[1] * laengs_station + quer[1] * q
+                        if bb.punkt_in_polygon((x, y), ring):
+                            getroffen = True
+                            break
+                    assert getroffen, (seite, teil["was"], round(laengs_station, 1))
+
+
+class TestViereckAusKanten:
+    """Das Aussengelaende 9/10 ist vor Ort gemessen, aber nicht verortet.
+
+    Vier Kantenlaengen legen kein Viereck fest -- es laesst sich verbiegen wie
+    ein Gelenkviereck. Erst eine liegende Grundkante macht es eindeutig. Diese
+    Pruefungen halten fest, dass die Konstruktion die gemessenen Laengen auch
+    wirklich einhaelt, statt sie nur ungefaehr zu treffen.
+    """
+
+    @staticmethod
+    def _kanten(poly):
+        return [math.dist(poly[i], poly[(i + 1) % len(poly)]) for i in range(len(poly))]
+
+    def test_haelt_alle_vier_gemessenen_laengen_ein(self):
+        from build_boulevard import viereck_aus_kanten
+
+        # Die vor Ort gemessenen Aussenmasse der Ebene 1 (Bereich 10.2).
+        grund, bc, cd, da = 188.10, 178.57, 178.93, 175.62
+        poly = viereck_aus_kanten((0.0, 0.0), (grund, 0.0), bc, cd, da)
+        assert len(poly) == 4
+        assert self._kanten(poly) == pytest.approx([grund, bc, cd, da], abs=1e-6)
+
+    def test_haelt_auch_die_masse_der_unteren_ebene_ein(self):
+        from build_boulevard import viereck_aus_kanten
+
+        grund, bc, cd, da = 213.00, 120.18, 206.95, 117.61
+        poly = viereck_aus_kanten((0.0, 0.0), (grund, 0.0), bc, cd, da)
+        assert self._kanten(poly) == pytest.approx([grund, bc, cd, da], abs=1e-6)
+
+    def test_dreht_sich_mit_der_grundkante(self):
+        """Dieselben Masse, gedrehte Grundkante -- dieselbe Figur."""
+        from build_boulevard import viereck_aus_kanten
+
+        gerade = viereck_aus_kanten((0.0, 0.0), (100.0, 0.0), 80.0, 100.0, 80.0)
+        schraeg = viereck_aus_kanten((0.0, 0.0), (60.0, 80.0), 80.0, 100.0, 80.0)
+        assert self._kanten(gerade) == pytest.approx(self._kanten(schraeg), abs=1e-6)
+
+    def test_klappt_nicht_ueber_die_grundkante_zurueck(self):
+        """Von zwei Schnittpunkten ist einer immer falsch -- er faltet die Figur."""
+        from build_boulevard import viereck_aus_kanten
+
+        poly = viereck_aus_kanten((0.0, 0.0), (188.10, 0.0), 178.57, 178.93, 175.62)
+        # Alle vier Ecken liegen auf derselben Seite der Grundkante oder darauf.
+        assert all(y >= -1e-9 for _x, y in poly)
+        # Und die Flaeche ist positiv, also ist der Ring nicht verschlungen.
+        flaeche = 0.5 * abs(sum(
+            poly[i][0] * poly[(i + 1) % 4][1] - poly[(i + 1) % 4][0] * poly[i][1]
+            for i in range(4)))
+        assert flaeche > 20_000
+
+    def test_meldet_unmoegliche_masse_statt_stillzuschweigen(self):
+        from build_boulevard import viereck_aus_kanten
+
+        with pytest.raises(ValueError):
+            # Zwei kurze Seiten koennen eine sehr lange Grundkante nicht schliessen.
+            viereck_aus_kanten((0.0, 0.0), (500.0, 0.0), 10.0, 10.0, 10.0)
+
+
+class TestZaunHinterHalleAcht:
+    """Die Flaeche hinter Halle 8 endet an der Unterfuehrung.
+
+    Vor Ort gemessen wurde ihre Tiefe bis dorthin: 84,41 m. Die Zahl schneidet
+    nichts weg -- sie prueft den OSM-Umriss. Faende sie sich darin nicht wieder,
+    waere entweder der Umriss zu gross oder die Messung anderswo gemacht.
+    """
+
+    @staticmethod
+    def _p8():
+        plan = json.loads((ROOT / "app/public/data/boulevard.json").read_text(encoding="utf-8"))
+        treffer = [p for p in plan["plaetze"] if p.get("osmWayId") == 39353363]
+        assert len(treffer) == 1, "P8 muss genau einmal vorkommen"
+        return treffer[0]
+
+    def test_p8_fuehrt_den_zaun(self):
+        zaun = self._p8()["zaun"]
+        assert zaun["tiefeGemessenM"] == 84.41
+        # 0,48 m auf 84 m -- die Flaeche ist eben und braucht keine Neigung.
+        assert abs(zaun["gefaelleGemessenM"]) < 1.0
+
+    def test_zaun_liegt_auf_der_laengsten_kante(self):
+        p8 = self._p8()
+        ring = [tuple(p) for p in p8["polygon"]]
+        ecken = ring[:-1] if ring[0] == ring[-1] else ring
+        laengen = sorted(math.dist(ecken[i], ecken[(i + 1) % len(ecken)])
+                         for i in range(len(ecken)))
+        assert p8["zaun"]["laengeM"] == pytest.approx(laengen[-1], abs=0.01)
+        # Und sie ist deutlich laenger als die zweitlaengste -- sonst waere die
+        # Auswahl ueber die Laenge eine Muenzwurf-Entscheidung.
+        assert laengen[-1] > laengen[-2] * 1.2
+
+    def test_die_messlinie_liegt_im_umriss(self):
+        """Beide Enden auf dem Rand, die Mitte drin -- sonst passt die Zahl nicht."""
+        from build_boulevard import punkt_in_polygon
+
+        p8 = self._p8()
+        ring = [tuple(p) for p in p8["polygon"]]
+        fuss, kopf = [tuple(p) for p in p8["zaun"]["messlinie"]]
+        assert math.dist(fuss, kopf) == pytest.approx(84.41, abs=0.01)
+        for anteil in (0.1, 0.25, 0.5, 0.75, 0.9):
+            punkt = (fuss[0] + (kopf[0] - fuss[0]) * anteil,
+                     fuss[1] + (kopf[1] - fuss[1]) * anteil)
+            assert punkt_in_polygon(punkt, ring), anteil
+
+    def test_die_messlinie_steht_senkrecht_auf_der_zaunkante(self):
+        zaun = self._p8()["zaun"]
+        (ax, ay), (bx, by) = zaun["kante"]
+        (fx, fy), (kx, ky) = zaun["messlinie"]
+        kante = (bx - ax, by - ay)
+        linie = (kx - fx, ky - fy)
+        kosinus = ((kante[0] * linie[0] + kante[1] * linie[1])
+                   / (math.hypot(*kante) * math.hypot(*linie)))
+        # Die Ecken stehen auf Zentimeter gerundet in der Datei -- daraus folgt
+        # ein Winkelfehler in der Groessenordnung 1e-4, nicht mehr.
+        assert abs(kosinus) < 2e-3
+
+    def test_die_gemessene_tiefe_kommt_nur_an_einer_stelle_vor(self):
+        """Sonst waere die Halbierungssuche nach der Messstelle Gluecksache.
+
+        Die Tiefe faellt nicht ueberall monoton -- bei etwa 40 m liegt eine
+        kleine Ausbuchtung im OSM-Umriss. Sie liegt aber weit ueber der
+        gemessenen Tiefe, sodass 84,41 m dennoch genau einmal erreicht wird.
+        """
+        from build_boulevard import tiefe_senkrecht
+
+        p8 = self._p8()
+        ring = [tuple(p) for p in p8["polygon"]]
+        ecken = ring[:-1] if ring[0] == ring[-1] else ring
+        (ax, ay), (bx, by) = p8["zaun"]["kante"]
+        laenge = math.dist((ax, ay), (bx, by))
+        laengs = ((bx - ax) / laenge, (by - ay) / laenge)
+        normale = (-laengs[1], laengs[0])
+        mitte = (sum(p[0] for p in ecken) / len(ecken),
+                 sum(p[1] for p in ecken) / len(ecken))
+        if (mitte[0] - ax) * normale[0] + (mitte[1] - ay) * normale[1] < 0:
+            normale = (-normale[0], -normale[1])
+        werte = [tiefe_senkrecht(ecken, (ax + laengs[0] * e, ay + laengs[1] * e), normale)
+                 for e in range(0, int(laenge) + 1)]
+        wechsel = sum(1 for a, b in zip(werte, werte[1:])
+                      if (a - 84.41) * (b - 84.41) < 0)
+        assert wechsel == 1, werte
+        # Und die Stelle, die der Bau gefunden hat, liegt genau dort.
+        assert werte[int(p8["zaun"]["tiefeBeiM"])] > 84.41
+        assert werte[int(p8["zaun"]["tiefeBeiM"]) + 1] < 84.41

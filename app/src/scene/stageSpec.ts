@@ -279,9 +279,6 @@ export function createStageSpecs({
 
   const result: StageSpec[] = [];
   const acceptedByArea = new Map<string, AcceptedFootprint[]>();
-  // DEBUG (temporär, siehe Diagnoseanfrage): Zaehlt Platzierungsversuche, die
-  // an findPlacement() scheitern (kein freier Footprint im Polygon).
-  let discarded = 0;
 
   if (hall.outdoor) {
     const keys = eligibleKeys(preset, true, polygonArea(hall.footprint));
@@ -304,17 +301,7 @@ export function createStageSpecs({
       );
 
       if (spec) result.push(spec);
-      else discarded += 1;
     }
-
-    // eslint-disable-next-line no-console
-    console.log('[ProceduralStaging][DEBUG] StageSpecs (outdoor) ' + JSON.stringify({
-      hallKey: hall.key,
-      erzeugteStageSpecs: result.length,
-      verworfenePlatzierungen: discarded,
-      standIds: [],
-      positionen: result.map((spec) => spec.position),
-    }));
 
     return result;
   }
@@ -360,19 +347,8 @@ export function createStageSpecs({
       );
 
       if (spec) result.push(spec);
-      else discarded += 1;
     }
   }
-
-  // DEBUG (temporär): sichtbare Zusammenfassung je Fokuswechsel.
-  // eslint-disable-next-line no-console
-  console.log('[ProceduralStaging][DEBUG] StageSpecs ' + JSON.stringify({
-    hallKey: hall.key,
-    erzeugteStageSpecs: result.length,
-    verworfenePlatzierungen: discarded,
-    betroffeneStandIds: [...new Set(result.map((spec) => spec.standId).filter(Boolean))],
-    positionen: result.map((spec) => ({ id: spec.id, position: spec.position })),
-  }));
 
   return result;
 }

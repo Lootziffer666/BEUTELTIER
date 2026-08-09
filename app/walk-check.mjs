@@ -6,6 +6,7 @@
  * nach aussen gereicht werden, was in der App nichts zu suchen hat.
  */
 import { chromium } from 'playwright';
+import { aufnehmen, AUFNAHME_MS, warteAufFrames } from './screenshot.mjs';
 
 const CHROME = process.env.BEUTELTIER_CHROME ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const browser = await chromium.launch({
@@ -13,6 +14,10 @@ const browser = await chromium.launch({
   args: ['--no-sandbox', '--use-gl=swiftshader', '--enable-unsafe-swiftshader'],
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+// Ein Bild der Ego-Perspektive braucht unter dem Software-Renderer Sekunden,
+// nicht Millisekunden. Das voreingestellte Zeitlimit von 30 s reicht dafuer
+// nicht -- siehe screenshot.mjs.
+page.setDefaultTimeout(AUFNAHME_MS);
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 await page.goto(process.env.BEUTELTIER_URL ?? 'http://localhost:4173/', { waitUntil: 'networkidle' });
@@ -27,7 +32,10 @@ const check = (name, ok, detail = '') => {
 const canvas = page.locator('canvas');
 // Nicht locator.screenshot(): das wartet darauf, dass sich das Element nicht
 // mehr bewegt -- eine Szene mit Renderschleife wird nie "stabil".
-const shot = async () => page.screenshot({ clip: { x: 0, y: 0, width: 890, height: 800 } });
+const shot = async () => {
+  await warteAufFrames(page);
+  return page.screenshot({ clip: { x: 0, y: 0, width: 890, height: 800 }, timeout: AUFNAHME_MS });
+};
 const overview = await shot();
 
 await page.getByRole('button', { name: 'Begehen' }).click();
@@ -53,7 +61,7 @@ const walked = await shot();
 check('W verändert den Standpunkt', differs(standing, walked) > 0.01,
   `${(differs(standing, walked) * 100).toFixed(0)} % der Stichproben anders`);
 
-await page.screenshot({ path: 'app-7-begehen.png' });
+await aufnehmen(page, 'app-7-begehen.png');
 
 // Solange der Zeiger gefangen ist, faengt die Leinwand jeden Klick ab --
 // deshalb fuehrt Escape hinaus, und nichts anderes.

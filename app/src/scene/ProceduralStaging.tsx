@@ -12,45 +12,12 @@ interface PreparedStage {
   objects: ReturnType<typeof createGeneratedStageObject>[];
   batches: StageBatch[];
   singles: THREE.Object3D[];
-  // DEBUG (temporär, siehe Diagnoseanfrage): eine sichtbare BoundingBox je
-  // erzeugtem Root, unabhängig von dessen Material/Sichtbarkeit.
-  debugBoxes: THREE.Box3Helper[];
-}
-
-// DEBUG (temporär): geteilte Geometrie/Material für den grellen Marker --
-// eine Instanz für alle Roots, kein Pro-Objekt-Leck.
-const DEBUG_MARKER_GEOMETRY = new THREE.SphereGeometry(0.3);
-const DEBUG_MARKER_MATERIAL = new THREE.MeshBasicMaterial({ color: 0xff00ff });
-
-function addDebugMarker(root: THREE.Group): void {
-  const helper = new THREE.Mesh(DEBUG_MARKER_GEOMETRY, DEBUG_MARKER_MATERIAL);
-  helper.position.y = 1;
-  helper.userData.noBatch = true;
-  helper.userData.debugMarker = true;
-  root.add(helper);
-}
-
-// DEBUG (temporär): BoundingBox in Weltkoordinaten -- root.updateMatrixWorld
-// lief in createGeneratedStageObject bereits ohne Elternobjekt, die äußere
-// Staging-Gruppe hat selbst keine eigene Transformation, daher deckungsgleich
-// mit der späteren tatsächlichen Position.
-function createDebugBox(root: THREE.Group): THREE.Box3Helper {
-  const box = new THREE.Box3().setFromObject(root);
-  if (box.isEmpty()) {
-    box.setFromCenterAndSize(root.position, new THREE.Vector3(0.5, 0.5, 0.5));
-  }
-  return new THREE.Box3Helper(box, new THREE.Color(0xff00ff));
 }
 
 function disposePlan(plan: PreparedStage): void {
   plan.objects.forEach((object) => object.dispose());
-  plan.debugBoxes.forEach((helper) => {
-    helper.geometry.dispose();
-    (helper.material as THREE.Material).dispose();
-  });
   plan.batches.length = 0;
   plan.singles.length = 0;
-  plan.debugBoxes.length = 0;
 }
 
 function InstancedStageBatch({ batch }: { batch: StageBatch }) {
@@ -125,12 +92,7 @@ export function ProceduralStaging({
 
   const prepared = useMemo<PreparedStage>(() => {
     if (!stagingVisible) {
-      return {
-        objects: [],
-        batches: [],
-        singles: [],
-        debugBoxes: [],
-      };
+      return { objects: [], batches: [], singles: [] };
     }
 
     const specs = createStageSpecs({
@@ -143,11 +105,7 @@ export function ProceduralStaging({
 
     const objects = specs.flatMap((spec) => {
       try {
-        const object = createGeneratedStageObject(spec);
-        // DEBUG (temporär): grelle Markierung, damit sichtbar ist, ob
-        // überhaupt ein Root an der erwarteten Position landet.
-        addDebugMarker(object.root);
-        return [object];
+        return [createGeneratedStageObject(spec)];
       } catch (cause) {
         console.warn(
           `[ProceduralStaging] ${spec.generator} konnte nicht erzeugt werden`,
@@ -157,40 +115,8 @@ export function ProceduralStaging({
       }
     });
 
-    // DEBUG (temporär, siehe Diagnoseanfrage): sichtbare Zusammenfassung.
-    // JSON.stringify statt Objekt-Log, damit Playwright/DevTools nicht auf
-    // "Array(N)" kürzen.
-    // eslint-disable-next-line no-console
-    console.log('[ProceduralStaging][DEBUG] Generatorobjekte ' + JSON.stringify({
-      hallKey: focusHallKey,
-      angefragteStageSpecs: specs.length,
-      erfolgreicheGeneratorobjekte: objects.length,
-      fehlgeschlagen: specs.length - objects.length,
-      rootPositionen: objects.map((object) => ({
-        id: object.id,
-        position: object.root.position.toArray(),
-      })),
-    }));
-
-    // DEBUG (temporär, siehe Diagnoseanfrage): sichtbare BoundingBox je
-    // Root, unabhängig davon, ob die Generatorgeometrie selbst sichtbar ist.
-    const debugBoxes = objects.map((object) => createDebugBox(object.root));
-
     const plan = prepareStageRenderPlan(objects);
-
-    // eslint-disable-next-line no-console
-    console.log('[ProceduralStaging][DEBUG] Renderplan', {
-      hallKey: focusHallKey,
-      batches: plan.batches.length,
-      singles: plan.singles.length,
-    });
-
-    return {
-      objects,
-      batches: plan.batches,
-      singles: plan.singles,
-      debugBoxes,
-    };
+    return { objects, batches: plan.batches, singles: plan.singles };
   }, [
     stagingVisible,
     data,
@@ -235,10 +161,6 @@ export function ProceduralStaging({
           object={object}
           dispose={null}
         />
-      ))}
-
-      {prepared.debugBoxes.map((helper, index) => (
-        <primitive key={`debug-box-${index}`} object={helper} dispose={null} />
       ))}
     </group>
   );

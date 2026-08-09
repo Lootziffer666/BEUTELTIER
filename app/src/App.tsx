@@ -57,6 +57,14 @@ export default function App() {
   const [selectedStandId, setSelectedStandId] = useState<string | null>(null);
   const [focusHallKey, setFocusHallKey] = useState<string | null>(null);
   const [stagingObjectCount, setStagingObjectCount] = useState(0);
+  /**
+   * Glas im Boulevard: sparsam oder echt.
+   *
+   * Echtes Glas kostet je Bild ein eigenes Renderziel und zeichnet alles,
+   * was dahinter liegt. Ob das die Maschine trägt, weiss nur, wer davorsitzt
+   * -- deshalb ein Schalter und keine Annahme im Quelltext.
+   */
+  const [previewSafe, setPreviewSafe] = useState(true);
 
   const [startStandId, setStartStandId] = useState<string | null>(null);
   const [tourStandIds, setTourStandIds] = useState<string[]>([]);
@@ -289,6 +297,7 @@ export default function App() {
           route={route}
           preset={preset}
           focusHallKey={focusHallKey}
+          previewSafe={previewSafe}
           onSelectStand={setSelectedStandId}
           onLeaveEgo={() => setPreset('uebersicht')}
           noClip={noClip}
@@ -377,6 +386,14 @@ export default function App() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className={previewSafe ? '' : 'is-active'}
+            onClick={() => setPreviewSafe((wert) => !wert)}
+            title="Echtes Glas spiegelt und lässt durchsehen, kostet aber Bildrate."
+          >
+            Glas: {previewSafe ? 'sparsam' : 'echt'}
+          </button>
           <label className="slider">
             <span>Obergeschoss</span>
             <input
