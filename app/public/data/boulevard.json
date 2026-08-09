@@ -200,24 +200,302 @@
    "gekappt": false,
    "quelle": "LoD2",
    "herkunft": "offener Wandabschnitt, Tiefe abgetastet"
-  },
-  {
-   "id": "hinter-8_1",
-   "seite": "nord",
-   "vonM": -211.09,
-   "bisM": -91.09,
-   "qVonM": -59.522,
-   "qBisM": 126.909,
-   "tiefeM": 120.0,
-   "zwischen": [
-    "8.1"
-   ],
-   "endetAn": "Vorgabe",
-   "gekappt": true,
-   "herkunft": "freies Gelaende noerdlich der Halle, abgetastet"
   }
  ],
  "plaetze": [
+  {
+   "id": "platz-45324343",
+   "name": "Claudius-Therme",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 45324343,
+   "vonM": -262.36,
+   "bisM": -169.73,
+   "qVonM": 115.83,
+   "qBisM": 201.99,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -104.94,
+     -479.22
+    ],
+    [
+     -107.69,
+     -464.79
+    ],
+    [
+     -94.72,
+     -437.08
+    ],
+    [
+     -89.08,
+     -425.56
+    ],
+    [
+     -86.71,
+     -421.64
+    ],
+    [
+     -79.83,
+     -408.38
+    ],
+    [
+     -17.34,
+     -459.75
+    ],
+    [
+     -23.81,
+     -464.2
+    ],
+    [
+     -21.82,
+     -466.56
+    ],
+    [
+     -79.96,
+     -514.14
+    ],
+    [
+     -104.94,
+     -479.22
+    ]
+   ]
+  },
+  {
+   "id": "platz-39353363",
+   "name": "P8",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 39353363,
+   "vonM": -218.21,
+   "bisM": -99.04,
+   "qVonM": -70.58,
+   "qBisM": 122.82,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": "Parkplatz; waehrend der Messe liegt darin die Freiflaeche Halle 8 Nord -- Zuschnitt siehe hallKey F8 in registered-site.json",
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -93.66,
+     -335.32
+    ],
+    [
+     -6.51,
+     -289.39
+    ],
+    [
+     43.25,
+     -263.17
+    ],
+    [
+     50.16,
+     -272.01
+    ],
+    [
+     59.78,
+     -271.76
+    ],
+    [
+     65.53,
+     -266.11
+    ],
+    [
+     93.04,
+     -273.5
+    ],
+    [
+     51.66,
+     -375.37
+    ],
+    [
+     43.57,
+     -385.36
+    ],
+    [
+     42.51,
+     -396.49
+    ],
+    [
+     27.56,
+     -394.51
+    ],
+    [
+     -93.66,
+     -335.32
+    ]
+   ]
+  },
+  {
+   "id": "platz-915040712",
+   "name": "P20a",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 915040712,
+   "vonM": -142.84,
+   "bisM": -79.44,
+   "qVonM": -226.16,
+   "qBisM": -98.48,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": "asphalt",
+   "beleuchtet": true,
+   "polygon": [
+    [
+     121.39,
+     -267.17
+    ],
+    [
+     222.99,
+     -186.94
+    ],
+    [
+     196.43,
+     -153.61
+    ],
+    [
+     183.75,
+     -162.14
+    ],
+    [
+     179.28,
+     -169.68
+    ],
+    [
+     121.39,
+     -267.17
+    ]
+   ]
+  },
+  {
+   "id": "platz-39484847",
+   "name": "Sonderparkplatz",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 39484847,
+   "vonM": -118.69,
+   "bisM": -13.13,
+   "qVonM": -216.1,
+   "qBisM": -76.59,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     78.38,
+     -234.32
+    ],
+    [
+     102.79,
+     -249.83
+    ],
+    [
+     179.1,
+     -127.92
+    ],
+    [
+     155.27,
+     -101.0
+    ],
+    [
+     152.58,
+     -102.05
+    ],
+    [
+     124.38,
+     -157.36
+    ],
+    [
+     133.85,
+     -162.09
+    ],
+    [
+     125.87,
+     -175.42
+    ],
+    [
+     116.4,
+     -170.71
+    ],
+    [
+     108.21,
+     -186.37
+    ],
+    [
+     118.46,
+     -190.5
+    ],
+    [
+     90.88,
+     -236.6
+    ],
+    [
+     82.67,
+     -232.9
+    ],
+    [
+     78.38,
+     -234.32
+    ]
+   ]
+  },
+  {
+   "id": "platz-688396159",
+   "name": "P 7A",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 688396159,
+   "vonM": -53.36,
+   "bisM": 17.4,
+   "qVonM": 138.88,
+   "qBisM": 194.63,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -210.32,
+     -272.08
+    ],
+    [
+     -203.68,
+     -262.9
+    ],
+    [
+     -192.11,
+     -256.89
+    ],
+    [
+     -169.05,
+     -244.91
+    ],
+    [
+     -150.42,
+     -275.41
+    ],
+    [
+     -146.45,
+     -273.17
+    ],
+    [
+     -129.73,
+     -303.01
+    ],
+    [
+     -138.64,
+     -307.04
+    ],
+    [
+     -210.32,
+     -272.08
+    ]
+   ]
+  },
   {
    "id": "platz-39270289",
    "name": "Messeplatz",
@@ -228,6 +506,8 @@
    "qVonM": -227.82,
    "qBisM": -78.68,
    "hoeheM": 0.0,
+   "art": "platz",
+   "nutzung": null,
    "belag": "paving_stones",
    "beleuchtet": true,
    "polygon": [
@@ -386,6 +666,416 @@
     [
      38.4,
      -157.21
+    ]
+   ]
+  },
+  {
+   "id": "platz-688393766",
+   "name": "P 7B",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 688393766,
+   "vonM": 75.74,
+   "bisM": 136.42,
+   "qVonM": 212.29,
+   "qBisM": 240.33,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -310.0,
+     -185.54
+    ],
+    [
+     -296.44,
+     -178.07
+    ],
+    [
+     -285.43,
+     -172.02
+    ],
+    [
+     -256.37,
+     -225.29
+    ],
+    [
+     -261.66,
+     -227.6
+    ],
+    [
+     -288.77,
+     -204.01
+    ],
+    [
+     -310.0,
+     -185.54
+    ]
+   ]
+  },
+  {
+   "id": "platz-688414444",
+   "name": "P9",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 688414444,
+   "vonM": 160.56,
+   "bisM": 174.26,
+   "qVonM": -195.33,
+   "qBisM": -8.25,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     53.76,
+     57.13
+    ],
+    [
+     -110.34,
+     -32.67
+    ],
+    [
+     -103.76,
+     -44.68
+    ],
+    [
+     58.01,
+     44.18
+    ],
+    [
+     53.76,
+     57.13
+    ]
+   ]
+  },
+  {
+   "id": "platz-688392471",
+   "name": "P 6",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 688392471,
+   "vonM": 252.63,
+   "bisM": 272.85,
+   "qVonM": 229.01,
+   "qBisM": 258.87,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -386.43,
+     -83.64
+    ],
+    [
+     -390.98,
+     -76.62
+    ],
+    [
+     -366.81,
+     -61.06
+    ],
+    [
+     -356.06,
+     -78.16
+    ],
+    [
+     -381.53,
+     -92.21
+    ],
+    [
+     -386.43,
+     -83.64
+    ]
+   ]
+  },
+  {
+   "id": "platz-699888891",
+   "name": "P10",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 699888891,
+   "vonM": 312.98,
+   "bisM": 477.53,
+   "qVonM": -159.81,
+   "qBisM": -45.37,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -98.06,
+     132.35
+    ],
+    [
+     -47.11,
+     161.44
+    ],
+    [
+     -123.52,
+     306.1
+    ],
+    [
+     -222.08,
+     250.43
+    ],
+    [
+     -144.94,
+     107.4
+    ],
+    [
+     -98.06,
+     132.35
+    ]
+   ]
+  },
+  {
+   "id": "platz-899864213",
+   "name": "P1",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 899864213,
+   "vonM": 318.51,
+   "bisM": 469.78,
+   "qVonM": 218.17,
+   "qBisM": 288.75,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -378.25,
+     -15.25
+    ],
+    [
+     -427.53,
+     -40.1
+    ],
+    [
+     -512.94,
+     83.36
+    ],
+    [
+     -450.47,
+     115.71
+    ],
+    [
+     -378.25,
+     -15.25
+    ]
+   ]
+  },
+  {
+   "id": "platz-915868925",
+   "name": "Piazza",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 915868925,
+   "vonM": 495.31,
+   "bisM": 533.73,
+   "qVonM": 56.34,
+   "qBisM": 122.3,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -378.96,
+     186.08
+    ],
+    [
+     -321.81,
+     218.15
+    ],
+    [
+     -340.14,
+     251.23
+    ],
+    [
+     -366.93,
+     236.24
+    ],
+    [
+     -397.57,
+     219.05
+    ],
+    [
+     -378.96,
+     186.08
+    ]
+   ]
+  },
+  {
+   "id": "platz-1063920313",
+   "name": "Confex",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 1063920313,
+   "vonM": 518.98,
+   "bisM": 652.18,
+   "qVonM": 214.99,
+   "qBisM": 291.34,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -472.96,
+     161.45
+    ],
+    [
+     -539.29,
+     125.95
+    ],
+    [
+     -602.03,
+     242.52
+    ],
+    [
+     -535.71,
+     278.04
+    ],
+    [
+     -472.96,
+     161.45
+    ]
+   ]
+  },
+  {
+   "id": "platz-699889799",
+   "name": "P11",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 699889799,
+   "vonM": 549.86,
+   "bisM": 681.63,
+   "qVonM": -166.5,
+   "qBisM": -26.8,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -273.27,
+     306.38
+    ],
+    [
+     -338.36,
+     420.96
+    ],
+    [
+     -215.78,
+     487.4
+    ],
+    [
+     -153.07,
+     373.82
+    ],
+    [
+     -190.27,
+     352.95
+    ],
+    [
+     -273.27,
+     306.38
+    ]
+   ]
+  },
+  {
+   "id": "platz-915868926",
+   "name": "P2",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 915868926,
+   "vonM": 549.97,
+   "bisM": 681.91,
+   "qVonM": 105.0,
+   "qBisM": 190.38,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": false,
+   "polygon": [
+    [
+     -464.24,
+     201.66
+    ],
+    [
+     -391.33,
+     241.64
+    ],
+    [
+     -453.99,
+     357.71
+    ],
+    [
+     -528.84,
+     316.65
+    ],
+    [
+     -464.24,
+     201.66
+    ]
+   ]
+  },
+  {
+   "id": "platz-914720480",
+   "name": "Behindertenparkplatz Süd",
+   "quelle": "OpenStreetMap (ODbL)",
+   "osmWayId": 914720480,
+   "vonM": 709.67,
+   "bisM": 725.57,
+   "qVonM": -21.03,
+   "qBisM": 9.24,
+   "hoeheM": 0.0,
+   "art": "parkplatz",
+   "nutzung": null,
+   "belag": null,
+   "beleuchtet": true,
+   "polygon": [
+    [
+     -383.42,
+     428.2
+    ],
+    [
+     -375.54,
+     432.84
+    ],
+    [
+     -364.36,
+     440.24
+    ],
+    [
+     -359.78,
+     444.62
+    ],
+    [
+     -358.75,
+     446.1
+    ],
+    [
+     -364.76,
+     456.59
+    ],
+    [
+     -377.35,
+     449.48
+    ],
+    [
+     -391.01,
+     441.95
+    ],
+    [
+     -383.42,
+     428.2
     ]
    ]
   }

@@ -242,10 +242,22 @@ describe('Laufen', () => {
 describe('Aussengelaende', () => {
   const hoefe = plan.aussen ?? [];
 
-  it('kennt die beiden Hoefe und das Gelaende hinter Halle 8', () => {
-    expect(hoefe.map((h) => h.id).sort()).toEqual(
-      ['hinter-8_1', 'hof-7_1-6_1', 'hof-8_1-7_1'],
-    );
+  it('nennt bei P8 seine Nutzung waehrend der Messe', () => {
+    const p8 = (plan.plaetze ?? []).find((platz) => platz.name === 'P8');
+    expect(p8).toBeDefined();
+    expect(p8!.art).toBe('parkplatz');
+    expect(p8!.nutzung).toContain('F8');
+  });
+
+  it('kennt die beiden Hoefe zwischen den Hallen', () => {
+    expect(hoefe.map((h) => h.id).sort()).toEqual(['hof-7_1-6_1', 'hof-8_1-7_1']);
+  });
+
+  it('fuehrt hinter Halle 8 kein eigenes Rechteck mehr', () => {
+    // Der Aussenbereich dort ist die Freiflaeche F8 -- gemessen aus dem
+    // amtlichen Ausstellerplan, mit zehn Ecken und einundzwanzig Staenden.
+    // Ein daneben gerechnetes Rechteck hat ihr nur widersprochen.
+    expect(hoefe.some((h) => h.id.startsWith('hinter-'))).toBe(false);
   });
 
   it('gibt jedem Hof einen Boden', () => {
@@ -281,10 +293,9 @@ describe('Aussengelaende', () => {
     for (const hof of hoefe) {
       expect(typeof hof.gekappt).toBe('boolean');
       expect(hof.endetAn.length).toBeGreaterThan(0);
-      // Nur eine einzige Flaeche darf eine Vorgabe sein: das freie Gelaende
-      // hinter Halle 8 geht in den Rheinpark ueber und hoert nicht von selbst
-      // auf. Alles andere muss an Gebautem enden.
-      if (hof.gekappt) expect(hof.id).toBe('hinter-8_1');
+      // Seit der Aussenbereich hinter Halle 8 ueber die Freiflaeche F8 laeuft,
+      // endet jede hier gefuehrte Flaeche an Gebautem. Keine Vorgabe mehr.
+      expect(hof.gekappt).toBe(false);
     }
   });
 });

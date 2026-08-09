@@ -263,6 +263,12 @@ export interface BoulevardPlatz {
   qVonM: number;
   qBisM: number;
   hoeheM: number;
+  art: 'platz' | 'parkplatz';
+  /**
+   * Was dort waehrend der Messe stattfindet -- Angabe vor Ort, nicht aus den
+   * Daten ableitbar. null, wo nichts bekannt ist.
+   */
+  nutzung: string | null;
   belag: string | null;
   beleuchtet: boolean;
   /** Der volle Umriss in Geländemetern. */

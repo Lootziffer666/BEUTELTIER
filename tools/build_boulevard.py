@@ -91,11 +91,6 @@ MIN_HOF_M = 6.0
 # Meter genau, und ein Hof, der in die Wand hineinreicht, waere schlechter als
 # einer, der einen Meter zu klein ist.
 HOF_RAND_M = 1.0
-# Wie weit hinter Halle 8 ueberhaupt noch Gelaende gefuehrt wird. Vorgabe und
-# keine Messung: noerdlich der Halle geht das Freie in den Rheinpark ueber und
-# hoert so bald nicht auf. So weit, wie man vom Gang aus blickt, reicht es.
-HINTER_MAX_M = 120.0
-
 # Durchgaenge von den Hallen in den Gang.
 #
 # OSM kennt sie nicht: im vollstaendigen Datensatz (28.228 Knoten) liegt kein
@@ -129,6 +124,22 @@ DURCHGANG_RAND_M = 3.0
 # ist eine Beobachtung am Referenzfoto und keine Messung. Sie steht deshalb
 # hier und wird in der Ergebnisdatei als solche ausgewiesen.
 NORD_KNICK = "DENW37AL100063v9"
+
+# Was auf einer Flaeche waehrend der Messe stattfindet.
+#
+# Nicht aus den Daten ableitbar, sondern Angabe vor Ort. OSM kennt P8 als
+# Parkplatz, und das ist er den groessten Teil des Jahres auch. Waehrend der
+# gamescom liegt darin der Aussenbereich hinter Halle 8.
+#
+# Dessen Zuschnitt wird hier ausdruecklich **nicht** gerechnet: er steht laengst
+# gemessen in `registered-site.json` als Freiflaeche `F8` -- ein Keil mit zehn
+# Ecken und einundzwanzig Staenden, aus dem amtlichen Ausstellerplan. Hier stand
+# eine Zeitlang ein frei gewaehltes Rechteck von 120 m Tiefe daneben; es hat der
+# vorhandenen Messung widersprochen und ist deshalb entfallen.
+NUTZUNG = {
+    "P8": ("Parkplatz; waehrend der Messe liegt darin die Freiflaeche "
+           "Halle 8 Nord -- Zuschnitt siehe hallKey F8 in registered-site.json"),
+}
 
 # Gebaeude, die den Gang zwar begrenzen, dort aber verglast sind.
 # Beobachtung vor Ort, nicht aus der Geometrie ableitbar: ein Grundriss sagt,
@@ -397,9 +408,6 @@ def main() -> int:
     _osm_bauten, osm_roh = osm_flaechen(origin)
     knick = nordknoten(gebaeude, rahmen)
     aussen = hoefe(seiten["west"], gebaeude, rahmen, "west")
-    hinterhof = hinter(gebaeude, rahmen, ABSCHLUSS, ziel)
-    if hinterhof:
-        aussen.append(hinterhof)
 
     plan = {
         "schema": "beuteltier.boulevard.v1",
@@ -523,7 +531,8 @@ def main() -> int:
     for platz in plan["plaetze"]:
         print(f"  {platz['vonM']:7.1f} .. {platz['bisM']:7.1f}  "
               f"q {platz['qVonM']:7.1f} .. {platz['qBisM']:7.1f}  "
-              f"{len(platz['polygon']):3d} Ecken  {platz['name']} ({platz['belag']})")
+              f"{len(platz['polygon']):3d} Ecken  {platz['art']:10s} {platz['name']}"
+              f"{'  -- ' + platz['nutzung'] if platz['nutzung'] else ''}")
     print("\nAUSSENGELAENDE:")
     for flaeche in aussen:
         print(f"  {flaeche['vonM']:7.1f} .. {flaeche['bisM']:7.1f}  "
@@ -695,7 +704,8 @@ def osm_flaechen(origin: tuple[float, float]) -> tuple[list, list]:
         if tags.get("building"):
             bauten.append((tags.get("name") or f"OSM {element['id']}", ring))
         elif tags.get("name") and (tags.get("area") == "yes"
-                                   or tags.get("highway") == "pedestrian"):
+                                   or tags.get("highway") == "pedestrian"
+                                   or tags.get("amenity") == "parking"):
             plaetze.append((tags["name"], ring, tags, element["id"]))
     return bauten, plaetze
 
@@ -807,59 +817,6 @@ def hoefe(teile: list[dict], gebaeude: dict[str, Gebaeude], rahmen: Rahmen,
     return out
 
 
-def hinter(gebaeude: dict[str, Gebaeude], rahmen: Rahmen,
-           schluessel: str, ziel: dict[str, list[str]]) -> dict | None:
-    """Das freie Gelaende hinter der Halle am Nordende.
-
-    Halle 8 steht quer vor dem Gang; noerdlich von ihr hoert das Gebaute auf.
-    Wie weit, wird genauso abgetastet wie bei den Hoefen -- nur laengs statt
-    quer, denn hier ist die Halle die Wand und die Station die Tiefe.
-    """
-    teile = [gebaeude[fid] for fid in ziel.get(schluessel, []) if fid in gebaeude]
-    if not teile:
-        return None
-    halle = teile[0]
-    (s_span, q_span) = strecke(halle.poly, rahmen.laengs, rahmen.quer)
-    stirn = min(rahmen.station(s_span[0]), rahmen.station(s_span[1]))
-    q_von = q_span[0] - rahmen.achse_q + HOF_RAND_M
-    q_bis = q_span[1] - rahmen.achse_q - HOF_RAND_M
-
-    tiefe = 0.0
-    while tiefe + HOF_SCHRITT_M <= HINTER_MAX_M:
-        probe = stirn - (tiefe + HOF_SCHRITT_M)
-        schritte = max(1, int((q_bis - q_von) / HOF_SCHRITT_M))
-        offen = True
-        for index in range(schritte + 1):
-            q = q_von + (q_bis - q_von) * index / schritte
-            punkt = rahmen.ort(probe, q)
-            if any(punkt_in_polygon(punkt, bau.poly) for bau in gebaeude.values()):
-                offen = False
-                break
-        if not offen:
-            break
-        tiefe += HOF_SCHRITT_M
-    if tiefe < MIN_HOF_M:
-        return None
-    gekappt = tiefe + HOF_SCHRITT_M > HINTER_MAX_M
-    return {
-        "id": f"hinter-{schluessel}".replace(".", "_"),
-        "seite": "nord",
-        "vonM": round(stirn - tiefe, 2),
-        "bisM": round(stirn, 2),
-        "qVonM": round(q_von, 3),
-        "qBisM": round(q_bis, 3),
-        "tiefeM": round(tiefe, 2),
-        "zwischen": [schluessel],
-        "endetAn": "Vorgabe" if gekappt else "Gebaeude",
-        # Ehrlich gesagt: noerdlich von Halle 8 geht das freie Gelaende in den
-        # Rheinpark ueber und hoert so bald nicht auf. Die Zahl ist dann keine
-        # gemessene Kante, sondern die Vorgabe von oben -- und das steht hier,
-        # damit sie niemand fuer eine Messung haelt.
-        "gekappt": gekappt,
-        "herkunft": "freies Gelaende noerdlich der Halle, abgetastet",
-    }
-
-
 def durchgaenge(seiten: dict[str, list[dict]], knick: dict | None = None) -> list[dict]:
     """Die Zugaenge von den Hallen in den Gang.
 
@@ -925,6 +882,7 @@ def durchgaenge(seiten: dict[str, list[dict]], knick: dict | None = None) -> lis
     return out
 
 
+
 def plaetze(osm_plaetze: list, rahmen: Rahmen) -> list[dict]:
     """Die benannten Plaetze am Gelaende, als Polygone in Geländemetern.
 
@@ -959,6 +917,8 @@ def plaetze(osm_plaetze: list, rahmen: Rahmen) -> list[dict]:
             "qVonM": round(min(quer), 2),
             "qBisM": round(max(quer), 2),
             "hoeheM": 0.0,
+            "art": ("parkplatz" if tags.get("amenity") == "parking" else "platz"),
+            "nutzung": NUTZUNG.get(name),
             "belag": tags.get("surface"),
             "beleuchtet": tags.get("lit") == "yes",
             # Der volle Umriss in Geländemetern -- die Kollision liest ihn

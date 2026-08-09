@@ -19,13 +19,22 @@ Ergebnisdatei als OSM-Kante ausgewiesen.
 from __future__ import annotations
 
 import json
+import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data/raw/osm"
-URL = "https://overpass-api.de/api/interpreter"
+# Overpass antwortet unter Last mit 504. Das ist kein Fehler in der Abfrage,
+# sondern Betrieb -- deshalb mehrere Anlaeufe und mehrere Spiegel, statt den
+# Bau daran scheitern zu lassen.
+URLS = (
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+)
+VERSUCHE = 4
 BBOX = "50.932,6.965,50.954,7.005"
 QUERY = f'''[out:json][timeout:120];(
 way[highway]({BBOX});node[amenity]({BBOX});node[entrance]({BBOX});
@@ -38,14 +47,25 @@ QUERY_FLAECHEN = f'''[out:json][timeout:180];(
 way[building]({BBOX_GELAENDE});
 way[highway][area=yes]({BBOX_GELAENDE});
 way[highway=pedestrian]({BBOX_GELAENDE});
+way[amenity=parking]({BBOX_GELAENDE});
 );out body;>;out skel qt;'''
 
 
 def hole(query: str) -> dict:
-    request = urllib.request.Request(URL, data=urllib.parse.urlencode({"data": query}).encode(),
-                                     headers={"User-Agent": "BEUTELTIER/1.0"})
-    with urllib.request.urlopen(request, timeout=240) as response:
-        return json.load(response)
+    letzter: Exception | None = None
+    for versuch in range(VERSUCHE):
+        for url in URLS:
+            try:
+                request = urllib.request.Request(
+                    url, data=urllib.parse.urlencode({"data": query}).encode(),
+                    headers={"User-Agent": "BEUTELTIER/1.0"})
+                with urllib.request.urlopen(request, timeout=240) as response:
+                    return json.load(response)
+            except Exception as fehler:  # noqa: BLE001 -- jeder Ausfall zaehlt gleich
+                letzter = fehler
+                print(f"  {url}: {type(fehler).__name__} -- naechster Versuch")
+        time.sleep(10 * (versuch + 1))
+    raise SystemExit(f"Overpass antwortet nicht: {letzter}")
 
 
 def main() -> int:
