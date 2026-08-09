@@ -363,26 +363,61 @@ function weltFlaechen(interior: boolean) {
   return satz;
 }
 
+/**
+ * Wie deckend die amtlichen Weltpakete je Preset stehen.
+ *
+ * Aus der Übersicht ist das Modell eine Karte: die Hülle bleibt als Andeutung
+ * stehen, sonst verdeckt sie genau die Stände, wegen derer man hinsieht. Auf
+ * Augenhöhe ist sie das Gebäude und steht undurchsichtig.
+ *
+ * Der Kern bleibt im Ego-Blick bei 1,0 und nicht bei den vorgeschlagenen 0,92:
+ * drinnen kommen die Wände aus `Hallenhuelle`, und ein Schleier darauf liesse
+ * die Nachbarhalle durchscheinen. Draussen hat das Modell keine Meinung, dort
+ * gelten die gemessenen Profile.
+ */
+const WELT_DECKKRAFT: Record<CameraPreset, { kern: number; umgebung: number }> = {
+  uebersicht: { kern: 0.18, umgebung: 0.35 },
+  halle: { kern: 0.35, umgebung: 0.25 },
+  laufmodus: { kern: 0.18, umgebung: 0.3 },
+  ego: { kern: 1.0, umgebung: 0.15 },
+};
+
+/** Legt den Preset-Schleier auf ein Material. 1,0 lässt es unberührt. */
+function schleier(material: THREE.Material, deckkraft: number) {
+  if (deckkraft > 0.99) return;
+  material.transparent = true;
+  material.opacity = deckkraft;
+  // Ohne das schreibt eine durchsichtige Wand ihre Tiefe und schneidet aus,
+  // was hinter ihr steht -- man saehe durch die Halle hindurch ins Nichts.
+  material.depthWrite = false;
+}
+
 function OfficialPackage({
   uri,
   interior,
   surfaces,
   behandeln,
+  deckkraft,
 }: {
   uri: string;
   interior: boolean;
   surfaces: { boden: Surface; decke: Surface; wand: Surface } | null;
   /** Nur der Hallenkern wird umgebaut; die Umgebung bleibt, wie sie kommt. */
   behandeln: boolean;
+  /** Deckkraft dieses Pakets im aktuellen Preset. */
+  deckkraft: number;
 }) {
   const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
 
   const model = useMemo(() => {
-    // Von aussen bleibt das Weltmodell, wie es geliefert wird -- die Übersicht
-    // ist eine Karte und soll sich nicht ändern, weil der Innenraum besser
-    // aussieht. Umgebaut wird nur, was man von drinnen sieht.
-    if (!behandeln || !surfaces || !interior) return scene;
-    const schluessel = `${uri}|${interior}`;
+    // Umgebaut wird nur, was man von drinnen sieht -- von aussen bleibt das
+    // Weltmodell inhaltlich, wie es geliefert wird.
+    const umbauen = behandeln && !!surfaces && interior;
+    // Ohne Umbau und ohne Schleier gibt es nichts zu tun; dann ist die
+    // gelieferte Szene das Ergebnis und wird nicht einmal geklont.
+    if (!umbauen && deckkraft > 0.99) return scene;
+
+    const schluessel = `${uri}|${interior}|${deckkraft.toFixed(2)}`;
     const fertig = weltCache.get(schluessel);
     if (fertig) return fertig;
 
@@ -391,7 +426,17 @@ function OfficialPackage({
       if (!(node instanceof THREE.Mesh)) return;
       const quelle = node.material as THREE.MeshStandardMaterial;
       const teil = bauteil(quelle.name);
-      if (!teil) return;
+      if (!umbauen || !teil || !surfaces) {
+        // Nur der Schleier. Das Material wird geklont, weil die Vorlage aus
+        // dem GLB-Cache kommt und von anderen Presets weiterbenutzt wird --
+        // sie hier zu veraendern faerbte auch die Übersicht ein.
+        if (deckkraft <= 0.99) {
+          const kopie = quelle.clone();
+          schleier(kopie, deckkraft);
+          node.material = kopie;
+        }
+        return;
+      }
 
       const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide });
       // Von innen ist das Dach die Decke und der Boden der Hallenboden. Von
@@ -415,6 +460,7 @@ function OfficialPackage({
       material.metalness = 0.18;
       material.envMapIntensity = 0.9;
       material.normalScale = new THREE.Vector2(1.0, 1.0);
+      schleier(material, deckkraft);
       node.material = material;
       node.receiveShadow = true;
       node.castShadow = false;
@@ -422,7 +468,7 @@ function OfficialPackage({
 
     weltCache.set(schluessel, clone);
     return clone;
-  }, [scene, interior, surfaces, behandeln, uri]);
+  }, [scene, interior, surfaces, behandeln, uri, deckkraft]);
 
   return <primitive object={model} />;
 }
@@ -430,13 +476,15 @@ function OfficialPackage({
 function OfficialWorld({
   data,
   centre,
-  interior,
+  preset,
 }: {
   data: Dataset;
   centre: [number, number];
-  interior: boolean;
+  preset: CameraPreset;
 }) {
+  const interior = preset === 'ego';
   const surfaces = weltFlaechen(interior);
+  const deckkraft = WELT_DECKKRAFT[preset];
 
   const packages = data.world?.manifest.packages.filter(
     (entry) => entry.available && entry.role === 'render',
@@ -446,15 +494,22 @@ function OfficialWorld({
   // laufen noch durch toScene(), das ihre zweite Achse negiert.
   return (
     <group position={[-centre[0], 0, centre[1]]} scale={[1, 1, -1]}>
-      {packages.map((entry) => (
-        <OfficialPackage
-          key={entry.id}
-          uri={entry.uri}
-          interior={interior}
-          surfaces={surfaces}
-          behandeln={entry.id.startsWith('core/')}
-        />
-      ))}
+      {packages.map((entry) => {
+        // Der Kern ist die Messe selbst, alles andere ist Umgebung. Die
+        // Kollisionspakete kommen hier gar nicht an -- sie sind oben schon
+        // ueber `role === 'render'` ausgesiebt.
+        const kern = entry.id.startsWith('core/');
+        return (
+          <OfficialPackage
+            key={entry.id}
+            uri={entry.uri}
+            interior={interior}
+            surfaces={surfaces}
+            behandeln={kern}
+            deckkraft={kern ? deckkraft.kern : deckkraft.umgebung}
+          />
+        );
+      })}
     </group>
   );
 }
@@ -1148,7 +1203,7 @@ export function SiteScene(props: SceneProps) {
       )}
       {registered && (
         <Suspense fallback={null}>
-          <OfficialWorld data={data} centre={centre} interior={preset === 'ego'} />
+          <OfficialWorld data={data} centre={centre} preset={preset} />
         </Suspense>
       )}
       {/* Hallenkörper und Schilder sind Hilfsmittel der Übersicht. Auf
