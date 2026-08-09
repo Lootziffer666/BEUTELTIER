@@ -3,8 +3,17 @@
  *
  * Alle Polygone liegen in Geländemetern in der XY-Ebene. Three.js rechnet mit
  * Y nach oben, deshalb wird beim Extrudieren getauscht: Karten-X bleibt X,
- * Karten-Y wird zu -Z, und die Höhe wandert auf Y. Ohne diesen Tausch stünde
- * das ganze Gelände hochkant.
+ * die Höhe wandert auf Y, und Karten-Y wird zu Z.
+ *
+ * Das Vorzeichen dabei ist dasselbe wie in `toScene`, und es muss dasselbe
+ * sein: `rotateX(-PI/2)` bildet die lokale Y-Achse auf **-Z** ab. Wer die
+ * Form also mit `y - centre[1]` aufbaut, bekommt Z nach Norden -- und damit
+ * ein Spiegelbild, obwohl `toScene` daneben richtig rechnet. Genau so lagen
+ * Hallen und Stände gespiegelt in einer sonst korrekten Welt: die belegten
+ * Stände gehören in den Süden, gezeichnet wurden sie im Norden.
+ *
+ * Deshalb wird hier gegengespiegelt aufgebaut. `geometry.test.ts` prüft das
+ * am fertigen Körper und nicht an der Formel.
  */
 
 import * as THREE from 'three';
@@ -19,7 +28,8 @@ export function extrudePolygon(
   const shape = new THREE.Shape();
   points.forEach(([x, y], index) => {
     const px = x - centre[0];
-    const py = y - centre[1];
+    // Gegengespiegelt: die Drehung unten legt lokales Y auf -Z.
+    const py = centre[1] - y;
     if (index === 0) shape.moveTo(px, py);
     else shape.lineTo(px, py);
   });

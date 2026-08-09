@@ -735,7 +735,8 @@ function knickflaeche(
   kachelM: number,
 ): THREE.BufferGeometry {
   const shape = new THREE.Shape(
-    polygon.map(([x, y]) => new THREE.Vector2(x - centre[0], y - centre[1])),
+    // Gegengespiegelt: die Drehung beim Einhängen legt lokales Y auf -Z.
+    polygon.map(([x, y]) => new THREE.Vector2(x - centre[0], centre[1] - y)),
   );
   const geometry = new THREE.ShapeGeometry(shape);
   // ShapeGeometry legt die UV in Metern an; ohne Teilung wiederholt sich die

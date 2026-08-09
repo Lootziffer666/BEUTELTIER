@@ -198,7 +198,8 @@ function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] })
     .filter((one) => !one.lod2Covered)
     .map((one) => {
       const shape = new THREE.Shape(one.footprint.map(([x, y]) =>
-        new THREE.Vector2(x - centre[0], y - centre[1])));
+        // Gegengespiegelt: die Drehung beim Einhängen legt lokales Y auf -Z.
+        new THREE.Vector2(x - centre[0], centre[1] - y)));
       return { id: one.id, geometry: new THREE.ShapeGeometry(shape) };
     }), [data.footprints, centre]);
   useEffect(() => () => {

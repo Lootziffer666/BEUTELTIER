@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 
 import registeredSite from '../../public/data/registered-site.json';
-import { nachSzene, toScene } from './geometry';
+import { extrudePolygon, nachSzene, toScene } from './geometry';
 
 /**
  * Die Achsenordnung der Szene, gegen Himmelsrichtungen geprüft.
@@ -98,5 +98,80 @@ describe('Das Gelände liegt richtig herum', () => {
     const z = (name: string) => toScene(...hallenMitte(name), 0, MITTE).z;
     expect(z('Halle 8.1')).toBeLessThan(z('Halle 7.1'));
     expect(z('Halle 7.1')).toBeLessThan(z('Halle 6.1'));
+  });
+});
+
+describe('Körper landen dort, wo ihr Grundriss liegt', () => {
+  /**
+   * Der Fehler, den diese Prüfungen fangen: `toScene` rechnete richtig,
+   * `extrudePolygon` aber baute die Form mit dem umgekehrten Vorzeichen auf.
+   * Hallen und Stände lagen deshalb gespiegelt in einer sonst korrekten Welt
+   * -- die belegten Stände gehören in den Süden und wurden im Norden
+   * gezeichnet. Ein Test auf `toScene` allein sieht das nicht.
+   */
+  function mittlerZ(geometry: THREE.BufferGeometry): number {
+    const position = geometry.getAttribute('position');
+    let summe = 0;
+    for (let i = 0; i < position.count; i += 1) summe += position.getZ(i);
+    return summe / position.count;
+  }
+
+  const quadrat = (x: number, y: number): [number, number][] => [
+    [x - 10, y - 10], [x + 10, y - 10], [x + 10, y + 10], [x - 10, y + 10],
+  ];
+
+  it('legt einen nördlichen Grundriss nach -Z', () => {
+    const nord = extrudePolygon(quadrat(0, -100), 5, MITTE);
+    const sued = extrudePolygon(quadrat(0, 100), 5, MITTE);
+    expect(mittlerZ(nord)).toBeLessThan(mittlerZ(sued));
+    nord.dispose();
+    sued.dispose();
+  });
+
+  it('setzt den Körper genau auf sein Quermaß', () => {
+    const geometry = extrudePolygon(quadrat(0, 250), 5, MITTE);
+    // Die Mitte des Quadrats liegt bei y = 250, also bei Szenen-Z = 250.
+    expect(mittlerZ(geometry)).toBeCloseTo(250, 6);
+    geometry.dispose();
+  });
+
+  it('stimmt mit toScene überein', () => {
+    // Beide Wege müssen denselben Punkt liefern -- sonst driften Körper und
+    // Beschriftung auseinander, und genau das war der Fehler.
+    const mitte: [number, number] = [-40, 90];
+    const geometry = extrudePolygon(quadrat(120, -60), 5, mitte);
+    expect(mittlerZ(geometry)).toBeCloseTo(toScene(120, -60, 0, mitte).z, 6);
+    geometry.dispose();
+  });
+
+  it('extrudiert nach oben und nicht nach unten', () => {
+    const geometry = extrudePolygon(quadrat(0, 0), 12, MITTE);
+    const position = geometry.getAttribute('position');
+    let min = Infinity;
+    let max = -Infinity;
+    for (let i = 0; i < position.count; i += 1) {
+      min = Math.min(min, position.getY(i));
+      max = Math.max(max, position.getY(i));
+    }
+    expect(min).toBeCloseTo(0, 6);
+    expect(max).toBeCloseTo(12, 6);
+    geometry.dispose();
+  });
+
+  it('stellt die belegten Stände in den Süden', () => {
+    // Die Tatsachenprüfung: zur gamescom liegen die belegten Flächen im Süden
+    // (Halle 10, 3, 2, 5), nicht im Norden. Was die Daten sagen, muss auch im
+    // Körper stehen.
+    const belegt = registeredSite.halls.filter((h) => ['10.1', '10.2', '3.2', '2.1']
+      .includes(h.key));
+    const nord = registeredSite.halls.filter((h) => ['8.1', '7.1'].includes(h.key));
+    const z = (halls: typeof belegt) => halls
+      .map((h) => extrudePolygon(h.footprint as [number, number][], 5, MITTE))
+      .reduce((summe, g) => {
+        const wert = mittlerZ(g);
+        g.dispose();
+        return summe + wert;
+      }, 0) / halls.length;
+    expect(z(belegt)).toBeGreaterThan(z(nord));
   });
 });
