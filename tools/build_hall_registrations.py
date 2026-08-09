@@ -81,6 +81,13 @@ Scheinloesungen quer zur eigentlichen Achse.
 """
 
 
+def polygon_mitte(polygon: list[list[float]]) -> tuple[float, float]:
+    """Schwerpunkt der Ecken -- derselbe Drehpunkt wie in `containment_fit`."""
+    ecken = polygon[:-1] if polygon[0] == polygon[-1] else polygon
+    return (sum(p[0] for p in ecken) / len(ecken),
+            sum(p[1] for p in ecken) / len(ecken))
+
+
 def laengste_kante(polygon: list[list[float]]) -> float:
     """Richtung der laengsten Kante in Grad, modulo 90.
 
@@ -122,8 +129,15 @@ def winkelkorrektur(paare: list[tuple[list, list]]) -> float:
 
 
 def containment_fit(hall_polygon: list[list[float]], target_polygons: list[list[list[float]]],
-                    radius: int = 30, vordrehung: float = 0.0) -> dict | None:
+                    radius: int = 30, vordrehung: float = 0.0,
+                    frei: bool = False, drehsuche: bool = True) -> dict | None:
     """Sucht hallenweise Drehung und Verschiebung mit maximaler Abdeckung.
+
+    Mit `frei=True` kehrt sich das Ziel um: gesucht wird die Lage, in der
+    moeglichst wenig der Flaeche in einem Gebaeude liegt. Das ist der Fall der
+    Freiflaechen -- sie gehoeren zwischen die Hallen, nicht in sie. Ohne das
+    bekamen sie gar keine Passung und ragten zu vierzehn Prozent in die
+    Nachbarhalle.
 
     Frueher wurde nur verschoben. Damit liess sich der Winkelfehler nicht
     einholen: eine verdrehte Halle deckt ihr Gebaeude in der Mitte, steht aber
@@ -152,8 +166,11 @@ def containment_fit(hall_polygon: list[list[float]], target_polygons: list[list[
             rx, ry = x - cx, y - cy
             px = cx + cos * rx - sin * ry + dx
             py = cy + sin * rx + cos * ry + dy
-            if any(bounds[0] <= px <= bounds[2] and bounds[1] <= py <= bounds[3]
-                   and inside(target, (px, py)) for target, bounds in prepared):
+            getroffen = any(bounds[0] <= px <= bounds[2] and bounds[1] <= py <= bounds[3]
+                            and inside(target, (px, py)) for target, bounds in prepared)
+            # Eine Freiflaeche will das Gegenteil: sie gehoert **zwischen** die
+            # Gebaeude und nicht hinein. Dieselbe Suche, umgedrehtes Ziel.
+            if getroffen != frei:
                 inside_count += 1
         return 100.0 * inside_count / len(samples)
 
@@ -179,7 +196,7 @@ def containment_fit(hall_polygon: list[list[float]], target_polygons: list[list[
     # in ein falsches Optimum, weil die beste Verschiebung ohne Drehung eine
     # andere ist als die mit.
     schritt_grad = 0.5
-    schritte = int(MAX_DREHUNG_GRAD / schritt_grad)
+    schritte = int(MAX_DREHUNG_GRAD / schritt_grad) if drehsuche else 0
     for i in range(-schritte, schritte + 1):
         grad = vordrehung + i * schritt_grad
         for dx in range(-radius, radius + 1, 3):
@@ -189,7 +206,7 @@ def containment_fit(hall_polygon: list[list[float]], target_polygons: list[list[
                     best = kandidat
     # Dann um den Sieger herum auf 25 cm und 0,05 Grad verfeinern.
     coarse = best
-    for ig in range(-5, 6):
+    for ig in (range(-5, 6) if drehsuche else (0,)):
         grad = coarse[3] + ig * 0.05
         for ix in range(-6, 7):
             for iy in range(-6, 7):
@@ -365,6 +382,8 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
         if umrisse:
             paare.append((hall["footprint"], max(umrisse, key=len)))
     vordrehung = winkelkorrektur(paare)
+    alle_umrisse = [b["footprint"] for b in buildings.get("buildings", [])
+                    if b.get("footprint")]
     print(f"  Winkelkorrektur des Hallenplans: {vordrehung:+.2f} Grad "
           f"(aus {len(paare)} Hallen)")
 
@@ -377,7 +396,41 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
                            if feature_id in building_by_id and building_by_id[feature_id].get("footprint")]
         constraint = containment_fit(hall["footprint"], target_polygons,
                                      vordrehung=vordrehung)
-        hall_transform = shifted_transform(transform, constraint) if constraint else dict(transform)
+        if constraint is None and alle_umrisse:
+            # Freiflaeche: gegen *alle* Gebaeude einpassen, mit umgedrehtem
+            # Ziel -- sie soll moeglichst wenig davon treffen.
+            # Ohne eigene Drehsuche: eine Freiflaeche hat keinen Grund, anders
+            # zu stehen als der Plan, aus dem sie stammt. Mit freier Suche fand
+            # FB 5,46 Grad -- die Umkehrung des Ziels laesst sich mit Drehung
+            # leichter "verbessern", ohne dass die Lage richtiger wuerde.
+            constraint = containment_fit(hall["footprint"], alle_umrisse,
+                                         radius=20, vordrehung=vordrehung,
+                                         frei=True, drehsuche=False)
+            if constraint is not None:
+                constraint["note"] = ("Freiflaeche: zwischen die Gebaeude gelegt, "
+                                      "nicht in eines hinein.")
+                constraint["frei"] = True
+        if constraint is None:
+            # Ohne Zielfeature gibt es nichts einzupassen -- die Winkelkorrektur
+            # gilt trotzdem. Sie ist eine Eigenschaft des ganzen Hallenplans und
+            # nicht eine der einzelnen Halle. Bliebe sie hier aus, staenden die
+            # Freiflaechen als einzige um 2,21 Grad schief zwischen lauter
+            # geraden Hallen -- und genau dort, zwischen den Hallen, faellt es
+            # am meisten auf: Halle 7 ragte in die Freiflaeche Halle 6, Halle 6
+            # in die Freiflaeche Halle 5.
+            mitte = polygon_mitte(hall["footprint"])
+            constraint = {"translation": [0.0, 0.0], "rotationDeg": round(vordrehung, 3),
+                          "pivot": [round(mitte[0], 3), round(mitte[1], 3)],
+                          "coverageBeforePct": None, "coverageAfterPct": None,
+                          "samples": 0, "searchRadiusM": 0,
+                          "maxRotationDeg": MAX_DREHUNG_GRAD,
+                          "vordrehungDeg": round(vordrehung, 3),
+                          "shiftM": 0.0,
+                          "note": ("Kein Zielfeature -- nur die globale "
+                                   "Winkelkorrektur, keine Einpassung.")}
+            hall_transform = shifted_transform(transform, constraint)
+        else:
+            hall_transform = shifted_transform(transform, constraint)
         floor_world = ground_reference + hall["baseY"]
         registrations.append({
             "hallKey": hall["key"],
@@ -388,13 +441,16 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
             "anchors": [],
             "residualM": placement.get("residualM"),
             "maxResidualM": placement.get("maxResidualM"),
-            "status": "constrained" if constraint else "draft",
-            "source": "official-footprint-containment" if constraint else "legacy-global-fit",
+            "status": "constrained" if target_polygons else "draft",
+            "source": ("official-footprint-containment" if target_polygons
+                       else "legacy-global-fit-plus-angle"),
             "constraint": constraint,
             "befund": passungsbefund(hall["footprint"], target_polygons, constraint),
             "notes": [
                 ("Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben."
-                 if constraint else "Noch keine amtlichen Zielfeatures dieser Hallenebene."),
+                 if target_polygons else
+                 "Noch keine amtlichen Zielfeatures dieser Hallenebene -- "
+                 "nur die globale Winkelkorrektur angewandt."),
                 "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
                 "Portale wurden nicht als Registrierungsanker verwendet.",
             ],

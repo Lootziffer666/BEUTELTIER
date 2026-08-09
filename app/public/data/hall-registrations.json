@@ -853,18 +853,18 @@
       "hallKey": "F2",
       "targetFeatureIds": [],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1207.587,
-          204.865
+          -1203.164,
+          259.899
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -873,19 +873,38 @@
       "residualM": 25.0,
       "maxResidualM": 25.0,
       "status": "draft",
-      "source": "legacy-global-fit",
-      "constraint": null,
+      "source": "legacy-global-fit-plus-angle",
+      "constraint": {
+        "translation": [
+          0.0,
+          -18.75
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          693.943,
+          820.609
+        ],
+        "coverageBeforePct": 47.42,
+        "coverageAfterPct": 100.0,
+        "samples": 97,
+        "searchRadiusM": 20,
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 18.75,
+        "note": "Freiflaeche: zwischen die Gebaeude gelegt, nicht in eines hinein.",
+        "frei": true
+      },
       "befund": {
         "transformVersion": 3,
         "targetFeatureCount": 0,
-        "fitPercent": null,
+        "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
         "geometryMismatch": true,
         "reviewReason": "kein amtliches Zielfeature zugeordnet"
       },
       "notes": [
-        "Noch keine amtlichen Zielfeatures dieser Hallenebene.",
+        "Noch keine amtlichen Zielfeatures dieser Hallenebene -- nur die globale Winkelkorrektur angewandt.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -894,18 +913,18 @@
       "hallKey": "F8",
       "targetFeatureIds": [],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1207.587,
-          204.865
+          -1186.371,
+          252.424
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -914,19 +933,38 @@
       "residualM": 25.0,
       "maxResidualM": 25.0,
       "status": "draft",
-      "source": "legacy-global-fit",
-      "constraint": null,
+      "source": "legacy-global-fit-plus-angle",
+      "constraint": {
+        "translation": [
+          0.0,
+          0.0
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          794.94,
+          1092.134
+        ],
+        "coverageBeforePct": 100.0,
+        "coverageAfterPct": 100.0,
+        "samples": 161,
+        "searchRadiusM": 20,
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 0.0,
+        "note": "Freiflaeche: zwischen die Gebaeude gelegt, nicht in eines hinein.",
+        "frei": true
+      },
       "befund": {
         "transformVersion": 3,
         "targetFeatureCount": 0,
-        "fitPercent": null,
+        "fitPercent": 100.0,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
         "geometryMismatch": true,
         "reviewReason": "kein amtliches Zielfeature zugeordnet"
       },
       "notes": [
-        "Noch keine amtlichen Zielfeatures dieser Hallenebene.",
+        "Noch keine amtlichen Zielfeatures dieser Hallenebene -- nur die globale Winkelkorrektur angewandt.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
@@ -935,18 +973,18 @@
       "hallKey": "FB",
       "targetFeatureIds": [],
       "transform": {
-        "rotationDeg": -31.0126,
+        "rotationDeg": -28.8036,
         "scale": 1.0,
         "translation": [
-          -1207.587,
-          204.865
+          -1199.458,
+          266.468
         ],
         "mirroredSceneZ": true,
         "matrix2D": [
-          0.8570540172,
-          0.5152265634,
-          0.5152265634,
-          -0.8570540172
+          0.8762764089,
+          0.4818087331,
+          0.4818087331,
+          -0.8762764089
         ]
       },
       "floorZ": 0.49,
@@ -955,19 +993,38 @@
       "residualM": 25.0,
       "maxResidualM": 25.0,
       "status": "draft",
-      "source": "legacy-global-fit",
-      "constraint": null,
+      "source": "legacy-global-fit-plus-angle",
+      "constraint": {
+        "translation": [
+          11.5,
+          -20.75
+        ],
+        "rotationDeg": 2.209,
+        "pivot": [
+          736.108,
+          691.654
+        ],
+        "coverageBeforePct": 37.37,
+        "coverageAfterPct": 77.78,
+        "samples": 99,
+        "searchRadiusM": 20,
+        "maxRotationDeg": 5.0,
+        "vordrehungDeg": 2.209,
+        "shiftM": 23.724,
+        "note": "Freiflaeche: zwischen die Gebaeude gelegt, nicht in eines hinein.",
+        "frei": true
+      },
       "befund": {
         "transformVersion": 3,
         "targetFeatureCount": 0,
-        "fitPercent": null,
+        "fitPercent": 77.78,
         "outsideCornerCount": 0,
         "maxOutsideDistanceM": 0.0,
         "geometryMismatch": true,
-        "reviewReason": "kein amtliches Zielfeature zugeordnet"
+        "reviewReason": "kein amtliches Zielfeature zugeordnet; Planflaeche passt nicht vollstaendig in den amtlichen Umriss -- moeglicherweise fehlt ein Zielkoerper"
       },
       "notes": [
-        "Noch keine amtlichen Zielfeatures dieser Hallenebene.",
+        "Noch keine amtlichen Zielfeatures dieser Hallenebene -- nur die globale Winkelkorrektur angewandt.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
         "Portale wurden nicht als Registrierungsanker verwendet."
       ]
