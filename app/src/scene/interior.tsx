@@ -16,6 +16,7 @@ import * as THREE from 'three';
 
 import type { Dataset } from '../data/load';
 import type { Placement2D } from '../data/types';
+import { drehungNachX } from './geometry';
 import {
   disposeSurface,
   hallenbodenSurface,
@@ -66,7 +67,7 @@ export function hallenlage(footprint: Placement2D[]) {
     const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
     if (d > laengste) {
       laengste = d;
-      winkel = Math.atan2(b[1] - a[1], b[0] - a[0]);
+      winkel = drehungNachX(b[0] - a[0], b[1] - a[1]);
     }
   }
   if (laengste < 1) return null;

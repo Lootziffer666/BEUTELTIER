@@ -35,6 +35,7 @@ import {
   WELT_KACHEL_M,
 } from './materials';
 import { ArchitectureGenerator } from '../procedural/generators/ArchitectureGenerator';
+import { drehungNachZ } from './geometry';
 
 /**
  * Fussbodenhoehe.
@@ -507,7 +508,7 @@ export function treppenteile(achse: Achse, centre: [number, number], anfang: num
     const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * q;
     return [x - centre[0], h, y - centre[1]];
   };
-  const drehung = Math.atan2(achse.laengs[0], -achse.laengs[1]);
+  const drehung = drehungNachZ(achse.laengs[0], achse.laengs[1]);
 
   // Wo die Anlage sitzt, ist gemessen und wird uebergeben: sie beginnt am
   // Ende des Gangs und endet dort, wo Halle 5 und Halle 10 anfangen.
@@ -943,8 +944,8 @@ export function Boulevard({
       const x = achse.x0 + achse.laengs[0] * schild.station;
       const y = achse.y0 + achse.laengs[1] * schild.station;
       const drehung = schild.blick > 0
-        ? Math.atan2(-achse.laengs[0], achse.laengs[1])
-        : Math.atan2(achse.laengs[0], -achse.laengs[1]);
+        ? drehungNachZ(-achse.laengs[0], -achse.laengs[1])
+        : drehungNachZ(achse.laengs[0], achse.laengs[1]);
       return {
         schluessel: `${schild.station}-${schild.blick}-${index}`,
         schild,
@@ -977,7 +978,7 @@ export function Boulevard({
     return {
       position: [x - centre[0], knoten.piazzaHoeheM + 0.6, y - centre[1]] as
         [number, number, number],
-      drehung: Math.atan2(achse.laengs[0], -achse.laengs[1]),
+      drehung: drehungNachZ(achse.laengs[0], achse.laengs[1]),
       breite: sued.breiteM,
       textur: bauzaunTextur(),
     };
@@ -1067,7 +1068,7 @@ export function Boulevard({
     return {
       // Der Fusspunkt der Wand; die Teile sitzen darueber in echten Hoehen.
       position: [x - centre[0], 0, y - centre[1]] as [number, number, number],
-      drehung: Math.atan2(achse.laengs[0], -achse.laengs[1]),
+      drehung: drehungNachZ(achse.laengs[0], achse.laengs[1]),
       /** Oberkante des massiven Sockels -- ab hier Glas. */
       sockel,
       boden,

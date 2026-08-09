@@ -145,6 +145,32 @@ export function nachSzene(
 }
 
 /**
+ * Y-Drehung, die die lokale **+X**-Achse auf eine Geländemeter-Richtung legt.
+ *
+ * Der dritte Ort, an dem die Spiegelung steckte. `toScene` und
+ * `extrudePolygon` legen Punkte richtig ab -- aber eine Drehung ist kein
+ * Punkt. `rotateY(phi)` bildet +X auf `(cos phi, 0, -sin phi)` ab, und Z zeigt
+ * nach Sueden. Damit +X auf `(dx, dy)` zeigt, muss also `-dy` in den Sinus.
+ *
+ * Vorher stand an elf Stellen ein selbstgebauter `atan2` mit je eigener
+ * Vorzeichenwahl, abgestimmt auf die damals gespiegelte Ebene. Nach deren
+ * Korrektur war jeder einzelne davon um sein Vorzeichen daneben -- und weil
+ * es Drehungen **um die eigene Mitte** sind, stand jeder Stand an der
+ * richtigen Stelle und trotzdem schief.
+ */
+export function drehungNachX(dx: number, dy: number): number {
+  return Math.atan2(-dy, dx);
+}
+
+/**
+ * Dasselbe für Objekte, die nach **-Z** blicken -- die Vorgabe von Three.js
+ * für Kameras und für alles, was mit der Front nach vorn gebaut ist.
+ */
+export function drehungNachZ(dx: number, dy: number): number {
+  return Math.atan2(-dx, -dy);
+}
+
+/**
  * Fasst viele Grundrisse zu einer Geometrie zusammen.
  *
  * Tausend Standflächen als tausend Meshes wären tausend Zeichenaufrufe je

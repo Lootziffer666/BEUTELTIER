@@ -23,6 +23,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 import type { Dataset } from '../data/load';
 import type { GraphNode } from '../routing/graph';
+import { drehungNachX } from './geometry';
 
 const STEP_RISE_M = 0.175;
 const STEP_RUN_M = 0.29;
@@ -117,7 +118,7 @@ function StairsFlight({ flight }: { flight: Flight }) {
   // Szenenkoordinaten entspricht, muss cos yaw = dirX und sin yaw = dirY
   // gelten -- also atan2(dirY, dirX), nicht andersherum. Vertauscht war das
   // hier zuvor der Fehler: eine Nord-Süd-Treppe landete Ost-West.
-  const yaw = Math.atan2(flight.dirY, flight.dirX);
+  const yaw = drehungNachX(flight.dirX, flight.dirY);
   return (
     <group position={flight.base} rotation={[0, yaw, 0]}>
       <mesh geometry={geometry} castShadow receiveShadow>
@@ -138,7 +139,7 @@ function EscalatorFlight({ flight }: { flight: Flight }) {
   const length = Math.hypot(runM, flight.riseM);
   const angle = Math.atan2(flight.riseM, runM);
   // Gleiche Herleitung wie bei StairsFlight: atan2(dirY, dirX), nicht (dirX, dirY).
-  const yaw = Math.atan2(flight.dirY, flight.dirX);
+  const yaw = drehungNachX(flight.dirX, flight.dirY);
 
   return (
     <group position={flight.base} rotation={[0, yaw, 0]}>

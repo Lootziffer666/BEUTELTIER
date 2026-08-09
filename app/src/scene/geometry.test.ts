@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 
 import registeredSite from '../../public/data/registered-site.json';
-import { extrudePolygon, nachSzene, toScene } from './geometry';
+import { drehungNachX, drehungNachZ, extrudePolygon, nachSzene, toScene } from './geometry';
 
 /**
  * Die Achsenordnung der Szene, gegen Himmelsrichtungen geprüft.
@@ -173,5 +173,57 @@ describe('Körper landen dort, wo ihr Grundriss liegt', () => {
         return summe + wert;
       }, 0) / halls.length;
     expect(z(belegt)).toBeGreaterThan(z(nord));
+  });
+});
+
+describe('Drehungen zeigen in die gemeinte Richtung', () => {
+  /**
+   * Die dritte Schicht derselben Spiegelung. Punkte lagen richtig, Drehungen
+   * nicht: jeder Stand stand an seinem Platz und war trotzdem in sich
+   * verdreht. Geprüft wird deshalb, wohin eine Drehung eine Achse tatsächlich
+   * legt -- nicht, welche Formel dahintersteht.
+   */
+  function gedreht(achse: THREE.Vector3, winkel: number): THREE.Vector3 {
+    return achse.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), winkel);
+  }
+
+  const richtungen: [string, number, number][] = [
+    ['Osten', 1, 0],
+    ['Sueden', 0, 1],
+    ['Westen', -1, 0],
+    ['Norden', 0, -1],
+    ['Suedosten', 0.7071067811865476, 0.7071067811865476],
+  ];
+
+  it.each(richtungen)('legt +X nach %s', (_name, dx, dy) => {
+    const gedrehteX = gedreht(new THREE.Vector3(1, 0, 0), drehungNachX(dx, dy));
+    expect(gedrehteX.x).toBeCloseTo(dx, 9);
+    expect(gedrehteX.z).toBeCloseTo(dy, 9);
+  });
+
+  it.each(richtungen)('legt -Z nach %s', (_name, dx, dy) => {
+    const gedrehteZ = gedreht(new THREE.Vector3(0, 0, -1), drehungNachZ(dx, dy));
+    expect(gedrehteZ.x).toBeCloseTo(dx, 9);
+    expect(gedrehteZ.z).toBeCloseTo(dy, 9);
+  });
+
+  it('dreht eine Standkante auf ihre eigene Richtung', () => {
+    // Der Fall aus der Messe: eine Standkante laeuft in Gelaendemetern von a
+    // nach b, und der Koerper darauf muss genau so liegen -- sonst steht er
+    // an der richtigen Stelle und trotzdem schief.
+    const a: [number, number] = [-120, 40];
+    const b: [number, number] = [-100, 52];
+    const laenge = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const richtung = gedreht(new THREE.Vector3(1, 0, 0), drehungNachX(b[0] - a[0], b[1] - a[1]));
+    const ziel = toScene(b[0], b[1], 0, [0, 0]).sub(toScene(a[0], a[1], 0, [0, 0]));
+    expect(richtung.x).toBeCloseTo(ziel.x / laenge, 9);
+    expect(richtung.z).toBeCloseTo(ziel.z / laenge, 9);
+  });
+
+  it('unterscheidet sich um eine Vierteldrehung von der -Z-Fassung', () => {
+    // Beide Fassungen beschreiben dieselbe Richtung, nur fuer eine andere
+    // lokale Achse. Waeren sie gleich, waere eine davon falsch benutzt.
+    const differenz = drehungNachZ(1, 0) - drehungNachX(1, 0);
+    expect(Math.abs(Math.sin(differenz))).toBeCloseTo(1, 9);
   });
 });

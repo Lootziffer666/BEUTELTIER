@@ -39,6 +39,7 @@ import {
 } from './boulevard';
 import { hallenlage } from './interior';
 import { markenkoerper } from './Markenstaende';
+import { drehungNachZ } from './geometry';
 
 /** Was der Editor aus einem Eintrag machen soll. */
 export type Bauart = 'block' | 'glass' | 'slope' | 'marker' | 'door';
@@ -226,7 +227,7 @@ function boulevardbloecke(achse: Achse, plan: BoulevardPlan,
     const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * q;
     return [x - centre[0], h, y - centre[1]];
   };
-  const drehung = grad(Math.atan2(achse.laengs[0], -achse.laengs[1]));
+  const drehung = grad(drehungNachZ(achse.laengs[0], achse.laengs[1]));
 
   const platte = (
     name: string,
