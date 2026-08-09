@@ -41,6 +41,15 @@ import { MARKEN_STAND_IDS } from './marken';
 import { Vertikalverbindungen } from './vertical';
 import type { CameraSnapshot } from './survey';
 import { ProceduralStaging } from './ProceduralStaging';
+import {
+  FAMILIEN,
+  konturHuelle,
+  konturStaerke,
+  stufenTextur,
+  toonMaterial,
+  type Familie,
+} from './stil';
+import { Kontur } from './Kontur';
 
 export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
@@ -58,6 +67,14 @@ export interface SceneProps {
   onLeaveEgo?: () => void;
   /** Sparsames Glas: keine Transmission, kein Durchblick -- dafür schnell. */
   previewSafe?: boolean;
+  /**
+   * Der BEUTELTIER-Look: gestufte Beleuchtung und Konturen statt PBR.
+   *
+   * Ein Schalter und keine Annahme im Quelltext, weil der alte Look die
+   * Rückfallebene bleibt, solange nicht alles umgestellt ist -- und weil man
+   * beim Vergleichen sofort sehen will, was der Stil eigentlich tut.
+   */
+  cel?: boolean;
   /** Vermessungsmodus: Kollision aus, um Referenzfoto-Perspektiven zu erreichen. */
   noClip?: boolean;
   /** Bewegung und Umsehen pausiert, während ein Referenzfoto ausgerichtet wird. */
@@ -200,7 +217,12 @@ function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] })
       </points>
       {gaps.map(({ id, geometry }) => (
         <mesh key={id} geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.18, 0]}>
-          <meshStandardMaterial color="#68737c" roughness={0.95} />
+          {/* Die Umgebung hat keine Familie: die Stilbibel fuehrt zehn fuer
+              die Messe, und Nachbargebaeude sind keine davon. Sie behalten
+              ihr gedecktes Grau und bekommen nur die Stufen -- als Familie
+              gestrichen waeren sie heller als die Halle davor und damit
+              Vordergrund. */}
+          <meshToonMaterial color="#68737c" gradientMap={stufenTextur(2)} />
         </mesh>
       ))}
     </group>
@@ -396,12 +418,29 @@ function schleier(material: THREE.Material, deckkraft: number) {
   material.depthWrite = false;
 }
 
+/**
+ * Welche Materialfamilie ein Bauteil im Cel-Look bekommt.
+ *
+ * Die Zuordnung ist die einzige Stelle, an der die Stilbibel auf das amtliche
+ * Modell trifft. Sie ist absichtlich grob: das Modell weiss nur, ob eine
+ * Fläche Dach, Boden oder Wand ist, und mehr braucht es für den Grundlook
+ * auch nicht. Glas, Metall und Vegetation bekommen ihre Familien dort, wo sie
+ * als eigene Objekte entstehen, nicht hier.
+ */
+function familieFuer(teil: 'roof' | 'ground' | 'wall', kern: boolean): Familie {
+  if (!kern) return FAMILIEN.M05;          // Umgebung bleibt heller Beton
+  if (teil === 'roof') return FAMILIEN.M02;
+  if (teil === 'ground') return FAMILIEN.M03;
+  return FAMILIEN.M01;
+}
+
 function OfficialPackage({
   uri,
   interior,
   surfaces,
   behandeln,
   deckkraft,
+  cel,
 }: {
   uri: string;
   interior: boolean;
@@ -410,6 +449,8 @@ function OfficialPackage({
   behandeln: boolean;
   /** Deckkraft dieses Pakets im aktuellen Preset. */
   deckkraft: number;
+  /** Cel-Shading statt PBR: gestufte Beleuchtung und eine Kontur am Kern. */
+  cel: boolean;
 }) {
   const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
 
@@ -417,15 +458,51 @@ function OfficialPackage({
     // Umgebaut wird nur, was man von drinnen sieht -- von aussen bleibt das
     // Weltmodell inhaltlich, wie es geliefert wird.
     const umbauen = behandeln && !!surfaces && interior;
-    // Ohne Umbau und ohne Schleier gibt es nichts zu tun; dann ist die
-    // gelieferte Szene das Ergebnis und wird nicht einmal geklont.
-    if (!umbauen && deckkraft > 0.99) return scene;
+    // Ohne Umbau, ohne Schleier und ohne Cel-Look gibt es nichts zu tun; dann
+    // ist die gelieferte Szene das Ergebnis und wird nicht einmal geklont.
+    if (!umbauen && deckkraft > 0.99 && !cel) return scene;
 
-    const schluessel = `${uri}|${interior}|${deckkraft.toFixed(2)}`;
+    const schluessel = `${uri}|${interior}|${deckkraft.toFixed(2)}|${cel}`;
     const fertig = weltCache.get(schluessel);
     if (fertig) return fertig;
 
     const clone = scene.clone(true);
+    if (cel) {
+      // Erst sammeln, dann anhängen: wer während `traverse` Kinder einfügt,
+      // läuft in seine eigenen Konturen hinein und umrandet die Umrandung.
+      const meshes: THREE.Mesh[] = [];
+      clone.traverse((node) => {
+        if (node instanceof THREE.Mesh) meshes.push(node);
+      });
+      for (const mesh of meshes) {
+        const quelle = mesh.material as THREE.MeshStandardMaterial;
+        const teil = bauteil(quelle.name) ?? 'wall';
+        const familie = familieFuer(teil, behandeln);
+        if (umbauen && teil !== 'wall') {
+          // Drinnen kommen Boden und Decke aus `Hallenhuelle` -- siehe unten.
+          mesh.visible = false;
+          continue;
+        }
+        if (umbauen && surfaces) projiziereUV(mesh.geometry, WELT_KACHEL_M.wand);
+        const material = toonMaterial(familie, {
+          map: umbauen && surfaces ? surfaces.wand.map : quelle.map,
+          normalMap: umbauen && surfaces ? surfaces.wand.normalMap : quelle.normalMap,
+        }, { side: THREE.DoubleSide });
+        schleier(material, deckkraft);
+        mesh.material = material;
+        mesh.receiveShadow = true;
+        mesh.castShadow = !interior && behandeln;
+        // Die Kontur trägt nur der Kern. Die Umgebung ist Hintergrund, und
+        // eine Linie um jedes Nebengebäude macht aus der Karte ein Netz.
+        // Durchsichtige Flächen bekommen auch keine: die Linie stünde vor
+        // dem, was man durch sie hindurch sehen will.
+        if (!behandeln || deckkraft <= 0.99) continue;
+        const huelle = konturHuelle(mesh, konturStaerke(familie.kontur));
+        if (huelle) mesh.add(huelle);
+      }
+      weltCache.set(schluessel, clone);
+      return clone;
+    }
     clone.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       const quelle = node.material as THREE.MeshStandardMaterial;
@@ -472,7 +549,7 @@ function OfficialPackage({
 
     weltCache.set(schluessel, clone);
     return clone;
-  }, [scene, interior, surfaces, behandeln, uri, deckkraft]);
+  }, [scene, interior, surfaces, behandeln, uri, deckkraft, cel]);
 
   return <primitive object={model} />;
 }
@@ -481,10 +558,12 @@ function OfficialWorld({
   data,
   centre,
   preset,
+  cel,
 }: {
   data: Dataset;
   centre: [number, number];
   preset: CameraPreset;
+  cel: boolean;
 }) {
   const interior = preset === 'ego';
   const surfaces = weltFlaechen(interior);
@@ -512,6 +591,7 @@ function OfficialWorld({
             surfaces={surfaces}
             behandeln={kern}
             deckkraft={kern ? deckkraft.kern : deckkraft.umgebung}
+            cel={cel}
           />
         );
       })}
@@ -728,14 +808,11 @@ function Stands({
           pick(merged.fullLower)(event.faceIndex);
         }}
       >
-        <meshStandardMaterial
+        <meshToonMaterial
           vertexColors
           map={surface.map}
           normalMap={surface.normalMap}
-          roughnessMap={surface.roughnessMap}
-          roughness={0.82}
-          metalness={0.04}
-          envMapIntensity={0.7}
+          gradientMap={stufenTextur(FAMILIEN.M01.stufen)}
           // Andere Hallen als die fokussierte bleiben vereinfachte Körper --
           // in Ego zurückhaltend transparent, sie stehen nicht im Weg.
           transparent={interior}
@@ -743,6 +820,17 @@ function Stands({
           depthWrite={!interior}
         />
       </mesh>
+      {/* Die Kontur macht aus dem Klotz eine Zeichnung. Sie haengt an den
+          vollen Koerpern und nicht an den flachen Konturflaechen der
+          fokussierten Halle -- eine Linie um eine Bodenflaeche waere ein
+          Rahmen, kein Umriss. In Ego stehen die Koerper durchsichtig, dort
+          stuende die Linie vor dem, was man sehen will. */}
+      {!interior && (
+        <Kontur
+          geometry={fullLowerGeometry}
+          staerke={konturStaerke(FAMILIEN.M01.kontur)}
+        />
+      )}
       {upperOpacity > 0.02 && (
         <mesh
           geometry={fullUpperGeometry}
@@ -753,14 +841,11 @@ function Stands({
             pick(merged.fullUpper)(event.faceIndex);
           }}
         >
-          <meshStandardMaterial
+          <meshToonMaterial
             vertexColors
             map={surface.map}
             normalMap={surface.normalMap}
-            roughnessMap={surface.roughnessMap}
-            roughness={0.82}
-            metalness={0.04}
-            envMapIntensity={0.7}
+            gradientMap={stufenTextur(FAMILIEN.M01.stufen)}
             transparent={upperOpacity < 0.99}
             opacity={upperOpacity}
           />
@@ -778,14 +863,11 @@ function Stands({
           pick(merged.reducedLower)(event.faceIndex);
         }}
       >
-        <meshStandardMaterial
+        <meshToonMaterial
           vertexColors
           map={surface.map}
           normalMap={surface.normalMap}
-          roughnessMap={surface.roughnessMap}
-          roughness={0.82}
-          metalness={0.04}
-          envMapIntensity={0.7}
+          gradientMap={stufenTextur(FAMILIEN.M01.stufen)}
         />
       </mesh>
       {upperOpacity > 0.02 && (
@@ -797,14 +879,11 @@ function Stands({
             pick(merged.reducedUpper)(event.faceIndex);
           }}
         >
-          <meshStandardMaterial
+          <meshToonMaterial
             vertexColors
             map={surface.map}
             normalMap={surface.normalMap}
-            roughnessMap={surface.roughnessMap}
-            roughness={0.82}
-            metalness={0.04}
-            envMapIntensity={0.7}
+            gradientMap={stufenTextur(FAMILIEN.M01.stufen)}
             transparent={upperOpacity < 0.99}
             opacity={upperOpacity}
           />
@@ -1229,6 +1308,7 @@ function CameraRig({
 
 export function SiteScene(props: SceneProps) {
   const { data, upperOpacity, route, preset, focusHallKey } = props;
+  const cel = props.cel ?? true;
   const centre = useMemo(() => siteCentre(data.site), [data.site]);
   const registered = data.spatialMode === 'registered';
 
@@ -1289,7 +1369,7 @@ export function SiteScene(props: SceneProps) {
       )}
       {registered && (
         <Suspense fallback={null}>
-          <OfficialWorld data={data} centre={centre} preset={preset} />
+          <OfficialWorld data={data} centre={centre} preset={preset} cel={cel} />
         </Suspense>
       )}
       {(preset === 'halle' || preset === 'ego') && focusHallKey && (

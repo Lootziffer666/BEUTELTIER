@@ -65,6 +65,10 @@ export default function App() {
    * -- deshalb ein Schalter und keine Annahme im Quelltext.
    */
   const [previewSafe, setPreviewSafe] = useState(true);
+  /**
+   * Der BEUTELTIER-Look. Standard an -- der alte Look bleibt als Vergleich.
+   */
+  const [cel, setCel] = useState(true);
 
   const [startStandId, setStartStandId] = useState<string | null>(null);
   const [tourStandIds, setTourStandIds] = useState<string[]>([]);
@@ -298,6 +302,7 @@ export default function App() {
           preset={preset}
           focusHallKey={focusHallKey}
           previewSafe={previewSafe}
+          cel={cel}
           onSelectStand={setSelectedStandId}
           onLeaveEgo={() => setPreset('uebersicht')}
           noClip={noClip}
@@ -393,6 +398,14 @@ export default function App() {
             title="Echtes Glas spiegelt und lässt durchsehen, kostet aber Bildrate."
           >
             Glas: {previewSafe ? 'sparsam' : 'echt'}
+          </button>
+          <button
+            type="button"
+            className={cel ? 'is-active' : ''}
+            onClick={() => setCel((wert) => !wert)}
+            title="Gestufte Beleuchtung und Konturen statt weicher Verläufe."
+          >
+            Look: {cel ? 'Cel' : 'Standard'}
           </button>
           <label className="slider">
             <span>Obergeschoss</span>
