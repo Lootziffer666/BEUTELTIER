@@ -350,7 +350,17 @@ export interface BoulevardAussen910 {
   quelle: string;
   grenzeM: number;
   versatzM: number;
+  versatzHerkunft: string;
   ueberlappM: number;
+  /**
+   * Beide Flaechen sind Vierecke, auf denen die Halle steht -- so bleibt die
+   * Bodenplatte robust und verschwindet unter den Hallenkanten. Was draussen
+   * uebrig bleibt, ist ein U; `offenNach` sagt, wohin.
+   */
+  form: {
+    ebene1: { traegt: string; offenNach: string; streifenZumBoulevardM: number };
+    ebene0: { traegt: string; offenNach: string; streifenZumBoulevardM: number };
+  };
   ebene1: BoulevardAussenEbene;
   schraege: BoulevardAussenSchraege;
   ebene0: BoulevardAussenEbene;

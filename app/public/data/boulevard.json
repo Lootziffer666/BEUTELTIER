@@ -1086,32 +1086,43 @@
   "quelle": "vor Ort gemessen (dz.nrw); verortet ueber die amtlichen Hallenkanten",
   "grenzeM": 300.0,
   "versatzM": 29.95,
-  "versatzGerechnetM": 29.34,
-  "versatzHerkunft": "Sprung der Boulevard-Ostflanke zwischen Nordgang (-7,46) und Suedteil (-36,8); vor Ort mit 29,95 m gemessen",
+  "versatzHerkunft": "An der Ostseite sind von Sueden aus 29,95 m von Halle 10 nicht mit Ebene 1 ueberbaut. Der Wert steht als Zahl und ist nicht aus der Platte herausgeschnitten -- die Platte bleibt bewusst ein Viereck, auf dem die Halle steht.",
+  "form": {
+   "ebene1": {
+    "traegt": "10.2",
+    "offenNach": "sued",
+    "streifenZumBoulevardM": 20.0
+   },
+   "ebene0": {
+    "traegt": "9.1",
+    "offenNach": "west",
+    "streifenZumBoulevardM": 0.0
+   }
+  },
   "ueberlappM": 2.0,
   "ebene1": {
    "id": "aussen-9-10:ebene1",
    "vonM": 300.0,
    "bisM": 488.1,
-   "qVonM": -214.9,
-   "qBisM": -36.8,
+   "qVonM": -194.56,
+   "qBisM": -16.46,
    "hoeheM": 7.45,
    "polygon": [
     [
-     -146.65,
-     88.56
+     -165.45,
+     80.52
     ],
     [
-     -239.14,
-     256.94
+     -256.97,
+     247.14
     ],
     [
-     -81.28,
-     343.64
+     -99.11,
+     333.85
     ],
     [
-     11.2,
-     175.27
+     -7.59,
+     167.23
     ]
    ],
    "herkunft": "188,10 x 178,93 m gemessen; Hoehe = Fussboden Halle 10.2"
@@ -1120,8 +1131,8 @@
    "id": "aussen-9-10:schraege",
    "vonM": 215.41,
    "bisM": 300.0,
-   "qVonM": -214.9,
-   "qBisM": -36.8,
+   "qVonM": -194.56,
+   "qBisM": -16.46,
    "obenM": 7.45,
    "untenM": 0.0,
    "laufM": 84.59,
@@ -1129,54 +1140,54 @@
    "steigungProzent": 8.81,
    "polygon": [
     [
-     -106.89,
-     16.18
+     -124.72,
+     6.38
     ],
     [
-     -147.62,
-     90.32
+     -165.45,
+     80.52
     ],
     [
-     10.24,
-     177.02
+     -7.59,
+     167.23
     ],
     [
-     50.96,
-     102.88
+     33.13,
+     93.09
     ]
    ],
    "dreiecke": [
     [
      [
-      -106.89,
-      16.18,
+      -124.72,
+      6.38,
       0.0
      ],
      [
-      -147.62,
-      90.32,
+      -165.45,
+      80.52,
       7.45
      ],
      [
-      10.24,
-      177.02,
+      -7.59,
+      167.23,
       7.45
      ]
     ],
     [
      [
-      -106.89,
-      16.18,
+      -124.72,
+      6.38,
       0.0
      ],
      [
-      10.24,
-      177.02,
+      -7.59,
+      167.23,
       7.45
      ],
      [
-      50.96,
-      102.88,
+      33.13,
+      93.09,
       0.0
      ]
     ]

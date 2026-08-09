@@ -531,14 +531,20 @@ describe('Aussengelaende 9/10', () => {
   it('faellt ueber die Schraege gleichmaessig ab', () => {
     const grenze = aussen.grenzeM;
     const lauf = aussen.schraege.laufM;
-    const hoehen = [0, 0.25, 0.5, 0.75, 1].map(
+    // Knapp innerhalb der Rampe abtasten: genau auf ihrer Oberkante liegt der
+    // Punkt auf einer Dreieckskante, und dort ist die Zugehoerigkeit eine
+    // Frage der letzten Nachkommastelle.
+    const hoehen = [0.01, 0.25, 0.5, 0.75, 0.99].map(
       (teil) => auf(grenze - lauf * teil, -120).z,
     );
     for (let i = 1; i < hoehen.length; i += 1) {
       expect(hoehen[i]).toBeLessThan(hoehen[i - 1] + 1e-6);
     }
-    expect(hoehen[0]).toBeCloseTo(7.45, 1);
-    expect(hoehen[hoehen.length - 1]).toBeCloseTo(0, 1);
+    // Ein Prozent unter der Oberkante fehlen sieben Zentimeter auf 7,45 m --
+    // die Grenzen stehen deshalb als Zahl und nicht als Rundungsstelle.
+    const fall = aussen.schraege.obenM - aussen.schraege.untenM;
+    expect(hoehen[0]).toBeGreaterThan(fall * 0.98);
+    expect(hoehen[hoehen.length - 1]).toBeLessThan(fall * 0.02);
   });
 
   it('traegt zwischen oberer Ebene und unterer keinen Absatz und kein Loch', () => {
@@ -570,17 +576,28 @@ describe('Aussengelaende 9/10', () => {
 describe('Versatz der Westkanten', () => {
   const aussen = plan.aussen9_10!;
 
-  it('legt die Westkanten auf die jeweilige Boulevardflanke', () => {
+  it('legt Ebene 0 direkt an die Wand des Nordgangs', () => {
+    // Halle 9 bildet dort die Gangwand selbst -- das U ist nach Westen offen,
+    // ein Streifen dazwischen existiert nicht.
     expect(aussen.ebene0.qBisM).toBeCloseTo(plan.seitenQ.ost, 2);
-    expect(aussen.ebene1.qBisM).toBeCloseTo(plan.sued!.seitenQ.ost, 0);
+    expect(aussen.form.ebene0.streifenZumBoulevardM).toBe(0);
+    expect(aussen.form.ebene0.offenNach).toBe('west');
   });
 
-  it('trifft den gemessenen Versatz auf unter einen Meter', () => {
-    // Gerechnet 29,34 m aus den amtlichen Umrissen, gemessen 29,95 m vor Ort.
-    // 61 cm Rest zwischen zwei Quellen, die nichts voneinander wissen -- die
-    // Toleranz steht hier als Zahl und nicht in einer Rundungsstelle.
-    const gerechnet = Math.abs(aussen.ebene0.qBisM - aussen.ebene1.qBisM);
-    expect(Math.abs(gerechnet - aussen.versatzM)).toBeLessThan(1.0);
+  it('laesst bei Ebene 1 zwanzig Meter zwischen Boulevard und Halle 10.2', () => {
+    // Angabe vor Ort. Die Rechnung hatte Halle 10.2 selbst fuer die Ostwand
+    // des Suedteils gehalten, weil sie das naechste Gebaeude ist.
+    expect(aussen.form.ebene1.streifenZumBoulevardM).toBe(20);
+    expect(aussen.form.ebene1.offenNach).toBe('sued');
+    expect(aussen.ebene1.qBisM - plan.sued!.seitenQ.ost).toBeCloseTo(20, 1);
+  });
+
+  it('fuehrt den Versatz als Zahl und schneidet ihn nicht aus', () => {
+    // An der Ostseite sind von Sueden aus 29,95 m von Halle 10 nicht mit
+    // Ebene 1 ueberbaut. Die Platte bleibt trotzdem ein Viereck -- so war es
+    // vorgegeben, und so verschwindet sie sauber unter den Hallenkanten.
+    expect(aussen.versatzM).toBeCloseTo(29.95, 2);
+    expect(aussen.versatzHerkunft).toContain('Ostseite');
   });
 
   it('haelt die gemessenen Breiten beider Ebenen ein', () => {

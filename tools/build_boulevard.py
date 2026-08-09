@@ -147,8 +147,15 @@ AUSSEN_GRENZE_M = 300.0        # Nordkante Ebene 1 = Suedkante Ebene 0
 # Zwischen beiden springt er um 29,34 m nach Osten -- und genau das ist der
 # vor Ort gemessene Versatz von 29,95 m. Die beiden Zahlen kommen aus
 # voellig getrennten Quellen und treffen sich auf 61 Zentimeter.
-AUSSEN_WEST_E1_Q = -36.8       # Ostflanke des Suedboulevards
-AUSSEN_WEST_E0_Q = -7.456      # Ostwand des Nordgangs
+# Ebene 1: zwischen Boulevard und Halle 10.2 liegen 20 m Aussenflaeche --
+# Angabe vor Ort. Meine Rechnung hatte Halle 10.2 selbst fuer die Ostwand des
+# Suedteils gehalten (q -36,46), weil sie das naechste Gebaeude ist; der Gang
+# ist also um diese 20 m schmaler als bisher gefuehrt.
+AUSSEN_STREIFEN_E1_M = 20.0
+AUSSEN_WEST_E1_Q = -36.46 + AUSSEN_STREIFEN_E1_M
+# Ebene 0: Halle 9 bildet die Ostwand des Nordgangs selbst -- das U ist dort
+# nach Westen offen, ein Streifen dazwischen existiert nicht.
+AUSSEN_WEST_E0_Q = -7.456
 AUSSEN_E1 = {"suedM": 488.1, "breiteQ": 178.1}   # 188,10 x 178,93 gemessen
 AUSSEN_E0 = {"nordM": 179.8, "breiteQ": 213.0}   # 120,18 x 213,00 gemessen
 # In den ersten rund 30 m ab Sueden gibt es die obere Ebene noch nicht.
@@ -1031,10 +1038,22 @@ def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
         "quelle": "vor Ort gemessen (dz.nrw); verortet ueber die amtlichen Hallenkanten",
         "grenzeM": grenze,
         "versatzM": AUSSEN_VERSATZ_M,
-        "versatzGerechnetM": round(abs(AUSSEN_WEST_E0_Q - AUSSEN_WEST_E1_Q), 2),
-        "versatzHerkunft": ("Sprung der Boulevard-Ostflanke zwischen Nordgang "
-                            "(-7,46) und Suedteil (-36,8); vor Ort mit 29,95 m "
-                            "gemessen"),
+        "versatzHerkunft": ("An der Ostseite sind von Sueden aus 29,95 m von "
+                            "Halle 10 nicht mit Ebene 1 ueberbaut. Der Wert "
+                            "steht als Zahl und ist nicht aus der Platte "
+                            "herausgeschnitten -- die Platte bleibt bewusst ein "
+                            "Viereck, auf dem die Halle steht."),
+        # Beide Flaechen sind als Vierecke gefuehrt, auf denen die Halle steht
+        # -- so war es vorgegeben, und so bleibt die Bodenplatte robust. Was
+        # draussen davon uebrig bleibt, ist ein U; wohin es offen ist, steht
+        # hier, damit spaeter niemand die Platte fuer die begehbare Flaeche
+        # haelt.
+        "form": {
+            "ebene1": {"traegt": "10.2", "offenNach": "sued",
+                       "streifenZumBoulevardM": AUSSEN_STREIFEN_E1_M},
+            "ebene0": {"traegt": "9.1", "offenNach": "west",
+                       "streifenZumBoulevardM": 0.0},
+        },
         "ueberlappM": u,
         "ebene1": {
             "id": "aussen-9-10:ebene1",
@@ -1042,7 +1061,10 @@ def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
             "qVonM": round(AUSSEN_WEST_E1_Q - AUSSEN_E1["breiteQ"], 2),
             "qBisM": AUSSEN_WEST_E1_Q,
             "hoeheM": round(oben, 2),
-            "polygon": flaeche(grenze - u, AUSSEN_E1["suedM"] + u,
+            # Nach Norden **ohne** Ueberlapp: dort stoesst Ebene 0 an, und
+            # zwei Fussboeden uebereinander waeren ein Absatz von 7,45 m --
+            # die Kollision nimmt bei gleicher Lage den tieferen.
+            "polygon": flaeche(grenze, AUSSEN_E1["suedM"] + u,
                                AUSSEN_WEST_E1_Q, AUSSEN_E1["breiteQ"]),
             "herkunft": "188,10 x 178,93 m gemessen; Hoehe = Fussboden Halle 10.2",
         },
