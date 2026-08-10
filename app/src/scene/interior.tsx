@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import type { Dataset } from '../data/load';
 import type { Placement2D } from '../data/types';
 import { drehungNachX } from './geometry';
+import { FAMILIEN, familienMaterial } from './stil';
 import {
   disposeSurface,
   hallenbodenSurface,
@@ -158,6 +159,28 @@ export function Hallenhuelle({
     disposeSurface(surfaces.decke);
   }, [surfaces]);
 
+  // Ein Bodenmaterial je Halle, einmal gebaut. Im JSX erzeugt liefe bei jedem
+  // Bild ein neues Material samt Texturkopien in den Speicher und keines
+  // wieder heraus.
+  const boeden = useMemo(() => {
+    const karten = new Map<string, THREE.MeshToonMaterial>();
+    for (const flaeche of flaechen) {
+      if (flaeche.art !== 'boden') continue;
+      karten.set(flaeche.key, bodenMaterial(
+        flaeche.groesse[0] / WELT_KACHEL_M.boden,
+        flaeche.groesse[1] / WELT_KACHEL_M.boden,
+      ));
+    }
+    return karten;
+  }, [flaechen]);
+  useEffect(() => () => {
+    boeden.forEach((material) => {
+      material.map?.dispose();
+      material.normalMap?.dispose();
+      material.dispose();
+    });
+  }, [boeden]);
+
   // Eine Kachel misst so viele Meter -- die Ebenen bekommen ihre UVs aus der
   // Größe, damit Fugen und Leuchtenraster überall gleich groß bleiben.
   const kacheln = (art: 'boden' | 'decke', groesse: [number, number]) =>
@@ -179,14 +202,12 @@ export function Hallenhuelle({
           >
             <planeGeometry args={[flaeche.groesse[0], flaeche.groesse[1]]} />
             {flaeche.art === 'boden' ? (
-              <meshStandardMaterial
-                map={kachel(surface.map, ru, rv)}
-                normalMap={kachel(surface.normalMap, ru, rv)}
-                roughnessMap={kachel(surface.roughnessMap, ru, rv)}
-                roughness={0.34}
-                metalness={0.22}
-                envMapIntensity={1.5}
-              />
+              // Der Boden ist im Ego-Blick die groesste Flaeche ueberhaupt --
+              // in der leeren Halle gut die Haelfte des Bildes. Er lief lange
+              // ueber `materials.ts` und blieb damit eine weisse Ebene, waehrend
+              // ringsum alles gestuft und gezeichnet war. Jetzt traegt er M03:
+              // Plattenraster mit Fuge, Laufspuren, Krakelee.
+              <primitive object={boeden.get(flaeche.key)!} attach="material" />
             ) : (
               <meshStandardMaterial
                 map={kachel(surface.map, ru, rv)}
@@ -205,6 +226,24 @@ export function Hallenhuelle({
       })}
     </group>
   );
+}
+
+/**
+ * Das Bodenmaterial einer Halle, in Metern gekachelt.
+ *
+ * Eine eigene Fassung je Wiederholung und nicht ein geteiltes Material: die
+ * Wiederholung sitzt an der Textur, nicht am Material, und zwei Hallen
+ * verschiedener Groesse brauchen deshalb verschiedene Texturkopien. Geteilt
+ * bleibt dabei das Bild selbst -- `familienMaterial` klont nur den Verweis.
+ */
+function bodenMaterial(ru: number, rv: number): THREE.MeshToonMaterial {
+  const material = familienMaterial(FAMILIEN.M03);
+  for (const karte of [material.map, material.normalMap]) {
+    if (!karte) continue;
+    karte.repeat.set(ru, rv);
+    karte.needsUpdate = true;
+  }
+  return material;
 }
 
 /**
