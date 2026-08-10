@@ -1648,21 +1648,39 @@ class TestHalleneinpassung:
                 assert r["constraint"]["scale"] == 1.0
 
     def test_verkleinert_nicht_ins_leere(self):
-        """Der Massstab ist kein Universalheilmittel.
-
-        Halle 5 steht in einem Gebaeude aus zwei Teilen mit Hof dazwischen.
-        Wer sie verkleinert, zieht ihre Staende in den Hof -- bei 0,90 stehen
-        **mehr** draussen als bei vollem Mass. Verkleinert werden darf nur,
-        wo es die Zahl der herausragenden Staende auch senkt, und das steht
-        als `skalaAusStaenden` in der Passung.
-        """
+        """Verkleinert wird nur, wo es die Zahl der Ausreisser auch senkt."""
         for r in self._reg()["registrations"]:
             c = r["constraint"] or {}
             if c.get("skalaAusStaenden"):
                 assert c["skalaAusStaenden"] < 1.0, r["hallKey"]
-            if r["hallKey"].startswith("5."):
-                assert c.get("skalaAusStaenden") is None, \
-                    "Halle 5 wird durch Verkleinern schlechter, nicht besser"
+
+    def test_zwei_gebaeudeteile_haben_keine_naht(self):
+        """Halle 5 besteht aus zwei Teilen, die sich **beruehren**.
+
+        Sie haben keinen Hof dazwischen -- der Abstand ihrer Umringe ist
+        0,000 m. Wer beiden Teilen an dieser Kante eine Wandstaerke gibt,
+        legt eine 1 m breite Naht quer durch die Halle: Staende, die darueber
+        laufen, gelten dann als "draussen", obwohl sie mitten im Raum stehen,
+        und beim Verkleinern wandern weitere hinein. Genau das hat einmal so
+        ausgesehen, als wuerde Verkleinern Halle 5 schlechter machen.
+        """
+        from build_hall_registrations import abstand_zur_kante, innenraum
+
+        buildings = json.loads(BUILDINGS_JSON.read_text(encoding="utf-8"))
+        by_id = {b["id"]: b for b in buildings["buildings"]}
+        mehrteilig = [v["buildingIds"] for v in buildings["hallBuildings"].values()
+                      if len(v.get("buildingIds") or []) > 1]
+        assert mehrteilig, "ohne mehrteiliges Gebaeude prueft das hier nichts"
+
+        for ids in mehrteilig:
+            teile = [by_id[i]["footprint"] for i in ids if i in by_id]
+            roh = [t[:-1] if t[0] == t[-1] else t for t in teile]
+            beruehrt = min(abstand_zur_kante(tuple(p), roh[1]) for p in roh[0])
+            if beruehrt > 0.5:
+                continue  # Teile, die wirklich auseinanderstehen, duerfen das.
+            innen = [r[:-1] if r[0] == r[-1] else r for r in innenraum(teile)]
+            spalt = min(abstand_zur_kante(tuple(p), innen[1]) for p in innen[0])
+            assert spalt < 0.01, (ids, spalt)
 
     def test_staende_folgen_ihrer_halle(self):
         """Dieselbe Abbildung fuer Umriss und Staende.
@@ -1806,7 +1824,7 @@ class TestKeinStandDraussen:
         return json.loads((BUILD / "hall-registrations.json").read_text(encoding="utf-8"))
 
     def test_jeder_stand_liegt_in_seinem_gebaeude(self):
-        from build_hall_registrations import angewandt, inside, nach_innen
+        from build_hall_registrations import angewandt, innenraum, inside
 
         site = json.loads((BUILD / "site.json").read_text(encoding="utf-8"))
         buildings = json.loads(BUILDINGS_JSON.read_text(encoding="utf-8"))
@@ -1820,8 +1838,8 @@ class TestKeinStandDraussen:
         for hall in site["halls"]:
             key = hall["key"]
             ziel = targets.get(key, {}).get("buildingIds", [])
-            ringe = [nach_innen(by_id[f]["footprint"]) for f in ziel
-                     if f in by_id and by_id[f].get("footprint")]
+            ringe = innenraum([by_id[f]["footprint"] for f in ziel
+                               if f in by_id and by_id[f].get("footprint")])
             if not ringe:
                 continue
             for stand in site["stands"]:

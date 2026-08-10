@@ -133,12 +133,10 @@ einen Stand mehr hereinholt -- Halle 2 wurde so um 14 Prozent gestaucht, um
 einen einzigen Stand zu retten, und stand danach mit 20 m Luecke in einem
 Gebaeude, in das ihr Umriss vorher zu 100 Prozent gepasst hatte.
 
-Gemessen an den drei Faellen, um die es geht:
-- Halle 10: 9 Staende draussen bei vollem Mass, 5 bei 0,93 -- das lohnt.
-- Halle 2: 15 bei vollem Mass, 5 bei 0,91 -- das lohnt.
-- Halle 5: 4 bei vollem Mass und 5 bei 0,90 -- Verkleinern macht es schlechter,
-  weil das Gebaeude aus zwei Teilen mit Hof dazwischen besteht und die Staende
-  beim Schrumpfen in den Hof wandern. Halle 5 bleibt deshalb unveraendert.
+Gemessen an den drei Faellen, um die es geht: Halle 10 hat bei vollem Mass
+neun Staende draussen, Halle 2 fuenfzehn, Halle 5 drei -- und in allen drei
+Faellen sinkt die Zahl beim Verkleinern. Die Abwaegung entscheidet, wie weit
+das lohnt.
 """
 
 
@@ -155,13 +153,24 @@ der Wand. Was hineinpasst, entscheidet sich daran.
 """
 
 
-def nach_innen(polygon: list[list[float]], meter: float = WANDSTAERKE_M) -> list[list[float]]:
-    """Versetzt jede Kante eines Umrisses um `meter` nach innen.
+def nach_innen(polygon: list[list[float]], meter: float = WANDSTAERKE_M,
+               nachbarn: list[list[list[float]]] | None = None) -> list[list[float]]:
+    """Versetzt jede **Aussenkante** eines Umrisses um `meter` nach innen.
 
     Ein echter Versatz und kein Schrumpf um die Mitte: eine Wand ist ueberall
     gleich dick, waehrend ein Schrumpf die langen Seiten viel weiter
     hereinzoege als die kurzen. Jede Kante wird deshalb einzeln parallel
     verschoben und mit ihren Nachbarn neu geschnitten.
+
+    Kanten, an denen ein anderer Gebaeudeteil anschliesst, bleiben stehen.
+    Dort ist keine Aussenwand, sondern der Uebergang in denselben Raum. Halle 5
+    besteht aus zwei Teilen, die sich **beruehren** -- Abstand 0,000 m --, und
+    ein Versatz auf beiden Seiten legte eine 1 m breite Naht dazwischen, die es
+    nicht gibt. Staende, die diese Naht kreuzten, galten als "draussen", obwohl
+    sie mitten in der Halle stehen; beim Verkleinern wanderten weitere hinein,
+    und es sah aus, als wuerde Verkleinern die Halle schlechter machen. Gegen
+    den rohen Umriss gemessen ragen dort nur drei Staende heraus, und
+    Verkleinern hilft ihnen monoton.
 
     Faellt der Umriss dabei in sich zusammen, bleibt er unveraendert -- lieber
     ein Gebaeude ohne Wandstaerke als ein verdrehtes.
@@ -169,6 +178,7 @@ def nach_innen(polygon: list[list[float]], meter: float = WANDSTAERKE_M) -> list
     ecken = polygon[:-1] if polygon[0] == polygon[-1] else list(polygon)
     if len(ecken) < 3:
         return [list(p) for p in polygon]
+    ringe = [r[:-1] if r[0] == r[-1] else r for r in (nachbarn or [])]
     flaeche2 = sum(ecken[i][0] * ecken[(i + 1) % len(ecken)][1]
                    - ecken[(i + 1) % len(ecken)][0] * ecken[i][1]
                    for i in range(len(ecken)))
@@ -181,7 +191,13 @@ def nach_innen(polygon: list[list[float]], meter: float = WANDSTAERKE_M) -> list
         if laenge < 1e-9:
             return [list(p) for p in polygon]
         nx, ny = -dy / laenge * vorzeichen, dx / laenge * vorzeichen
-        geraden.append(((a[0] + nx * meter, a[1] + ny * meter), (dx / laenge, dy / laenge)))
+        # Liegt direkt **hinter** dieser Kante ein anderer Teil desselben
+        # Gebaeudes, ist es keine Aussenwand.
+        mitte = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+        dahinter = (mitte[0] - nx * 0.1, mitte[1] - ny * 0.1)
+        versatz = 0.0 if any(inside(ring, dahinter) for ring in ringe) else meter
+        geraden.append(((a[0] + nx * versatz, a[1] + ny * versatz),
+                        (dx / laenge, dy / laenge)))
     neu = []
     for i in range(len(geraden)):
         (p1, r1), (p2, r2) = geraden[i - 1], geraden[i]
@@ -268,6 +284,20 @@ def ausreisser(stands: list[dict], ringe: list[list[list[float]]],
         draussen.append({"id": stand["id"], "code": stand.get("code"),
                          "abstandM": round(ueberstand, 2)})
     return sorted(draussen, key=lambda e: -e["abstandM"])
+
+
+def innenraum(umrisse: list[list[list[float]]]) -> list[list[list[float]]]:
+    """Der verfuegbare Innenraum eines Gebaeudes aus einem oder mehreren Teilen.
+
+    Jeder Teil bekommt seine Wandstaerke, aber nur an den Kanten, die wirklich
+    nach draussen zeigen. Wo zwei Teile aneinanderstossen, bleibt der Uebergang
+    offen -- sonst entstuende dort eine doppelte Wand und damit eine Naht
+    quer durch die Halle. **Die einzige Stelle, an der der Innenraum gebildet
+    werden darf**; jeder Aufrufer, der `nach_innen` einzeln nimmt, baut sich
+    diese Naht zurueck.
+    """
+    return [nach_innen(umriss, nachbarn=[a for a in umrisse if a is not umriss])
+            for umriss in umrisse]
 
 
 EINZUG_RAND_M = 0.4
@@ -798,7 +828,7 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
         # drehung mehr oder weniger ohne Belang. Deshalb ohne Drehsuche -- das
         # spart den teuersten Teil der Passung, die es hier zweimal gaebe.
         vorpassung = containment_fit(hall["footprint"],
-                                     [nach_innen(r) for r in rohringe],
+                                     innenraum(rohringe),
                                      vordrehung=vordrehung, drehsuche=False)
         raus = ausreisser(eigene, ringe, vorpassung)
         if not raus:
@@ -832,8 +862,8 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
     je_gebaeude: dict[str, dict] = {}
     for hall in sorted(site["halls"], key=lambda item: item["key"]):
         ziel = targets.get(hall["key"], {}).get("buildingIds", [])
-        ringe = [nach_innen(building_by_id[f]["footprint"]) for f in ziel
-                 if f in building_by_id and building_by_id[f].get("footprint")]
+        ringe = innenraum([building_by_id[f]["footprint"] for f in ziel
+                           if f in building_by_id and building_by_id[f].get("footprint")])
         if not ringe:
             continue
         gefunden = containment_fit(bereinigt.get(hall["key"], hall["footprint"]), ringe,
@@ -854,8 +884,8 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
     stands_je_haus: dict[str, list] = {}
     for hall in site["halls"]:
         ziel = targets.get(hall["key"], {}).get("buildingIds", [])
-        ringe = [nach_innen(building_by_id[f]["footprint"]) for f in ziel
-                 if f in building_by_id and building_by_id[f].get("footprint")]
+        ringe = innenraum([building_by_id[f]["footprint"] for f in ziel
+                           if f in building_by_id and building_by_id[f].get("footprint")])
         if not ringe:
             continue
         innen_je_haus[hall["hall"]] = ringe
@@ -939,9 +969,10 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
         target = targets.get(hall["key"], {})
         target_ids = target.get("buildingIds", [])
         # Der verfuegbare Innenraum ist der amtliche Umriss abzueglich der Wand.
-        target_polygons = [nach_innen(building_by_id[feature_id]["footprint"])
-                           for feature_id in target_ids
-                           if feature_id in building_by_id and building_by_id[feature_id].get("footprint")]
+        target_polygons = innenraum([building_by_id[feature_id]["footprint"]
+                                     for feature_id in target_ids
+                                     if feature_id in building_by_id
+                                     and building_by_id[feature_id].get("footprint")])
         # Die Registrierung des Gebaeudes, nicht der einzelnen Ebene.
         gebaeude = je_gebaeude.get(hall["hall"])
         constraint = None
