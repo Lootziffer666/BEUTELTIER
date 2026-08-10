@@ -432,7 +432,15 @@ function schleier(material: THREE.Material, deckkraft: number) {
  * als eigene Objekte entstehen, nicht hier.
  */
 function familieFuer(teil: 'roof' | 'ground' | 'wall', kern: boolean): Familie {
-  if (!kern) return FAMILIEN.M05;          // Umgebung bleibt heller Beton
+  // Die Umgebung ist Hintergrund und bleibt gedeckt -- aber sie ist deshalb
+  // nicht **eine** Fläche. Hier stand `return FAMILIEN.M05` für alles, und
+  // M05 ist Aussenbeton: ein Plattenraster mit Fuge. Jede Wand jedes
+  // Nachbargebäudes trug damit einen Bodenbelag, senkrecht gestellt --
+  // sichtbar als Kachelmuster auf Fassaden über das halbe Bild.
+  //
+  // Boden bleibt Boden, Wand wird Wand. Dass die Umgebung ruhiger ist als der
+  // Kern, entscheidet die Deckkraft und nicht eine falsche Familie.
+  if (!kern) return teil === 'ground' ? FAMILIEN.M05 : FAMILIEN.M01;
   if (teil === 'roof') return FAMILIEN.M02;
   if (teil === 'ground') return FAMILIEN.M03;
   return FAMILIEN.M01;
@@ -1363,7 +1371,13 @@ export function SiteScene(props: SceneProps) {
         // Ohne Tone Mapping kippt alles Helle nach Weiß, und genau das ließ
         // die Szene wie ein eingefärbtes Drahtgitter aussehen.
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.05;
+        // Drinnen dunkler belichten als draussen. In der Halle sind die
+        // Lichtbaender die hellsten Flaechen im Bild; bei 1,05 fressen sie
+        // aus und ziehen den Boden gleich mit ins Weisse -- genau der Grund,
+        // warum der Hallenboden auf den Aufnahmen keine Zeichnung zeigte,
+        // obwohl er sie traegt. Weniger Belichtung ist hier kein Abdunkeln,
+        // sondern das Gegenteil: die Zeichnung kommt zurueck.
+        gl.toneMappingExposure = preset === 'ego' ? 0.86 : 1.05;
       }}
       onPointerMissed={() => props.onSelectStand(null)}
     >

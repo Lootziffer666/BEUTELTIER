@@ -141,6 +141,7 @@ export function Ausstattung({
   const bauteile = useMemo(() => {
     const decken: THREE.BufferGeometry[] = [];
     const lichter: THREE.BufferGeometry[] = [];
+    const lichtpunkte: [number, number, number][] = [];
     const stuetzen: THREE.BufferGeometry[] = [];
     const baender: THREE.BufferGeometry[] = [];
 
@@ -162,6 +163,23 @@ export function Ausstattung({
       if (traeger) decken.push(traeger);
       const band = versetzen(tafelNetz(werk.lichtbaender, false));
       if (band) lichter.push(band);
+
+      // Echte Lichtquellen unter jedem dritten Band, laengs verteilt.
+      const cos = Math.cos(-lage.winkel);
+      const sin = Math.sin(-lage.winkel);
+      werk.lichtbaender.forEach((tafel, i) => {
+        if (i % 3 !== 0) return;
+        const schritte = Math.max(1, Math.round(lage.laenge / 30));
+        for (let k = 0; k < schritte; k += 1) {
+          const x = -lage.laenge / 2 + ((k + 0.5) * lage.laenge) / schritte;
+          const z = tafel.position[2];
+          lichtpunkte.push([
+            lage.mx - centre[0] + cos * x + sin * z,
+            halle.baseY + tafel.position[1] - 0.4,
+            lage.my - centre[1] - sin * x + cos * z,
+          ]);
+        }
+      });
 
       // -- Fassade -----------------------------------------------------
       // Nur die Hauptfassade, nicht alle vier Seiten: die Rückseiten der
@@ -214,6 +232,7 @@ export function Ausstattung({
       stuetzen: zusammen(stuetzen),
       fensterband: zusammen(baender),
       zaun: zusammen(zaunGeometrien),
+      lichtpunkte,
       schilder: nummernschilder(data.site.halls as never),
     };
   }, [data, centre]);
@@ -268,6 +287,22 @@ export function Ausstattung({
       {drinnen && bauteile.licht && (
         <mesh geometry={bauteile.licht} material={materialien.licht} />
       )}
+      {/* Ein emissives Band leuchtet **für die Kamera**, beleuchtet aber
+          nichts. Ohne echte Lichtquellen darunter bleibt der Boden schwarz,
+          während über ihm helle Streifen hängen -- genau das Bild, das nicht
+          stimmte. Nur jedes dritte Band bekommt eine: dreissig Lichter je
+          Halle wären hundert Zeichenaufrufe je Bild ohne sichtbaren Gewinn,
+          und die Verteilung ist ohnehin gleichmässig genug. */}
+      {drinnen && bauteile.lichtpunkte.map((punkt, i) => (
+        <pointLight
+          key={`pool-${i}`}
+          position={punkt}
+          color="#ffe9c4"
+          intensity={26}
+          distance={26}
+          decay={1.7}
+        />
+      ))}
       {bauteile.stuetzen && (
         <mesh geometry={bauteile.stuetzen} material={materialien.stuetzen}
               castShadow receiveShadow />
