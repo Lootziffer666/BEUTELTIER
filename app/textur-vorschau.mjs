@@ -102,5 +102,43 @@ for (const [id, { bild }] of Object.entries(zeichnungsRaster())) {
   writeFileSync(join(ZIEL, `${id}-gekachelt.png`),
                 png(gekachelt(bild.daten, KACHEL_PX), KACHEL_PX * 2, KACHEL_PX * 2));
 }
-console.log(`Vorschau in ${ZIEL}/`);
-console.log("Vorschau fertig"); await server.close();
+/**
+ * Alle Familien auf einem Blatt.
+ *
+ * Einzelbilder beantworten "sieht diese Fläche gut aus". Das Blatt beantwortet
+ * die wichtigere Frage: gehören sie zusammen? Zehn für sich gelungene
+ * Materialien können nebeneinander trotzdem auseinanderfallen -- an der
+ * Sättigung, an der Körnung, an der Strichstärke.
+ */
+function blatt(eintraege, kante, spalten) {
+  const zeilen = Math.ceil(eintraege.length / spalten);
+  const feld = Math.floor(kante / 2);
+  const breite = spalten * feld;
+  const hoehe = zeilen * feld;
+  const ziel = new Uint8ClampedArray(breite * hoehe * 4);
+  eintraege.forEach(({ daten }, i) => {
+    const ox = (i % spalten) * feld;
+    const oy = Math.floor(i / spalten) * feld;
+    for (let y = 0; y < feld; y += 1) {
+      for (let x = 0; x < feld; x += 1) {
+        // Halbiert durch Abtastung jedes zweiten Punktes -- fürs Blatt genügt das.
+        const q = ((y * 2) * kante + x * 2) * 4;
+        const z = ((oy + y) * breite + ox + x) * 4;
+        ziel[z] = daten[q];
+        ziel[z + 1] = daten[q + 1];
+        ziel[z + 2] = daten[q + 2];
+        ziel[z + 3] = 255;
+      }
+    }
+  });
+  return { ziel, breite, hoehe };
+}
+
+const alle = Object.entries(zeichnungsRaster())
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([id, { bild }]) => ({ id, daten: bild.daten }));
+const { ziel, breite, hoehe } = blatt(alle, KACHEL_PX, 5);
+writeFileSync(join(ZIEL, 'alle.png'), png(ziel, breite, hoehe));
+
+console.log(`Vorschau in ${ZIEL}/ (${alle.map((e) => e.id).join(', ')})`);
+await server.close();
