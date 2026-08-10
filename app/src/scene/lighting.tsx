@@ -72,10 +72,22 @@ const HALL_FRAGMENT = /* glsl */ `
   void main() {
     float height = vDirection.y;
 
-    // Decke: dunkles Trapezblech, in das die Leuchtbaender eingelassen sind.
-    // Der Streifenanteil bestimmt, wie hell der Boden zurueckwirft.
-    float bands = smoothstep(0.35, 0.95, abs(sin(vDirection.x * 9.0)));
-    vec3 ceiling = mix(deck, lamp, bands);
+    // Decke: dunkles Blech mit einem gleichmaessigen Lichtanteil.
+    //
+    // Hier stand ein Streifenmuster aus sin(vDirection.x * 9.0), das der
+    // Boden als breite Baender zurueckwarf. Diese Baender lagen in der
+    // Welt-X-Achse fest und hatten mit den Leuchtenreihen der Halle, in der
+    // man steht, nichts zu tun -- eine Halle steht schraeg im Gelaende, jede
+    // andere anders. Auf dem Boden kreuzten sich damit zwei Spiegelungen:
+    // die echte aus Lichtspiegel und diese erfundene.
+    //
+    // Die Umgebung liefert jetzt nur noch die Grundhelligkeit von oben. Die
+    // Zeichnung der Baender im Boden kommt von den Baendern selbst.
+    // Nur ein schwacher Anteil: die Umgebung liefert Grundhelligkeit, nicht
+    // das Bild der Leuchten. Bei einem hohen Anteil spiegelt der Boden
+    // ueberall eine gleichmaessig helle Decke und wird flaechig weiss -- die
+    // Baender aus Lichtspiegel verschwinden dann in ihrem eigenen Hof.
+    vec3 ceiling = mix(deck, lamp, 0.16);
 
     vec3 colour = wall;
     colour = mix(colour, ceiling, smoothstep(0.18, 0.62, height));

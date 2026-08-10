@@ -382,16 +382,20 @@ export function ceilingSurface(): Surface {
 export const WELT_KACHEL_M = { boden: 16, decke: 12, wand: 30 };
 
 /**
- * Hallenboden von innen: geschliffener Estrich.
+ * Hallenboden von innen: dunkler Plattenbelag.
  *
- * Auf den Referenzfotos ist der Boden kein Belag mit Fugen, sondern eine
- * durchgehende graue Fläche mit den Schleifspuren der Maschine — und er
- * spiegelt die Decke so deutlich, dass die Leuchtenreihen ein zweites Mal
- * darin stehen. Genau das trägt den ganzen Raumeindruck: ohne Spiegelung
- * wirkt jede Halle wie ein Foto bei bedecktem Himmel.
+ * Auf dem Referenzbild ist der Boden **dunkel** -- deutlich dunkler als die
+ * Wände, fast so dunkel wie die Decke -- und in grosse Platten geteilt, deren
+ * Fugen als klares Raster durchs Bild laufen. Genau dieser Kontrast trägt die
+ * Aufnahme: helle Bänder auf dunklem Grund.
+ *
+ * Vorher stand hier ein heller Estrich (#74777c) ohne Plattenteilung. Im Bild
+ * wurde daraus eine fast weisse Fläche, auf der die Reflexe der Leuchten
+ * nicht mehr auffielen -- hell auf hell. Der Belag ist jetzt dunkel, und die
+ * Fugen liegen im Plattenmass statt nur als zwei Dehnfugen je Kachel.
  */
 export function hallenbodenSurface(): Surface {
-  const [colour, ctx] = layer('#74777c');
+  const [colour, ctx] = layer('#3f4247');
   // War bisher unbemalt: `toNormalMap` las eine reine Fläche und lieferte
   // damit überall dieselbe, nach oben zeigende Normale -- ein Boden ohne
   // jede Neigung, so glatt wie Glas, unabhängig davon, was Farbe und Rauheit
@@ -406,7 +410,7 @@ export function hallenbodenSurface(): Surface {
     const y = Math.random() * SIZE;
     const strength = 0.03 + Math.random() * 0.05;
     const breite = 6 + Math.random() * 40;
-    ctx.strokeStyle = `rgba(${Math.random() < 0.5 ? 120 : 168}, 124, 130, ${strength})`;
+    ctx.strokeStyle = `rgba(${Math.random() < 0.5 ? 96 : 132}, 100, 108, ${strength})`;
     ctx.lineWidth = breite;
     ctx.beginPath();
     ctx.moveTo(-20, y);
@@ -436,7 +440,7 @@ export function hallenbodenSurface(): Surface {
     const radius = 30 + Math.random() * 130;
     const dreh = Math.random() * Math.PI;
     const laenge = radius * (0.3 + Math.random() * 0.5);
-    ctx.fillStyle = `rgba(150, 154, 160, ${0.03 + Math.random() * 0.05})`;
+    ctx.fillStyle = `rgba(110, 114, 122, ${0.03 + Math.random() * 0.05})`;
     ctx.beginPath();
     ctx.ellipse(x, y, radius, laenge, dreh, 0, Math.PI * 2);
     ctx.fill();
@@ -448,26 +452,29 @@ export function hallenbodenSurface(): Surface {
     hctx.fill();
   }
 
-  // Dehnfugen alle acht Meter -- die einzige durchgehende Linie des Estrichs,
-  // und die einzige mit einer echten Kante statt eines Schleiers.
-  const joint = SIZE / 2;
-  ctx.strokeStyle = 'rgba(70, 72, 78, 0.55)';
+  // Plattenfugen. Die Kachel deckt WELT_KACHEL_M.boden = 16 m ab, geteilt in
+  // acht Platten -- also rund zwei Meter je Platte, wie im Referenzbild, wo
+  // das Fugenraster über den ganzen Boden läuft und den Massstab angibt.
+  // Vorher lagen hier nur zwei Dehnfugen je Kachel: acht Meter Abstand, viel
+  // zu grob, um als Belag zu lesen.
+  const platte = SIZE / 8;
+  ctx.strokeStyle = 'rgba(26, 28, 32, 0.85)';
   ctx.lineWidth = 3;
-  hctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+  hctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
   hctx.lineWidth = 3;
-  for (let step = 0; step <= SIZE; step += joint) {
-    ctx.beginPath();
-    ctx.moveTo(step, 0);
-    ctx.lineTo(step, SIZE);
-    ctx.moveTo(0, step);
-    ctx.lineTo(SIZE, step);
-    ctx.stroke();
-    hctx.beginPath();
-    hctx.moveTo(step, 0);
-    hctx.lineTo(step, SIZE);
-    hctx.moveTo(0, step);
-    hctx.lineTo(SIZE, step);
-    hctx.stroke();
+  // Die Fuge liegt tiefer und ist rauher als die Platte -- sonst spiegelt sie
+  // mit und die Teilung verschwindet in jedem Reflex.
+  rctx.strokeStyle = 'rgba(220, 220, 220, 0.8)';
+  rctx.lineWidth = 3;
+  for (let step = 0; step <= SIZE; step += platte) {
+    for (const context of [ctx, hctx, rctx]) {
+      context.beginPath();
+      context.moveTo(step, 0);
+      context.lineTo(step, SIZE);
+      context.moveTo(0, step);
+      context.lineTo(SIZE, step);
+      context.stroke();
+    }
   }
 
   speckle(ctx, 0.025);

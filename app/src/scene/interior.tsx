@@ -39,30 +39,32 @@ const DROP_M = 0.3;
 const STRIP_WIDTH_M = 0.42;
 const STRIP_THICKNESS_M = 0.12;
 
-/**
- * Wo die Stützen einer Halle stehen -- zwei Reihen an den Längswänden, im
- * Rastermaß, das auch die Leuchtenreihen und die Traversen bestimmt.
- *
- * Ohne sie war die Halle ein Raum ohne Tragwerk: Boden, Decke, Wände, aber
- * nichts dazwischen. Genau das tragen Stützen auf jedem Referenzfoto als
- * erstes zur Lesbarkeit bei -- sie geben dem Auge den Rhythmus, an dem es
- * Tiefe abliest.
- */
-const SAEULEN_RAND_M = 2.4;
-const SAEULEN_ABSTAND_M = 10;
 const SAEULEN_BREITE_M = 0.7;
 const SAEULEN_TIEFE_M = 0.9;
+
 /**
- * Breite eines Feldes: der Abstand zweier Stützenreihen quer zur Halle.
+ * Das Stützenraster der Messehallen: 12,00 m in beiden Richtungen.
  *
- * Nicht zwei Reihen für die ganze Halle, sondern ein durchgehendes Raster
- * über die volle Breite -- so steht es auf dem Referenzfoto, und nur so
- * ergibt der Satz "zwischen den Pfeilern je drei Lampenbahnen" überhaupt
- * einen Ort. Eine 82 m weite Halle trägt damit vier Felder, nicht eines.
+ * Ein festes Baumaß, keine aus der Hallengröße abgeleitete Zahl. Die
+ * vorherige Fassung teilte die Halle in „Felder" und verschob den Abstand je
+ * nach Breite -- damit standen die Stützen zwar regelmäßig, aber in einem
+ * Maß, das es am Bau nicht gibt, und in jeder Halle in einem anderen.
+ *
+ * Zur Probe, dass die Zahl stimmt: Halle 10.2 misst 174,5 m × 145,5 m und
+ * trägt damit 15 Achsen längs und 13 quer, zusammen 195 Rasterpunkte. Genau
+ * das steht in `interior.test.ts`.
  */
-const FELD_BREITE_M = 18;
-/** Wie viele Leuchtenbahnen in einem Feld liegen. */
+export const RASTER_M = 12;
+/** Wie viele Leuchtenbahnen zwischen zwei Stützenachsen liegen. */
 const BAHNEN_JE_FELD = 3;
+/**
+ * Wie weit um eine feste Einbaute herum keine Stütze steht.
+ *
+ * Treppenhäuser, Rolltreppen und Atrien unterbrechen das Raster -- dort steht
+ * keine Stütze, weil dort der Durchbruch ist. Der Radius ist grosszügig: die
+ * Vertikalknoten sind eingemessene Punkte, nicht die Umrisse der Einbaute.
+ */
+const AUSSPARUNG_RADIUS_M = 9;
 
 interface Lage {
   mx: number;
@@ -73,42 +75,53 @@ interface Lage {
 }
 
 /**
- * Das Stützenraster einer Halle: Reihen quer im Feldmaß, Stützen längs im
- * Stützenabstand.
+ * Die Achsabstände eines Rasters über eine Strecke, mittig eingepasst.
+ *
+ * `floor(laenge / 12) + 1` Achsen: so viele volle 12-m-Felder, wie die Halle
+ * hergibt, plus die Achse am Anfang. Was übrig bleibt, verteilt sich zu
+ * gleichen Teilen auf beide Ränder -- das Raster sitzt mittig, nicht an einer
+ * Wand ausgerichtet.
+ */
+export function rasterAchsen(laenge: number): number[] {
+  const felder = Math.max(1, Math.floor(laenge / RASTER_M));
+  const spanne = felder * RASTER_M;
+  const achsen: number[] = [];
+  for (let i = 0; i <= felder; i += 1) achsen.push(i * RASTER_M - spanne / 2);
+  return achsen;
+}
+
+/**
+ * Das Stützenraster einer Halle, mit den Aussparungen für feste Einbauten.
  *
  * Geteilt zwischen `Hallenstuetzen` und `Deckenleuchten` -- die Bahnen liegen
- * **in** den Feldern zwischen den Reihen, und beide müssen deshalb von
- * derselben Rechnung ausgehen. Wer das Raster an einer Stelle ändert und an
- * der anderen nicht, bekommt Leuchten, die in Stützen stehen.
+ * **zwischen** den Querachsen, und beide müssen deshalb von derselben
+ * Rechnung ausgehen. Wer das Raster an einer Stelle ändert und an der anderen
+ * nicht, bekommt Leuchten, die in Stützen stehen.
+ *
+ * `aussparungen` sind Weltpunkte (Treppen, Rolltreppen, Aufzüge); Rasterpunkte
+ * in ihrer Nähe fallen weg.
  */
-function saeulenraster(lage: Lage) {
+function saeulenraster(lage: Lage, aussparungen: { x: number; y: number }[] = []) {
   const ux = Math.cos(lage.winkel);
   const uy = Math.sin(lage.winkel);
   const vx = -uy;
   const vy = ux;
 
-  // Die Reihen quer: symmetrisch um die Mittelachse, im Feldmaß, so weit
-  // nach aussen, wie die Halle es bis auf den Randabstand hergibt.
-  const nutzbar = Math.max(FELD_BREITE_M, lage.breite - 2 * SAEULEN_RAND_M);
-  const felder = Math.max(1, Math.round(nutzbar / FELD_BREITE_M));
-  const reihenAbstand = nutzbar / felder;
-  const reihenQuer: number[] = [];
-  for (let r = 0; r <= felder; r += 1) {
-    reihenQuer.push((r / felder - 0.5) * nutzbar);
-  }
+  const laengsAchsen = rasterAchsen(lage.laenge);
+  const querAchsen = rasterAchsen(lage.breite);
 
-  const anzahl = Math.max(2, Math.round(lage.laenge / SAEULEN_ABSTAND_M));
   const positionen: { x: number; y: number }[] = [];
-  for (let i = 0; i <= anzahl; i += 1) {
-    const laengs = (i / anzahl - 0.5) * lage.laenge * 0.94;
-    for (const quer of reihenQuer) {
-      positionen.push({
-        x: lage.mx + ux * laengs + vx * quer,
-        y: lage.my + uy * laengs + vy * quer,
-      });
+  for (const laengs of laengsAchsen) {
+    for (const quer of querAchsen) {
+      const x = lage.mx + ux * laengs + vx * quer;
+      const y = lage.my + uy * laengs + vy * quer;
+      const verdeckt = aussparungen.some(
+        (a) => Math.hypot(a.x - x, a.y - y) < AUSSPARUNG_RADIUS_M,
+      );
+      if (!verdeckt) positionen.push({ x, y });
     }
   }
-  return { positionen, reihenQuer, reihenAbstand, ux, uy, vx, vy };
+  return { positionen, laengsAchsen, querAchsen, reihenAbstand: RASTER_M, ux, uy, vx, vy };
 }
 
 /**
@@ -287,7 +300,11 @@ function hallenMaterial(
       roughnessMap: kachel(surface.roughnessMap, ru, rv),
       roughness: 0.34,
       metalness: 0.22,
-      envMapIntensity: 1.5,
+      // Zurückgenommen von 1,5: die Umgebung ist eine gleichmäßig helle
+      // Kugel, kein Bild der Leuchten. Bei voller Stärke hob sie den ganzen
+      // Boden auf dieselbe Helligkeit an -- der Belag war dann trotz dunkler
+      // Grundfarbe fast weiss, und die Bahnen darauf gingen unter.
+      envMapIntensity: 0.5,
     });
     hallenMaterialCache.set(schluessel, material);
     return material;
@@ -359,6 +376,23 @@ export function Hallenstuetzen({
   centre: [number, number];
   visible: boolean;
 }) {
+  /**
+   * Wo feste Einbauten das Raster unterbrechen.
+   *
+   * Treppenhäuser, Rolltreppen und Aufzüge stehen im Wegenetz als
+   * Vertikalknoten mit eingemessener Lage -- dieselbe Quelle, aus der
+   * `Vertikalverbindungen` die Läufe baut. Eine eigene Liste dafür wäre eine
+   * zweite Wahrheit, die beim ersten Datenlauf auseinanderfiele.
+   */
+  const aussparungen = useMemo(() => {
+    const out: { x: number; y: number }[] = [];
+    for (const node of data.graph.nodes.values()) {
+      if (node.kind !== 'vertical') continue;
+      out.push({ x: node.x, y: node.y });
+    }
+    return out;
+  }, [data]);
+
   const saeulen = useMemo(() => {
     const out: THREE.Matrix4[] = [];
     const dummy = new THREE.Object3D();
@@ -368,7 +402,7 @@ export function Hallenstuetzen({
       const lage = hallenlage(hall.footprint);
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
       const hoehe = hall.height?.clearHeightM ?? 8;
-      const { positionen } = saeulenraster(lage);
+      const { positionen } = saeulenraster(lage, aussparungen);
 
       for (const p of positionen) {
         dummy.position.set(p.x - centre[0], hall.baseY + hoehe / 2, p.y - centre[1]);
@@ -385,7 +419,7 @@ export function Hallenstuetzen({
       }
     }
     return out;
-  }, [data, centre]);
+  }, [data, centre, aussparungen]);
 
   /**
    * Die Stütze liest sich als Körper, nicht als Silhouette.
@@ -568,7 +602,11 @@ export function Hallenlicht({
             castShadow
             position={schatten.position}
             target={ziel}
-            intensity={2.4}
+            // Schwach: dieses Licht ist für den Schattenwurf da, nicht für die
+            // Helligkeit. Bei 2,4 flutete es den Boden flächig und hob ihn
+            // trotz dunkler Grundfarbe auf Weiss -- eine Halle hat aber keine
+            // Sonne, sie hat Leuchtenreihen.
+            intensity={0.55}
             color="#fff4e2"
             shadow-mapSize={[2048, 2048]}
             shadow-camera-left={-schatten.spanne}
@@ -588,7 +626,7 @@ export function Hallenlicht({
           key={index}
           position={position}
           color="#fff3dc"
-          intensity={70}
+          intensity={38}
           // Keine Reichweitengrenze: sie zog einen sichtbaren Kreisrand über
           // den Boden. Der Abfall kommt aus dem Abstandsquadrat, wie beim
           // echten Licht auch.
@@ -605,18 +643,17 @@ export function Hallenlicht({
  * dem Bodenschein darunter (`Lichtspiegel`), damit beide exakt zueinander
  * stehen und nicht nur ungefähr.
  *
- * Drei Bahnen **je Feld**, nicht drei für die ganze Halle: die Felder stehen
- * zwischen den Stützenreihen aus `saeulenraster()`, und eine Halle hat
- * mehrere davon. Innerhalb eines Feldes sitzen die Bahnen auf den Vierteln
- * -- so bleibt zu beiden Stützenreihen derselbe Abstand wie zwischen den
- * Bahnen selbst.
+ * Drei Bahnen zwischen je zwei Stützenachsen, mit **identischen Abständen**:
+ * bei 12 m Achsmaß liegen sie auf 3, 6 und 9 m. Damit ist der Abstand Stütze
+ * zu Bahn derselbe wie Bahn zu Bahn -- deshalb `b / (BAHNEN + 1)` und nicht
+ * eine Aufteilung, die die Ränder anders behandelt als die Mitte.
  */
 function leuchtenreihen(lage: Lage) {
-  const { reihenQuer, reihenAbstand, ux, uy, vx, vy } = saeulenraster(lage);
+  const { querAchsen, reihenAbstand, ux, uy, vx, vy } = saeulenraster(lage);
   const laenge = lage.laenge * 0.94;
   const bahnen: { quer: number; laenge: number; ux: number; uy: number; vx: number; vy: number }[] = [];
-  for (let feld = 0; feld < reihenQuer.length - 1; feld += 1) {
-    const von = reihenQuer[feld];
+  for (let feld = 0; feld < querAchsen.length - 1; feld += 1) {
+    const von = querAchsen[feld];
     for (let b = 1; b <= BAHNEN_JE_FELD; b += 1) {
       bahnen.push({
         quer: von + (b / (BAHNEN_JE_FELD + 1)) * reihenAbstand,
@@ -801,7 +838,20 @@ export function Lichtspiegel({
         out.push({
           key: `${hall.key}-schein${index}`,
           position: [x - centre[0], hall.baseY + 0.03, y - centre[1]],
-          drehung: -Math.atan2(reihe.uy, reihe.ux),
+          // `+winkel`, nicht `-winkel`.
+          //
+          // Eine Ebene mit Euler [-90°, 0, θ] richtet ihre Längsachse nach
+          // (cos θ, 0, -sin θ) aus -- dieselbe Richtung, die ein Quader mit
+          // Ry(θ) bekommt. Mit dem Minuszeichen lag der Schein an der
+          // Hallenachse gespiegelt; bei einer Halle um 45° stand er damit
+          // quer zu dem Band, das er zurückwerfen soll.
+          //
+          // (Die grossen Ebenen in `Hallenhuelle` benutzen weiterhin
+          // `-winkel`. Dort fällt es nicht auf: ein mittiges Rechteck ist zu
+          // seinen eigenen Achsen symmetrisch und deckt gespiegelt dieselbe
+          // Fläche. Hier liegen die Streifen aussermittig -- und dann zählt
+          // das Vorzeichen.)
+          drehung: Math.atan2(reihe.uy, reihe.ux),
           laenge: reihe.laenge,
         });
       });
