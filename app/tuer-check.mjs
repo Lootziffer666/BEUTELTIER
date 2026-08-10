@@ -9,7 +9,10 @@
  * Die Wand steht auf der Mitte des Suedteils, die Tueren dagegen dort, wo die
  * Treppe ankommt -- auf der Gangachse. Genau das wird hier nachgesehen.
  *
- *   npm run dev &
+ * Wie der Gangpruefer laeuft er gegen die Vorschau und schaltet das Setzen der
+ * Kamera mit `?setzen` frei (siehe `src/scene/fernsteuerung.ts`).
+ *
+ *   npm run build && npm run preview &
  *   node tuer-check.mjs
  */
 import { chromium } from 'playwright';
@@ -26,7 +29,11 @@ const ort = (s, q) => [
   x0 + laengs[0] * s + quer[0] * q,
   y0 + laengs[1] * s + quer[1] * q,
 ];
-const blickrichtung = (vor) => Math.atan2(-laengs[0] * vor, laengs[1] * vor);
+// Vorwaerts ist in der Szene (-sin yaw, -cos yaw) in Gelaendemetern (siehe
+// SiteScene). Soll das `laengs * vor` sein, gehoert vor beide Anteile ein
+// Minus. Ohne das zweite stand der Blick an der x-Achse gespiegelt -- die
+// Aufnahmen zeigten Wand und Decke statt der Front.
+const blickrichtung = (vor) => Math.atan2(-laengs[0] * vor, -laengs[1] * vor);
 
 const browser = await chromium.launch({
   executablePath: CHROME,
@@ -38,8 +45,9 @@ const fehler = [];
 page.on('console', (m) => { if (m.type() === 'error') fehler.push(m.text()); });
 page.on('pageerror', (e) => fehler.push(`pageerror: ${e.message}`));
 
-await page.goto(process.env.BEUTELTIER_URL ?? 'http://localhost:5173/',
-  { waitUntil: 'networkidle' });
+const ziel = new URL(process.env.BEUTELTIER_URL ?? 'http://localhost:4173/');
+ziel.searchParams.set('setzen', '1');
+await page.goto(ziel.href, { waitUntil: 'networkidle' });
 await page.waitForTimeout(3500);
 await page.getByRole('button', { name: 'Begehen' }).click();
 await page.waitForTimeout(1500);

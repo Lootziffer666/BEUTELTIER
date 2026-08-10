@@ -33,6 +33,7 @@ import {
   WELT_KACHEL_M,
   type Surface,
 } from './materials';
+import { fernsteuerungErlaubt } from './fernsteuerung';
 import { Beleuchtung } from './lighting';
 import { Deckenleuchten, Hallenhuelle, Hallenlicht } from './interior';
 import { Boulevard } from './boulevard';
@@ -117,6 +118,13 @@ const STAND_HEIGHT_M = 2.6;
 const MODEL_URL = `${import.meta.env.BASE_URL}models/messe.glb`;
 /** Das entzerrte Senkrechtluftbild, gebaut von tools/build_ortho.py. */
 const ORTHO_URL = `${import.meta.env.BASE_URL}models/gelaende.jpg`;
+/**
+ * Darf `__SETZEN` gestellt werden? Einmal beim Laden entschieden -- die Adresse
+ * ändert sich innerhalb einer Sitzung nicht (siehe `fernsteuerung.ts`).
+ */
+const SETZEN_ERLAUBT =
+  typeof window !== 'undefined' && fernsteuerungErlaubt(window.location.search);
+
 /** Wie durchsichtig die Gebäudehülle in der Übersicht ist. */
 const SHELL_OPACITY = 0.16;
 /** In der Ego-Perspektive ist die Wand eine Wand. */
@@ -1195,6 +1203,23 @@ function WalkControls({
     // binden. Aktuelle Werte kommen aus den Refs oben.
   }, [active, gl, data]);
 
+  // Die Kamera von aussen setzen -- nur, wenn die Adresse es erlaubt. Der
+  // Bilderpruefer (`gang-check.mjs`, `tuer-check.mjs`) stellt sie in Sekunden
+  // dorthin, wofuer Laufen unter dem Software-Renderer Minuten braucht.
+  // Einmal gestellt statt in jedem Bild neu: die Refs darin sind stabil.
+  useEffect(() => {
+    if (!active || !SETZEN_ERLAUBT) return;
+    const global = globalThis as { __SETZEN?: unknown };
+    global.__SETZEN = (px: number, py: number, pz: number, yaw: number) => {
+      position.current = { x: px, y: py, z: pz };
+      look.current.yaw = yaw;
+      look.current.pitch = 0;
+    };
+    return () => {
+      delete global.__SETZEN;
+    };
+  }, [active]);
+
   useFrame((state, delta) => {
     if (!active) return;
 
@@ -1243,18 +1268,6 @@ function WalkControls({
         pitch: look.current.pitch,
         hallKey: data.walk.footingAt(x, y, z).hallKey,
       });
-    }
-    // Nur im Entwicklungsbetrieb: die Kamera von aussen setzen. Der
-    // Bilderpruefer (`gang-check.mjs`) braucht in Sekunden, wofuer Laufen
-    // unter dem Software-Renderer Minuten braucht. `import.meta.env.DEV` ist
-    // im gebauten Stand false, der ausgelieferte Code hat den Haken nicht.
-    if (import.meta.env.DEV) {
-      (globalThis as unknown as { __SETZEN?: unknown }).__SETZEN =
-        (px: number, py: number, pz: number, yaw: number) => {
-          position.current = { x: px, y: py, z: pz };
-          look.current.yaw = yaw;
-          look.current.pitch = 0;
-        };
     }
     camera.position.set(x - centre[0], z + EYE_HEIGHT_M, y - centre[1]);
     camera.rotation.set(0, 0, 0);
