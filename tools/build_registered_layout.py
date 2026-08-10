@@ -60,10 +60,31 @@ def geschrumpft(polygon: list[list[float]], faktor: float = STAND_SCHRUMPF) -> l
     return [[mx + (p[0] - mx) * faktor, my + (p[1] - my) * faktor] for p in polygon]
 
 
+def hereingezogen(stand: dict, korrekturen: dict) -> list[list[float]]:
+    """Wendet die Einzugskorrektur eines Standes an, falls es eine gibt.
+
+    Erst verkleinern um die eigene Mitte, dann verschieben -- genau die
+    Reihenfolge, in der `einzug()` in `build_hall_registrations` sie gefunden
+    hat, und im selben Planbild. Wer hier die Reihenfolge dreht, verschiebt um
+    einen falschen Betrag.
+
+    Es gibt sie, weil kein Stand ausserhalb seiner Halle stehen soll: beim
+    Laufen ist eine Flaeche, die durch die Aussenwand ragt, ein groesserer
+    Fehler als eine, die ein paar Meter kleiner ist als in Wirklichkeit.
+    """
+    korrektur = korrekturen.get(stand["id"])
+    if not korrektur:
+        return stand["polygon"]
+    dx, dy = korrektur["translation"]
+    verkleinert = geschrumpft(stand["polygon"], korrektur["scale"])
+    return [[p[0] + dx, p[1] + dy] for p in verkleinert]
+
+
 def build() -> dict:
     site = json.loads(SITE.read_text())
     graph = json.loads(GRAPH.read_text())
     registration_product = json.loads(REGISTRATIONS.read_text())
+    korrekturen = registration_product.get("standKorrekturen", {})
     registrations = {item["hallKey"]: item for item in registration_product["registrations"]}
     grids = {grid["key"]: grid for grid in graph["grids"]}
 
@@ -101,7 +122,9 @@ def build() -> dict:
             "stands": [{
                 "id": stand["id"],
                 "polygon": [rounded(transform_point(tuple(point), transform))
-                            for point in geschrumpft(stand["polygon"])],
+                            for point in geschrumpft(hereingezogen(stand, korrekturen))],
+                **({"korrigiert": korrekturen[stand["id"]]["shiftM"]}
+                   if stand["id"] in korrekturen else {}),
             } for stand in hall_stands],
             "walkGrid": transformed_grid,
             "facilities": [{

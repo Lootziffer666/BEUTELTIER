@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -18,6 +19,9 @@ SITE = ROOT / "data" / "build" / "site.json"
 BUILDINGS = ROOT / "data" / "build" / "buildings.json"
 WORLD_ORIGIN = ROOT / "data" / "build" / "world-origin.json"
 OUTPUT = ROOT / "data" / "build" / "hall-registrations.json"
+
+sys.path.insert(0, str(ROOT / "tools"))
+from beuteltier import building  # noqa: E402
 
 
 def inside(polygon: list[list[float]], point: tuple[float, float]) -> bool:
@@ -93,17 +97,48 @@ wer mehr abweicht, hat einen Grund, und der gehoert benannt.
 """
 
 SKALA_GRENZE = 0.95
-"""Wie weit die Registrierung verkleinern darf.
+"""Wie weit die Passung am **Hallenumriss** verkleinern darf.
 
-Fuenf Prozent. Darueber ist es kein gelungener Fit mehr, sondern ein
-Datenkonflikt -- und der gehoert gemeldet, nicht weggerechnet. Eine Halle, die
-zehn Prozent schrumpfen muss, um in ihr Gebaeude zu passen, sagt etwas ueber
-die Daten und nicht ueber ihre Lage.
+Fuenf Prozent. Was darueber hinaus noetig waere, ist kein Umrissproblem mehr,
+sondern eines einzelner Flaechen -- und die werden einzeln behandelt, nicht
+durch Zusammendruecken der ganzen Halle.
 
 Ausdruecklich getrennt davon: die drei Prozent, um die **Staende** kleiner
 gezeichnet werden. Das ist eine Darstellungsentscheidung fuer die Lesbarkeit
-der Gaenge und passiert nach der Registrierung. Die Registrierung selbst darf
-Datenprobleme nicht durch Skalieren verstecken.
+der Gaenge und passiert nach der Registrierung.
+"""
+
+SKALA_BODEN = 0.90
+"""Wie klein ein **Gebaeude** insgesamt werden darf, alles zusammengerechnet.
+
+Warum ueberhaupt geschrumpft wird: BEUTELTIER ist eine gamifizierte Messe-App.
+Auf die Gesamtbreite einer Halle faellt ein Stand, der zehn Prozent kleiner
+ist, nicht auf; ein Stand, der durch die Aussenwand ragt, faellt sofort auf.
+Der Massstab ist deshalb ein zulaessiges Mittel und keine Notluege -- solange
+er benannt, begrenzt und gemessen ist.
+
+Warum nicht mehr als zehn Prozent: Halle 10 braeuchte 0,70, um allein durch
+Verkleinern alles hereinzubekommen. Das waeren 56 m Luecke auf 187 m
+Gebaeudelaenge -- die Halle stuende sichtbar nicht mehr in ihrem Haus, und
+Raumwahrheit geht vor. Was nach dem Verkleinern noch heraussteht, wird
+einzeln hereingezogen (`einzug`); dafuer braucht es keinen Extremmassstab.
+"""
+
+EINZUG_STRAFE = 40.0
+"""Was ein Prozent Verkleinerung gegen einen hereingezogenen Stand wiegt.
+
+Vierzig heisst: ein Prozent kleiner ist 0,4 Staende wert. Ohne diese Abwaegung
+nimmt die Suche immer den kleinsten erlaubten Massstab, sobald er auch nur
+einen Stand mehr hereinholt -- Halle 2 wurde so um 14 Prozent gestaucht, um
+einen einzigen Stand zu retten, und stand danach mit 20 m Luecke in einem
+Gebaeude, in das ihr Umriss vorher zu 100 Prozent gepasst hatte.
+
+Gemessen an den drei Faellen, um die es geht:
+- Halle 10: 9 Staende draussen bei vollem Mass, 5 bei 0,93 -- das lohnt.
+- Halle 2: 15 bei vollem Mass, 5 bei 0,91 -- das lohnt.
+- Halle 5: 4 bei vollem Mass und 5 bei 0,90 -- Verkleinern macht es schlechter,
+  weil das Gebaeude aus zwei Teilen mit Hof dazwischen besteht und die Staende
+  beim Schrumpfen in den Hof wandern. Halle 5 bleibt deshalb unveraendert.
 """
 
 
@@ -164,6 +199,160 @@ def nach_innen(polygon: list[list[float]], meter: float = WANDSTAERKE_M) -> list
     if not (0.5 * aussen < innen < aussen):
         return [list(p) for p in polygon]
     return neu
+
+
+def angewandt(punkte: list[list[float]], passung: dict) -> list[tuple[float, float]]:
+    """Legt eine gefundene Passung auf Punkte -- Drehung und Massstab um den
+    Drehpunkt der Passung, danach die Verschiebung."""
+    bogen = math.radians(passung["rotationDeg"])
+    cos = math.cos(bogen) * passung["scale"]
+    sin = math.sin(bogen) * passung["scale"]
+    cx, cy = passung["pivot"]
+    dx, dy = passung["translation"]
+    gedreht = []
+    for x, y in punkte:
+        rx, ry = x - cx, y - cy
+        gedreht.append((cx + cos * rx - sin * ry + dx, cy + sin * rx + cos * ry + dy))
+    return gedreht
+
+
+AUSREISSER_M = 3.0
+"""Ab wie vielen Metern Ueberstand ein Stand nicht mehr Rauschen ist.
+
+Unterhalb davon liegt das uebliche Spiel zwischen Plan und amtlichem Umriss:
+Wandstaerke, Rundung der Umringe, der Rest der Winkelkorrektur. Ueber alle
+vierzehn Hallen mit Zielfeature reisst diese Schwelle genau ein Stand, der
+nicht zu einer der beiden auffaelligen Gruppen gehoert -- sie trennt also
+sauber und nicht knapp.
+"""
+
+
+def ausreisser(stands: list[dict], ringe: list[list[list[float]]],
+               passung: dict | None = None) -> list[dict]:
+    """Staende, die weit ueber ihr Gebaeude hinausragen.
+
+    Gemessen wird der **groesste Ueberstand**: wie weit die am weitesten
+    draussen liegende Ecke vom Gebaeuderand entfernt ist. Nicht "keine Ecke
+    drin" -- ein Stand, der zur Haelfte durch die Wand geht, ist genauso
+    falsch verortet wie einer, der ganz draussen liegt, und bei Halle 5.2
+    liegen genau solche: D022, D024 und D026 stehen zu rund sechs Metern
+    ueber die Suedwand hinaus und haetten die strengere Regel ueberlebt.
+
+    Gemessen wird in der **registrierten** Lage, nicht in der rohen. Ungedreht
+    steht der ganze Hallenplan um 2,21 Grad schief im Gelaende, und auf 200 m
+    Hallenlaenge sind das an den Enden gut 4 m: dann meldet die Pruefung ganze
+    Standreihen am Rand, die in Wahrheit sauber liegen. Deshalb erst passen,
+    dann pruefen -- und mit dem Ergebnis noch einmal passen.
+
+    Warum das zaehlt: der Hallenumriss ist die konvexe Huelle ueber seine
+    Staende. Sechs falsch verortete Staende der Gruppe G zogen die Huelle von
+    Halle 10.2 auf 26.503 m2 auf -- 13 Prozent ueber das ganze Gebaeude, das
+    23.443 m2 hat. Die uebrigen 86 Staende lagen sauber drin.
+
+    Ausgeschlossen werden sie nur aus dem **Umriss**. Der Stand selbst bleibt,
+    wo der Plan ihn hat, und wird gemeldet: er ist Evidenz fuer ein
+    Datenproblem und kein Muell.
+    """
+    draussen = []
+    for stand in stands:
+        ecken = (angewandt(stand["polygon"], passung) if passung
+                 else [tuple(p) for p in stand["polygon"]])
+        ueberstand = 0.0
+        for punkt in ecken:
+            if any(inside(ring, punkt) for ring in ringe):
+                continue
+            ueberstand = max(ueberstand,
+                             min(abstand_zur_kante(punkt, ring) for ring in ringe))
+        if ueberstand < AUSREISSER_M:
+            continue
+        draussen.append({"id": stand["id"], "code": stand.get("code"),
+                         "abstandM": round(ueberstand, 2)})
+    return sorted(draussen, key=lambda e: -e["abstandM"])
+
+
+EINZUG_RAND_M = 0.4
+"""Wie weit hinter die Innenkante ein nachgezogener Stand gesetzt wird.
+
+Genau auf der Kante ist nicht drinnen: `inside()` ist auf dem Rand nicht
+verlaesslich, und beim Laufen sieht man einen Stand, der die Wand kuesst, als
+Fehler. Vierzig Zentimeter sind sichtbar drin und kosten keine Flaeche.
+"""
+
+EINZUG_SCHRUMPF = 0.98
+"""Je Durchgang, wenn Verschieben allein den Stand nicht hereinbekommt."""
+
+
+def naechster_randpunkt(punkt: tuple[float, float],
+                        ring: list[list[float]]) -> tuple[float, float]:
+    """Der Punkt auf dem Polygonrand, der `punkt` am naechsten liegt."""
+    bester = (float("inf"), punkt)
+    for i in range(len(ring)):
+        a, b = ring[i], ring[(i + 1) % len(ring)]
+        vx, vy = b[0] - a[0], b[1] - a[1]
+        l2 = vx * vx + vy * vy
+        t = 0.0 if l2 == 0 else max(0.0, min(1.0, ((punkt[0] - a[0]) * vx
+                                                   + (punkt[1] - a[1]) * vy) / l2))
+        q = (a[0] + t * vx, a[1] + t * vy)
+        d = math.dist(punkt, q)
+        if d < bester[0]:
+            bester = (d, q)
+    return bester[1]
+
+
+def einzug(polygon: list[tuple[float, float]], ringe: list[list[list[float]]],
+           schritte: int = 60) -> tuple[float, tuple[float, float]] | None:
+    """Zieht einen Stand in sein Gebaeude -- verschieben, notfalls verkleinern.
+
+    Rueckgabe ist die Korrektur als `(Faktor, Verschiebung)` in dem Raum, in
+    dem `ringe` liegen; `None`, wenn der Stand schon drin ist.
+
+    **Warum ueberhaupt:** BEUTELTIER ist ein Orientierungswerkzeug fuer eine
+    Messe, kein Kataster. Ein Stand, der durch die Hallenwand ragt, ist beim
+    Laufen ein Fehler -- und zwar ein groesserer als ein Stand, der ein paar
+    Meter kleiner ist als in Wirklichkeit. Deshalb gilt hier: **kein Stand
+    bleibt draussen.** Das ersetzt die frueher strengere Regel, nach der eine
+    unpassende Geometrie unangetastet blieb; sie hat ihren Zweck erfuellt, denn
+    sie hat die falsch verorteten Flaechen sichtbar gemacht.
+
+    Gemeldet wird trotzdem jede Korrektur: nachgezogen ist nicht dasselbe wie
+    richtig, und wer spaeter bessere Standdaten hat, sieht sofort, wo es
+    geklemmt hat.
+
+    Zuerst wird nur verschoben -- das erhaelt die Groesse. Erst wenn das nach
+    einem Drittel der Durchgaenge nicht reicht, kommt Verkleinern dazu.
+    """
+    def aussen(punkte):
+        return [p for p in punkte if not any(inside(ring, p) for ring in ringe)]
+
+    if not aussen(polygon):
+        return None
+
+    mx = sum(p[0] for p in polygon) / len(polygon)
+    my = sum(p[1] for p in polygon) / len(polygon)
+    faktor, dx, dy = 1.0, 0.0, 0.0
+    for schritt in range(schritte):
+        aktuell = [(mx + (p[0] - mx) * faktor + dx, my + (p[1] - my) * faktor + dy)
+                   for p in polygon]
+        draussen = aussen(aktuell)
+        if not draussen:
+            return round(faktor, 4), (round(dx, 3), round(dy, 3))
+        # Mittel der Wege nach drinnen. Der Mittelwert und nicht der groesste
+        # Weg: bei einem Stand, der ueber zwei gegenueberliegende Waende ragt,
+        # zoege der groesste Weg ihn hin und her, bis das Verkleinern greift.
+        vx = vy = 0.0
+        for p in draussen:
+            q = min((naechster_randpunkt(p, ring) for ring in ringe),
+                    key=lambda q: math.dist(p, q))
+            vx += q[0] - p[0]
+            vy += q[1] - p[1]
+        laenge = math.hypot(vx, vy) / len(draussen)
+        if laenge > 1e-9:
+            zug = (laenge + EINZUG_RAND_M) / laenge
+            dx += vx / len(draussen) * zug
+            dy += vy / len(draussen) * zug
+        if schritt >= schritte // 3:
+            faktor *= EINZUG_SCHRUMPF
+    return round(faktor, 4), (round(dx, 3), round(dy, 3))
 
 
 def polygon_mitte(polygon: list[list[float]]) -> tuple[float, float]:
@@ -372,7 +561,7 @@ def abstand_zur_kante(punkt: tuple[float, float], ring: list[list[float]]) -> fl
 
 
 def passungsbefund(hall_polygon: list[list[float]], target_polygons: list[list[list[float]]],
-                   constraint: dict | None) -> dict:
+                   constraint: dict | None, draussen_stehende: list[dict] | None = None) -> dict:
     """Wie gut die Halle in ihre Zielgebaeude passt -- als Zahl, nicht als Urteil.
 
     **Regel: aus einer schlechten Passung wird nichts abgeschnitten.** Eine
@@ -420,6 +609,9 @@ def passungsbefund(hall_polygon: list[list[float]], target_polygons: list[list[l
         "rotationDeviationDeg": abweichung,
         "appliedScale": c.get("scale", 1.0),
         "requiredScale": noetig,
+        "outlierStandCount": len(draussen_stehende or []),
+        "outlierMaxDistanceM": max((e["abstandM"] for e in draussen_stehende or []),
+                                   default=0.0),
     }
     gruende = []
     if not ringe:
@@ -438,6 +630,12 @@ def passungsbefund(hall_polygon: list[list[float]], target_polygons: list[list[l
                        "Innenraum -- moeglicherweise fehlt ein Zielkoerper")
     if befund["maxOutsideDistanceM"] > MELDEGRENZE_M:
         gruende.append(f"Ecke liegt {befund['maxOutsideDistanceM']} m ausserhalb")
+    if draussen_stehende:
+        codes = ", ".join(e["code"] or e["id"] for e in draussen_stehende)
+        gruende.append(
+            f"{len(draussen_stehende)} Stand(e) liegen ganz ausserhalb des Gebaeudes "
+            f"(bis {befund['outlierMaxDistanceM']} m): {codes} -- aus dem Umriss "
+            "genommen, aber nicht geloescht: falsch verortete Standdaten")
     befund["geometryMismatch"] = bool(gruende)
     befund["reviewRequired"] = bool(gruende)
     befund["reviewReason"] = "; ".join(gruende) or None
@@ -572,6 +770,49 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
         if umrisse:
             paare.append((hall["footprint"], max(umrisse, key=len)))
     vordrehung = winkelkorrektur(paare)
+
+    # Umrisse ohne Ausreisser. Der Umriss einer Halle ist die konvexe Huelle
+    # ueber ihre Staende -- ein einziger falsch verorteter Stand zieht sie auf,
+    # und die Passung rechnet danach gegen eine Flaeche, die es nicht gibt.
+    #
+    # Zwei Durchgaenge, weil beides voneinander abhaengt: welche Staende
+    # draussen liegen, sieht man erst in der registrierten Lage, und die
+    # Registrierung soll gegen einen Umriss ohne Ausreisser rechnen. Also erst
+    # roh passen, damit pruefen, dann mit dem bereinigten Umriss endgueltig
+    # passen.
+    stands_je_halle: dict[str, list] = {}
+    for stand in site.get("stands", []):
+        stands_je_halle.setdefault(stand["hallKey"], []).append(stand)
+    bereinigt: dict[str, list] = {}
+    verworfen: dict[str, list] = {}
+    for hall in site["halls"]:
+        ziel = targets.get(hall["key"], {}).get("buildingIds", [])
+        rohringe = [building_by_id[f]["footprint"] for f in ziel
+                    if f in building_by_id and building_by_id[f].get("footprint")]
+        eigene = stands_je_halle.get(hall["key"], [])
+        if not rohringe or not eigene:
+            continue
+        ringe = [r[:-1] if r[0] == r[-1] else r for r in rohringe]
+        # Fuer die Pruefung genuegt die grobe Lage: gesucht sind Staende, die
+        # drei Meter und mehr draussen stehen, und dafuer ist eine Zehntel-
+        # drehung mehr oder weniger ohne Belang. Deshalb ohne Drehsuche -- das
+        # spart den teuersten Teil der Passung, die es hier zweimal gaebe.
+        vorpassung = containment_fit(hall["footprint"],
+                                     [nach_innen(r) for r in rohringe],
+                                     vordrehung=vordrehung, drehsuche=False)
+        raus = ausreisser(eigene, ringe, vorpassung)
+        if not raus:
+            continue
+        verworfen[hall["key"]] = raus
+        ids = {e["id"] for e in raus}
+        punkte = [tuple(p) for stand in eigene if stand["id"] not in ids
+                  for p in stand["polygon"]]
+        if len(punkte) >= 3:
+            bereinigt[hall["key"]] = [list(p) for p in building.convex_hull(punkte)]
+        liste = ", ".join("{} ({} m)".format(e["code"] or e["id"], e["abstandM"])
+                          for e in raus)
+        print(f"  {hall['key']}: {len(raus)} Stand(e) ausserhalb des Gebaeudes, "
+              f"nicht im Umriss -- {liste}")
     alle_umrisse = [b["footprint"] for b in buildings.get("buildings", [])
                     if b.get("footprint")]
     print(f"  Winkelkorrektur des Hallenplans: {vordrehung:+.2f} Grad "
@@ -595,13 +836,102 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
                  if f in building_by_id and building_by_id[f].get("footprint")]
         if not ringe:
             continue
-        gefunden = containment_fit(hall["footprint"], ringe,
+        gefunden = containment_fit(bereinigt.get(hall["key"], hall["footprint"]), ringe,
                                    vordrehung=vordrehung, drehsuche=True)
         if gefunden is None:
             continue
         bisher = je_gebaeude.get(hall["hall"])
         if bisher is None or gefunden["coverageAfterPct"] > bisher["passung"]["coverageAfterPct"]:
             je_gebaeude[hall["hall"]] = {"passung": gefunden, "vonEbene": hall["key"]}
+
+    # Und jetzt die Groesse des ganzen Gebaeudes, gemessen an den Staenden
+    # aller seiner Ebenen. Bis hierher ist der Massstab am Hallenumriss
+    # gesucht worden; der sagt aber nicht, ob jeder einzelne Stand drin ist.
+    # Gesucht wird der **groesste** Massstab, bei dem am wenigsten Staende
+    # herausragen -- also so wenig verkleinern wie noetig und nur dort, wo es
+    # ueberhaupt etwas bringt.
+    innen_je_haus: dict[str, list] = {}
+    stands_je_haus: dict[str, list] = {}
+    for hall in site["halls"]:
+        ziel = targets.get(hall["key"], {}).get("buildingIds", [])
+        ringe = [nach_innen(building_by_id[f]["footprint"]) for f in ziel
+                 if f in building_by_id and building_by_id[f].get("footprint")]
+        if not ringe:
+            continue
+        innen_je_haus[hall["hall"]] = ringe
+        stands_je_haus.setdefault(hall["hall"], []).extend(stands_je_halle.get(hall["key"], []))
+
+    for haus, eintrag in je_gebaeude.items():
+        ringe = innen_je_haus.get(haus)
+        eigene = stands_je_haus.get(haus)
+        if not ringe or not eigene:
+            continue
+        passung = eintrag["passung"]
+        stufe = 0.01
+        beste = None
+        for i in range(int(round((1.0 - SKALA_BODEN / passung["scale"]) / stufe)) + 1):
+            faktor = round(1.0 - i * stufe, 4)
+            gesamt = round(passung["scale"] * faktor, 4)
+            if gesamt < SKALA_BODEN - 1e-9:
+                break
+            probe = {**passung, "scale": gesamt}
+            heraus = sum(1 for stand in eigene
+                         if any(not any(inside(ring, punkt) for ring in ringe)
+                                for punkt in angewandt(stand["polygon"], probe)))
+            # Abwaegung statt Minimierung: das letzte Prozent Verkleinerung ist
+            # nicht gratis. Bei Gleichstand gewinnt der groessere Massstab --
+            # die Schleife laeuft von oben, deshalb genuegt echt kleiner.
+            preis = heraus + EINZUG_STRAFE * (1.0 - faktor)
+            if beste is None or preis < beste[0] - 1e-9:
+                beste = (preis, faktor, gesamt, heraus)
+            if heraus == 0:
+                break
+        if beste and beste[1] < 1.0:
+            passung["scale"] = beste[2]
+            passung["skalaAusStaenden"] = beste[1]
+            print(f"  Halle {haus}: auf {beste[2]:.4f} verkleinert -- danach ragen "
+                  f"{beste[3]} von {len(eigene)} Staenden heraus")
+
+    # Und was jetzt noch heraussteht, wird einzeln hereingezogen. Danach ist
+    # kein Stand mehr ausserhalb seiner Halle -- das ist die Zusage, die die
+    # App einloest, und sie geht vor Massgenauigkeit einzelner Flaechen.
+    #
+    # Die Korrektur wird im **Planbild** ausgeschrieben, also vor der
+    # Registrierung: Verkleinern um die eigene Mitte, dann verschieben. Weil
+    # die Registrierung eine Aehnlichkeitsabbildung ist, laesst sich die im
+    # Zielbild gefundene Verschiebung d als d' = R^T d / s zuruecknehmen -- und
+    # `build_registered_layout` braucht danach nur zwei einfache Schritte und
+    # keine zweite Geometrieauswertung.
+    korrekturen: dict[str, dict] = {}
+    for hall in sorted(site["halls"], key=lambda item: item["key"]):
+        gebaeude = je_gebaeude.get(hall["hall"])
+        ringe = innen_je_haus.get(hall["hall"])
+        if gebaeude is None or not ringe:
+            continue
+        passung = gebaeude["passung"]
+        bogen = math.radians(passung["rotationDeg"])
+        cos, sin = math.cos(bogen), math.sin(bogen)
+        skala = passung["scale"]
+        for stand in stands_je_halle.get(hall["key"], []):
+            korrektur = einzug(angewandt(stand["polygon"], passung), ringe)
+            if korrektur is None:
+                continue
+            faktor, (dx, dy) = korrektur
+            # R^T * d / s -- dieselbe Verschiebung, im Planbild ausgedrueckt.
+            korrekturen[stand["id"]] = {
+                "hallKey": hall["key"],
+                "code": stand.get("code"),
+                "scale": faktor,
+                "translation": [round((cos * dx + sin * dy) / skala, 3),
+                                round((-sin * dx + cos * dy) / skala, 3)],
+                "shiftM": round(math.hypot(dx, dy) / skala, 2),
+            }
+    if korrekturen:
+        je_halle: dict[str, int] = {}
+        for eintrag in korrekturen.values():
+            je_halle[eintrag["hallKey"]] = je_halle.get(eintrag["hallKey"], 0) + 1
+        for key in sorted(je_halle):
+            print(f"  {key}: {je_halle[key]} Stand(e) in die Halle hereingezogen")
 
     registrations = []
     for hall in sorted(site["halls"], key=lambda item: item["key"]):
@@ -682,7 +1012,8 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
             "source": ("official-footprint-containment" if target_polygons
                        else "legacy-global-fit-plus-angle"),
             "constraint": constraint,
-            "befund": passungsbefund(hall["footprint"], target_polygons, constraint),
+            "befund": passungsbefund(hall["footprint"], target_polygons, constraint,
+                                     verworfen.get(hall["key"])),
             "notes": [
                 ("Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben."
                  if target_polygons else
@@ -709,6 +1040,16 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
         "origin": origin,
         "registrations": registrations,
         "beziehungen": beziehungen(im_plan, registrierte),
+        # Staende, die vollstaendig ausserhalb ihres Gebaeudes liegen und
+        # deshalb nicht in den Umriss eingehen. Sie bleiben, wo der Plan
+        # sie hat -- gemeldet, nicht geloescht.
+        "ausreisser": verworfen,
+        # Staende, die nach der Registrierung noch aus ihrer Halle ragten und
+        # deshalb hereingezogen wurden. Anzuwenden **vor** dem Transform:
+        # erst um die eigene Mitte auf `scale` verkleinern, dann um
+        # `translation` verschieben. Jede Korrektur steht hier, damit
+        # nachvollziehbar bleibt, welche Flaeche nicht ihrem Planmass folgt.
+        "standKorrekturen": korrekturen,
         "counts": {
             "total": len(registrations),
             "draft": sum(item["status"] == "draft" for item in registrations),
@@ -716,6 +1057,7 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
             "constrained": sum(item["status"] == "constrained" for item in registrations),
             "withTargetFeatures": sum(bool(item["targetFeatureIds"])
                                       for item in registrations),
+            "standKorrekturen": len(korrekturen),
         },
     }
 
