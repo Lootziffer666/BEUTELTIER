@@ -10,7 +10,7 @@
  * Kameraposition von oben, kein zweiter Renderer.
  */
 
-import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Html, OrbitControls, useGLTF, type OrbitControlsProps } from '@react-three/drei';
 import * as THREE from 'three';
@@ -1336,6 +1336,27 @@ export function SiteScene(props: SceneProps) {
   const centre = useMemo(() => siteCentre(data.site), [data.site]);
   const registered = data.spatialMode === 'registered';
 
+  /**
+   * In welcher Halle die Kamera gerade steht.
+   *
+   * `focusHallKey` taugt dafür nicht: es wird ausschliesslich von einem
+   * Suchtreffer gesetzt (`pickHit` in App.tsx). Wer zu Fuss in eine Halle
+   * läuft, hatte deshalb keine -- und `Hallenlicht`, die einzige echte
+   * Lichtquelle drinnen, rendert dann gar nichts. Die Halle lag im Dunkeln,
+   * beleuchtet nur von einer schwachen Halbkugel; Stützen wurden schwarze
+   * Silhouetten ohne Flächenunterschied, Schatten gab es keine.
+   *
+   * Der Schnappschuss der Laufkamera weiss es dagegen ohnehin -- er führt
+   * `hallKey` aus dem Wegenetz mit. Viermal je Sekunde, deshalb wird nur bei
+   * einem echten Wechsel neu gesetzt.
+   */
+  const [egoHallKey, setEgoHallKey] = useState<string | null>(null);
+  const onCameraSnapshot = useCallback((snapshot: CameraSnapshot) => {
+    setEgoHallKey((bisher) => (bisher === snapshot.hallKey ? bisher : snapshot.hallKey));
+    props.onCameraSnapshot?.(snapshot);
+  }, [props.onCameraSnapshot]);
+  const lichtHallKey = preset === 'ego' ? (egoHallKey ?? focusHallKey) : focusHallKey;
+
   const extent = useMemo(() => {
     const points = data.site.halls.flatMap((hall) => hall.footprint);
     const xs = points.map((point) => point[0]);
@@ -1440,7 +1461,7 @@ export function SiteScene(props: SceneProps) {
       <Hallenlicht
         data={data}
         centre={centre}
-        hallKey={focusHallKey}
+        hallKey={lichtHallKey}
         active={preset === 'ego'}
       />
       <Vertikalverbindungen data={data} centre={centre} />
@@ -1462,7 +1483,7 @@ export function SiteScene(props: SceneProps) {
           onToggleFreeze={props.onToggleFreeze}
           onToggleViewfinder={props.onToggleViewfinder}
           onMark={props.onMark}
-          onCameraSnapshot={props.onCameraSnapshot}
+          onCameraSnapshot={onCameraSnapshot}
         />
       ) : (
         <CameraRig preset={preset} focus={focus} extent={extent} />

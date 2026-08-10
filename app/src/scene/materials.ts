@@ -507,7 +507,9 @@ export function hallendeckeSurface(): Surface {
   const [colour, ctx] = layer('#17181c');
   const [height, hctx] = layer('#808080');
   const [rough, rctx] = layer('#c0c0c0');
-  const [glow, gctx] = layer('#000000');
+  // Bleibt schwarz: die Decke leuchtet nirgends von sich aus, seit die
+  // gemalten Leuchtfelder heraus sind (siehe unten).
+  const [glow] = layer('#000000');
 
   // Kassettenraster: die Decke ist in Felder von rund 1,5 m geteilt.
   const cell = SIZE / 8;
@@ -538,25 +540,15 @@ export function hallendeckeSurface(): Surface {
     }
   }
 
-  // Leuchtfelder: vier je Kachel, also rund alle sechs Meter eines.
-  const panelW = cell * 1.5;
-  const panelH = cell * 0.62;
-  for (const px of [cell, cell * 5]) {
-    for (const py of [cell, cell * 5]) {
-      const x = px - panelW / 2 + cell / 2;
-      const y = py - panelH / 2 + cell / 2;
-      ctx.fillStyle = '#f6f2e8';
-      ctx.fillRect(x, y, panelW, panelH);
-      gctx.fillStyle = '#fff6e2';
-      gctx.fillRect(x, y, panelW, panelH);
-      // Ein schmaler Hof um die Leuchte -- die Decke daneben wird angestrahlt.
-      gctx.fillStyle = 'rgba(255, 240, 210, 0.22)';
-      gctx.fillRect(x - 14, y - 14, panelW + 28, panelH + 28);
-      rctx.fillStyle = '#e8e8e8';
-      rctx.fillRect(x, y, panelW, panelH);
-    }
-  }
-
+  // Keine aufgemalten Leuchtfelder mehr.
+  //
+  // Hier stand ein Raster heller Rechtecke, vier je Kachel -- gemalte Lampen
+  // in der Decke, zusätzlich zu den echten Leuchtbändern, die `Deckenleuchten`
+  // als Geometrie darunter setzt. Beide gehorchten verschiedenen Rastern und
+  // lagen nie übereinander: das Ergebnis war ein Streumuster heller Flecken,
+  // das mit keiner Lichtquelle der Halle etwas zu tun hatte. Die Decke trägt
+  // jetzt nur noch ihr Tragwerk; Licht kommt ausschliesslich von den echten
+  // Bändern.
   speckle(ctx, 0.02);
 
   return {
