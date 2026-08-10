@@ -37,3 +37,20 @@ export const LEER_PARAMETER = 'leer';
 export function leerErlaubt(search: string): boolean {
   return new URLSearchParams(search).has(LEER_PARAMETER);
 }
+
+/**
+ * Soll die Decke wegbleiben?
+ *
+ * Für die senkrechte Draufsicht: von oben verdeckt die Deckenebene alles,
+ * was darunter steht. Ohne sie sieht man Boden, Stützen und Leuchtbänder im
+ * Grundriss -- die einzige Ansicht, in der sich prüfen lässt, ob die
+ * Stützenreihen parallel laufen und die Bänder wirklich zwischen ihnen
+ * liegen. In der Perspektive sieht beides plausibel aus, auch wenn es
+ * falsch ist. Wie `?setzen` ein Merkmal nur für den Bildprüfer.
+ */
+export const PLAN_PARAMETER = 'plan';
+
+/** Erlaubt die Adresse den Blick von oben ohne Decke? */
+export function planErlaubt(search: string): boolean {
+  return new URLSearchParams(search).has(PLAN_PARAMETER);
+}

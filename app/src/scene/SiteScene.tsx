@@ -1214,10 +1214,16 @@ function WalkControls({
   useEffect(() => {
     if (!active || !SETZEN_ERLAUBT) return;
     const global = globalThis as { __SETZEN?: unknown };
-    global.__SETZEN = (px: number, py: number, pz: number, yaw: number) => {
+    // `pitch` ist optional und war es immer -- ohne ihn schaut die Kamera
+    // waagerecht, wie bisher. Mit ihm lässt sich senkrecht nach unten
+    // blicken, und das ist die einzige Ansicht, in der man prüfen kann, ob
+    // Stützenreihen tatsächlich parallel laufen und die Leuchtbänder
+    // zwischen ihnen liegen. In der Perspektive sieht beides plausibel aus,
+    // auch wenn es falsch ist.
+    global.__SETZEN = (px: number, py: number, pz: number, yaw: number, pitch = 0) => {
       position.current = { x: px, y: py, z: pz };
       look.current.yaw = yaw;
-      look.current.pitch = 0;
+      look.current.pitch = pitch;
     };
     return () => {
       delete global.__SETZEN;

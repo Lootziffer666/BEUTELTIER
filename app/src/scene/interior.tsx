@@ -25,6 +25,11 @@ import {
   type Surface,
 } from './materials';
 import { FAMILIEN, toonMaterial } from './stil';
+import { planErlaubt } from './fernsteuerung';
+
+/** Draufsicht ohne Decke -- siehe `planErlaubt`. Einmal beim Laden entschieden. */
+const PLAN_ANSICHT =
+  typeof window !== 'undefined' && planErlaubt(window.location.search);
 
 /**
  * Wie weit unter der Decke die Bänder hängen.
@@ -86,7 +91,14 @@ interface Lage {
   my: number;
   laenge: number;
   breite: number;
+  /** Drehung für die Szene (Y-Achse), **nicht** für Rechnungen im Grundriss. */
   winkel: number;
+  /** Längsachse der Halle in Geländemetern. */
+  tx: number;
+  ty: number;
+  /** Querachse dazu, ebenfalls in Geländemetern. */
+  px: number;
+  py: number;
 }
 
 /**
@@ -117,10 +129,10 @@ export function rasterAchsen(laenge: number): number[] {
  * in ihrer Nähe fallen weg.
  */
 function saeulenraster(lage: Lage, aussparungen: { x: number; y: number }[] = []) {
-  const ux = Math.cos(lage.winkel);
-  const uy = Math.sin(lage.winkel);
-  const vx = -uy;
-  const vy = ux;
+  // Die Achsen kommen aus `hallenlage` und werden hier **nicht** aus `winkel`
+  // neu gerechnet: `winkel` ist die Drehung für die Szene und trägt dafür
+  // einen Vorzeichenwechsel, der im Grundriss nichts zu suchen hat.
+  const { tx, ty, px, py } = lage;
 
   const laengsAchsen = rasterAchsen(lage.laenge);
   const querAchsen = rasterAchsen(lage.breite);
@@ -128,15 +140,15 @@ function saeulenraster(lage: Lage, aussparungen: { x: number; y: number }[] = []
   const positionen: { x: number; y: number }[] = [];
   for (const laengs of laengsAchsen) {
     for (const quer of querAchsen) {
-      const x = lage.mx + ux * laengs + vx * quer;
-      const y = lage.my + uy * laengs + vy * quer;
+      const x = lage.mx + tx * laengs + px * quer;
+      const y = lage.my + ty * laengs + py * quer;
       const verdeckt = aussparungen.some(
         (a) => Math.hypot(a.x - x, a.y - y) < AUSSPARUNG_RADIUS_M,
       );
       if (!verdeckt) positionen.push({ x, y });
     }
   }
-  return { positionen, laengsAchsen, querAchsen, reihenAbstand: RASTER_M, ux, uy, vx, vy };
+  return { positionen, laengsAchsen, querAchsen, reihenAbstand: RASTER_M, tx, ty, px, py };
 }
 
 /**
@@ -150,35 +162,61 @@ function saeulenraster(lage: Lage, aussparungen: { x: number; y: number }[] = []
 export function hallenlage(footprint: Placement2D[]) {
   if (footprint.length < 3) return null;
   let laengste = 0;
-  let winkel = 0;
+  /** Richtung der längsten Kante **in Geländemetern**. */
+  let richtung = 0;
   for (let i = 0; i < footprint.length; i += 1) {
     const a = footprint[i];
     const b = footprint[(i + 1) % footprint.length];
     const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
     if (d > laengste) {
       laengste = d;
-      winkel = drehungNachX(b[0] - a[0], b[1] - a[1]);
+      richtung = Math.atan2(b[1] - a[1], b[0] - a[0]);
     }
   }
   if (laengste < 1) return null;
 
-  const ux = Math.cos(winkel);
-  const uy = Math.sin(winkel);
+  /**
+   * Zwei Winkel, nicht einer -- und das war der Fehler.
+   *
+   * Vorher stand hier nur `drehungNachX()`, also der Winkel für die **Drehung
+   * eines Objekts in der Szene**: `atan2(-dy, dx)`, mit dem Vorzeichenwechsel,
+   * den Three.js für eine Drehung um die Y-Achse braucht. Gemessen und
+   * gerechnet wurde dann aber mit `(cos, sin)` **dieses** Winkels -- also
+   * entlang einer an der x-Achse gespiegelten Richtung.
+   *
+   * Bei einer achsparallelen Halle fällt das nicht auf. Bei einer um 45°
+   * gedrehten steht die gespiegelte Achse **senkrecht** auf der echten: Länge
+   * und Breite wurden quer gemessen, und das ganze Stützenraster lag um den
+   * doppelten Hallenwinkel verdreht im Grundriss. In der Perspektive sah das
+   * nach "irgendwie verteilten" Pfeilern aus; erst die Draufsicht
+   * (`plan-check.mjs`) zeigte, dass die Reihen gar nicht zur Halle gehören.
+   *
+   * `tx/ty` ist die Längsachse in Geländemetern, `px/py` die Querachse dazu.
+   * Wer eine Lage im Grundriss rechnet, nimmt diese beiden. `winkel` bleibt
+   * ausschliesslich das, was es immer war: die Drehung für die Szene.
+   */
+  const tx = Math.cos(richtung);
+  const ty = Math.sin(richtung);
+  const px = -ty;
+  const py = tx;
+
   let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity;
   for (const [x, y] of footprint) {
-    const u = x * ux + y * uy;
-    const v = -x * uy + y * ux;
+    const u = x * tx + y * ty;
+    const v = x * px + y * py;
     uMin = Math.min(uMin, u); uMax = Math.max(uMax, u);
     vMin = Math.min(vMin, v); vMax = Math.max(vMax, v);
   }
   const uM = (uMin + uMax) / 2;
   const vM = (vMin + vMax) / 2;
   return {
-    mx: uM * ux - vM * uy,
-    my: uM * uy + vM * ux,
+    // Zurück in Geländemeter: Mitte entlang beider Achsen.
+    mx: uM * tx + vM * px,
+    my: uM * ty + vM * py,
     laenge: uMax - uMin,
     breite: vMax - vMin,
-    winkel,
+    winkel: drehungNachX(tx, ty),
+    tx, ty, px, py,
   };
 }
 
@@ -221,7 +259,8 @@ export function Hallenhuelle({
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
       const hoehe = hall.height?.clearHeightM ?? 8;
 
-      for (const art of ['boden', 'decke'] as const) {
+      for (const art of (PLAN_ANSICHT ? ['boden'] : ['boden', 'decke']) as
+        readonly ('boden' | 'decke')[]) {
         out.push({
           key: `${hall.key}-${art}`,
           position: [
@@ -720,13 +759,13 @@ export function Hallenlicht({
  * eine Aufteilung, die die Ränder anders behandelt als die Mitte.
  */
 function leuchtenreihen(lage: Lage) {
-  const { querAchsen, reihenAbstand, ux, uy, vx, vy } = saeulenraster(lage);
+  const { querAchsen, reihenAbstand, px, py } = saeulenraster(lage);
   const laenge = lage.laenge * 0.94;
-  const bahnen: { quer: number; laenge: number; ux: number; uy: number; vx: number; vy: number }[] = [];
+  const bahnen: { quer: number; laenge: number; px: number; py: number }[] = [];
   for (let feld = 0; feld < querAchsen.length - 1; feld += 1) {
     const von = querAchsen[feld];
     for (const versatz of bahnenImFeld(reihenAbstand)) {
-      bahnen.push({ quer: von + versatz, laenge, ux, uy, vx, vy });
+      bahnen.push({ quer: von + versatz, laenge, px, py });
     }
   }
   return bahnen;
@@ -756,15 +795,16 @@ export function Deckenleuchten({
       const lichtY = deckenY - DROP_M;
 
       for (const reihe of leuchtenreihen(lage)) {
-        const x = lage.mx + reihe.vx * reihe.quer;
-        const y = lage.my + reihe.vy * reihe.quer;
-        const winkel = Math.atan2(reihe.uy, reihe.ux);
+        // Querversatz in Geländemetern, Drehung in Szenenwinkeln -- die
+        // beiden sind nicht dasselbe, siehe `hallenlage`.
+        const x = lage.mx + reihe.px * reihe.quer;
+        const y = lage.my + reihe.py * reihe.quer;
 
         // Durchgehend, nicht gestückelt: die Stützen im gleichen Rastermaß
         // geben dem Auge jetzt den Anhaltspunkt für die Länge, den vorher
         // die Lücken liefern mussten.
         dummy.position.set(x - centre[0], lichtY, y - centre[1]);
-        dummy.rotation.set(0, winkel, 0);
+        dummy.rotation.set(0, lage.winkel, 0);
         dummy.scale.set(reihe.laenge, STRIP_THICKNESS_M, STRIP_WIDTH_M);
         dummy.updateMatrix();
         strips.push(dummy.matrix.clone());
@@ -897,25 +937,15 @@ export function Lichtspiegel({
       const lage = hallenlage(hall.footprint);
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
       leuchtenreihen(lage).forEach((reihe, index) => {
-        const x = lage.mx + reihe.vx * reihe.quer;
-        const y = lage.my + reihe.vy * reihe.quer;
+        const x = lage.mx + reihe.px * reihe.quer;
+        const y = lage.my + reihe.py * reihe.quer;
         out.push({
           key: `${hall.key}-schein${index}`,
           position: [x - centre[0], hall.baseY + 0.03, y - centre[1]],
-          // `+winkel`, nicht `-winkel`.
-          //
           // Eine Ebene mit Euler [-90°, 0, θ] richtet ihre Längsachse nach
           // (cos θ, 0, -sin θ) aus -- dieselbe Richtung, die ein Quader mit
-          // Ry(θ) bekommt. Mit dem Minuszeichen lag der Schein an der
-          // Hallenachse gespiegelt; bei einer Halle um 45° stand er damit
-          // quer zu dem Band, das er zurückwerfen soll.
-          //
-          // (Die grossen Ebenen in `Hallenhuelle` benutzen weiterhin
-          // `-winkel`. Dort fällt es nicht auf: ein mittiges Rechteck ist zu
-          // seinen eigenen Achsen symmetrisch und deckt gespiegelt dieselbe
-          // Fläche. Hier liegen die Streifen aussermittig -- und dann zählt
-          // das Vorzeichen.)
-          drehung: Math.atan2(reihe.uy, reihe.ux),
+          // Ry(θ) bekommt. Beide nehmen deshalb denselben Szenenwinkel.
+          drehung: lage.winkel,
           laenge: reihe.laenge,
         });
       });
