@@ -52,6 +52,7 @@ import {
 } from './stil';
 import { KACHEL_M } from './textur';
 import { Kontur } from './Kontur';
+import { Ausstattung } from './Ausstattung';
 
 export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
@@ -1432,6 +1433,10 @@ export function SiteScene(props: SceneProps) {
         previewSafe={props.previewSafe ?? true}
       />
       <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
+      {/* Die A-Stufen der Detailhierarchie: Deckenraster, Fassadengliederung,
+          Hallennummern, Zaun. Ohne sie bleiben M02, M07, M08 und M10 Familien
+          ohne Traeger -- Materialien, die in der Welt niemand anhat. */}
+      <Ausstattung data={data} centre={centre} drinnen={preset === 'ego'} />
       <Hallenlicht
         data={data}
         centre={centre}
