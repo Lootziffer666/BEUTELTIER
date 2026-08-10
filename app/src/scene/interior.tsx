@@ -181,6 +181,39 @@ export function rasterAchsen(laenge: number): number[] {
  * `aussparungen` sind Weltpunkte (Treppen, Rolltreppen, Aufzüge); Rasterpunkte
  * in ihrer Nähe fallen weg.
  */
+/**
+ * Der senkrechte Aufbau einer Halle: welche Höhe wo liegt.
+ *
+ * Eine Stelle für alle Höhen, weil sie zusammengehören und weil man sie sonst
+ * nur im fertigen Bild vergleichen kann -- und dort sieht man einen halben
+ * Meter Versatz nicht. Genau daran hing die Frage, ob die Stützen bis zur
+ * Decke reichen: sie tun es, aber das war aus keiner Zahl abzulesen, weil die
+ * Höhen an vier Stellen getrennt gerechnet wurden.
+ *
+ * `schnitt-check.mjs` zeichnet daraus den Schnitt.
+ */
+export function hallenAufbau(baseY: number, lichteHoehe: number) {
+  const deckeY = baseY + lichteHoehe;
+  const lichtY = deckeY - DROP_M;
+  const fassungHoehe = DROP_M - STRIP_THICKNESS_M;
+  return {
+    bodenY: baseY + 0.02,
+    deckeY,
+    /** Schaft zwischen den Sockeln. */
+    schaftVon: baseY + SOCKEL_HOEHE_M,
+    schaftBis: deckeY - SOCKEL_HOEHE_M,
+    sockelUnten: [baseY, baseY + SOCKEL_HOEHE_M] as [number, number],
+    sockelOben: [deckeY - SOCKEL_HOEHE_M, deckeY] as [number, number],
+    /** Unterkante und Oberkante des Leuchtbands. */
+    band: [lichtY - STRIP_THICKNESS_M / 2, lichtY + STRIP_THICKNESS_M / 2] as [number, number],
+    /** Die Fassung sitzt darüber, nicht darum. */
+    fassung: [
+      lichtY + STRIP_THICKNESS_M / 2,
+      lichtY + STRIP_THICKNESS_M / 2 + fassungHoehe,
+    ] as [number, number],
+  };
+}
+
 /** Liegt ein Punkt im Vieleck? Strahlverfahren, in Geländemetern. */
 function imUmriss(umriss: Placement2D[], x: number, y: number): boolean {
   let drin = false;
@@ -594,6 +627,11 @@ export function hallenGrundriss(
     saeulen: { x: number; y: number }[];
     reihen: number;
     baender: number;
+    breite: number;
+    querAchsen: number[];
+    profil: { breite: number; kragen: number };
+    aufbau: ReturnType<typeof hallenAufbau>;
+    bahnen: number[];
   }[] = [];
   for (const hall of data.site.halls) {
     if (hall.outdoor) continue;
@@ -606,6 +644,11 @@ export function hallenGrundriss(
       saeulen: positionen,
       reihen: PFEILERREIHEN_QUER,
       baender: PFEILERREIHEN_QUER + 1,
+      breite: lage.breite,
+      querAchsen: saeulenraster(lage, [], [], stuetzenSpec(hall.key)).querAchsen,
+      profil: { breite: SAEULEN_BREITE_M, kragen: SOCKEL_KRAGEN_M },
+      aufbau: hallenAufbau(hall.baseY, hall.height?.clearHeightM ?? 8),
+      bahnen: leuchtenreihen(lage).map((r) => r.quer),
     });
   }
   return out;
@@ -657,8 +700,7 @@ export function Hallenstuetzen({
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
       const hoehe = hall.height?.clearHeightM ?? 8;
       const { positionen } = saeulenraster(lage, aussparungen, hall.footprint, stuetzenSpec(hall.key));
-      const boden = hall.baseY;
-      const decke = hall.baseY + hoehe;
+      const aufbau = hallenAufbau(hall.baseY, hoehe);
 
       for (const p of positionen) {
         const sx = p.x - centre[0];
@@ -668,14 +710,17 @@ export function Hallenstuetzen({
         dummy.rotation.set(0, lage.winkel, 0);
 
         // Der Schaft läuft zwischen den Sockeln, nicht durch sie hindurch.
-        const schafthoehe = hoehe - 2 * SOCKEL_HOEHE_M;
-        dummy.position.set(sx, boden + hoehe / 2, sz);
-        dummy.scale.set(SAEULEN_BREITE_M, schafthoehe, SAEULEN_TIEFE_M);
+        dummy.position.set(sx, (aufbau.schaftVon + aufbau.schaftBis) / 2, sz);
+        dummy.scale.set(
+          SAEULEN_BREITE_M,
+          aufbau.schaftBis - aufbau.schaftVon,
+          SAEULEN_TIEFE_M,
+        );
         dummy.updateMatrix();
         schaefte.push(dummy.matrix.clone());
 
-        for (const y of [boden + SOCKEL_HOEHE_M / 2, decke - SOCKEL_HOEHE_M / 2]) {
-          dummy.position.set(sx, y, sz);
+        for (const [von, bis] of [aufbau.sockelUnten, aufbau.sockelOben]) {
+          dummy.position.set(sx, (von + bis) / 2, sz);
           dummy.scale.set(
             SAEULEN_BREITE_M + 2 * SOCKEL_KRAGEN_M,
             SOCKEL_HOEHE_M,
@@ -977,8 +1022,8 @@ export function Deckenleuchten({
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
 
       const hoehe = hall.height?.clearHeightM ?? 8;
-      const deckenY = hall.baseY + hoehe;
-      const lichtY = deckenY - DROP_M;
+      const aufbau = hallenAufbau(hall.baseY, hoehe);
+      const lichtY = (aufbau.band[0] + aufbau.band[1]) / 2;
 
       for (const reihe of leuchtenreihen(lage)) {
         // Querversatz in Geländemetern, Drehung in Szenenwinkeln -- die
@@ -1004,13 +1049,16 @@ export function Deckenleuchten({
         // so breit -- von unten, also aus jeder Augenhöhe, verdeckte der
         // dunkle Kasten damit das Leuchtband vollständig. Sichtbar blieb nur
         // die eine Bahn, an der die Perspektive zufällig daran vorbeisah.
-        const fassungHoehe = DROP_M - STRIP_THICKNESS_M;
         dummy.position.set(
           x - centre[0],
-          lichtY + STRIP_THICKNESS_M / 2 + fassungHoehe / 2,
+          (aufbau.fassung[0] + aufbau.fassung[1]) / 2,
           y - centre[1],
         );
-        dummy.scale.set(reihe.laenge * 1.01, fassungHoehe, STRIP_WIDTH_M * 1.5);
+        dummy.scale.set(
+          reihe.laenge * 1.01,
+          aufbau.fassung[1] - aufbau.fassung[0],
+          STRIP_WIDTH_M * 1.5,
+        );
         dummy.updateMatrix();
         gehaeuse.push(dummy.matrix.clone());
       }
