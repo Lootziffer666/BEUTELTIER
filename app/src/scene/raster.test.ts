@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { RASTER_M, rasterAchsen } from './interior';
+import { BAHNEN_JE_FELD, RASTER_M, bahnenImFeld, rasterAchsen } from './interior';
 
 /**
  * Das Stützenraster ist ein Baumaß, keine Ableitung aus der Hallengröße.
@@ -38,5 +38,33 @@ describe('Stützenraster', () => {
 
   it('trägt auch in einer kleinen Halle mindestens ein Feld', () => {
     expect(rasterAchsen(5)).toHaveLength(2);
+  });
+});
+
+/**
+ * Zwischen zwei Stützenreihen liegen drei Lichtleisten mit identischen
+ * Abständen -- bei 12 m Achsmaß also auf 3, 6 und 9 m. „Identisch" heisst
+ * dabei: der Abstand Stütze→Bahn ist derselbe wie Bahn→Bahn, die Ränder
+ * werden nicht anders behandelt als die Mitte.
+ */
+describe('Lichtleisten je Feld', () => {
+  it('sind zu dritt', () => {
+    expect(BAHNEN_JE_FELD).toBe(3);
+    expect(bahnenImFeld()).toHaveLength(3);
+  });
+
+  it('liegen bei zwölf Metern auf 3, 6 und 9', () => {
+    expect(bahnenImFeld()).toEqual([3, 6, 9]);
+  });
+
+  it('halten überall denselben Abstand, auch zu den Stützen', () => {
+    const feld = RASTER_M;
+    const bahnen = bahnenImFeld(feld);
+    const abstaende = [
+      bahnen[0] - 0,
+      ...bahnen.slice(1).map((b, i) => b - bahnen[i]),
+      feld - bahnen[bahnen.length - 1],
+    ];
+    for (const abstand of abstaende) expect(abstand).toBeCloseTo(3, 6);
   });
 });

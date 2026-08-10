@@ -56,7 +56,22 @@ const SAEULEN_TIEFE_M = 0.9;
  */
 export const RASTER_M = 12;
 /** Wie viele Leuchtenbahnen zwischen zwei Stützenachsen liegen. */
-const BAHNEN_JE_FELD = 3;
+export const BAHNEN_JE_FELD = 3;
+
+/**
+ * Die Lage der Bahnen in einem Feld, gemessen von der linken Stützenachse.
+ *
+ * Bei 12 m Achsmaß und drei Bahnen sind das 3, 6 und 9 m: der Abstand Stütze
+ * zu Bahn ist derselbe wie Bahn zu Bahn. Deshalb `b / (n + 1)` und keine
+ * Aufteilung, die die Ränder anders behandelt als die Mitte.
+ */
+export function bahnenImFeld(feldbreite = RASTER_M): number[] {
+  const out: number[] = [];
+  for (let b = 1; b <= BAHNEN_JE_FELD; b += 1) {
+    out.push((b / (BAHNEN_JE_FELD + 1)) * feldbreite);
+  }
+  return out;
+}
 /**
  * Wie weit um eine feste Einbaute herum keine Stütze steht.
  *
@@ -215,7 +230,18 @@ export function Hallenhuelle({
             lage.my - centre[1],
           ],
           // Die Ebene liegt waagerecht; die Decke schaut nach unten.
-          rotation: [art === 'boden' ? -Math.PI / 2 : Math.PI / 2, 0, -lage.winkel],
+          //
+          // `+winkel`, nicht `-winkel`: eine Ebene mit Euler [-90°, 0, θ]
+          // richtet ihre Längsachse nach (cos θ, 0, -sin θ) aus, und das ist
+          // mit `winkel = atan2(-dy, dx)` genau die Hallenachse. Mit dem
+          // Minuszeichen lag die Ebene an dieser Achse gespiegelt.
+          //
+          // Am Umriss sah man das nie -- ein mittiges Rechteck ist zu seinen
+          // eigenen Achsen symmetrisch und deckt gespiegelt dieselbe Fläche.
+          // An der **Textur** sieht man es sofort: die Plattenfugen liefen
+          // im gespiegelten Winkel, bei einer Halle um 45° also quer zu den
+          // Stützenreihen und den Leuchtbändern statt in derselben Flucht.
+          rotation: [art === 'boden' ? -Math.PI / 2 : Math.PI / 2, 0, lage.winkel],
           groesse: [lage.laenge, lage.breite],
           art,
         });
@@ -233,10 +259,39 @@ export function Hallenhuelle({
     disposeSurface(surfaces.decke);
   }, [surfaces]);
 
-  // Eine Kachel misst so viele Meter -- die Ebenen bekommen ihre UVs aus der
-  // Größe, damit Fugen und Leuchtenraster überall gleich groß bleiben.
-  const kacheln = (art: 'boden' | 'decke', groesse: [number, number]) =>
-    [groesse[0] / WELT_KACHEL_M[art], groesse[1] / WELT_KACHEL_M[art]] as [number, number];
+  /**
+   * Wie oft die Textur über eine Ebene läuft -- und wo ihre erste Fuge liegt.
+   *
+   * Der Boden hängt am Stützenraster: eine Texturkachel deckt genau ein Feld
+   * von `RASTER_M` ab, und die Kachel ist so verschoben, dass ihr Rand auf
+   * einer Stützenachse sitzt. Damit haben Bodenplatten, Stützen und
+   * Leuchtbänder dieselbe Flucht statt drei verschiedener.
+   *
+   * Ohne den Versatz begänne die Kachel an der Hallenkante: das Fugenraster
+   * liefe dann um den Rest an, den die Halle über die vollen Felder hinaus
+   * misst -- bei Halle 10.2 um 6,5 m, also mitten durch jedes Feld.
+   */
+  const kacheln = (art: 'boden' | 'decke', groesse: [number, number]) => {
+    if (art === 'decke') {
+      const m = WELT_KACHEL_M.decke;
+      return {
+        repeat: [groesse[0] / m, groesse[1] / m] as [number, number],
+        offset: [0, 0] as [number, number],
+      };
+    }
+    const achse = (laenge: number) => {
+      const felder = Math.max(1, Math.floor(laenge / RASTER_M));
+      // Texturkoordinate 0 soll auf der ersten Achse liegen, also bei
+      // -felder*RASTER/2 in Ebenenkoordinaten.
+      return { repeat: laenge / RASTER_M, offset: felder / 2 - laenge / (2 * RASTER_M) };
+    };
+    const u = achse(groesse[0]);
+    const v = achse(groesse[1]);
+    return {
+      repeat: [u.repeat, v.repeat] as [number, number],
+      offset: [u.offset, v.offset] as [number, number],
+    };
+  };
 
   if (!visible || !flaechen.length) return null;
 
@@ -244,14 +299,14 @@ export function Hallenhuelle({
     <group>
       {flaechen.map((flaeche) => {
         const surface = surfaces[flaeche.art];
-        const [ru, rv] = kacheln(flaeche.art, flaeche.groesse);
+        const { repeat, offset } = kacheln(flaeche.art, flaeche.groesse);
         return (
           <mesh
             key={flaeche.key}
             position={flaeche.position}
             rotation={flaeche.rotation}
             receiveShadow={flaeche.art === 'boden'}
-            material={hallenMaterial(flaeche.art, surface, ru, rv)}
+            material={hallenMaterial(flaeche.art, surface, repeat, offset)}
           >
             <planeGeometry args={[flaeche.groesse[0], flaeche.groesse[1]]} />
           </mesh>
@@ -286,18 +341,20 @@ const hallenMaterialCache = new Map<string, THREE.Material>();
 function hallenMaterial(
   art: 'boden' | 'decke',
   surface: Surface,
-  ru: number,
-  rv: number,
+  repeat: [number, number],
+  offset: [number, number],
 ): THREE.Material {
-  const schluessel = `${art}|${surface.map.uuid}|${ru.toFixed(2)}|${rv.toFixed(2)}`;
+  const [ru, rv] = repeat;
+  const schluessel = `${art}|${surface.map.uuid}|${ru.toFixed(3)}|${rv.toFixed(3)}`
+    + `|${offset[0].toFixed(3)}|${offset[1].toFixed(3)}`;
   const fertig = hallenMaterialCache.get(schluessel);
   if (fertig) return fertig;
 
   if (art === 'boden') {
     const material = new THREE.MeshStandardMaterial({
-      map: kachel(surface.map, ru, rv),
-      normalMap: kachel(surface.normalMap, ru, rv),
-      roughnessMap: kachel(surface.roughnessMap, ru, rv),
+      map: kachel(surface.map, ru, rv, offset),
+      normalMap: kachel(surface.normalMap, ru, rv, offset),
+      roughnessMap: kachel(surface.roughnessMap, ru, rv, offset),
       roughness: 0.34,
       metalness: 0.22,
       // Zurückgenommen von 1,5: die Umgebung ist eine gleichmäßig helle
@@ -315,10 +372,10 @@ function hallenMaterial(
   // Reihen dieser Halle, die `Deckenleuchten` als echte Geometrie setzt. Zwei
   // Lichtquellen an derselben Stelle, die nicht zueinander passten, waren der
   // Grund, warum die Decke nach nichts Bestimmtem aussah.
-  const map = kachel(surface.map, ru, rv);
+  const map = kachel(surface.map, ru, rv, offset);
   const material = toonMaterial(FAMILIEN.M02, {
     map,
-    normalMap: kachel(surface.normalMap, ru, rv),
+    normalMap: kachel(surface.normalMap, ru, rv, offset),
   }, { side: THREE.DoubleSide });
   // Die Decke bekommt kaum direktes Licht ab -- sie liegt über den
   // Punktlichtern, nicht darunter, und das gedämpfte Umgebungslicht reicht
@@ -343,15 +400,22 @@ function hallenMaterial(
  * ohne dass die Textur zweimal im Speicher liegt.
  */
 const kachelCache = new Map<string, THREE.Texture>();
-function kachel(quelle: THREE.Texture | undefined, u: number, v: number) {
+function kachel(
+  quelle: THREE.Texture | undefined,
+  u: number,
+  v: number,
+  offset: [number, number] = [0, 0],
+) {
   if (!quelle) return null;
-  const schluessel = `${quelle.uuid}|${u.toFixed(2)}|${v.toFixed(2)}`;
+  const schluessel = `${quelle.uuid}|${u.toFixed(3)}|${v.toFixed(3)}`
+    + `|${offset[0].toFixed(3)}|${offset[1].toFixed(3)}`;
   let fertig = kachelCache.get(schluessel);
   if (!fertig) {
     fertig = quelle.clone();
     fertig.wrapS = THREE.RepeatWrapping;
     fertig.wrapT = THREE.RepeatWrapping;
     fertig.repeat.set(u, v);
+    fertig.offset.set(offset[0], offset[1]);
     fertig.needsUpdate = true;
     kachelCache.set(schluessel, fertig);
   }
@@ -654,15 +718,8 @@ function leuchtenreihen(lage: Lage) {
   const bahnen: { quer: number; laenge: number; ux: number; uy: number; vx: number; vy: number }[] = [];
   for (let feld = 0; feld < querAchsen.length - 1; feld += 1) {
     const von = querAchsen[feld];
-    for (let b = 1; b <= BAHNEN_JE_FELD; b += 1) {
-      bahnen.push({
-        quer: von + (b / (BAHNEN_JE_FELD + 1)) * reihenAbstand,
-        laenge,
-        ux,
-        uy,
-        vx,
-        vy,
-      });
+    for (const versatz of bahnenImFeld(reihenAbstand)) {
+      bahnen.push({ quer: von + versatz, laenge, ux, uy, vx, vy });
     }
   }
   return bahnen;

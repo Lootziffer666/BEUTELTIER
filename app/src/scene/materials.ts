@@ -452,12 +452,12 @@ export function hallenbodenSurface(): Surface {
     hctx.fill();
   }
 
-  // Plattenfugen. Die Kachel deckt WELT_KACHEL_M.boden = 16 m ab, geteilt in
-  // acht Platten -- also rund zwei Meter je Platte, wie im Referenzbild, wo
-  // das Fugenraster über den ganzen Boden läuft und den Massstab angibt.
-  // Vorher lagen hier nur zwei Dehnfugen je Kachel: acht Meter Abstand, viel
-  // zu grob, um als Belag zu lesen.
-  const platte = SIZE / 8;
+  // Plattenfugen. Die Kachel deckt beim Hallenboden genau ein Stützenfeld ab
+  // (RASTER_M = 12 m, siehe `Hallenhuelle`), geteilt in sechs Platten -- also
+  // zwei Meter je Platte. Damit fällt jede sechste Fuge auf eine
+  // Stützenachse, und Bodenplatten, Stützen und Leuchtbänder stehen in
+  // derselben Flucht statt in drei verschiedenen.
+  const platte = SIZE / 6;
   ctx.strokeStyle = 'rgba(26, 28, 32, 0.85)';
   ctx.lineWidth = 3;
   hctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
