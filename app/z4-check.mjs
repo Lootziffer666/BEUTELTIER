@@ -56,7 +56,10 @@ const l = lage(hall.footprint);
 // Bounding-Box aus `lage()` nicht kennt -- sichtbar als schräge Kante quer
 // durchs Bild, wo eigentlich nur Boden sein sollte. Die Mitte ist von jeder
 // Unregelmässigkeit am Rand am weitesten weg.
-const station = (l.uMin + l.uMax) / 2;
+// Versatz optional: die Stützen stehen alle 10 m, und mittig zwischen zwei
+// Reihen zu stehen zeigt mehr Decke als direkt neben einer.
+const versatz = Number(process.argv[3] ?? 0);
+const station = (l.uMin + l.uMax) / 2 + versatz;
 const x = l.ux * station - l.uy * l.vM;
 const y = l.uy * station + l.ux * l.vM;
 // Blick geradeaus die lange Achse hinunter, kein Versatz. Kamera schaut nach

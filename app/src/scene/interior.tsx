@@ -285,17 +285,27 @@ function hallenMaterial(
     return material;
   }
 
-  // Keine `emissiveMap` mehr hier: die Decke trug bisher ihr eigenes,
-  // generisches Leuchtfeld-Raster aus der Kachel -- unabhängig von den
-  // tatsächlichen Reihen dieser Halle, die `Deckenleuchten` als echte
-  // Geometrie setzt. Zwei Lichtquellen an derselben Stelle, die nicht
-  // zueinander passten, waren der Grund, warum die Decke nach nichts
-  // Bestimmtem aussah. Jetzt ist die Fläche nur noch das dunkle Tragwerk;
-  // das Licht kommt ausschliesslich aus den echten Bändern darunter.
+  // Keine gemalten Leuchtfelder mehr in der `emissiveMap` -- die Decke trug
+  // bisher ihr eigenes, generisches Raster, unabhängig von den tatsächlichen
+  // Reihen dieser Halle, die `Deckenleuchten` als echte Geometrie setzt. Zwei
+  // Lichtquellen an derselben Stelle, die nicht zueinander passten, waren der
+  // Grund, warum die Decke nach nichts Bestimmtem aussah.
+  const map = kachel(surface.map, ru, rv);
   const material = toonMaterial(FAMILIEN.M02, {
-    map: kachel(surface.map, ru, rv),
+    map,
     normalMap: kachel(surface.normalMap, ru, rv),
   }, { side: THREE.DoubleSide });
+  // Die Decke bekommt kaum direktes Licht ab -- sie liegt über den
+  // Punktlichtern, nicht darunter, und das gedämpfte Umgebungslicht reicht
+  // nicht bis dorthin. Ohne Weiteres fällt die Fläche komplett in die
+  // dunkelste Stufe von M02s zweistufigem Grauverlauf, und das Kassetten-
+  // raster -- eigentlich in der Farbtextur gezeichnet -- verschwindet darin
+  // vollständig. Die eigene Textur noch einmal schwach als Emission macht
+  // die Fläche unabhängig vom Lichteinfall lesbar: kein zusätzliches Licht,
+  // sondern dieselbe Zeichnung, die sonst ungesehen bliebe.
+  material.emissiveMap = map;
+  material.emissive = new THREE.Color('#ffffff');
+  material.emissiveIntensity = 0.5;
   hallenMaterialCache.set(schluessel, material);
   return material;
 }
