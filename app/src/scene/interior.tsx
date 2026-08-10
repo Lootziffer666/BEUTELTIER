@@ -26,6 +26,7 @@ import {
 } from './materials';
 import { FAMILIEN, toonMaterial } from './stil';
 import { planErlaubt } from './fernsteuerung';
+import konstruktion from '../../public/data/hallen-konstruktion.json';
 
 /** Draufsicht ohne Decke -- siehe `planErlaubt`. Einmal beim Laden entschieden. */
 const PLAN_ANSICHT =
@@ -193,21 +194,52 @@ function imUmriss(umriss: Placement2D[], x: number, y: number): boolean {
   return drin;
 }
 
+/**
+ * Die Konstruktion einer Halle, sofern sie als Daten vorliegt.
+ *
+ * `hallen-konstruktion.json` gibt Stützenreihen und -abstände in Metern vor.
+ * Steht eine Halle dort, gilt ausschliesslich die Datei; die Ableitung aus
+ * der Hallengrösse darunter ist nur der Notnagel für alles, was noch nicht
+ * eingemessen ist, und als solcher benannt.
+ */
+interface StuetzenSpec {
+  reihenQuer: number[];
+  laengsStart: number;
+  laengsAbstand: number;
+  laengsAnzahl: number;
+  profil: { breite: number; tiefe: number };
+}
+
+const KONSTRUKTION = konstruktion.hallen as Record<string, { stuetzen: StuetzenSpec }>;
+
+export function stuetzenSpec(hallKey: string): StuetzenSpec | null {
+  return KONSTRUKTION[hallKey]?.stuetzen ?? null;
+}
+
 function saeulenraster(
   lage: Lage,
   aussparungen: { x: number; y: number }[] = [],
   umriss: Placement2D[] = [],
+  spec: StuetzenSpec | null = null,
 ) {
   // Die Achsen kommen aus `hallenlage` und werden hier **nicht** aus `winkel`
   // neu gerechnet: `winkel` ist die Drehung für die Szene und trägt dafür
   // einen Vorzeichenwechsel, der im Grundriss nichts zu suchen hat.
   const { tx, ty, px, py } = lage;
 
-  // Längs im Stützenmass, quer in Reihen mit Ausstellerbändern dazwischen --
-  // die beiden Richtungen sind nicht dasselbe.
-  const laengsAchsen = rasterAchsen(lage.laenge);
-  const querAchsen = pfeilerreihenQuer(lage.breite);
-  const bandbreite = lage.breite / (PFEILERREIHEN_QUER + 1);
+  // Daten schlagen Rechnung: liegt die Halle in `hallen-konstruktion.json`,
+  // kommen Reihen und Abstände von dort. Die Ableitung darunter gilt nur für
+  // Hallen, die noch nicht erfasst sind.
+  const laengsAchsen = spec
+    ? Array.from({ length: spec.laengsAnzahl },
+        (_, i) => spec.laengsStart + i * spec.laengsAbstand)
+    : rasterAchsen(lage.laenge);
+  const querAchsen = spec ? spec.reihenQuer : pfeilerreihenQuer(lage.breite);
+  // Der Bandabstand trägt die Leuchtenbahnen; bei ungleichen Reihenabständen
+  // ist es der erste, sonst wäre die Zahl eine Erfindung.
+  const bandbreite = querAchsen.length > 1
+    ? querAchsen[1] - querAchsen[0]
+    : lage.breite / (PFEILERREIHEN_QUER + 1);
 
   const positionen: { x: number; y: number }[] = [];
   for (const laengs of laengsAchsen) {
@@ -567,7 +599,7 @@ export function hallenGrundriss(
     if (hall.outdoor) continue;
     const lage = hallenlage(hall.footprint);
     if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
-    const { positionen } = saeulenraster(lage, aussparungen, hall.footprint);
+    const { positionen } = saeulenraster(lage, aussparungen, hall.footprint, stuetzenSpec(hall.key));
     out.push({
       key: hall.key,
       umriss: hall.footprint.map(([x, y]) => [x, y] as [number, number]),
@@ -624,7 +656,7 @@ export function Hallenstuetzen({
       const lage = hallenlage(hall.footprint);
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
       const hoehe = hall.height?.clearHeightM ?? 8;
-      const { positionen } = saeulenraster(lage, aussparungen, hall.footprint);
+      const { positionen } = saeulenraster(lage, aussparungen, hall.footprint, stuetzenSpec(hall.key));
       const boden = hall.baseY;
       const decke = hall.baseY + hoehe;
 
