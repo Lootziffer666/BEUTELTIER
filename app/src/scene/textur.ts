@@ -218,28 +218,69 @@ function holzdeck(startwert: number) {
   return { bild, hoehe };
 }
 
-/** M07 -- Glas: Pfosten-Riegel-Raster, dazwischen fast leer. */
+/**
+ * M07 -- Glas: Pfosten-Riegel-Raster mit **scheibenweise** verschiedenem Ton.
+ *
+ * Der Punkt, an dem eine Glasfassade steht oder fällt. Auf dem Referenzbild
+ * vom Boulevard ist keine Scheibe wie die andere: eine spiegelt hellen
+ * Himmel, die daneben zeigt dunkel den Innenraum, die dritte fängt einen
+ * Baum. Genau diese Unruhe liest man als Glas.
+ *
+ * Die erste Fassung legte einen gleichmässigen Schrägzug über die ganze
+ * Fläche -- über die Pfosten hinweg, quer durch alles. Das las sich als
+ * Folie über einer blauen Wand, nicht als verglaste Fassade: eine Spiegelung
+ * endet am Rahmen, weil dahinter eine andere Scheibe in einem anderen Winkel
+ * steht.
+ */
 function glasraster(startwert: number) {
   const bild = new Raster(KACHEL_PX, KACHEL_PX, farbe('#8fa9bd'));
   const hoehe = new Raster(KACHEL_PX, KACHEL_PX, grau(190));
-  const rahmen = farbe('#3d474f');
-  const pfosten = KACHEL_PX / 4;
-  for (let x = 0; x < KACHEL_PX; x += pfosten) {
-    bild.rechteck(x, 0, 7, KACHEL_PX, rahmen);
-    hoehe.rechteck(x, 0, 7, KACHEL_PX, grau(60));
-  }
-  for (let y = 0; y < KACHEL_PX; y += pfosten * 2) {
-    bild.rechteck(0, y, KACHEL_PX, 5, rahmen);
-    hoehe.rechteck(0, y, KACHEL_PX, 5, grau(60));
-  }
-  // Die Spiegelung: ein heller Schrägzug über die Scheibe, sonst nichts.
   const zufall = mulberry32(startwert);
-  for (let i = 0; i < 5; i += 1) {
-    const x = zufall() * KACHEL_PX;
-    bild.linie(x, 0, x + KACHEL_PX * 0.6, KACHEL_PX, 14 + zufall() * 20,
-               farbe('#d8e6f2'), 0.12);
+  const spalten = 4;
+  const zeilen = 2;
+  const breite = KACHEL_PX / spalten;
+  const hoch = KACHEL_PX / zeilen;
+
+  for (let zy = 0; zy < zeilen; zy += 1) {
+    for (let zx = 0; zx < spalten; zx += 1) {
+      const x = zx * breite;
+      const y = zy * hoch;
+      // Drei Zustände, wie sie eine Fassade tatsächlich zeigt: Himmel,
+      // Innenraum, und das Übliche dazwischen.
+      const wurf = zufall();
+      const ton = wurf < 0.25 ? hsl(205, 30, 68 + zufall() * 10)
+        : wurf < 0.45 ? hsl(210, 18, 26 + zufall() * 10)
+          : hsl(203, 24, 44 + zufall() * 16);
+      bild.rechteck(x, y, breite, hoch, ton);
+
+      // Die Spiegelung bleibt in ihrer Scheibe -- sie endet am Rahmen.
+      if (zufall() < 0.6) {
+        const versatz = zufall() * breite;
+        for (let s = 0; s < 2; s += 1) {
+          const start = versatz + s * (12 + zufall() * 18);
+          for (let dy = 0; dy < hoch; dy += 1) {
+            const px = x + ((start + dy * 0.55) % breite);
+            bild.rechteck(px, y + dy, 6 + zufall() * 10, 1,
+                          farbe('#dbe8f4'), 0.1 + zufall() * 0.12);
+          }
+        }
+      }
+    }
   }
-  bild.koernung(startwert + 1, 0.015);
+
+  // Rahmen zuletzt, damit er scharf bleibt: Pfosten kräftig, Riegel feiner.
+  const rahmen = farbe('#2c343a');
+  for (let zx = 0; zx <= spalten; zx += 1) {
+    bild.rechteck(zx * breite - 4, 0, 8, KACHEL_PX, rahmen);
+    hoehe.rechteck(zx * breite - 4, 0, 8, KACHEL_PX, grau(50));
+    // Die Lichtkante des Profils -- ohne sie ist der Pfosten ein Strich.
+    bild.rechteck(zx * breite + 4, 0, 2, KACHEL_PX, farbe('#9fb3c4'), 0.5);
+  }
+  for (let zy = 0; zy <= zeilen; zy += 1) {
+    bild.rechteck(0, zy * hoch - 3, KACHEL_PX, 6, rahmen);
+    hoehe.rechteck(0, zy * hoch - 3, KACHEL_PX, 6, grau(50));
+  }
+  bild.koernung(startwert + 1, 0.012);
   return { bild, hoehe };
 }
 

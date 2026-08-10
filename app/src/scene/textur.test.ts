@@ -101,6 +101,40 @@ describe('Die Zeichnungen zeigen etwas', () => {
     expect(toene.size).toBeGreaterThanOrEqual(10);
   });
 
+  it('gibt jeder Glasscheibe ihren eigenen Ton', () => {
+    // Der Punkt, an dem eine Glasfassade steht oder fällt: auf dem
+    // Referenzbild ist keine Scheibe wie die andere -- eine spiegelt hellen
+    // Himmel, die daneben zeigt dunkel den Innenraum. Genau diese Unruhe
+    // liest man als Glas. Eine gleichmässig blaue Fläche mit einem Raster
+    // darüber liest man als Wand mit aufgemalten Fenstern.
+    const bild = raster.M07.bild;
+    const breite = KACHEL_PX / 4;
+    const hoch = KACHEL_PX / 2;
+    const toene: number[] = [];
+    for (let zy = 0; zy < 2; zy += 1) {
+      for (let zx = 0; zx < 4; zx += 1) {
+        toene.push(bild.lesen(zx * breite + breite * 0.75, zy * hoch + hoch * 0.15)[0]);
+      }
+    }
+    const spanne = Math.max(...toene) - Math.min(...toene);
+    expect(spanne, `Scheibentöne: ${toene.join(', ')}`).toBeGreaterThan(40);
+  });
+
+  it('lässt die Spiegelung am Rahmen enden', () => {
+    // Eine Spiegelung, die über den Pfosten hinwegläuft, verrät die Fläche
+    // als Folie über einer blauen Wand. Hinter dem Rahmen steht eine andere
+    // Scheibe in einem anderen Winkel.
+    const bild = raster.M07.bild;
+    const breite = KACHEL_PX / 4;
+    for (let zx = 1; zx < 4; zx += 1) {
+      // Im Pfosten selbst darf nichts Helles stehen.
+      for (let y = 20; y < KACHEL_PX; y += 37) {
+        expect(bild.lesen(zx * breite, y)[0], `Pfosten bei x=${zx * breite}`)
+          .toBeLessThan(90);
+      }
+    }
+  });
+
   it('zieht die Bretter des Holzdecks in eine Richtung', () => {
     // Senkrecht gefügt: über die Spalten hinweg wechselt der Ton von Brett zu
     // Brett, über die Zeilen hinweg bleibt er gleich.
