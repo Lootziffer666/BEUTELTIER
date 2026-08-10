@@ -25,7 +25,7 @@
 
 import * as THREE from 'three';
 
-import { Raster, farbe, grau, hsl, mulberry32, normalenkarte } from './raster';
+import { Raster, farbe, grau, hsl, mulberry32, normalenkarte, type Farbe } from './raster';
 import type { Familie } from './stil';
 
 /**
@@ -258,24 +258,61 @@ function metall(startwert: number) {
   return { bild, hoehe };
 }
 
-/** M09 -- Laub: gebrochene Flächen statt Blätter, damit die Silhouette trägt. */
+/**
+ * M09 -- Laub: gelappte Büschel mit dunkler Trennung, nicht Blätter.
+ *
+ * Die Stilbibel sagt es ausdrücklich: Vegetation ist Landmarke, nicht
+ * Botanik-Simulation -- markante Kronensilhouette, klare dunkle Außenkante,
+ * innen flächig gestuft. Auf dem Referenzbild ist der Baum vor Halle 11 genau
+ * das: erkennbare Büschel mit Tuschekante dazwischen.
+ *
+ * Erste Fassung streute einzelne Kreise. Das ergab Schaum -- lauter perfekte
+ * Kugeln ohne Trennung. Jetzt besteht ein Büschel aus mehreren
+ * ineinandergreifenden Keulen, und zwischen den Büscheln steht ein dunkler
+ * Rand. Die Lappung ist der Unterschied zwischen Laub und Seifenblasen.
+ */
 function laub(startwert: number) {
-  const bild = new Raster(KACHEL_PX, KACHEL_PX, farbe('#5f8043'));
-  const hoehe = new Raster(KACHEL_PX, KACHEL_PX, grau(128));
+  const bild = new Raster(KACHEL_PX, KACHEL_PX, farbe('#38502a'));
+  const hoehe = new Raster(KACHEL_PX, KACHEL_PX, grau(96));
   const zufall = mulberry32(startwert);
-  for (let i = 0; i < 700; i += 1) {
-    const x = zufall() * KACHEL_PX;
-    const y = zufall() * KACHEL_PX;
-    const r = 6 + zufall() * 22;
-    const ton = hsl(88 + zufall() * 30, 26 + zufall() * 22, 24 + zufall() * 24);
+
+  const keule = (x: number, y: number, r: number, ton: Farbe,
+                 deckkraft: number, hoehenwert: number) => {
     for (let dy = -r; dy <= r; dy += 1) {
       const halb = Math.sqrt(Math.max(0, r * r - dy * dy));
-      bild.rechteck(x - halb, y + dy, halb * 2, 1, ton, 0.55);
+      bild.rechteck(x - halb, y + dy, halb * 2, 1, ton, deckkraft);
       hoehe.rechteck(x - halb, y + dy, halb * 2, 1,
-                     grau(110 + Math.round((1 - Math.abs(dy) / r) * 80)), 0.5);
+                     grau(hoehenwert + Math.round((1 - Math.abs(dy) / r) * 60)), 0.6);
+    }
+  };
+
+  for (let i = 0; i < 190; i += 1) {
+    const cx = zufall() * KACHEL_PX;
+    const cy = zufall() * KACHEL_PX;
+    const gross = 16 + zufall() * 26;
+    const hell = hsl(78 + zufall() * 34, 30 + zufall() * 22, 26 + zufall() * 22);
+    // Erst die dunkle Kante -- das Büschel etwas grösser und fast schwarz.
+    keule(cx, cy, gross * 1.16, farbe('#1a2412'), 0.85, 70);
+    // Dann die Lappen, die es ausfüllen.
+    const lappen = 3 + Math.floor(zufall() * 4);
+    for (let k = 0; k < lappen; k += 1) {
+      const winkel = (k / lappen) * Math.PI * 2 + zufall();
+      const weite = gross * (0.3 + zufall() * 0.35);
+      keule(cx + Math.cos(winkel) * weite, cy + Math.sin(winkel) * weite,
+            gross * (0.45 + zufall() * 0.3), hell, 0.95, 120);
     }
   }
-  bild.koernung(startwert + 1, 0.05);
+  // Ein paar Lichtblitze auf den obersten Lappen -- der Sonnenstand der
+  // Stilbibel: klare Tageslichtsituation mit definierten Schlagschatten.
+  // Flach und schwach: runde, kräftige Punkte lesen sich als Regentropfen.
+  for (let i = 0; i < 120; i += 1) {
+    const x = zufall() * KACHEL_PX;
+    const y = zufall() * KACHEL_PX;
+    const laenge = 5 + zufall() * 11;
+    bild.linie(x, y, x + laenge, y + laenge * (zufall() - 0.5), 2.5 + zufall() * 2,
+               hsl(74 + zufall() * 20, 34, 50 + zufall() * 14), 0.3);
+  }
+  bild.koernung(startwert + 1, 0.045);
   return { bild, hoehe };
 }
 

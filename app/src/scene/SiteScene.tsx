@@ -43,12 +43,14 @@ import type { CameraSnapshot } from './survey';
 import { ProceduralStaging } from './ProceduralStaging';
 import {
   FAMILIEN,
+  familienMaterial,
   konturHuelle,
   konturStaerke,
   stufenTextur,
   toonMaterial,
   type Familie,
 } from './stil';
+import { KACHEL_M } from './textur';
 import { Kontur } from './Kontur';
 
 export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
@@ -485,10 +487,26 @@ function OfficialPackage({
           continue;
         }
         if (umbauen && surfaces) projiziereUV(mesh.geometry, WELT_KACHEL_M.wand);
-        const material = toonMaterial(familie, {
-          map: umbauen && surfaces ? surfaces.wand.map : quelle.map,
-          normalMap: umbauen && surfaces ? surfaces.wand.normalMap : quelle.normalMap,
-        }, { side: THREE.DoubleSide });
+        // Der Punkt, an dem der Look bisher verlorenging: die amtlichen
+        // GLB-Pakete sind aus Gebäudeumringen gerechnet und bringen **keine**
+        // Textur mit. `quelle.map` ist dort schlicht `null`, und was blieb,
+        // war eine gestufte Beleuchtung auf einer leeren Farbfläche -- eine
+        // Pappschachtel. Wo keine Karte mitkommt, zeichnet jetzt die Familie
+        // selbst, projiziert in Metern statt über die Fläche gestreckt.
+        const eigeneKarte = umbauen && surfaces ? surfaces.wand : null;
+        let material: THREE.MeshToonMaterial;
+        if (eigeneKarte) {
+          material = toonMaterial(familie, {
+            map: eigeneKarte.map, normalMap: eigeneKarte.normalMap,
+          }, { side: THREE.DoubleSide });
+        } else if (quelle.map) {
+          material = toonMaterial(familie, {
+            map: quelle.map, normalMap: quelle.normalMap,
+          }, { side: THREE.DoubleSide });
+        } else {
+          projiziereUV(mesh.geometry, KACHEL_M[familie.id] ?? 6);
+          material = familienMaterial(familie, undefined, { side: THREE.DoubleSide });
+        }
         schleier(material, deckkraft);
         mesh.material = material;
         mesh.receiveShadow = true;
