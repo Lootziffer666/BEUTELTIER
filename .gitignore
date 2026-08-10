@@ -29,3 +29,4 @@ data/raw/alkis/*.zip
 # maschinenlesbaren GLB-Extras werden eingecheckt, nicht das Binaerprodukt.
 data/build/official-world-diagnostic.glb
 data/build/world-packages/**/*.glb
+app/textur-vorschau/
