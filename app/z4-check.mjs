@@ -70,10 +70,13 @@ const RASTER_M = 12;
 const PFEILER_IN_DIE_TIEFE = 4;
 
 const l = lage(hall.footprint);
-// Wie das Raster in `interior.tsx`: floor(breite / 12) Felder, mittig
-// eingepasst. Der halbe Feldversatz stellt die Kamera in den Gang.
-const felderQuer = Math.max(1, Math.floor(l.breite / RASTER_M));
-const gangVersatz = felderQuer % 2 === 0 ? RASTER_M / 2 : 0;
+// Quer teilen fuenf Stuetzenreihen die Halle in sechs Ausstellerbaender
+// (siehe `pfeilerreihenQuer` in interior.tsx). Die mittlere Reihe liegt genau
+// auf der Hallenmitte -- die Kamera stuende also in einer Stuetze. Ein halbes
+// Band Versatz stellt sie in den Ausstellerblock, flankiert von zwei Reihen.
+const PFEILERREIHEN_QUER = 5;
+const bandbreite = l.breite / (PFEILERREIHEN_QUER + 1);
+const gangVersatz = bandbreite / 2;
 // Auch laengs mittig im Feld stehen, nicht auf einer Achse: sonst steht die
 // flankierende Stuetze auf gleicher Hoehe wie die Kamera, also einen halben
 // Feldabstand seitlich -- und fuellt das halbe Bild, statt die Flucht zu

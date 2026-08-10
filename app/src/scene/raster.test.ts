@@ -1,63 +1,79 @@
 import { describe, expect, it } from 'vitest';
 
-import { BAHNEN_JE_FELD, RASTER_M, bahnenImFeld, hallenlage, rasterAchsen } from './interior';
+import {
+  BAHNEN_JE_FELD,
+  PFEILERREIHEN_QUER,
+  RASTER_M,
+  bahnenImFeld,
+  hallenlage,
+  pfeilerreihenQuer,
+  rasterAchsen,
+} from './interior';
 import site from '../../public/data/registered-site.json';
 
 /**
- * Das Stützenraster ist ein Baumaß, keine Ableitung aus der Hallengröße.
+ * Quer zur Halle wechseln sich Ausstellerbänder und Stützenreihen ab -- kein
+ * gleichmäßiges Raster in beiden Richtungen.
  *
- * Die Zahlen hier sind die Vorgabe für Halle 10.2 und stammen nicht aus dem
- * Code: 12,00 m Achsmaß, 13 Achsen quer, 15 Reihen längs, 195 Rasterpunkte.
- * Wer am Raster dreht, muss diese Prüfung anfassen -- und dann erklären,
- * warum die Halle plötzlich anders gebaut ist.
+ * Ein Raster von 12 m auch quer (13 Achsen über Halle 10.2) stand hier
+ * vorher und war falsch: bei 12 m Abstand bleibt zwischen zwei Reihen kein
+ * Platz für einen Ausstellerblock, und genau dafür ist die Fläche da.
  */
-describe('Stützenraster', () => {
-  it('misst zwölf Meter', () => {
+describe('Stützenreihen quer', () => {
+  it('sind zu fünft', () => {
+    expect(PFEILERREIHEN_QUER).toBe(5);
+    expect(pfeilerreihenQuer(145.5)).toHaveLength(5);
+  });
+
+  it('teilen die Breite in sechs gleiche Bänder', () => {
+    const breite = 145.5;
+    const reihen = pfeilerreihenQuer(breite);
+    const band = breite / 6;
+    // Wand -> erste Reihe, dann Reihe zu Reihe, dann letzte Reihe -> Wand.
+    const abstaende = [
+      reihen[0] - -breite / 2,
+      ...reihen.slice(1).map((r, i) => r - reihen[i]),
+      breite / 2 - reihen[reihen.length - 1],
+    ];
+    for (const abstand of abstaende) expect(abstand).toBeCloseTo(band, 6);
+  });
+
+  it('lassen an beiden Wänden ein ganzes Band frei', () => {
+    const reihen = pfeilerreihenQuer(145.5);
+    expect(reihen[0]).toBeCloseTo(-reihen[reihen.length - 1], 6);
+    expect(Math.abs(reihen[0])).toBeLessThan(145.5 / 2);
+  });
+});
+
+/** Längs der Halle stehen die Stützen einer Reihe im festen Abstand. */
+describe('Stützen längs einer Reihe', () => {
+  it('stehen zwölf Meter auseinander', () => {
     expect(RASTER_M).toBe(12);
-  });
-
-  it('legt für Halle 10.2 fünfzehn Achsen längs und dreizehn quer', () => {
-    // Gemessen aus registered-site.json: 174,5 m lang, 145,5 m breit.
-    const laengs = rasterAchsen(174.5);
-    const quer = rasterAchsen(145.5);
-    expect(laengs).toHaveLength(15);
-    expect(quer).toHaveLength(13);
-    expect(laengs.length * quer.length).toBe(195);
-  });
-
-  it('hält überall genau zwölf Meter Abstand', () => {
     const achsen = rasterAchsen(174.5);
     for (let i = 1; i < achsen.length; i += 1) {
       expect(achsen[i] - achsen[i - 1]).toBeCloseTo(12, 6);
     }
   });
 
-  it('sitzt mittig, nicht an einer Wand', () => {
+  it('sitzen mittig, nicht an einer Wand', () => {
     const achsen = rasterAchsen(145.5);
     expect(achsen[0]).toBeCloseTo(-achsen[achsen.length - 1], 6);
   });
 
-  it('trägt auch in einer kleinen Halle mindestens ein Feld', () => {
+  it('tragen auch in einer kleinen Halle mindestens ein Feld', () => {
     expect(rasterAchsen(5)).toHaveLength(2);
   });
 });
 
 /**
- * Zwischen zwei Stützenreihen liegen drei Lichtleisten mit identischen
- * Abständen -- bei 12 m Achsmaß also auf 3, 6 und 9 m. „Identisch" heisst
- * dabei: der Abstand Stütze→Bahn ist derselbe wie Bahn→Bahn, die Ränder
- * werden nicht anders behandelt als die Mitte.
- */
-/**
- * Dieselbe Vorgabe, aber am echten Grundriss statt an getippten Zahlen.
+ * Am echten Grundriss statt an getippten Zahlen.
  *
- * Der Fehler, den diese Prüfung fangen soll, war genau hier: `hallenlage()`
- * maß Länge und Breite entlang einer an der x-Achse gespiegelten Achse --
- * dem Winkel für die *Szenendrehung*, nicht der Richtung im Grundriss. Bei
- * Halle 10.2 (längste Kante bei -60°) kamen dabei 194,8 x 197,1 m heraus
- * statt 174,5 x 145,5, also 17 x 17 = 289 Stützen in einer gegen die Halle
- * verdrehten Box. Die Zahlen oben stimmten trotzdem -- sie stammen aus einer
- * Rechnung von Hand. Erst diese Prüfung verbindet beide.
+ * Der Fehler, den diese Prüfung fangen soll: `hallenlage()` maß Länge und
+ * Breite entlang einer an der x-Achse gespiegelten Achse -- dem Winkel für
+ * die *Szenendrehung*, nicht der Richtung im Grundriss. Bei Halle 10.2
+ * (längste Kante bei -60°) kamen dabei 194,8 x 197,1 m heraus statt
+ * 174,5 x 145,5, und das ganze Stützenwerk lag als verdrehte Box über der
+ * Halle.
  */
 describe('Halle 10.2 im Datensatz', () => {
   const halle = site.halls.find((h) => h.key === '10.2');
@@ -69,13 +85,20 @@ describe('Halle 10.2 im Datensatz', () => {
     expect(lage!.breite).toBeCloseTo(145.5, 0);
   });
 
-  it('trägt damit 195 Rasterpunkte', () => {
+  it('trägt fünf Stützenreihen mit je fünfzehn Stützen', () => {
     const lage = hallenlage(halle!.footprint as [number, number][])!;
     const laengs = rasterAchsen(lage.laenge);
-    const quer = rasterAchsen(lage.breite);
+    const quer = pfeilerreihenQuer(lage.breite);
+    expect(quer).toHaveLength(5);
     expect(laengs).toHaveLength(15);
-    expect(quer).toHaveLength(13);
-    expect(laengs.length * quer.length).toBe(195);
+    expect(laengs.length * quer.length).toBe(75);
+  });
+
+  it('lässt zwischen den Reihen rund 24 m für einen Ausstellerblock', () => {
+    const lage = hallenlage(halle!.footprint as [number, number][])!;
+    const quer = pfeilerreihenQuer(lage.breite);
+    expect(quer[1] - quer[0]).toBeCloseTo(lage.breite / 6, 6);
+    expect(quer[1] - quer[0]).toBeGreaterThan(20);
   });
 
   it('führt eine Längsachse, die senkrecht auf ihrer Querachse steht', () => {
@@ -85,24 +108,25 @@ describe('Halle 10.2 im Datensatz', () => {
   });
 });
 
-describe('Lichtleisten je Feld', () => {
+/**
+ * Über jedem Ausstellerband liegen drei Lichtleisten mit identischen
+ * Abständen: Stützenreihe → Bahn ist derselbe Abstand wie Bahn → Bahn.
+ */
+describe('Lichtleisten je Band', () => {
   it('sind zu dritt', () => {
     expect(BAHNEN_JE_FELD).toBe(3);
     expect(bahnenImFeld()).toHaveLength(3);
   });
 
-  it('liegen bei zwölf Metern auf 3, 6 und 9', () => {
-    expect(bahnenImFeld()).toEqual([3, 6, 9]);
-  });
-
-  it('halten überall denselben Abstand, auch zu den Stützen', () => {
-    const feld = RASTER_M;
-    const bahnen = bahnenImFeld(feld);
+  it('halten überall denselben Abstand, auch zu den Stützenreihen', () => {
+    // Bandbreite von Halle 10.2: 145,5 m auf sechs Bänder.
+    const band = 145.5 / 6;
+    const bahnen = bahnenImFeld(band);
     const abstaende = [
       bahnen[0] - 0,
       ...bahnen.slice(1).map((b, i) => b - bahnen[i]),
-      feld - bahnen[bahnen.length - 1],
+      band - bahnen[bahnen.length - 1],
     ];
-    for (const abstand of abstaende) expect(abstand).toBeCloseTo(3, 6);
+    for (const abstand of abstaende) expect(abstand).toBeCloseTo(band / 4, 6);
   });
 });

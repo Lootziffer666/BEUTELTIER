@@ -44,23 +44,59 @@ const DROP_M = 0.3;
 const STRIP_WIDTH_M = 0.42;
 const STRIP_THICKNESS_M = 0.12;
 
-const SAEULEN_BREITE_M = 0.7;
-const SAEULEN_TIEFE_M = 0.9;
+/**
+ * Der Pfeiler: schmal, mit einem kleinen Sockel oben und unten.
+ *
+ * Die Sockel sind nicht Zierat. Ein Quader, der ohne Übergang aus dem Boden
+ * kommt und ohne Übergang in der Decke endet, sieht aus, als wäre er in die
+ * Szene gesetzt statt in ihr gebaut -- er hat keinen Kontakt zu den Flächen,
+ * die er berührt. Ein leicht breiterer Absatz an beiden Enden stellt genau
+ * diesen Kontakt her; auf dem Referenzfoto ist er unten und oben zu sehen.
+ */
+const SAEULEN_BREITE_M = 0.46;
+const SAEULEN_TIEFE_M = 0.58;
+/** Wie weit der Sockel über den Schaft steht, je Seite. */
+const SOCKEL_KRAGEN_M = 0.07;
+/** Höhe des Sockels, oben wie unten. */
+const SOCKEL_HOEHE_M = 0.22;
 
 /**
- * Das Stützenraster der Messehallen: 12,00 m in beiden Richtungen.
+ * Wie eine Messehalle wirklich aufgeteilt ist -- **kein** gleichmäßiges
+ * Raster in beiden Richtungen.
  *
- * Ein festes Baumaß, keine aus der Hallengröße abgeleitete Zahl. Die
- * vorherige Fassung teilte die Halle in „Felder" und verschob den Abstand je
- * nach Breite -- damit standen die Stützen zwar regelmäßig, aber in einem
- * Maß, das es am Bau nicht gibt, und in jeder Halle in einem anderen.
+ * Hier stand vorher 12,00 m längs *und* quer, also 13 Stützenachsen über die
+ * Breite von Halle 10.2. Das ist falsch und macht die Halle unbrauchbar: bei
+ * 12 m Abstand quer bleibt zwischen zwei Reihen kein Platz für einen
+ * Ausstellerblock, und genau dafür ist die Fläche da.
  *
- * Zur Probe, dass die Zahl stimmt: Halle 10.2 misst 174,5 m × 145,5 m und
- * trägt damit 15 Achsen längs und 13 quer, zusammen 195 Rasterpunkte. Genau
- * das steht in `interior.test.ts`.
+ * Gebaut ist es andersherum. Quer zur Halle wechseln sich breite
+ * Ausstellerbänder und schmale Stützenreihen ab:
+ *
+ *     WAND
+ *     A  Aussteller
+ *     ●   ●   ●   ●     Pfeilerreihe 1
+ *     B  Aussteller
+ *     ●   ●   ●   ●     Pfeilerreihe 2
+ *     …
+ *     ●   ●   ●   ●     Pfeilerreihe 5
+ *     G  Aussteller
+ *     WAND
+ *
+ * Fünf Reihen quer, sechs Bänder dazwischen und an den Wänden. Die Reihen
+ * teilen die Breite also in sechs gleiche Teile -- bei Halle 10.2 rund 24 m
+ * je Band. Deshalb sieht man aus einem Band immer **zwei** Reihen, die es
+ * flankieren, und nicht dreizehn.
+ */
+export const PFEILERREIHEN_QUER = 5;
+/**
+ * Abstand der Stützen **innerhalb** einer Reihe, längs der Halle.
+ *
+ * Angenommen, nicht gemessen: 12 m ist das Mass, mit dem vier Pfeiler auf die
+ * rund 48 m fallen, die man von einem Standpunkt aus in die Flucht sieht.
+ * Sollte das am Bau anders sein, gehört die Zahl hierher und nirgends sonst.
  */
 export const RASTER_M = 12;
-/** Wie viele Leuchtenbahnen zwischen zwei Stützenachsen liegen. */
+/** Wie viele Leuchtenbahnen zwischen zwei Stützenreihen liegen. */
 export const BAHNEN_JE_FELD = 3;
 
 /**
@@ -74,6 +110,22 @@ export function bahnenImFeld(feldbreite = RASTER_M): number[] {
   const out: number[] = [];
   for (let b = 1; b <= BAHNEN_JE_FELD; b += 1) {
     out.push((b / (BAHNEN_JE_FELD + 1)) * feldbreite);
+  }
+  return out;
+}
+
+/**
+ * Die Lage der Stützenreihen quer zur Halle, gemessen von der Hallenmitte.
+ *
+ * Fünf Reihen teilen die Breite in sechs gleiche Bänder; die Reihe `i` sitzt
+ * damit auf `(i + 1) / 6` der Breite. An beiden Wänden bleibt ein ganzes
+ * Band -- dort steht die äusserste Ausstellerreihe, keine Stütze.
+ */
+export function pfeilerreihenQuer(breite: number): number[] {
+  const baender = PFEILERREIHEN_QUER + 1;
+  const out: number[] = [];
+  for (let i = 1; i <= PFEILERREIHEN_QUER; i += 1) {
+    out.push((i / baender - 0.5) * breite);
   }
   return out;
 }
@@ -134,8 +186,11 @@ function saeulenraster(lage: Lage, aussparungen: { x: number; y: number }[] = []
   // einen Vorzeichenwechsel, der im Grundriss nichts zu suchen hat.
   const { tx, ty, px, py } = lage;
 
+  // Längs im Stützenmass, quer in Reihen mit Ausstellerbändern dazwischen --
+  // die beiden Richtungen sind nicht dasselbe.
   const laengsAchsen = rasterAchsen(lage.laenge);
-  const querAchsen = rasterAchsen(lage.breite);
+  const querAchsen = pfeilerreihenQuer(lage.breite);
+  const bandbreite = lage.breite / (PFEILERREIHEN_QUER + 1);
 
   const positionen: { x: number; y: number }[] = [];
   for (const laengs of laengsAchsen) {
@@ -148,7 +203,7 @@ function saeulenraster(lage: Lage, aussparungen: { x: number; y: number }[] = []
       if (!verdeckt) positionen.push({ x, y });
     }
   }
-  return { positionen, laengsAchsen, querAchsen, reihenAbstand: RASTER_M, tx, ty, px, py };
+  return { positionen, laengsAchsen, querAchsen, reihenAbstand: bandbreite, tx, ty, px, py };
 }
 
 /**
@@ -244,12 +299,25 @@ export function Hallenhuelle({
   centre: [number, number];
   visible: boolean;
 }) {
+  /**
+   * Boden und Decke folgen dem **Hallenumriss**, nicht seiner Hüllbox.
+   *
+   * Vorher stand hier eine `planeGeometry(laenge, breite)`, also das
+   * umschliessende Rechteck. Halle 10.2 hat aber fünfzehn Ecken. Wo der
+   * Umriss einspringt, schob sich die gerade Kante des Rechtecks vor die
+   * Wand -- im Bild eine schräge Linie quer durch die Halle, an der die
+   * Decke abbricht, und Stützen, die scheinbar vor dem Nichts enden. Nichts
+   * daran war schief: es war die falsche Fläche.
+   *
+   * Gebaut wird direkt in Szenenkoordinaten und ohne Drehung. Der Umweg über
+   * Euler-Winkel war die Quelle mehrerer Vorzeichenfehler in dieser Datei
+   * (gespiegelte Texturflucht, gespiegelter Bodenschein); eine waagerechte
+   * Fläche braucht ihn nicht.
+   */
   const flaechen = useMemo(() => {
     const out: {
       key: string;
-      position: [number, number, number];
-      rotation: [number, number, number];
-      groesse: [number, number];
+      geometry: THREE.BufferGeometry;
       art: 'boden' | 'decke';
     }[] = [];
 
@@ -259,35 +327,56 @@ export function Hallenhuelle({
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
       const hoehe = hall.height?.clearHeightM ?? 8;
 
+      // Umriss in Hallenkoordinaten: u längs, v quer, Ursprung in der Mitte.
+      const lokal = hall.footprint.map(([x, y]) => {
+        const dx = x - lage.mx;
+        const dy = y - lage.my;
+        return new THREE.Vector2(
+          dx * lage.tx + dy * lage.ty,
+          dx * lage.px + dy * lage.py,
+        );
+      });
+      const dreiecke = THREE.ShapeUtils.triangulateShape(lokal, []);
+      if (!dreiecke.length) continue;
+
       for (const art of (PLAN_ANSICHT ? ['boden'] : ['boden', 'decke']) as
         readonly ('boden' | 'decke')[]) {
-        out.push({
-          key: `${hall.key}-${art}`,
-          position: [
-            lage.mx - centre[0],
-            hall.baseY + (art === 'boden' ? 0.02 : hoehe),
-            lage.my - centre[1],
-          ],
-          // Die Ebene liegt waagerecht; die Decke schaut nach unten.
-          //
-          // `+winkel`, nicht `-winkel`: eine Ebene mit Euler [-90°, 0, θ]
-          // richtet ihre Längsachse nach (cos θ, 0, -sin θ) aus, und das ist
-          // mit `winkel = atan2(-dy, dx)` genau die Hallenachse. Mit dem
-          // Minuszeichen lag die Ebene an dieser Achse gespiegelt.
-          //
-          // Am Umriss sah man das nie -- ein mittiges Rechteck ist zu seinen
-          // eigenen Achsen symmetrisch und deckt gespiegelt dieselbe Fläche.
-          // An der **Textur** sieht man es sofort: die Plattenfugen liefen
-          // im gespiegelten Winkel, bei einer Halle um 45° also quer zu den
-          // Stützenreihen und den Leuchtbändern statt in derselben Flucht.
-          rotation: [art === 'boden' ? -Math.PI / 2 : Math.PI / 2, 0, lage.winkel],
-          groesse: [lage.laenge, lage.breite],
-          art,
-        });
+        const y = hall.baseY + (art === 'boden' ? 0.02 : hoehe);
+        const positions: number[] = [];
+        const uvs: number[] = [];
+        const normals: number[] = [];
+        // Die Decke schaut nach unten; ihre Dreiecke laufen deshalb andersherum.
+        const reihenfolge = art === 'boden' ? [0, 1, 2] : [0, 2, 1];
+        const kachelM = art === 'boden' ? RASTER_M : WELT_KACHEL_M.decke;
+
+        for (const dreieck of dreiecke) {
+          for (const index of reihenfolge) {
+            const p = lokal[dreieck[index]];
+            // Zurück in Geländemeter, dann in die Szene.
+            const gx = lage.mx + p.x * lage.tx + p.y * lage.px;
+            const gy = lage.my + p.x * lage.ty + p.y * lage.py;
+            positions.push(gx - centre[0], y, gy - centre[1]);
+            // UV in Kachelmassen -- die Textur hängt damit an den Metern der
+            // Halle und nicht an ihrer Ausdehnung, und das Fugenraster sitzt
+            // in jeder Halle gleich.
+            uvs.push(p.x / kachelM, p.y / kachelM);
+            normals.push(0, art === 'boden' ? 1 : -1, 0);
+          }
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+        out.push({ key: `${hall.key}-${art}`, geometry, art });
       }
     }
     return out;
   }, [data, centre]);
+
+  useEffect(() => () => {
+    flaechen.forEach((f) => f.geometry.dispose());
+  }, [flaechen]);
 
   const surfaces = useMemo(
     () => ({ boden: hallenbodenSurface(), decke: hallendeckeSurface() }),
@@ -298,57 +387,19 @@ export function Hallenhuelle({
     disposeSurface(surfaces.decke);
   }, [surfaces]);
 
-  /**
-   * Wie oft die Textur über eine Ebene läuft -- und wo ihre erste Fuge liegt.
-   *
-   * Der Boden hängt am Stützenraster: eine Texturkachel deckt genau ein Feld
-   * von `RASTER_M` ab, und die Kachel ist so verschoben, dass ihr Rand auf
-   * einer Stützenachse sitzt. Damit haben Bodenplatten, Stützen und
-   * Leuchtbänder dieselbe Flucht statt drei verschiedener.
-   *
-   * Ohne den Versatz begänne die Kachel an der Hallenkante: das Fugenraster
-   * liefe dann um den Rest an, den die Halle über die vollen Felder hinaus
-   * misst -- bei Halle 10.2 um 6,5 m, also mitten durch jedes Feld.
-   */
-  const kacheln = (art: 'boden' | 'decke', groesse: [number, number]) => {
-    if (art === 'decke') {
-      const m = WELT_KACHEL_M.decke;
-      return {
-        repeat: [groesse[0] / m, groesse[1] / m] as [number, number],
-        offset: [0, 0] as [number, number],
-      };
-    }
-    const achse = (laenge: number) => {
-      const felder = Math.max(1, Math.floor(laenge / RASTER_M));
-      // Texturkoordinate 0 soll auf der ersten Achse liegen, also bei
-      // -felder*RASTER/2 in Ebenenkoordinaten.
-      return { repeat: laenge / RASTER_M, offset: felder / 2 - laenge / (2 * RASTER_M) };
-    };
-    const u = achse(groesse[0]);
-    const v = achse(groesse[1]);
-    return {
-      repeat: [u.repeat, v.repeat] as [number, number],
-      offset: [u.offset, v.offset] as [number, number],
-    };
-  };
-
   if (!visible || !flaechen.length) return null;
 
   return (
     <group>
       {flaechen.map((flaeche) => {
         const surface = surfaces[flaeche.art];
-        const { repeat, offset } = kacheln(flaeche.art, flaeche.groesse);
         return (
           <mesh
             key={flaeche.key}
-            position={flaeche.position}
-            rotation={flaeche.rotation}
+            geometry={flaeche.geometry}
             receiveShadow={flaeche.art === 'boden'}
-            material={hallenMaterial(flaeche.art, surface, repeat, offset)}
-          >
-            <planeGeometry args={[flaeche.groesse[0], flaeche.groesse[1]]} />
-          </mesh>
+            material={hallenMaterial(flaeche.art, surface)}
+          />
         );
       })}
     </group>
@@ -377,23 +428,25 @@ export function Hallenhuelle({
  */
 const hallenMaterialCache = new Map<string, THREE.Material>();
 
-function hallenMaterial(
-  art: 'boden' | 'decke',
-  surface: Surface,
-  repeat: [number, number],
-  offset: [number, number],
-): THREE.Material {
-  const [ru, rv] = repeat;
-  const schluessel = `${art}|${surface.map.uuid}|${ru.toFixed(3)}|${rv.toFixed(3)}`
-    + `|${offset[0].toFixed(3)}|${offset[1].toFixed(3)}`;
+/**
+ * Ein Material je Art, nicht je Fläche.
+ *
+ * Die Wiederholung steckt jetzt in den UVs der Geometrie (in Kachelmassen
+ * gerechnet, siehe `Hallenhuelle`) und nicht mehr in `repeat`/`offset` der
+ * Textur. Damit brauchen alle Hallen dasselbe Material, und das Fugenraster
+ * sitzt in jeder gleich -- vorher hing es an der Ausdehnung der einzelnen
+ * Halle und lief deshalb in jeder anders an.
+ */
+function hallenMaterial(art: 'boden' | 'decke', surface: Surface): THREE.Material {
+  const schluessel = `${art}|${surface.map.uuid}`;
   const fertig = hallenMaterialCache.get(schluessel);
   if (fertig) return fertig;
 
   if (art === 'boden') {
     const material = new THREE.MeshStandardMaterial({
-      map: kachel(surface.map, ru, rv, offset),
-      normalMap: kachel(surface.normalMap, ru, rv, offset),
-      roughnessMap: kachel(surface.roughnessMap, ru, rv, offset),
+      map: kachel(surface.map),
+      normalMap: kachel(surface.normalMap),
+      roughnessMap: kachel(surface.roughnessMap),
       roughness: 0.34,
       metalness: 0.22,
       // Zurückgenommen von 1,5: die Umgebung ist eine gleichmäßig helle
@@ -411,10 +464,10 @@ function hallenMaterial(
   // Reihen dieser Halle, die `Deckenleuchten` als echte Geometrie setzt. Zwei
   // Lichtquellen an derselben Stelle, die nicht zueinander passten, waren der
   // Grund, warum die Decke nach nichts Bestimmtem aussah.
-  const map = kachel(surface.map, ru, rv, offset);
+  const map = kachel(surface.map);
   const material = toonMaterial(FAMILIEN.M02, {
     map,
-    normalMap: kachel(surface.normalMap, ru, rv, offset),
+    normalMap: kachel(surface.normalMap),
   }, { side: THREE.DoubleSide });
   // Die Decke bekommt kaum direktes Licht ab -- sie liegt über den
   // Punktlichtern, nicht darunter, und das gedämpfte Umgebungslicht reicht
@@ -439,24 +492,18 @@ function hallenMaterial(
  * ohne dass die Textur zweimal im Speicher liegt.
  */
 const kachelCache = new Map<string, THREE.Texture>();
-function kachel(
-  quelle: THREE.Texture | undefined,
-  u: number,
-  v: number,
-  offset: [number, number] = [0, 0],
-) {
+function kachel(quelle: THREE.Texture | undefined) {
   if (!quelle) return null;
-  const schluessel = `${quelle.uuid}|${u.toFixed(3)}|${v.toFixed(3)}`
-    + `|${offset[0].toFixed(3)}|${offset[1].toFixed(3)}`;
-  let fertig = kachelCache.get(schluessel);
+  let fertig = kachelCache.get(quelle.uuid);
   if (!fertig) {
     fertig = quelle.clone();
     fertig.wrapS = THREE.RepeatWrapping;
     fertig.wrapT = THREE.RepeatWrapping;
-    fertig.repeat.set(u, v);
-    fertig.offset.set(offset[0], offset[1]);
+    // Wiederholung 1:1 -- die UVs kommen bereits in Kachelmassen aus der
+    // Geometrie und laufen über die ganze Halle durch.
+    fertig.repeat.set(1, 1);
     fertig.needsUpdate = true;
-    kachelCache.set(schluessel, fertig);
+    kachelCache.set(quelle.uuid, fertig);
   }
   return fertig;
 }
@@ -496,8 +543,9 @@ export function Hallenstuetzen({
     return out;
   }, [data]);
 
-  const saeulen = useMemo(() => {
-    const out: THREE.Matrix4[] = [];
+  const { schaefte, sockel } = useMemo(() => {
+    const schaefte: THREE.Matrix4[] = [];
+    const sockel: THREE.Matrix4[] = [];
     const dummy = new THREE.Object3D();
 
     for (const hall of data.site.halls) {
@@ -506,22 +554,36 @@ export function Hallenstuetzen({
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
       const hoehe = hall.height?.clearHeightM ?? 8;
       const { positionen } = saeulenraster(lage, aussparungen);
+      const boden = hall.baseY;
+      const decke = hall.baseY + hoehe;
 
       for (const p of positionen) {
-        dummy.position.set(p.x - centre[0], hall.baseY + hoehe / 2, p.y - centre[1]);
-        // `+winkel`, wie bei den Leuchtbändern unten -- ein Quader dreht sich
-        // um die Y-Achse der Szene. Mit dem Minuszeichen stand jede Stütze um
-        // den doppelten Hallenwinkel verdreht im Raum: die Seitenflächen
-        // fluchteten mit nichts, und der Quader las sich als schiefer Klotz.
-        // (Die Ebenen in `Hallenhuelle` benutzen `-winkel`, aber im Z-Slot
-        // eines um X gekippten Planes -- eine andere Kette, kein Widerspruch.)
+        const sx = p.x - centre[0];
+        const sz = p.y - centre[1];
+        // `+winkel`: ein Quader dreht sich um die Y-Achse der Szene, und
+        // `winkel` ist genau dafür gerechnet (siehe `hallenlage`).
         dummy.rotation.set(0, lage.winkel, 0);
-        dummy.scale.set(SAEULEN_BREITE_M, hoehe, SAEULEN_TIEFE_M);
+
+        // Der Schaft läuft zwischen den Sockeln, nicht durch sie hindurch.
+        const schafthoehe = hoehe - 2 * SOCKEL_HOEHE_M;
+        dummy.position.set(sx, boden + hoehe / 2, sz);
+        dummy.scale.set(SAEULEN_BREITE_M, schafthoehe, SAEULEN_TIEFE_M);
         dummy.updateMatrix();
-        out.push(dummy.matrix.clone());
+        schaefte.push(dummy.matrix.clone());
+
+        for (const y of [boden + SOCKEL_HOEHE_M / 2, decke - SOCKEL_HOEHE_M / 2]) {
+          dummy.position.set(sx, y, sz);
+          dummy.scale.set(
+            SAEULEN_BREITE_M + 2 * SOCKEL_KRAGEN_M,
+            SOCKEL_HOEHE_M,
+            SAEULEN_TIEFE_M + 2 * SOCKEL_KRAGEN_M,
+          );
+          dummy.updateMatrix();
+          sockel.push(dummy.matrix.clone());
+        }
       }
     }
-    return out;
+    return { schaefte, sockel };
   }, [data, centre, aussparungen]);
 
   /**
@@ -550,14 +612,14 @@ export function Hallenstuetzen({
    * unsichtbar, ohne Fehlermeldung. Ein Callback-Ref feuert garantiert erst,
    * wenn das Objekt existiert, und genau dafür ist er hier.
    */
-  const setzeMatrizen = (mesh: THREE.InstancedMesh | null) => {
+  const setzeMatrizen = (mesh: THREE.InstancedMesh | null, quelle: THREE.Matrix4[]) => {
     if (!mesh) return;
-    saeulen.forEach((matrix, index) => mesh.setMatrixAt(index, matrix));
+    quelle.forEach((matrix, index) => mesh.setMatrixAt(index, matrix));
     mesh.instanceMatrix.needsUpdate = true;
     mesh.computeBoundingSphere();
   };
 
-  if (!visible || !saeulen.length) return null;
+  if (!visible || !schaefte.length) return null;
 
   /*
    * Keine Konturhülle an der Stütze.
@@ -574,16 +636,31 @@ export function Hallenstuetzen({
    * Flächenwerte (drei Stufen, siehe oben) gegen den hellen Boden.
    */
   return (
-    <instancedMesh
-      ref={setzeMatrizen}
-      args={[undefined, undefined, saeulen.length]}
-      material={material}
-      castShadow
-      receiveShadow
-      frustumCulled={false}
-    >
-      <boxGeometry args={[1, 1, 1]} />
-    </instancedMesh>
+    <group>
+      <instancedMesh
+        ref={(mesh) => setzeMatrizen(mesh, schaefte)}
+        args={[undefined, undefined, schaefte.length]}
+        material={material}
+        castShadow
+        receiveShadow
+        frustumCulled={false}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+      </instancedMesh>
+      {/* Sockel oben und unten: der Übergang zu Boden und Decke. Ohne ihn
+          steht der Schaft ohne Kontakt in der Fläche -- er wirkt gesetzt,
+          nicht gebaut. */}
+      <instancedMesh
+        ref={(mesh) => setzeMatrizen(mesh, sockel)}
+        args={[undefined, undefined, sockel.length]}
+        material={material}
+        castShadow
+        receiveShadow
+        frustumCulled={false}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+      </instancedMesh>
+    </group>
   );
 }
 
@@ -753,17 +830,23 @@ export function Hallenlicht({
  * dem Bodenschein darunter (`Lichtspiegel`), damit beide exakt zueinander
  * stehen und nicht nur ungefähr.
  *
- * Drei Bahnen zwischen je zwei Stützenachsen, mit **identischen Abständen**:
- * bei 12 m Achsmaß liegen sie auf 3, 6 und 9 m. Damit ist der Abstand Stütze
- * zu Bahn derselbe wie Bahn zu Bahn -- deshalb `b / (BAHNEN + 1)` und nicht
- * eine Aufteilung, die die Ränder anders behandelt als die Mitte.
+ * Drei Bahnen über jedem Ausstellerband, mit **identischen Abständen**: der
+ * Abstand Stützenreihe zu Bahn ist derselbe wie Bahn zu Bahn -- deshalb
+ * `b / (BAHNEN + 1)` und keine Aufteilung, die die Ränder anders behandelt
+ * als die Mitte.
+ *
+ * Beleuchtet werden **alle sechs** Bänder, auch die beiden an den Wänden.
+ * Dort steht die äusserste Ausstellerreihe; ein unbeleuchtetes Band wäre eine
+ * dunkle Zone entlang der ganzen Hallenwand.
  */
 function leuchtenreihen(lage: Lage) {
   const { querAchsen, reihenAbstand, px, py } = saeulenraster(lage);
   const laenge = lage.laenge * 0.94;
+  // Bandgrenzen: Wand, dann jede Stützenreihe, dann die andere Wand.
+  const grenzen = [-lage.breite / 2, ...querAchsen, lage.breite / 2];
   const bahnen: { quer: number; laenge: number; px: number; py: number }[] = [];
-  for (let feld = 0; feld < querAchsen.length - 1; feld += 1) {
-    const von = querAchsen[feld];
+  for (let feld = 0; feld < grenzen.length - 1; feld += 1) {
+    const von = grenzen[feld];
     for (const versatz of bahnenImFeld(reihenAbstand)) {
       bahnen.push({ quer: von + versatz, laenge, px, py });
     }

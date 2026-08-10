@@ -179,8 +179,15 @@ export function Beleuchtung({ extent, interior }: { extent: number; interior: bo
             Stützen, die echten Schlagschatten werfen. Eine starke Halbkugel
             würde all das wieder einebnen -- auf den Referenzfotos ist der
             Raum dunkel, mit klaren hellen Inseln, nicht gleichmässig grau. */}
-        <hemisphereLight args={['#fff3dd', '#33353b', 0.14]} position={[0, extent, 0]} />
-        <ambientLight intensity={0.045} color="#cfd7e2" />
+        {/* Wieder herauf. Ich hatte beides gedämpft, weil der Boden zu hell
+            wirkte -- der Fehler lag aber an der Bodentextur, nicht an der
+            Helligkeit. Zu wenig Grundlicht heisst: senkrechte Flächen bekommen
+            gar nichts ab, Stützen werden schwarze Silhouetten ohne
+            Flächenunterschied, und ihr Kopf verschwindet vor der ebenfalls
+            schwarzen Decke. Genau das sah nach "reicht nicht bis zur Decke"
+            aus, obwohl beide auf derselben Höhe liegen. */}
+        <hemisphereLight args={['#fff3dd', '#33353b', 0.5]} position={[0, extent, 0]} />
+        <ambientLight intensity={0.14} color="#cfd7e2" />
       </>
     );
   }
