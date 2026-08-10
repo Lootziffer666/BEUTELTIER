@@ -9,6 +9,7 @@ verwendet.
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -28,10 +29,62 @@ def rounded(point) -> list[float]:
     return [round(point[0], 3), round(point[1], 3)]
 
 
+STAND_SCHRUMPF = 0.97
+"""Wie gross ein Stand gezeichnet wird, im Verhaeltnis zu seinem Planmass.
+
+Drei Prozent, um die eigene Mitte. Eine bewusste Abweichung von den Daten und
+deshalb hier benannt statt stillschweigend eingebaut.
+
+Warum ueberhaupt: BEUTELTIER ist ein Orientierungswerkzeug. Aneinander
+stossende Standflaechen lassen den Gang dazwischen verschwinden -- und der Gang
+ist genau das, was man beim Laufen sucht. Drei Prozent oeffnen bei einem Stand
+von 10 m eine Fuge von 15 cm je Seite, bei 30 m eine von 45 cm. Sichtbar genug,
+um den Gang zu lesen, klein genug, um keine Strecke zu verfaelschen.
+
+Was es **nicht** ist: ein Ersatz fuer eine Passung. Geschrumpft wird um die
+eigene Mitte, jeder Stand bleibt an seinem Platz und keiner faellt weg. Eine
+Halle, die nicht in ihr Gebaeude passt, passt danach immer noch nicht -- das
+meldet der Befund in `hall-registrations.json`, und dort gehoert es hin.
+"""
+
+
+def geschrumpft(polygon: list[list[float]], faktor: float = STAND_SCHRUMPF) -> list[list[float]]:
+    """Verkleinert ein Polygon um seine eigene Mitte.
+
+    Um die eigene Mitte und nicht um einen gemeinsamen Punkt: sonst wandern
+    die Staende zusaetzlich, und aus einer Darstellungsentscheidung wuerde
+    eine Ortsveraenderung.
+    """
+    mx = sum(p[0] for p in polygon) / len(polygon)
+    my = sum(p[1] for p in polygon) / len(polygon)
+    return [[mx + (p[0] - mx) * faktor, my + (p[1] - my) * faktor] for p in polygon]
+
+
+def hereingezogen(stand: dict, korrekturen: dict) -> list[list[float]]:
+    """Wendet die Einzugskorrektur eines Standes an, falls es eine gibt.
+
+    Erst verkleinern um die eigene Mitte, dann verschieben -- genau die
+    Reihenfolge, in der `einzug()` in `build_hall_registrations` sie gefunden
+    hat, und im selben Planbild. Wer hier die Reihenfolge dreht, verschiebt um
+    einen falschen Betrag.
+
+    Es gibt sie, weil kein Stand ausserhalb seiner Halle stehen soll: beim
+    Laufen ist eine Flaeche, die durch die Aussenwand ragt, ein groesserer
+    Fehler als eine, die ein paar Meter kleiner ist als in Wirklichkeit.
+    """
+    korrektur = korrekturen.get(stand["id"])
+    if not korrektur:
+        return stand["polygon"]
+    dx, dy = korrektur["translation"]
+    verkleinert = geschrumpft(stand["polygon"], korrektur["scale"])
+    return [[p[0] + dx, p[1] + dy] for p in verkleinert]
+
+
 def build() -> dict:
     site = json.loads(SITE.read_text())
     graph = json.loads(GRAPH.read_text())
     registration_product = json.loads(REGISTRATIONS.read_text())
+    korrekturen = registration_product.get("standKorrekturen", {})
     registrations = {item["hallKey"]: item for item in registration_product["registrations"]}
     grids = {grid["key"]: grid for grid in graph["grids"]}
 
@@ -60,7 +113,8 @@ def build() -> dict:
             "status": registration["status"],
             "targetFeatureIds": registration["targetFeatureIds"],
             "floorZ": registration["floorZ"],
-            "footprint": [rounded(transform_point(tuple(point), transform)) for point in hall["footprint"]],
+            "footprint": [rounded(transform_point(tuple(point), transform))
+                          for point in hall["footprint"]],
             "label": rounded(transform_point((
                 sum(p[0] for p in hall["footprint"]) / len(hall["footprint"]),
                 sum(p[1] for p in hall["footprint"]) / len(hall["footprint"]),
@@ -68,7 +122,9 @@ def build() -> dict:
             "stands": [{
                 "id": stand["id"],
                 "polygon": [rounded(transform_point(tuple(point), transform))
-                            for point in stand["polygon"]],
+                            for point in geschrumpft(hereingezogen(stand, korrekturen))],
+                **({"korrigiert": korrekturen[stand["id"]]["shiftM"]}
+                   if stand["id"] in korrekturen else {}),
             } for stand in hall_stands],
             "walkGrid": transformed_grid,
             "facilities": [{
@@ -96,6 +152,15 @@ def build() -> dict:
         "schema": "beuteltier.registered-layout.v1",
         "coordinatePlane": "sceneX/sceneZ",
         "origin": registration_product["origin"],
+        # Benannte Abweichung von den Plandaten, damit sie niemand fuer eine
+        # Messung haelt: die Staende sind gezeichnet, nicht vermessen.
+        "standSchrumpf": {
+            "faktor": STAND_SCHRUMPF,
+            "bezug": "eigene Mitte je Stand",
+            "grund": ("Fuge zwischen benachbarten Staenden, damit der Gang "
+                      "dazwischen sichtbar bleibt"),
+            "gemessen": False,
+        },
         "halls": halls,
         "portalEnds": portal_ends,
         "counts": {

@@ -21,7 +21,7 @@ import * as THREE from 'three';
 
 import type { Dataset, Gelaende } from '../data/load';
 import type { Placement2D } from '../data/types';
-import { polygonCentre, toScene } from './geometry';
+import { drehungNachX, drehungNachZ, polygonCentre, toScene } from './geometry';
 import { MARKEN, MARKENFLAECHEN, type Marke } from './marken';
 
 const FONT = '"Arial Black", "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -267,7 +267,7 @@ export function rechteck(polygon: Placement2D[]): Rechteck | null {
     my: mitte[1],
     breite,
     tiefe,
-    winkel: Math.atan2(e1[1], e1[0]),
+    winkel: drehungNachX(e1[0], e1[1]),
     u: [e1[0] / breite, e1[1] / breite],
     v: [e2[0] / tiefe, e2[1] / tiefe],
   };
@@ -364,7 +364,7 @@ export function markenkoerper(data: Gelaende, centre: [number, number]): Koerper
         position: toScene(bx, by, BANNER_Y, centre),
         breite: Math.min(beste.laenge * 0.72, 18),
         // Die Bannerfläche zeigt mit ihrer Vorderseite nach aussen in den Gang.
-        drehung: Math.atan2(beste.richtung[0], -beste.richtung[1]),
+        drehung: drehungNachZ(beste.richtung[0], beste.richtung[1]),
       };
     }
 

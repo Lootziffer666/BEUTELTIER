@@ -16,6 +16,7 @@ import * as THREE from 'three';
 
 import type { Dataset } from '../data/load';
 import type { Placement2D } from '../data/types';
+import { drehungNachX } from './geometry';
 import {
   disposeSurface,
   hallenbodenSurface,
@@ -66,7 +67,7 @@ export function hallenlage(footprint: Placement2D[]) {
     const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
     if (d > laengste) {
       laengste = d;
-      winkel = Math.atan2(b[1] - a[1], b[0] - a[0]);
+      winkel = drehungNachX(b[0] - a[0], b[1] - a[1]);
     }
   }
   if (laengste < 1) return null;
@@ -136,7 +137,7 @@ export function Hallenhuelle({
           position: [
             lage.mx - centre[0],
             hall.baseY + (art === 'boden' ? 0.02 : hoehe),
-            -(lage.my - centre[1]),
+            lage.my - centre[1],
           ],
           // Die Ebene liegt waagerecht; die Decke schaut nach unten.
           rotation: [art === 'boden' ? -Math.PI / 2 : Math.PI / 2, 0, -lage.winkel],
@@ -274,7 +275,7 @@ export function Hallenlicht({
         const quer = ((k + 0.5) / LICHT_QUER - 0.5) * lage.breite * 0.82;
         const x = lage.mx + ux * laengs - uy * quer;
         const y = lage.my + uy * laengs + ux * quer;
-        out.push([x - centre[0], hall.baseY + LICHT_HOEHE_M, -(y - centre[1])]);
+        out.push([x - centre[0], hall.baseY + LICHT_HOEHE_M, y - centre[1]]);
       }
     }
     return out;
@@ -300,7 +301,7 @@ export function Hallenlicht({
     const mitte: [number, number, number] = [
       lage.mx - centre[0],
       hall.baseY,
-      -(lage.my - centre[1]),
+      lage.my - centre[1],
     ];
     return {
       mitte,
@@ -424,7 +425,7 @@ export function Deckenleuchten({
           const offset = -run / 2 + SEGMENT_M / 2 + segment * pitch;
           const x = mx + ux * offset + vx * quer;
           const y = my + uy * offset + vy * quer;
-          dummy.position.set(x - centre[0], ceiling, -(y - centre[1]));
+          dummy.position.set(x - centre[0], ceiling, y - centre[1]);
           dummy.rotation.set(0, winkel, 0);
           dummy.scale.set(SEGMENT_M, STRIP_THICKNESS_M, STRIP_WIDTH_M);
           dummy.updateMatrix();

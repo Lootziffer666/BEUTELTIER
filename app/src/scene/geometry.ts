@@ -3,8 +3,17 @@
  *
  * Alle Polygone liegen in Geländemetern in der XY-Ebene. Three.js rechnet mit
  * Y nach oben, deshalb wird beim Extrudieren getauscht: Karten-X bleibt X,
- * Karten-Y wird zu -Z, und die Höhe wandert auf Y. Ohne diesen Tausch stünde
- * das ganze Gelände hochkant.
+ * die Höhe wandert auf Y, und Karten-Y wird zu Z.
+ *
+ * Das Vorzeichen dabei ist dasselbe wie in `toScene`, und es muss dasselbe
+ * sein: `rotateX(-PI/2)` bildet die lokale Y-Achse auf **-Z** ab. Wer die
+ * Form also mit `y - centre[1]` aufbaut, bekommt Z nach Norden -- und damit
+ * ein Spiegelbild, obwohl `toScene` daneben richtig rechnet. Genau so lagen
+ * Hallen und Stände gespiegelt in einer sonst korrekten Welt: die belegten
+ * Stände gehören in den Süden, gezeichnet wurden sie im Norden.
+ *
+ * Deshalb wird hier gegengespiegelt aufgebaut. `geometry.test.ts` prüft das
+ * am fertigen Körper und nicht an der Formel.
  */
 
 import * as THREE from 'three';
@@ -19,7 +28,8 @@ export function extrudePolygon(
   const shape = new THREE.Shape();
   points.forEach(([x, y], index) => {
     const px = x - centre[0];
-    const py = y - centre[1];
+    // Gegengespiegelt: die Drehung unten legt lokales Y auf -Z.
+    const py = centre[1] - y;
     if (index === 0) shape.moveTo(px, py);
     else shape.lineTo(px, py);
   });
@@ -88,13 +98,76 @@ export function polygonCentre(points: Placement2D[]): [number, number] {
   return [sum[0] / points.length, sum[1] / points.length];
 }
 
+/**
+ * Geländemeter nach Three.js. **Die einzige Stelle, an der das passieren darf.**
+ *
+ * Die Geländemeter sind ein gespiegeltes System: `ins_gelaende()` in der
+ * Pipeline rechnet `y = -(nord - ursprung)`, y waechst also nach Sueden. Die
+ * Szene uebernimmt das unveraendert -- X nach Osten, Y nach oben, Z nach
+ * Sueden. Das ist rechtshaendig und deckt sich mit dem, was
+ * `world-origin.json` als verbindliche Achsenordnung fuehrt und was in den
+ * amtlichen GLB-Paketen steht.
+ *
+ * Hier stand lange `-(y - centre[1])`, also Z nach **Norden**. Zusammen mit X
+ * nach Osten und Y nach oben ist das linkshaendig, und die ganze Messe wurde
+ * spiegelverkehrt gezeichnet: Halle 1 stand oestlich von Halle 9 statt
+ * westlich. Aufgefallen ist es lange nicht, weil die Formel fuer den alten,
+ * ungespiegelten Datensatz richtig war -- und beide Datensaetze durch dieselbe
+ * Zeile liefen.
+ *
+ * Wer hier ein Vorzeichen aendert, spiegelt das Gelaende. `geometry.test.ts`
+ * haelt mit Himmelsrichtungen dagegen.
+ */
 export function toScene(
   x: number,
   y: number,
   z: number,
   centre: [number, number],
 ): THREE.Vector3 {
-  return new THREE.Vector3(x - centre[0], z, -(y - centre[1]));
+  return new THREE.Vector3(x - centre[0], z, y - centre[1]);
+}
+
+/**
+ * Dasselbe fuer die Faelle, in denen ein Tripel statt eines Vektors gebraucht
+ * wird -- Positionen von React-Knoten, Punktlisten fuer Puffergeometrien.
+ *
+ * Es gibt sie, damit niemand die Umrechnung noch einmal von Hand hinschreibt.
+ * Genau daran lag der Spiegelungsfehler so lange unentdeckt: die Formel stand
+ * siebenundzwanzigmal ausgeschrieben in vier Dateien.
+ */
+export function nachSzene(
+  x: number,
+  y: number,
+  hoehe: number,
+  centre: [number, number],
+): [number, number, number] {
+  return [x - centre[0], hoehe, y - centre[1]];
+}
+
+/**
+ * Y-Drehung, die die lokale **+X**-Achse auf eine Geländemeter-Richtung legt.
+ *
+ * Der dritte Ort, an dem die Spiegelung steckte. `toScene` und
+ * `extrudePolygon` legen Punkte richtig ab -- aber eine Drehung ist kein
+ * Punkt. `rotateY(phi)` bildet +X auf `(cos phi, 0, -sin phi)` ab, und Z zeigt
+ * nach Sueden. Damit +X auf `(dx, dy)` zeigt, muss also `-dy` in den Sinus.
+ *
+ * Vorher stand an elf Stellen ein selbstgebauter `atan2` mit je eigener
+ * Vorzeichenwahl, abgestimmt auf die damals gespiegelte Ebene. Nach deren
+ * Korrektur war jeder einzelne davon um sein Vorzeichen daneben -- und weil
+ * es Drehungen **um die eigene Mitte** sind, stand jeder Stand an der
+ * richtigen Stelle und trotzdem schief.
+ */
+export function drehungNachX(dx: number, dy: number): number {
+  return Math.atan2(-dy, dx);
+}
+
+/**
+ * Dasselbe für Objekte, die nach **-Z** blicken -- die Vorgabe von Three.js
+ * für Kameras und für alles, was mit der Front nach vorn gebaut ist.
+ */
+export function drehungNachZ(dx: number, dy: number): number {
+  return Math.atan2(-dx, -dy);
 }
 
 /**

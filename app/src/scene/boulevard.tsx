@@ -35,6 +35,7 @@ import {
   WELT_KACHEL_M,
 } from './materials';
 import { ArchitectureGenerator } from '../procedural/generators/ArchitectureGenerator';
+import { drehungNachZ } from './geometry';
 
 /**
  * Fussbodenhoehe.
@@ -159,7 +160,7 @@ function band(
   const ort = (s: number, q: number, h: number): [number, number, number] => {
     const x = achse.x0 + achse.laengs[0] * s + achse.quer[0] * q;
     const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * q;
-    return [x - centre[0], h, -(y - centre[1])];
+    return [x - centre[0], h, y - centre[1]];
   };
 
   for (const [s0, s1] of stuecke) {
@@ -505,9 +506,9 @@ export function treppenteile(achse: Achse, centre: [number, number], anfang: num
   const ort = (s: number, q: number, h: number): [number, number, number] => {
     const x = achse.x0 + achse.laengs[0] * s + achse.quer[0] * q;
     const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * q;
-    return [x - centre[0], h, -(y - centre[1])];
+    return [x - centre[0], h, y - centre[1]];
   };
-  const drehung = Math.atan2(achse.laengs[0], -achse.laengs[1]);
+  const drehung = drehungNachZ(achse.laengs[0], achse.laengs[1]);
 
   // Wo die Anlage sitzt, ist gemessen und wird uebergeben: sie beginnt am
   // Ende des Gangs und endet dort, wo Halle 5 und Halle 10 anfangen.
@@ -735,7 +736,8 @@ function knickflaeche(
   kachelM: number,
 ): THREE.BufferGeometry {
   const shape = new THREE.Shape(
-    polygon.map(([x, y]) => new THREE.Vector2(x - centre[0], y - centre[1])),
+    // Gegengespiegelt: die Drehung beim Einhängen legt lokales Y auf -Z.
+    polygon.map(([x, y]) => new THREE.Vector2(x - centre[0], centre[1] - y)),
   );
   const geometry = new THREE.ShapeGeometry(shape);
   // ShapeGeometry legt die UV in Metern an; ohne Teilung wiederholt sich die
@@ -764,7 +766,7 @@ function rampenflaeche(
   const uvs: number[] = [];
   for (const dreieck of dreiecke) {
     for (const [x, y, h] of dreieck) {
-      positions.push(x - centre[0], h, -(y - centre[1]));
+      positions.push(x - centre[0], h, y - centre[1]);
       uvs.push(x / kachelM, y / kachelM);
     }
   }
@@ -914,7 +916,7 @@ export function Boulevard({
       const s = ((i + 0.5) / anzahl) * plan.laengeM;
       const x = achse.x0 + achse.laengs[0] * s;
       const y = achse.y0 + achse.laengs[1] * s;
-      out.push([x - centre[0], plan.hoeheM - 1.2, -(y - centre[1])]);
+      out.push([x - centre[0], plan.hoeheM - 1.2, y - centre[1]]);
     }
     return out;
   }, [achse, centre, plan]);
@@ -928,7 +930,7 @@ export function Boulevard({
       for (const q of [-4.2, 4.2]) {
         const x = achse.x0 + achse.laengs[0] * s + achse.quer[0] * q;
         const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * q;
-        out.push([x - centre[0], plan.hoeheM - 1.5, -(y - centre[1])]);
+        out.push([x - centre[0], plan.hoeheM - 1.5, y - centre[1]]);
       }
     }
     return out;
@@ -942,15 +944,15 @@ export function Boulevard({
       const x = achse.x0 + achse.laengs[0] * schild.station;
       const y = achse.y0 + achse.laengs[1] * schild.station;
       const drehung = schild.blick > 0
-        ? Math.atan2(-achse.laengs[0], achse.laengs[1])
-        : Math.atan2(achse.laengs[0], -achse.laengs[1]);
+        ? drehungNachZ(-achse.laengs[0], -achse.laengs[1])
+        : drehungNachZ(achse.laengs[0], achse.laengs[1]);
       return {
         schluessel: `${schild.station}-${schild.blick}-${index}`,
         schild,
         position: [
           x - centre[0],
           SCHILD_Y + SCHILD_HOEHE_M / 2,
-          -(y - centre[1]),
+          y - centre[1],
         ] as [number, number, number],
         drehung,
         textur: schildTextur(schild),
@@ -974,9 +976,9 @@ export function Boulevard({
     const x = achse.x0 + achse.laengs[0] * s;
     const y = achse.y0 + achse.laengs[1] * s;
     return {
-      position: [x - centre[0], knoten.piazzaHoeheM + 0.6, -(y - centre[1])] as
+      position: [x - centre[0], knoten.piazzaHoeheM + 0.6, y - centre[1]] as
         [number, number, number],
-      drehung: Math.atan2(achse.laengs[0], -achse.laengs[1]),
+      drehung: drehungNachZ(achse.laengs[0], achse.laengs[1]),
       breite: sued.breiteM,
       textur: bauzaunTextur(),
     };
@@ -1065,8 +1067,8 @@ export function Boulevard({
     const sturzY = boden + TUER_HOEHE_M + TUER_PROFIL_M / 2;
     return {
       // Der Fusspunkt der Wand; die Teile sitzen darueber in echten Hoehen.
-      position: [x - centre[0], 0, -(y - centre[1])] as [number, number, number],
-      drehung: Math.atan2(achse.laengs[0], -achse.laengs[1]),
+      position: [x - centre[0], 0, y - centre[1]] as [number, number, number],
+      drehung: drehungNachZ(achse.laengs[0], achse.laengs[1]),
       /** Oberkante des massiven Sockels -- ab hier Glas. */
       sockel,
       boden,
