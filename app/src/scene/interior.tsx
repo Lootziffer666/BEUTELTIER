@@ -214,19 +214,6 @@ export function hallenAufbau(baseY: number, lichteHoehe: number) {
   };
 }
 
-/** Liegt ein Punkt im Vieleck? Strahlverfahren, in Geländemetern. */
-function imUmriss(umriss: Placement2D[], x: number, y: number): boolean {
-  let drin = false;
-  for (let i = 0, j = umriss.length - 1; i < umriss.length; j = i++) {
-    const [xi, yi] = umriss[i];
-    const [xj, yj] = umriss[j];
-    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
-      drin = !drin;
-    }
-  }
-  return drin;
-}
-
 /**
  * Die Konstruktion einer Halle, sofern sie als Daten vorliegt.
  *
@@ -252,7 +239,6 @@ export function stuetzenSpec(hallKey: string): StuetzenSpec | null {
 function saeulenraster(
   lage: Lage,
   aussparungen: { x: number; y: number }[] = [],
-  umriss: Placement2D[] = [],
   spec: StuetzenSpec | null = null,
 ) {
   // Die Achsen kommen aus `hallenlage` und werden hier **nicht** aus `winkel`
@@ -279,11 +265,10 @@ function saeulenraster(
     for (const quer of querAchsen) {
       const x = lage.mx + tx * laengs + px * quer;
       const y = lage.my + ty * laengs + py * quer;
-      // Das Raster wird auf die Hüllbox gelegt, die Halle ist aber ein
-      // Vieleck: an jeder einspringenden Ecke fielen Rasterpunkte nach
-      // draussen, und dort standen dann Stützen vor oder in der Wand. In der
-      // Perspektive war das nicht zu sehen, in der Draufsicht sofort.
-      if (umriss.length >= 3 && !imUmriss(umriss, x, y)) continue;
+      // Die Halle ist ein Rechteck; das Raster liegt darin. Beschnitten wird
+      // an Länge und Breite, nicht am Standbereich aus den Daten -- der ist
+      // ein Vieleck und nicht die Halle (siehe `Hallenhuelle`).
+      if (Math.abs(laengs) > lage.laenge / 2 || Math.abs(quer) > lage.breite / 2) continue;
       const verdeckt = aussparungen.some(
         (a) => Math.hypot(a.x - x, a.y - y) < AUSSPARUNG_RADIUS_M,
       );
@@ -387,19 +372,20 @@ export function Hallenhuelle({
   visible: boolean;
 }) {
   /**
-   * Boden und Decke folgen dem **Hallenumriss**, nicht seiner Hüllbox.
+   * Eine Halle ist ein Rechteck.
    *
-   * Vorher stand hier eine `planeGeometry(laenge, breite)`, also das
-   * umschliessende Rechteck. Halle 10.2 hat aber fünfzehn Ecken. Wo der
-   * Umriss einspringt, schob sich die gerade Kante des Rechtecks vor die
-   * Wand -- im Bild eine schräge Linie quer durch die Halle, an der die
-   * Decke abbricht, und Stützen, die scheinbar vor dem Nichts enden. Nichts
-   * daran war schief: es war die falsche Fläche.
+   * `registered-site.json` führt als `footprint` **nicht** den Hallenumriss,
+   * sondern den belegten Standbereich -- ein Vieleck mit fünfzehn Ecken und
+   * abgeschrägten Kanten, das dort endet, wo die Messe keine Stände gelegt
+   * hat. Als Hallenboden benutzt, ergibt das eine Halle mit schrägen Wänden
+   * und einer Decke, die an einer Diagonalen abbricht. Das war der Grund für
+   * die "schiefe Decke", nicht irgendeine Drehung.
    *
-   * Gebaut wird direkt in Szenenkoordinaten und ohne Drehung. Der Umweg über
-   * Euler-Winkel war die Quelle mehrerer Vorzeichenfehler in dieser Datei
-   * (gespiegelte Texturflucht, gespiegelter Bodenschein); eine waagerechte
-   * Fläche braucht ihn nicht.
+   * Gebaut wird deshalb aus Länge, Breite und Achse -- also aus dem
+   * Rechteck, das `hallenlage()` ohnehin misst. Vier Ecken, zwei Dreiecke.
+   *
+   * Direkt in Szenenkoordinaten und ohne Drehung: der Umweg über Euler-Winkel
+   * war die Quelle mehrerer Vorzeichenfehler in dieser Datei.
    */
   const flaechen = useMemo(() => {
     const out: {
@@ -414,17 +400,15 @@ export function Hallenhuelle({
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
       const hoehe = hall.height?.clearHeightM ?? 8;
 
-      // Umriss in Hallenkoordinaten: u längs, v quer, Ursprung in der Mitte.
-      const lokal = hall.footprint.map(([x, y]) => {
-        const dx = x - lage.mx;
-        const dy = y - lage.my;
-        return new THREE.Vector2(
-          dx * lage.tx + dy * lage.ty,
-          dx * lage.px + dy * lage.py,
-        );
-      });
-      const dreiecke = THREE.ShapeUtils.triangulateShape(lokal, []);
-      if (!dreiecke.length) continue;
+      const hl = lage.laenge / 2;
+      const hb = lage.breite / 2;
+      const lokal = [
+        new THREE.Vector2(-hl, -hb),
+        new THREE.Vector2(hl, -hb),
+        new THREE.Vector2(hl, hb),
+        new THREE.Vector2(-hl, hb),
+      ];
+      const dreiecke = [[0, 1, 2], [0, 2, 3]];
 
       for (const art of (PLAN_ANSICHT ? ['boden'] : ['boden', 'decke']) as
         readonly ('boden' | 'decke')[]) {
@@ -637,15 +621,23 @@ export function hallenGrundriss(
     if (hall.outdoor) continue;
     const lage = hallenlage(hall.footprint);
     if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
-    const { positionen } = saeulenraster(lage, aussparungen, hall.footprint, stuetzenSpec(hall.key));
+    const { positionen } = saeulenraster(lage, aussparungen, stuetzenSpec(hall.key));
+    // Der Umriss für den Plan ist das Hallenrechteck, nicht der Standbereich
+    // aus den Daten -- dasselbe Rechteck, das auch Boden und Decke bilden.
+    const hl = lage.laenge / 2;
+    const hb = lage.breite / 2;
+    const ecke = (u: number, v: number): [number, number] => [
+      lage.mx + u * lage.tx + v * lage.px,
+      lage.my + u * lage.ty + v * lage.py,
+    ];
     out.push({
       key: hall.key,
-      umriss: hall.footprint.map(([x, y]) => [x, y] as [number, number]),
+      umriss: [ecke(-hl, -hb), ecke(hl, -hb), ecke(hl, hb), ecke(-hl, hb)],
       saeulen: positionen,
       reihen: PFEILERREIHEN_QUER,
       baender: PFEILERREIHEN_QUER + 1,
       breite: lage.breite,
-      querAchsen: saeulenraster(lage, [], [], stuetzenSpec(hall.key)).querAchsen,
+      querAchsen: saeulenraster(lage, [], stuetzenSpec(hall.key)).querAchsen,
       profil: { breite: SAEULEN_BREITE_M, kragen: SOCKEL_KRAGEN_M },
       aufbau: hallenAufbau(hall.baseY, hall.height?.clearHeightM ?? 8),
       bahnen: leuchtenreihen(lage).map((r) => r.quer),
@@ -699,7 +691,7 @@ export function Hallenstuetzen({
       const lage = hallenlage(hall.footprint);
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
       const hoehe = hall.height?.clearHeightM ?? 8;
-      const { positionen } = saeulenraster(lage, aussparungen, hall.footprint, stuetzenSpec(hall.key));
+      const { positionen } = saeulenraster(lage, aussparungen, stuetzenSpec(hall.key));
       const aufbau = hallenAufbau(hall.baseY, hoehe);
 
       for (const p of positionen) {
