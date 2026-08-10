@@ -392,44 +392,69 @@ export const WELT_KACHEL_M = { boden: 16, decke: 12, wand: 30 };
  */
 export function hallenbodenSurface(): Surface {
   const [colour, ctx] = layer('#74777c');
-  const [height] = layer('#808080');
+  // War bisher unbemalt: `toNormalMap` las eine reine Fläche und lieferte
+  // damit überall dieselbe, nach oben zeigende Normale -- ein Boden ohne
+  // jede Neigung, so glatt wie Glas, unabhängig davon, was Farbe und Rauheit
+  // zeigten. Jede Spur unten bekommt jetzt auch eine Höhe.
+  const [height, hctx] = layer('#808080');
   // Dunkel = glatt. Der Boden ist überall poliert, aber nicht gleichmässig.
   const [rough, rctx] = layer('#2e2e2e');
 
-  // Schleifbahnen der Maschine: lange, leicht gebogene Züge.
+  // Schleifbahnen der Maschine: lange, leicht gebogene Züge -- als echte
+  // Rillen, nicht nur als Farbwechsel.
   for (let i = 0; i < 90; i += 1) {
     const y = Math.random() * SIZE;
     const strength = 0.03 + Math.random() * 0.05;
+    const breite = 6 + Math.random() * 40;
     ctx.strokeStyle = `rgba(${Math.random() < 0.5 ? 120 : 168}, 124, 130, ${strength})`;
-    ctx.lineWidth = 6 + Math.random() * 40;
+    ctx.lineWidth = breite;
     ctx.beginPath();
     ctx.moveTo(-20, y);
     ctx.bezierCurveTo(SIZE * 0.3, y + (Math.random() - 0.5) * 60,
                       SIZE * 0.7, y + (Math.random() - 0.5) * 60, SIZE + 20, y);
     ctx.stroke();
     rctx.strokeStyle = `rgba(255,255,255,${strength * 0.8})`;
-    rctx.lineWidth = ctx.lineWidth;
+    rctx.lineWidth = breite;
     rctx.stroke();
+    // Deutlich schwächer als Farbe und Rauheit: eine Rille ist ein sanfter
+    // Wechsel im Relief, keine Kante. Zu kräftige Werte hier ergaben nach
+    // dem Sobel-Filter ein wirres Ringelmuster statt eines Bodens.
+    hctx.strokeStyle = `rgba(0, 0, 0, ${0.1 + Math.random() * 0.08})`;
+    hctx.lineWidth = breite * 0.6;
+    hctx.beginPath();
+    hctx.moveTo(-20, y);
+    hctx.bezierCurveTo(SIZE * 0.3, y + (Math.random() - 0.5) * 60,
+                       SIZE * 0.7, y + (Math.random() - 0.5) * 60, SIZE + 20, y);
+    hctx.stroke();
   }
 
-  // Flecken vom Aufbau: hellere Schleier, wo Kleber und Teppichband sassen.
+  // Flecken vom Aufbau: hellere Schleier, wo Kleber und Teppichband sassen --
+  // flache, breite Erhebungen, kein scharfer Rand.
   for (let i = 0; i < 70; i += 1) {
     const x = Math.random() * SIZE;
     const y = Math.random() * SIZE;
     const radius = 30 + Math.random() * 130;
+    const dreh = Math.random() * Math.PI;
+    const laenge = radius * (0.3 + Math.random() * 0.5);
     ctx.fillStyle = `rgba(150, 154, 160, ${0.03 + Math.random() * 0.05})`;
     ctx.beginPath();
-    ctx.ellipse(x, y, radius, radius * (0.3 + Math.random() * 0.5),
-                Math.random() * Math.PI, 0, Math.PI * 2);
+    ctx.ellipse(x, y, radius, laenge, dreh, 0, Math.PI * 2);
     ctx.fill();
     rctx.fillStyle = `rgba(0,0,0,${0.04 + Math.random() * 0.06})`;
     rctx.fill();
+    hctx.fillStyle = `rgba(255, 255, 255, ${0.04 + Math.random() * 0.05})`;
+    hctx.beginPath();
+    hctx.ellipse(x, y, radius, laenge, dreh, 0, Math.PI * 2);
+    hctx.fill();
   }
 
-  // Dehnfugen alle acht Meter -- die einzige Linie, die der Estrich hat.
+  // Dehnfugen alle acht Meter -- die einzige durchgehende Linie des Estrichs,
+  // und die einzige mit einer echten Kante statt eines Schleiers.
   const joint = SIZE / 2;
   ctx.strokeStyle = 'rgba(70, 72, 78, 0.55)';
   ctx.lineWidth = 3;
+  hctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+  hctx.lineWidth = 3;
   for (let step = 0; step <= SIZE; step += joint) {
     ctx.beginPath();
     ctx.moveTo(step, 0);
@@ -437,13 +462,31 @@ export function hallenbodenSurface(): Surface {
     ctx.moveTo(0, step);
     ctx.lineTo(SIZE, step);
     ctx.stroke();
+    hctx.beginPath();
+    hctx.moveTo(step, 0);
+    hctx.lineTo(step, SIZE);
+    hctx.moveTo(0, step);
+    hctx.lineTo(SIZE, step);
+    hctx.stroke();
   }
 
   speckle(ctx, 0.025);
 
+  // Weichzeichnen, bevor daraus Normalen werden: neunzig sich
+  // überlappende Schleifbahnen ergaben scharfkantig ein Ringelmuster wie
+  // ein Fingerabdruck statt eines Bodenreliefs. Ein Bodenschliff hat keine
+  // Kanten, nur sanfte Übergänge -- die Unschärfe ist hier die Zeichnung,
+  // nicht ihr Verlust.
+  hctx.filter = 'blur(7px)';
+  hctx.drawImage(height, 0, 0);
+  hctx.filter = 'none';
+
   return {
     map: texture(colour, [1, 1], true),
-    normalMap: texture(toNormalMap(height, 0.5), [1, 1]),
+    // Massvoll, nicht die 2,6 der Fassade: der Boden ist geschliffen, kein
+    // Sichtbeton. Vorher stand hier faktisch 0 -- eine Hoehenkarte, die nie
+    // bemalt wurde --, jetzt reicht es fuer sichtbares, aber ruhiges Relief.
+    normalMap: texture(toNormalMap(height, 0.8), [1, 1]),
     roughnessMap: texture(rough, [1, 1]),
   };
 }

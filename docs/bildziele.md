@@ -100,21 +100,57 @@ Das ist die eigentliche Messlatte:
    Stützen, Hallenkanten. Nicht überall gleich dick.
 6. **Leere Räume.** Keine Menschen, kein Kram.
 
-## Abgleich (Stand: erste Aufnahme gegen die Vorschau)
+## Aktueller Fokus: nur Z4
 
-Aufgenommen mit `gang-check.mjs` und `tuer-check.mjs` gegen den Vorschaustand.
+Auf ausdrückliche Anweisung zählt bis auf Weiteres **nur Z4** (leere Halle).
+Element für Element, in dieser Reihenfolge: Decke, dann Boden, dann Wände.
+Erst wenn eines im Bild stimmt, kommt das nächste dran. Die anderen vier
+Ziele bleiben stehen, werden aber nicht bearbeitet.
 
-| Ziel | Stand | Lücke |
+Werkzeug: `z4-check.mjs [hallenschlüssel]` -- eine Aufnahme, mittig in der
+Halle, geradeaus den Gang hinunter, `?leer=1` blendet alle Stände aus.
+`halle-check.mjs` deckt mehrere Hallen/Blickrichtungen ab, für Regressionen.
+
+## Abgleich Z4
+
+| Element | Stand | Bemerkung |
 |---|---|---|
-| Reflexbahnen auf dem Boden | offen | Böden sind matt und flach |
-| Hell-Dunkel-Achsen | offen | Innenraum durchgehend hellgrau, wenig Tiefe |
-| Lichtbänder als Band | teilweise | Decke trägt einzelne Felder, keine Bänder |
-| Dunkler Hallenboden (Z4) | offen | Boden hell statt dunkel |
-| Beschilderung als Objekt | offen | in den Ego-Bildern nicht zu sehen |
-| Vegetation, Holzdeck (Z2) | ungeprüft | keine Aussenaufnahme vorhanden |
-| Glasfassade mit Tiefe (Z3) | teilweise | Glas steht, wirkt aber milchig |
-| Handlauf am Treppenlauf (Z1) | teilweise | Lauf vorhanden, Kehre am Fuss fehlt |
-| Kontur an Kanten | teilweise | an Decke und Stufen sichtbar, an Wänden kaum |
+| Stützen | **stehen jetzt** | Ref-Bug behoben (siehe unten), werfen Schatten |
+| Bodenschein unter den Bändern | steht, diffus | ersetzt die frühere gemalte Textur-Bahn |
+| Boden-Bump | steht, ruhig | vorher unbemalte Höhenkarte, dann übersteuert, jetzt gedämpft |
+| Lichtbänder durchgehend | steht | Segmentierung entfernt, 3 Reihen im Stützenraster |
+| Deckenraster/Kassetten | offen | Decke ist dunkel, aber ohne das Referenzbild-Raster |
+| Wandanschluss/Fluchtwegzeichen | offen | noch nicht angefasst |
+| Gesamtkontrast vs. Referenz | ungeprüft | noch kein Bild-gegen-Bild-Vergleich mit dem Referenzfoto selbst |
 
-Die Tabelle wird mit jeder Runde fortgeschrieben. Ein Haken kommt erst nach
-einem Bild, nicht nach einer Begründung.
+### Runde 2 — Stützen, durchgehende Bänder, Bodenschein, ein echter Bug
+
+Drei Dinge kamen zusammen:
+
+1. **Stützen fehlten komplett** -- keine Geometrie dafür existierte. Jetzt
+   zwei Reihen im 10-m-Raster, `MeshToonMaterial` (Familie M02) mit Kontur,
+   als `InstancedMesh`.
+2. **Die Instanzen waren unsichtbar**, obwohl korrekt berechnet: der
+   `useEffect`, der `setMatrixAt` aufruft, feuerte einmal -- bevor R3F die
+   Refs überhaupt gesetzt hatte -- und danach nie wieder, weil sich die
+   Abhängigkeit nicht mehr änderte. Eine frische `InstancedMesh` füllt ihre
+   Matrizen mit Nullen, nicht mit der Einheitsmatrix; ungesetzt heißt also
+   nicht "am Ursprung", sondern "ohne jede Ausdehnung". Behoben mit
+   Callback-Refs statt `useRef`+`useEffect`, an beiden Stellen, die dasselbe
+   Muster benutzten (`Hallenstuetzen`, `Deckenleuchten`).
+3. **`hallenbodenSurface()`'s Höhenkarte war nie bemalt** -- Farbe und
+   Rauheit bekamen die Kratzer, die Höhe blieb eine reine Fläche, macht den
+   Boden spiegelglatt unabhängig von der eingestellten Stärke. Nachgetragen,
+   dann beim ersten Versuch (Stärke 1.6, unweichgezeichnet) in ein wirres
+   Ringelmuster gekippt, dann mit Weichzeichnung und niedrigerer Stärke (0.8)
+   beruhigt.
+
+Dazu: Leuchtbänder sind jetzt durchgehend (keine Segmentierung mehr), im
+selben Rastermaß wie die Stützen, mit einer Fassung statt frei schwebend im
+Dunkeln. Der Bodenschein kommt als eigene, weiche Fläche direkt unter jeder
+Bandreihe -- an die echte Geometrie gebunden, nicht als generische Textur.
+Umgebungslicht in Hallen gedämpft (Hemisphäre 0.6→0.32, Ambient 0.09→0.045)
+für mehr Kontrast.
+
+Beleg: an den Nutzer geschicktes Bild aus `z4-check.mjs` (Halle 9.1, mittig).
+Kein Abgleich mit dem Referenzfoto selbst -- das steht noch aus.

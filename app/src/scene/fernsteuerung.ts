@@ -22,3 +22,18 @@ export const SETZEN_PARAMETER = 'setzen';
 export function fernsteuerungErlaubt(search: string): boolean {
   return new URLSearchParams(search).has(SETZEN_PARAMETER);
 }
+
+/**
+ * Soll die Halle leer bleiben -- ohne Stände, ohne Standbau?
+ *
+ * Das Referenzbild Z4 (`docs/bildziele.md`) zeigt eine leere Halle: nur
+ * Boden, Decke, Stützen, Wände. Der Vergleich Bild-gegen-Bild braucht genau
+ * das, und keine hunderte Stände dazwischen. Wie `?setzen` ein Merkmal, das
+ * nur der Bildprüfer setzt -- kein Schalter für Besucher.
+ */
+export const LEER_PARAMETER = 'leer';
+
+/** Erlaubt die Adresse eine Halle ohne Stände? */
+export function leerErlaubt(search: string): boolean {
+  return new URLSearchParams(search).has(LEER_PARAMETER);
+}

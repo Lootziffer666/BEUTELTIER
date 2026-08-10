@@ -163,10 +163,12 @@ export function Beleuchtung({ extent, interior }: { extent: number; interior: bo
     return (
       <>
         {/* Grundhelligkeit, nicht Beleuchtung: was den Raum formt, sind die
-            Leuchtenfelder in der Decke und die Punktlichter darunter. Eine
-            starke Halbkugel würde beides wieder einebnen. */}
-        <hemisphereLight args={['#fff3dd', '#33353b', 0.6]} position={[0, extent, 0]} />
-        <ambientLight intensity={0.09} color="#cfd7e2" />
+            Leuchtenreihen und die Punktlichter darunter, dazu jetzt die
+            Stützen, die echten Schlagschatten werfen. Eine starke Halbkugel
+            würde all das wieder einebnen -- auf den Referenzfotos ist der
+            Raum dunkel, mit klaren hellen Inseln, nicht gleichmässig grau. */}
+        <hemisphereLight args={['#fff3dd', '#33353b', 0.32]} position={[0, extent, 0]} />
+        <ambientLight intensity={0.045} color="#cfd7e2" />
       </>
     );
   }

@@ -33,9 +33,9 @@ import {
   WELT_KACHEL_M,
   type Surface,
 } from './materials';
-import { fernsteuerungErlaubt } from './fernsteuerung';
+import { fernsteuerungErlaubt, leerErlaubt } from './fernsteuerung';
 import { Beleuchtung } from './lighting';
-import { Deckenleuchten, Hallenhuelle, Hallenlicht } from './interior';
+import { Deckenleuchten, Hallenhuelle, Hallenlicht, Hallenstuetzen, Lichtspiegel } from './interior';
 import { Boulevard } from './boulevard';
 import { Markenstaende } from './Markenstaende';
 import { MARKEN_STAND_IDS } from './marken';
@@ -124,6 +124,10 @@ const ORTHO_URL = `${import.meta.env.BASE_URL}models/gelaende.jpg`;
  */
 const SETZEN_ERLAUBT =
   typeof window !== 'undefined' && fernsteuerungErlaubt(window.location.search);
+
+/** Siehe `SETZEN_ERLAUBT` -- dieselbe Begründung, für `?leer`. */
+const LEER_ERLAUBT =
+  typeof window !== 'undefined' && leerErlaubt(window.location.search);
 
 /** Wie durchsichtig die Gebäudehülle in der Übersicht ist. */
 const SHELL_OPACITY = 0.16;
@@ -1392,7 +1396,7 @@ export function SiteScene(props: SceneProps) {
           <OfficialWorld data={data} centre={centre} preset={preset} cel={cel} />
         </Suspense>
       )}
-      {(preset === 'halle' || preset === 'ego') && focusHallKey && (
+      {(preset === 'halle' || preset === 'ego') && focusHallKey && !LEER_ERLAUBT && (
         <ProceduralStaging
           data={data}
           centre={centre}
@@ -1408,18 +1412,24 @@ export function SiteScene(props: SceneProps) {
       {preset !== 'ego' && (
         <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
       )}
-      <Stands
-        data={data}
-        centre={centre}
-        upperOpacity={upperOpacity}
-        selectedStandId={props.selectedStandId}
-        routeStandIds={props.routeStandIds}
-        interior={preset === 'ego'}
-        reduceHallKey={(preset === 'halle' || preset === 'ego') ? focusHallKey : null}
-        onSelectStand={props.onSelectStand}
-      />
-      <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
+      {!LEER_ERLAUBT && (
+        <Stands
+          data={data}
+          centre={centre}
+          upperOpacity={upperOpacity}
+          selectedStandId={props.selectedStandId}
+          routeStandIds={props.routeStandIds}
+          interior={preset === 'ego'}
+          reduceHallKey={(preset === 'halle' || preset === 'ego') ? focusHallKey : null}
+          onSelectStand={props.onSelectStand}
+        />
+      )}
+      {!LEER_ERLAUBT && (
+        <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
+      )}
       <Hallenhuelle data={data} centre={centre} visible={preset === 'ego'} />
+      <Hallenstuetzen data={data} centre={centre} visible={preset === 'ego'} />
+      <Lichtspiegel data={data} centre={centre} visible={preset === 'ego'} />
       <Boulevard
         data={data}
         centre={centre}
