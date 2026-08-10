@@ -195,6 +195,119 @@ export class Raster {
     }
   }
 
+  /**
+   * Das Rissnetz -- der eine Zug, der den Look ausmacht.
+   *
+   * Auf den Referenzbildern liegt über **jeder** Fläche ein feines Netz
+   * dunkler Risse: über dem Terrazzo im Foyer, über der Betonwand am
+   * Rolltreppenblock, über den Wellblechtafeln von Halle 11. Es ist nicht
+   * Schmutz und nicht Rauschen, sondern Zeichnung -- die Tuschelinie, die
+   * einer flächigen Comic-Architektur ihre Oberfläche gibt. Ohne sie bleiben
+   * die Flächen leer, und genau daran hat die alte Fassung gekrankt.
+   *
+   * Gewachsen statt gestreut: jeder Riss läuft los, dreht dabei leicht und
+   * verzweigt sich gelegentlich. Die Verzweigung ist der Unterschied zu
+   * Kratzern -- ein Netz von Rissen hat Knoten, ein Bündel Striche nicht.
+   *
+   * Der Drall ist bewusst klein. Mit 0,6 rad je Schritt wuchsen daraus
+   * Zweige: organisch geschwungen, sichtbar gewachsen, und in einer
+   * Betonfläche völlig fehl am Platz. Ein Riss folgt der Spannung im
+   * Material und läuft darum fast gerade; er knickt, statt zu schwingen.
+   */
+  krakelee(startwert: number, keime: number, ton: Farbe,
+           laenge = 90, deckkraft = 0.5, drall = 0.16): void {
+    const zufall = mulberry32(startwert);
+    type Riss = { x: number; y: number; winkel: number; rest: number; kraft: number };
+    const offen: Riss[] = [];
+    for (let i = 0; i < keime; i += 1) {
+      offen.push({
+        x: zufall() * this.breite,
+        y: zufall() * this.hoehe,
+        winkel: zufall() * Math.PI * 2,
+        rest: laenge * (0.4 + zufall()),
+        kraft: deckkraft * (0.5 + zufall() * 0.5),
+      });
+    }
+    let schutz = 0;
+    while (offen.length > 0 && schutz < keime * 40) {
+      schutz += 1;
+      const riss = offen.pop()!;
+      let { x, y, winkel } = riss;
+      let rest = riss.rest;
+      while (rest > 0) {
+        const schritt = 3 + zufall() * 5;
+        // Fast gerade, mit gelegentlichem Knick -- so laeuft ein Riss.
+        winkel += (zufall() - 0.5) * drall;
+        if (zufall() < 0.04) winkel += (zufall() - 0.5) * 0.9;
+        const nx = x + Math.cos(winkel) * schritt;
+        const ny = y + Math.sin(winkel) * schritt;
+        this.linie(x, y, nx, ny, 0.45 + zufall() * 0.35, ton,
+                   riss.kraft * (0.3 + 0.7 * (rest / riss.rest)));
+        x = nx;
+        y = ny;
+        rest -= schritt;
+        if (zufall() < 0.025 && offen.length < keime * 2) {
+          offen.push({ x, y, winkel: winkel + (zufall() < 0.5 ? 1 : -1) * (0.7 + zufall() * 0.6),
+                       rest: rest * 0.5, kraft: riss.kraft * 0.6 });
+        }
+      }
+    }
+  }
+
+  /**
+   * Feine Einschlüsse, wie sie Terrazzo und Waschbeton haben.
+   *
+   * Auf den Referenzbildern deutlich zu sehen: der helle Plattenboden am
+   * Rolltreppenblock ist nicht glatt, sondern dicht gesprenkelt. Das ist der
+   * Unterschied zwischen Naturstein und Pappe -- und er kostet fast nichts.
+   */
+  sprenkel(startwert: number, anzahl: number, hell: Farbe, dunkel: Farbe): void {
+    const zufall = mulberry32(startwert);
+    for (let i = 0; i < anzahl; i += 1) {
+      const x = zufall() * this.breite;
+      const y = zufall() * this.hoehe;
+      // Klein und eckig statt rund: ein Zuschlagkorn im Terrazzo ist
+      // gebrochen, kein Kiesel. Runde Punkte in dieser Groesse lesen sich
+      // als Konfetti -- der Fehler der ersten Fassung.
+      const b = 1 + Math.floor(zufall() * 2.2);
+      const h = 1 + Math.floor(zufall() * 2.2);
+      const ton = zufall() < 0.45 ? hell : dunkel;
+      this.rechteck(x, y, b, h, ton, 0.2 + zufall() * 0.5);
+    }
+  }
+
+  /**
+   * Grossflächige Abnutzung: weiche, unregelmässige Aufhellungen und
+   * Verdunkelungen.
+   *
+   * Der Hallenboden auf dem Referenzbild ist nirgends gleichmässig -- er hat
+   * Laufspuren, blanke Stellen, dunklere Ecken. Eine Fläche ohne das liest
+   * sich als frisch verlegt, und eine Messehalle ist nie frisch verlegt.
+   *
+   * Weiche Kreise mit quadratischem Abfall zum Rand; einzeln kaum sichtbar,
+   * übereinander ergeben sie das wolkige Bild.
+   */
+  flecken(startwert: number, anzahl: number, spanne: number, radius = 90): void {
+    const zufall = mulberry32(startwert);
+    for (let i = 0; i < anzahl; i += 1) {
+      const cx = zufall() * this.breite;
+      const cy = zufall() * this.hoehe;
+      const r = radius * (0.4 + zufall() * 1.2);
+      const richtung = (zufall() - 0.5) * 2 * spanne * 255;
+      for (let dy = -r; dy <= r; dy += 1) {
+        const halb = Math.sqrt(Math.max(0, r * r - dy * dy));
+        for (let dx = -halb; dx <= halb; dx += 1) {
+          const abfall = 1 - (dx * dx + dy * dy) / (r * r);
+          const i2 = this.stelle(cx + dx, cy + dy);
+          const zug = richtung * abfall * abfall;
+          this.daten[i2] += zug;
+          this.daten[i2 + 1] += zug;
+          this.daten[i2 + 2] += zug;
+        }
+      }
+    }
+  }
+
   /** Multipliziert die ganze Fläche mit einem Ton -- zum Abdunkeln und Einfärben. */
   einfaerben(ton: Farbe): void {
     for (let i = 0; i < this.daten.length; i += 4) {

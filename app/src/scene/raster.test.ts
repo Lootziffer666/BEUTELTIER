@@ -146,6 +146,151 @@ describe('Zeichnen', () => {
   });
 });
 
+describe('Krakelee', () => {
+  /**
+   * Das Rissnetz ist der Zug, der den Look trägt -- auf den Referenzbildern
+   * liegt es über jeder Fläche. Geprüft wird deshalb, dass es (a) etwas
+   * zeichnet, (b) zusammenhängende Linien ergibt und nicht Punkte, und
+   * (c) **gerichtet** bleibt statt zu schwingen. Der letzte Punkt ist der,
+   * an dem die erste Fassung scheiterte: mit zu grossem Drall wuchsen daraus
+   * Zweige, und Zweige gehören nicht in eine Betonfläche.
+   */
+  function dunkelAnteil(bild: Raster, schwelle = 100): number {
+    let zahl = 0;
+    for (let y = 0; y < bild.hoehe; y += 1) {
+      for (let x = 0; x < bild.breite; x += 1) {
+        if (bild.lesen(x, y)[0] < schwelle) zahl += 1;
+      }
+    }
+    return zahl / (bild.breite * bild.hoehe);
+  }
+
+  it('zeichnet überhaupt etwas', () => {
+    const bild = new Raster(128, 128, [200, 200, 200]);
+    bild.krakelee(5, 20, [10, 10, 10], 120, 0.9);
+    expect(dunkelAnteil(bild)).toBeGreaterThan(0.005);
+  });
+
+  it('bleibt sparsam und deckt die Fläche nicht zu', () => {
+    const bild = new Raster(128, 128, [200, 200, 200]);
+    bild.krakelee(5, 20, [10, 10, 10], 120, 0.9);
+    expect(dunkelAnteil(bild)).toBeLessThan(0.25);
+  });
+
+  it('wächst mit der Zahl der Keime', () => {
+    const wenig = new Raster(128, 128, [200, 200, 200]);
+    const viel = new Raster(128, 128, [200, 200, 200]);
+    wenig.krakelee(5, 5, [10, 10, 10], 120, 0.9);
+    viel.krakelee(5, 40, [10, 10, 10], 120, 0.9);
+    expect(dunkelAnteil(viel)).toBeGreaterThan(dunkelAnteil(wenig));
+  });
+
+  it('läuft gerichtet und schwingt nicht', () => {
+    // Ein Riss folgt der Spannung im Material: er knickt, statt zu schwingen.
+    // Gemessen an der Ausdehnung eines einzelnen Risses -- ein gerichteter
+    // Riss deckt eine lange Strecke ab, ein Zweig kringelt sich auf der
+    // Stelle. Ohne diese Prüfung schleicht sich der alte Drall zurück.
+    const bild = new Raster(256, 256, [200, 200, 200]);
+    bild.krakelee(9, 1, [10, 10, 10], 200, 0.9);
+    let minX = 999;
+    let maxX = -999;
+    let minY = 999;
+    let maxY = -999;
+    let treffer = 0;
+    for (let y = 0; y < 256; y += 1) {
+      for (let x = 0; x < 256; x += 1) {
+        if (bild.lesen(x, y)[0] < 150) {
+          treffer += 1;
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+    expect(treffer).toBeGreaterThan(20);
+    // Weite Ausdehnung bei wenigen getroffenen Punkten heisst: eine Linie,
+    // kein Knäuel.
+    const ausdehnung = Math.max(maxX - minX, maxY - minY);
+    expect(ausdehnung).toBeGreaterThan(60);
+  });
+
+  it('endet, statt endlos zu verzweigen', () => {
+    // Die Verzweigung ist gedeckelt; ohne Deckel liefe die Schleife weiter,
+    // bis der Speicher voll ist.
+    const bild = new Raster(64, 64, [200, 200, 200]);
+    const start = Date.now();
+    bild.krakelee(3, 30, [0, 0, 0], 200, 1);
+    expect(Date.now() - start).toBeLessThan(4000);
+  });
+});
+
+describe('Sprenkel', () => {
+  it('setzt Einschlüsse in beiden Richtungen -- heller und dunkler', () => {
+    const bild = new Raster(128, 128, [128, 128, 128]);
+    bild.sprenkel(4, 3000, [250, 250, 250], [10, 10, 10]);
+    let heller = 0;
+    let dunkler = 0;
+    for (let y = 0; y < 128; y += 1) {
+      for (let x = 0; x < 128; x += 1) {
+        const wert = bild.lesen(x, y)[0];
+        if (wert > 160) heller += 1;
+        if (wert < 96) dunkler += 1;
+      }
+    }
+    expect(heller).toBeGreaterThan(50);
+    expect(dunkler).toBeGreaterThan(50);
+  });
+
+  it('lässt den Grundton stehen, statt ihn zu ersetzen', () => {
+    const bild = new Raster(128, 128, [128, 128, 128]);
+    bild.sprenkel(4, 2000, [255, 255, 255], [0, 0, 0]);
+    let summe = 0;
+    for (let y = 0; y < 128; y += 1) {
+      for (let x = 0; x < 128; x += 1) summe += bild.lesen(x, y)[0];
+    }
+    expect(summe / (128 * 128)).toBeCloseTo(128, -1);
+  });
+});
+
+describe('Flecken', () => {
+  it('macht die Fläche wolkig, ohne sie zu verschieben', () => {
+    const bild = new Raster(128, 128, [128, 128, 128]);
+    bild.flecken(6, 30, 0.1, 40);
+    let summe = 0;
+    let hell = 0;
+    let dunkel = 0;
+    for (let y = 0; y < 128; y += 1) {
+      for (let x = 0; x < 128; x += 1) {
+        const wert = bild.lesen(x, y)[0];
+        summe += wert;
+        if (wert > 133) hell += 1;
+        if (wert < 123) dunkel += 1;
+      }
+    }
+    // Beides muss vorkommen -- blanke Stellen und dunklere Ecken.
+    expect(hell).toBeGreaterThan(100);
+    expect(dunkel).toBeGreaterThan(100);
+    // Und der Grundton bleibt im Mittel erhalten.
+    expect(summe / (128 * 128)).toBeCloseTo(128, -1);
+  });
+
+  it('läuft weich aus und setzt keine Kanten', () => {
+    // Ein Fleck mit harter Kante liest sich als Fleck; einer mit weichem
+    // Rand als Abnutzung. Der Unterschied ist der ganze Zweck.
+    const bild = new Raster(128, 128, [128, 128, 128]);
+    bild.flecken(6, 1, 0.4, 40);
+    let groessterSprung = 0;
+    for (let y = 0; y < 128; y += 1) {
+      for (let x = 0; x < 127; x += 1) {
+        groessterSprung = Math.max(groessterSprung,
+                                   Math.abs(bild.lesen(x, y)[0] - bild.lesen(x + 1, y)[0]));
+      }
+    }
+    expect(groessterSprung).toBeLessThan(12);
+  });
+});
+
 describe('Normalenkarte', () => {
   it('zeigt auf einer ebenen Fläche gerade nach oben', () => {
     const hoehe = new Raster(16, 16, [128, 128, 128]);

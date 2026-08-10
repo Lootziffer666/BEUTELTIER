@@ -139,23 +139,30 @@ function tafelstoesse(bild: Raster, hoehe: Raster, abstandPx: number,
 
 type Bauplan = (startwert: number) => { bild: Raster; hoehe: Raster };
 
-/** M04 -- heller Foyerboden: grosse Platten, geschliffen, mit Gebrauchsspuren. */
+/** M04 -- heller Foyerboden: Terrazzoplatten, geschliffen, mit Laufspuren. */
 function foyerboden(startwert: number) {
   const bild = new Raster(KACHEL_PX, KACHEL_PX, farbe('#b7ad9e'));
   const hoehe = new Raster(KACHEL_PX, KACHEL_PX, grau(170));
-  platten(bild, hoehe, 4, 4, startwert, { h: 36, s: 14, l: 68 }, 7, '#6d675d');
-  bild.kratzer(startwert + 2, 220, farbe('#3b322a'));
-  bild.koernung(startwert + 1, 0.035);
+  platten(bild, hoehe, 4, 5, startwert, { h: 36, s: 14, l: 70 }, 9, '#4a443b');
+  bild.sprenkel(startwert + 7, 11000, farbe('#efe9dc'), farbe('#5d554a'));
+  bild.flecken(startwert + 9, 22, 0.05, 110);
+  bild.krakelee(startwert + 5, 26, farbe('#3a332b'), 130, 0.4);
+  bild.kratzer(startwert + 2, 160, farbe('#3b322a'));
+  bild.koernung(startwert + 1, 0.03);
   return { bild, hoehe };
 }
 
 /** M03 -- dunkler Hallenboden: derselbe Aufbau, eingefärbt und stärker benutzt. */
 function hallenboden(startwert: number) {
-  const bild = new Raster(KACHEL_PX, KACHEL_PX, farbe('#4a4f55'));
+  const bild = new Raster(KACHEL_PX, KACHEL_PX, farbe('#4b4e51'));
   const hoehe = new Raster(KACHEL_PX, KACHEL_PX, grau(170));
-  platten(bild, hoehe, 3, 5, startwert, { h: 212, s: 8, l: 30 }, 6, '#14171a');
-  bild.kratzer(startwert + 3, 340, farbe('#0a0c0d'), 12, 120);
-  bild.koernung(startwert + 1, 0.045);
+  platten(bild, hoehe, 3, 6, startwert, { h: 210, s: 4, l: 30 }, 8, '#0d0e10');
+  // Laufspuren und blanke Stellen. Ein Hallenboden ist nie frisch verlegt.
+  bild.flecken(startwert + 9, 34, 0.085, 130);
+  bild.krakelee(startwert + 5, 42, farbe('#090b0d'), 150, 0.55);
+  bild.sprenkel(startwert + 7, 5200, farbe('#949aa0'), farbe('#101315'));
+  bild.kratzer(startwert + 3, 240, farbe('#0a0c0d'), 12, 120);
+  bild.koernung(startwert + 1, 0.04);
   return { bild, hoehe };
 }
 
@@ -163,9 +170,12 @@ function hallenboden(startwert: number) {
 function aussenbeton(startwert: number) {
   const bild = new Raster(KACHEL_PX, KACHEL_PX, farbe('#cbc6bb'));
   const hoehe = new Raster(KACHEL_PX, KACHEL_PX, grau(170));
-  platten(bild, hoehe, 2, 6, startwert, { h: 42, s: 8, l: 78 }, 5, '#8c887f');
+  platten(bild, hoehe, 2, 7, startwert, { h: 42, s: 8, l: 78 }, 6, '#7d786f');
+  bild.flecken(startwert + 9, 18, 0.055, 150);
+  bild.krakelee(startwert + 5, 30, farbe('#5a544b'), 170, 0.42);
+  bild.sprenkel(startwert + 7, 7000, farbe('#efece4'), farbe('#7c766c'));
   bild.kratzer(startwert + 4, 90, farbe('#6c6459'), 20, 160);
-  bild.koernung(startwert + 1, 0.05);
+  bild.koernung(startwert + 1, 0.04);
   return { bild, hoehe };
 }
 
@@ -173,9 +183,13 @@ function aussenbeton(startwert: number) {
 function wandtafel(startwert: number) {
   const bild = new Raster(KACHEL_PX, KACHEL_PX, farbe('#d6d2c7'));
   const hoehe = new Raster(KACHEL_PX, KACHEL_PX, grau(150));
-  tafelstoesse(bild, hoehe, KACHEL_PX / 4, '#221f1b', KACHEL_PX / 2);
+  tafelstoesse(bild, hoehe, KACHEL_PX / 4, '#1b1814', KACHEL_PX / 2);
+  // Die Wand am Rolltreppenblock ist auf dem Referenzbild von feinen dunklen
+  // Zuegen durchzogen -- Schalspuren, Regenlaeufer, Stossstellen.
+  bild.flecken(startwert + 9, 16, 0.04, 140);
+  bild.krakelee(startwert + 5, 34, farbe('#4a423a'), 190, 0.34);
   bild.kratzer(startwert + 2, 60, farbe('#3c342b'), 6, 40);
-  bild.koernung(startwert + 1, 0.022);
+  bild.koernung(startwert + 1, 0.02);
   return { bild, hoehe };
 }
 
@@ -183,9 +197,11 @@ function wandtafel(startwert: number) {
 function struktur(startwert: number) {
   const bild = new Raster(KACHEL_PX, KACHEL_PX, farbe('#2b2e33'));
   const hoehe = new Raster(KACHEL_PX, KACHEL_PX, grau(150));
-  tafelstoesse(bild, hoehe, KACHEL_PX / 8, '#0c0d0f', KACHEL_PX / 4);
+  tafelstoesse(bild, hoehe, KACHEL_PX / 8, '#08090a', KACHEL_PX / 4);
+  bild.flecken(startwert + 9, 14, 0.06, 100);
+  bild.krakelee(startwert + 6, 22, farbe('#0a0b0d'), 110, 0.5);
   bild.kratzer(startwert + 5, 120, farbe('#5b626b'), 8, 48);
-  bild.koernung(startwert + 1, 0.03);
+  bild.koernung(startwert + 1, 0.028);
   return { bild, hoehe };
 }
 
@@ -195,8 +211,10 @@ function holzdeck(startwert: number) {
   const hoehe = new Raster(KACHEL_PX, KACHEL_PX, grau(150));
   bretter(bild, hoehe, KACHEL_PX / 8, 3, startwert,
           { h: 18, hSpanne: 10, s: 42, l: 33, lSpanne: 14 }, '#2c1a12');
+  bild.flecken(startwert + 9, 20, 0.05, 80);
+  bild.krakelee(startwert + 5, 18, farbe('#25130b'), 100, 0.35);
   bild.kratzer(startwert + 2, 150, farbe('#2b160d'), 10, 90);
-  bild.koernung(startwert + 1, 0.04);
+  bild.koernung(startwert + 1, 0.035);
   return { bild, hoehe };
 }
 
