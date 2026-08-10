@@ -46,23 +46,51 @@ function lage(footprint) {
     uMin = Math.min(uMin, u); uMax = Math.max(uMax, u);
     vMin = Math.min(vMin, v); vMax = Math.max(vMax, v);
   }
-  return { ux, uy, uMin, uMax, vM: (vMin + vMax) / 2 };
+  return { ux, uy, uMin, uMax, vM: (vMin + vMax) / 2, breite: vMax - vMin };
 }
 
+/**
+ * Der Standpunkt der Referenzaufnahme: im Gang zwischen zwei Stützenreihen,
+ * mit je vier Pfeilern in die Tiefe.
+ *
+ * Zwei Dinge machen genau diese Perspektive aus, und beide werden hier
+ * gerechnet statt geraten:
+ *
+ * 1. **Quer mittig im Feld.** Die Stützenachsen liegen im 12-m-Raster
+ *    symmetrisch um die Hallenmitte -- bei gerader Feldzahl steht die Mitte
+ *    also *auf* einer Achse, und die Kamera stünde in einer Stütze. Ein
+ *    halbes Feld Versatz stellt sie in den Gang, und dann flankieren zwei
+ *    Reihen den Blick.
+ * 2. **Längs so weit vom Hallenende, dass vier Achsen davor liegen.** Steht
+ *    man mittig in einer 175 m langen Halle, laufen fünfzehn Reihen bis zum
+ *    Fluchtpunkt und das Bild wird ein Wald. Vier Felder Abstand zur
+ *    Stirnwand zeigt vier Pfeiler je Reihe, wie auf dem Referenzbild.
+ */
+const RASTER_M = 12;
+const PFEILER_IN_DIE_TIEFE = 4;
+
 const l = lage(hall.footprint);
-// Die Hallenmitte, nicht ein Fünftel von vorn: reale Hallenumrisse sind
-// selten ein sauberes Rechteck (9.1 hat fünf Ecken, nicht vier), und nahe
-// einem Ende kann die Kamera an einem Vorsprung stehen, den die schlichte
-// Bounding-Box aus `lage()` nicht kennt -- sichtbar als schräge Kante quer
-// durchs Bild, wo eigentlich nur Boden sein sollte. Die Mitte ist von jeder
-// Unregelmässigkeit am Rand am weitesten weg.
-// Versatz optional: die Stützen stehen alle 10 m, und mittig zwischen zwei
-// Reihen zu stehen zeigt mehr Decke als direkt neben einer.
+// Wie das Raster in `interior.tsx`: floor(breite / 12) Felder, mittig
+// eingepasst. Der halbe Feldversatz stellt die Kamera in den Gang.
+const felderQuer = Math.max(1, Math.floor(l.breite / RASTER_M));
+const gangVersatz = felderQuer % 2 === 0 ? RASTER_M / 2 : 0;
+// Auch laengs mittig im Feld stehen, nicht auf einer Achse: sonst steht die
+// flankierende Stuetze auf gleicher Hoehe wie die Kamera, also einen halben
+// Feldabstand seitlich -- und fuellt das halbe Bild, statt die Flucht zu
+// zeigen. Von hier aus liegen vier Achsen voraus.
+const felderLaengs = Math.max(1, Math.floor((l.uMax - l.uMin) / RASTER_M));
+const ersteAchse = (l.uMin + l.uMax) / 2 - (felderLaengs * RASTER_M) / 2;
+// Optionaler Feinversatz laengs, in Metern.
 const versatz = Number(process.argv[3] ?? 0);
-const station = (l.uMin + l.uMax) / 2 + versatz;
-const x = l.ux * station - l.uy * l.vM;
-const y = l.uy * station + l.ux * l.vM;
-// Blick geradeaus die lange Achse hinunter, kein Versatz. Kamera schaut nach
+const station =
+  ersteAchse
+  + Math.max(0, felderLaengs - PFEILER_IN_DIE_TIEFE) * RASTER_M
+  + RASTER_M / 2
+  + versatz;
+const quer = l.vM + gangVersatz;
+const x = l.ux * station - l.uy * quer;
+const y = l.uy * station + l.ux * quer;
+// Blick die lange Achse hinunter, auf die Stirnwand zu. Kamera schaut nach
 // -Z, Szenen-Z nach Sueden -- vor beiden Anteilen ein Minus (siehe SiteScene).
 const yaw = Math.atan2(-l.ux, -l.uy);
 

@@ -179,7 +179,7 @@ export function Beleuchtung({ extent, interior }: { extent: number; interior: bo
             Stützen, die echten Schlagschatten werfen. Eine starke Halbkugel
             würde all das wieder einebnen -- auf den Referenzfotos ist der
             Raum dunkel, mit klaren hellen Inseln, nicht gleichmässig grau. */}
-        <hemisphereLight args={['#fff3dd', '#33353b', 0.32]} position={[0, extent, 0]} />
+        <hemisphereLight args={['#fff3dd', '#33353b', 0.14]} position={[0, extent, 0]} />
         <ambientLight intensity={0.045} color="#cfd7e2" />
       </>
     );

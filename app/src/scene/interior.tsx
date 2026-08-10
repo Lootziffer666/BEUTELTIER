@@ -593,7 +593,14 @@ export function Hallenlicht({
         const quer = ((k + 0.5) / LICHT_QUER - 0.5) * lage.breite * 0.82;
         const x = lage.mx + ux * laengs - uy * quer;
         const y = lage.my + uy * laengs + ux * quer;
-        out.push([x - centre[0], hall.baseY + LICHT_HOEHE_M, y - centre[1]]);
+        // Nie über die Decke: `LICHT_HOEHE_M` ist ein Richtwert für hohe
+        // Hallen, aber Halle 10.2 misst nur 5,7 m licht. Dort hingen die
+        // Lichter bislang knapp drei Meter *über* der Decke und leuchteten
+        // durch sie hindurch auf den Boden -- die Punktlichter werfen keinen
+        // Schatten, also hielt sie nichts auf. Der Boden war dadurch flächig
+        // hell, ohne dass eine sichtbare Quelle dafür im Raum stand.
+        const lichtHoehe = Math.min(LICHT_HOEHE_M, (hall.height?.clearHeightM ?? 8) - 1);
+        out.push([x - centre[0], hall.baseY + lichtHoehe, y - centre[1]]);
       }
     }
     return out;
