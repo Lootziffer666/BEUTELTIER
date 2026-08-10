@@ -180,7 +180,24 @@ export function rasterAchsen(laenge: number): number[] {
  * `aussparungen` sind Weltpunkte (Treppen, Rolltreppen, Aufzüge); Rasterpunkte
  * in ihrer Nähe fallen weg.
  */
-function saeulenraster(lage: Lage, aussparungen: { x: number; y: number }[] = []) {
+/** Liegt ein Punkt im Vieleck? Strahlverfahren, in Geländemetern. */
+function imUmriss(umriss: Placement2D[], x: number, y: number): boolean {
+  let drin = false;
+  for (let i = 0, j = umriss.length - 1; i < umriss.length; j = i++) {
+    const [xi, yi] = umriss[i];
+    const [xj, yj] = umriss[j];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+      drin = !drin;
+    }
+  }
+  return drin;
+}
+
+function saeulenraster(
+  lage: Lage,
+  aussparungen: { x: number; y: number }[] = [],
+  umriss: Placement2D[] = [],
+) {
   // Die Achsen kommen aus `hallenlage` und werden hier **nicht** aus `winkel`
   // neu gerechnet: `winkel` ist die Drehung für die Szene und trägt dafür
   // einen Vorzeichenwechsel, der im Grundriss nichts zu suchen hat.
@@ -197,6 +214,11 @@ function saeulenraster(lage: Lage, aussparungen: { x: number; y: number }[] = []
     for (const quer of querAchsen) {
       const x = lage.mx + tx * laengs + px * quer;
       const y = lage.my + ty * laengs + py * quer;
+      // Das Raster wird auf die Hüllbox gelegt, die Halle ist aber ein
+      // Vieleck: an jeder einspringenden Ecke fielen Rasterpunkte nach
+      // draussen, und dort standen dann Stützen vor oder in der Wand. In der
+      // Perspektive war das nicht zu sehen, in der Draufsicht sofort.
+      if (umriss.length >= 3 && !imUmriss(umriss, x, y)) continue;
       const verdeckt = aussparungen.some(
         (a) => Math.hypot(a.x - x, a.y - y) < AUSSPARUNG_RADIUS_M,
       );
@@ -517,6 +539,46 @@ function kachel(quelle: THREE.Texture | undefined) {
  * also keine eigene Geometrie, sondern derselbe Quader, gleichmässig
  * aufgeblasen.
  */
+/**
+ * Der Grundriss einer Halle in Geländemetern: Umriss und Stützen.
+ *
+ * Dieselbe Rechnung, aus der die Szene ihre Stützen setzt -- nur als Zahlen
+ * statt als Geometrie. `plan-check.mjs` zeichnet daraus eine orthografische
+ * Draufsicht ohne Renderer, ohne Material und ohne Licht. Genau dort fallen
+ * Fehler auf, die in der Perspektive plausibel aussehen: ein verdrehtes
+ * Raster, Reihen, die nicht parallel laufen, Bänder ungleicher Breite.
+ *
+ * Dass es **dieselbe** Funktion ist, ist der Punkt. Eine nachgebaute Rechnung
+ * im Prüfer wäre eine zweite Wahrheit und zeigte genau die Fehler nicht,
+ * wegen derer man hinsieht -- so ist mir das Raster schon einmal durchgegangen.
+ */
+export function hallenGrundriss(
+  data: Dataset,
+  aussparungen: { x: number; y: number }[] = [],
+) {
+  const out: {
+    key: string;
+    umriss: [number, number][];
+    saeulen: { x: number; y: number }[];
+    reihen: number;
+    baender: number;
+  }[] = [];
+  for (const hall of data.site.halls) {
+    if (hall.outdoor) continue;
+    const lage = hallenlage(hall.footprint);
+    if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
+    const { positionen } = saeulenraster(lage, aussparungen, hall.footprint);
+    out.push({
+      key: hall.key,
+      umriss: hall.footprint.map(([x, y]) => [x, y] as [number, number]),
+      saeulen: positionen,
+      reihen: PFEILERREIHEN_QUER,
+      baender: PFEILERREIHEN_QUER + 1,
+    });
+  }
+  return out;
+}
+
 export function Hallenstuetzen({
   data,
   centre,
@@ -543,6 +605,15 @@ export function Hallenstuetzen({
     return out;
   }, [data]);
 
+  // Nur in der Planansicht: den Grundriss als Zahlen nach aussen reichen,
+  // damit `plan-check.mjs` ihn zeichnen kann, ohne die Rechnung nachzubauen.
+  useEffect(() => {
+    if (!PLAN_ANSICHT) return;
+    const global = globalThis as { __GRUNDRISS?: unknown };
+    global.__GRUNDRISS = () => hallenGrundriss(data, aussparungen);
+    return () => { delete global.__GRUNDRISS; };
+  }, [data, aussparungen]);
+
   const { schaefte, sockel } = useMemo(() => {
     const schaefte: THREE.Matrix4[] = [];
     const sockel: THREE.Matrix4[] = [];
@@ -553,7 +624,7 @@ export function Hallenstuetzen({
       const lage = hallenlage(hall.footprint);
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
       const hoehe = hall.height?.clearHeightM ?? 8;
-      const { positionen } = saeulenraster(lage, aussparungen);
+      const { positionen } = saeulenraster(lage, aussparungen, hall.footprint);
       const boden = hall.baseY;
       const decke = hall.baseY + hoehe;
 
