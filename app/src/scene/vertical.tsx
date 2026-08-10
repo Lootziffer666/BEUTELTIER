@@ -195,15 +195,43 @@ function EscalatorFlight({ flight }: { flight: Flight }) {
     return netz;
   }, [length]);
 
+  /**
+   * Der Handlauf als geschlossene Bahn.
+   *
+   * Ein `CatmullRomCurve3` durch acht Punkte in der Laengsebene: unten aus der
+   * Schleife heraus, die Neigung hinauf, oben um den Umlenkbogen und auf der
+   * Unterseite zurueck. `TubeGeometry` legt das Profil darauf -- und weil die
+   * Kurve geschlossen ist, gibt es weder Anfang noch Ende zu verstecken.
+   */
+  const handlauf = useMemo(() => {
+    const oben = RAIL_HEIGHT_M + 0.12;
+    const unten = RAIL_HEIGHT_M - 0.22;
+    const bogen = 0.34;
+    const punkte = [
+      new THREE.Vector3(bogen, oben, 0),
+      new THREE.Vector3(length - bogen, oben, 0),
+      new THREE.Vector3(length + bogen * 0.2, oben - bogen * 0.5, 0),
+      new THREE.Vector3(length + bogen * 0.2, unten + bogen * 0.5, 0),
+      new THREE.Vector3(length - bogen, unten, 0),
+      new THREE.Vector3(bogen, unten, 0),
+      new THREE.Vector3(-bogen * 0.2, unten + bogen * 0.5, 0),
+      new THREE.Vector3(-bogen * 0.2, oben - bogen * 0.5, 0),
+    ];
+    const kurve = new THREE.CatmullRomCurve3(punkte, true, 'catmullrom', 0.4);
+    return new THREE.TubeGeometry(kurve, 96, 0.055, 8, true);
+  }, [length]);
+
   const materialien = useMemo(() => ({
     bahn: familienMaterial(FAMILIEN.M02),
     stufe: familienMaterial(FAMILIEN.M08),
+    blende: familienMaterial(FAMILIEN.M08),
     handlauf: handlaufMaterial(),
   }), []);
   useEffect(() => () => {
     stufen.dispose();
+    handlauf.dispose();
     Object.values(materialien).forEach((material) => material.dispose());
-  }, [stufen, materialien]);
+  }, [stufen, handlauf, materialien]);
 
   return (
     <group position={flight.base} rotation={[0, yaw, 0]}>
@@ -236,9 +264,16 @@ function EscalatorFlight({ flight }: { flight: Flight }) {
                 opacity={0.35}
               />
             </mesh>
-            <mesh position={[0, RAIL_HEIGHT_M + 0.1, 0]} material={materialien.handlauf}
-                  castShadow>
-              <boxGeometry args={[length, 0.09, 0.13]} />
+            {/* Der Handlauf laeuft **um**, er hoert nicht oben auf. Auf dem
+                Referenzbild ist genau das sein Kennzeichen: hoch, oben um,
+                und unten in einer engen Schleife zurueck unter die
+                Balustrade. Ein gerader Balken auf der Bruestung liest sich
+                als Gelaender an einer Rampe -- die Schleife macht daraus
+                eine Rolltreppe. */}
+            <mesh geometry={handlauf} material={materialien.handlauf} castShadow />
+            {/* Die Sockelblende zwischen Stufenband und Balustrade. */}
+            <mesh position={[0, 0.16, side * -0.02]} material={materialien.blende}>
+              <boxGeometry args={[length, 0.28, 0.05]} />
             </mesh>
           </group>
         ))}

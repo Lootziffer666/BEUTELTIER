@@ -56,8 +56,20 @@ const fehler = [];
 page.on('console', (m) => { if (m.type() === 'error') fehler.push(m.text()); });
 page.on('pageerror', (e) => fehler.push(String(e)));
 
-await page.goto(URL, { waitUntil: 'networkidle' });
-await page.waitForTimeout(3500);
+await page.goto(URL, { waitUntil: 'domcontentloaded' });
+
+// Auf den ersten fertigen Frame warten und nicht auf eine Uhr. Der Dev-Server
+// uebersetzt die Szene beim ersten Aufruf, und das dauert unter dem
+// Software-Renderer laenger als jede geratene Wartezeit -- der Grund, warum
+// der erste Versuch nach zwei Minuten ohne ein einziges Bild abbrach.
+// `networkidle` hilft nicht: Vite haelt eine offene HMR-Verbindung.
+await page.waitForSelector('canvas', { timeout: AUFNAHME_MS });
+await page.waitForFunction(() => {
+  const leinwand = document.querySelector('canvas');
+  return !!leinwand && leinwand.width > 0;
+}, null, { timeout: AUFNAHME_MS });
+await warteAufFrames(page, 6);
+
 await page.getByRole('button', { name: 'Begehen' }).click();
 await page.waitForTimeout(1800);
 
