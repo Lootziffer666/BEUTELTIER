@@ -10,7 +10,7 @@
  * Kameraposition von oben, kein zweiter Renderer.
  */
 
-import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Html, OrbitControls, useGLTF, type OrbitControlsProps } from '@react-three/drei';
 import * as THREE from 'three';
@@ -33,8 +33,9 @@ import {
   WELT_KACHEL_M,
   type Surface,
 } from './materials';
+import { fernsteuerungErlaubt, leerErlaubt } from './fernsteuerung';
 import { Beleuchtung } from './lighting';
-import { Deckenleuchten, Hallenhuelle, Hallenlicht } from './interior';
+import { Deckenleuchten, Hallenhuelle, Hallenlicht, Hallenstuetzen, Lichtspiegel } from './interior';
 import { Boulevard } from './boulevard';
 import { Markenstaende } from './Markenstaende';
 import { MARKEN_STAND_IDS } from './marken';
@@ -117,6 +118,17 @@ const STAND_HEIGHT_M = 2.6;
 const MODEL_URL = `${import.meta.env.BASE_URL}models/messe.glb`;
 /** Das entzerrte Senkrechtluftbild, gebaut von tools/build_ortho.py. */
 const ORTHO_URL = `${import.meta.env.BASE_URL}models/gelaende.jpg`;
+/**
+ * Darf `__SETZEN` gestellt werden? Einmal beim Laden entschieden -- die Adresse
+ * ändert sich innerhalb einer Sitzung nicht (siehe `fernsteuerung.ts`).
+ */
+const SETZEN_ERLAUBT =
+  typeof window !== 'undefined' && fernsteuerungErlaubt(window.location.search);
+
+/** Siehe `SETZEN_ERLAUBT` -- dieselbe Begründung, für `?leer`. */
+const LEER_ERLAUBT =
+  typeof window !== 'undefined' && leerErlaubt(window.location.search);
+
 /** Wie durchsichtig die Gebäudehülle in der Übersicht ist. */
 const SHELL_OPACITY = 0.16;
 /** In der Ego-Perspektive ist die Wand eine Wand. */
@@ -1195,6 +1207,29 @@ function WalkControls({
     // binden. Aktuelle Werte kommen aus den Refs oben.
   }, [active, gl, data]);
 
+  // Die Kamera von aussen setzen -- nur, wenn die Adresse es erlaubt. Der
+  // Bilderpruefer (`gang-check.mjs`, `tuer-check.mjs`) stellt sie in Sekunden
+  // dorthin, wofuer Laufen unter dem Software-Renderer Minuten braucht.
+  // Einmal gestellt statt in jedem Bild neu: die Refs darin sind stabil.
+  useEffect(() => {
+    if (!active || !SETZEN_ERLAUBT) return;
+    const global = globalThis as { __SETZEN?: unknown };
+    // `pitch` ist optional und war es immer -- ohne ihn schaut die Kamera
+    // waagerecht, wie bisher. Mit ihm lässt sich senkrecht nach unten
+    // blicken, und das ist die einzige Ansicht, in der man prüfen kann, ob
+    // Stützenreihen tatsächlich parallel laufen und die Leuchtbänder
+    // zwischen ihnen liegen. In der Perspektive sieht beides plausibel aus,
+    // auch wenn es falsch ist.
+    global.__SETZEN = (px: number, py: number, pz: number, yaw: number, pitch = 0) => {
+      position.current = { x: px, y: py, z: pz };
+      look.current.yaw = yaw;
+      look.current.pitch = pitch;
+    };
+    return () => {
+      delete global.__SETZEN;
+    };
+  }, [active]);
+
   useFrame((state, delta) => {
     if (!active) return;
 
@@ -1243,18 +1278,6 @@ function WalkControls({
         pitch: look.current.pitch,
         hallKey: data.walk.footingAt(x, y, z).hallKey,
       });
-    }
-    // Nur im Entwicklungsbetrieb: die Kamera von aussen setzen. Der
-    // Bilderpruefer (`gang-check.mjs`) braucht in Sekunden, wofuer Laufen
-    // unter dem Software-Renderer Minuten braucht. `import.meta.env.DEV` ist
-    // im gebauten Stand false, der ausgelieferte Code hat den Haken nicht.
-    if (import.meta.env.DEV) {
-      (globalThis as unknown as { __SETZEN?: unknown }).__SETZEN =
-        (px: number, py: number, pz: number, yaw: number) => {
-          position.current = { x: px, y: py, z: pz };
-          look.current.yaw = yaw;
-          look.current.pitch = 0;
-        };
     }
     camera.position.set(x - centre[0], z + EYE_HEIGHT_M, y - centre[1]);
     camera.rotation.set(0, 0, 0);
@@ -1319,6 +1342,27 @@ export function SiteScene(props: SceneProps) {
   const centre = useMemo(() => siteCentre(data.site), [data.site]);
   const registered = data.spatialMode === 'registered';
 
+  /**
+   * In welcher Halle die Kamera gerade steht.
+   *
+   * `focusHallKey` taugt dafür nicht: es wird ausschliesslich von einem
+   * Suchtreffer gesetzt (`pickHit` in App.tsx). Wer zu Fuss in eine Halle
+   * läuft, hatte deshalb keine -- und `Hallenlicht`, die einzige echte
+   * Lichtquelle drinnen, rendert dann gar nichts. Die Halle lag im Dunkeln,
+   * beleuchtet nur von einer schwachen Halbkugel; Stützen wurden schwarze
+   * Silhouetten ohne Flächenunterschied, Schatten gab es keine.
+   *
+   * Der Schnappschuss der Laufkamera weiss es dagegen ohnehin -- er führt
+   * `hallKey` aus dem Wegenetz mit. Viermal je Sekunde, deshalb wird nur bei
+   * einem echten Wechsel neu gesetzt.
+   */
+  const [egoHallKey, setEgoHallKey] = useState<string | null>(null);
+  const onCameraSnapshot = useCallback((snapshot: CameraSnapshot) => {
+    setEgoHallKey((bisher) => (bisher === snapshot.hallKey ? bisher : snapshot.hallKey));
+    props.onCameraSnapshot?.(snapshot);
+  }, [props.onCameraSnapshot]);
+  const lichtHallKey = preset === 'ego' ? (egoHallKey ?? focusHallKey) : focusHallKey;
+
   const extent = useMemo(() => {
     const points = data.site.halls.flatMap((hall) => hall.footprint);
     const xs = points.map((point) => point[0]);
@@ -1379,7 +1423,7 @@ export function SiteScene(props: SceneProps) {
           <OfficialWorld data={data} centre={centre} preset={preset} cel={cel} />
         </Suspense>
       )}
-      {(preset === 'halle' || preset === 'ego') && focusHallKey && (
+      {(preset === 'halle' || preset === 'ego') && focusHallKey && !LEER_ERLAUBT && (
         <ProceduralStaging
           data={data}
           centre={centre}
@@ -1395,18 +1439,24 @@ export function SiteScene(props: SceneProps) {
       {preset !== 'ego' && (
         <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
       )}
-      <Stands
-        data={data}
-        centre={centre}
-        upperOpacity={upperOpacity}
-        selectedStandId={props.selectedStandId}
-        routeStandIds={props.routeStandIds}
-        interior={preset === 'ego'}
-        reduceHallKey={(preset === 'halle' || preset === 'ego') ? focusHallKey : null}
-        onSelectStand={props.onSelectStand}
-      />
-      <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
+      {!LEER_ERLAUBT && (
+        <Stands
+          data={data}
+          centre={centre}
+          upperOpacity={upperOpacity}
+          selectedStandId={props.selectedStandId}
+          routeStandIds={props.routeStandIds}
+          interior={preset === 'ego'}
+          reduceHallKey={(preset === 'halle' || preset === 'ego') ? focusHallKey : null}
+          onSelectStand={props.onSelectStand}
+        />
+      )}
+      {!LEER_ERLAUBT && (
+        <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
+      )}
       <Hallenhuelle data={data} centre={centre} visible={preset === 'ego'} />
+      <Hallenstuetzen data={data} centre={centre} visible={preset === 'ego'} />
+      <Lichtspiegel data={data} centre={centre} visible={preset === 'ego'} />
       <Boulevard
         data={data}
         centre={centre}
@@ -1417,7 +1467,7 @@ export function SiteScene(props: SceneProps) {
       <Hallenlicht
         data={data}
         centre={centre}
-        hallKey={focusHallKey}
+        hallKey={lichtHallKey}
         active={preset === 'ego'}
       />
       <Vertikalverbindungen data={data} centre={centre} />
@@ -1439,7 +1489,7 @@ export function SiteScene(props: SceneProps) {
           onToggleFreeze={props.onToggleFreeze}
           onToggleViewfinder={props.onToggleViewfinder}
           onMark={props.onMark}
-          onCameraSnapshot={props.onCameraSnapshot}
+          onCameraSnapshot={onCameraSnapshot}
         />
       ) : (
         <CameraRig preset={preset} focus={focus} extent={extent} />
