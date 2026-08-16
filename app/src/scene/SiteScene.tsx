@@ -44,13 +44,16 @@ import type { CameraSnapshot } from './survey';
 import { ProceduralStaging } from './ProceduralStaging';
 import {
   FAMILIEN,
+  familienMaterial,
   konturHuelle,
   konturStaerke,
   stufenTextur,
   toonMaterial,
   type Familie,
 } from './stil';
+import { KACHEL_M } from './textur';
 import { Kontur } from './Kontur';
+import { Ausstattung } from './Ausstattung';
 
 export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
 
@@ -441,7 +444,15 @@ function schleier(material: THREE.Material, deckkraft: number) {
  * als eigene Objekte entstehen, nicht hier.
  */
 function familieFuer(teil: 'roof' | 'ground' | 'wall', kern: boolean): Familie {
-  if (!kern) return FAMILIEN.M05;          // Umgebung bleibt heller Beton
+  // Die Umgebung ist Hintergrund und bleibt gedeckt -- aber sie ist deshalb
+  // nicht **eine** Fläche. Hier stand `return FAMILIEN.M05` für alles, und
+  // M05 ist Aussenbeton: ein Plattenraster mit Fuge. Jede Wand jedes
+  // Nachbargebäudes trug damit einen Bodenbelag, senkrecht gestellt --
+  // sichtbar als Kachelmuster auf Fassaden über das halbe Bild.
+  //
+  // Boden bleibt Boden, Wand wird Wand. Dass die Umgebung ruhiger ist als der
+  // Kern, entscheidet die Deckkraft und nicht eine falsche Familie.
+  if (!kern) return teil === 'ground' ? FAMILIEN.M05 : FAMILIEN.M01;
   if (teil === 'roof') return FAMILIEN.M02;
   if (teil === 'ground') return FAMILIEN.M03;
   return FAMILIEN.M01;
@@ -497,10 +508,26 @@ function OfficialPackage({
           continue;
         }
         if (umbauen && surfaces) projiziereUV(mesh.geometry, WELT_KACHEL_M.wand);
-        const material = toonMaterial(familie, {
-          map: umbauen && surfaces ? surfaces.wand.map : quelle.map,
-          normalMap: umbauen && surfaces ? surfaces.wand.normalMap : quelle.normalMap,
-        }, { side: THREE.DoubleSide });
+        // Der Punkt, an dem der Look bisher verlorenging: die amtlichen
+        // GLB-Pakete sind aus Gebäudeumringen gerechnet und bringen **keine**
+        // Textur mit. `quelle.map` ist dort schlicht `null`, und was blieb,
+        // war eine gestufte Beleuchtung auf einer leeren Farbfläche -- eine
+        // Pappschachtel. Wo keine Karte mitkommt, zeichnet jetzt die Familie
+        // selbst, projiziert in Metern statt über die Fläche gestreckt.
+        const eigeneKarte = umbauen && surfaces ? surfaces.wand : null;
+        let material: THREE.MeshToonMaterial;
+        if (eigeneKarte) {
+          material = toonMaterial(familie, {
+            map: eigeneKarte.map, normalMap: eigeneKarte.normalMap,
+          }, { side: THREE.DoubleSide });
+        } else if (quelle.map) {
+          material = toonMaterial(familie, {
+            map: quelle.map, normalMap: quelle.normalMap,
+          }, { side: THREE.DoubleSide });
+        } else {
+          projiziereUV(mesh.geometry, KACHEL_M[familie.id] ?? 6);
+          material = familienMaterial(familie, undefined, { side: THREE.DoubleSide });
+        }
         schleier(material, deckkraft);
         mesh.material = material;
         mesh.receiveShadow = true;
@@ -1388,7 +1415,13 @@ export function SiteScene(props: SceneProps) {
         // Ohne Tone Mapping kippt alles Helle nach Weiß, und genau das ließ
         // die Szene wie ein eingefärbtes Drahtgitter aussehen.
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.05;
+        // Drinnen dunkler belichten als draussen. In der Halle sind die
+        // Lichtbaender die hellsten Flaechen im Bild; bei 1,05 fressen sie
+        // aus und ziehen den Boden gleich mit ins Weisse -- genau der Grund,
+        // warum der Hallenboden auf den Aufnahmen keine Zeichnung zeigte,
+        // obwohl er sie traegt. Weniger Belichtung ist hier kein Abdunkeln,
+        // sondern das Gegenteil: die Zeichnung kommt zurueck.
+        gl.toneMappingExposure = preset === 'ego' ? 0.86 : 1.05;
       }}
       onPointerMissed={() => props.onSelectStand(null)}
     >
@@ -1464,6 +1497,10 @@ export function SiteScene(props: SceneProps) {
         previewSafe={props.previewSafe ?? true}
       />
       <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
+      {/* Die A-Stufen der Detailhierarchie: Deckenraster, Fassadengliederung,
+          Hallennummern, Zaun. Ohne sie bleiben M02, M07, M08 und M10 Familien
+          ohne Traeger -- Materialien, die in der Welt niemand anhat. */}
+      <Ausstattung data={data} centre={centre} drinnen={preset === 'ego'} />
       <Hallenlicht
         data={data}
         centre={centre}

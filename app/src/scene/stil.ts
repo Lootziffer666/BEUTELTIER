@@ -28,6 +28,8 @@
 
 import * as THREE from 'three';
 
+import { familienZeichnung, kachelung } from './textur';
+
 /**
  * Wie viele Lichtstufen ein Material hat.
  *
@@ -251,6 +253,37 @@ export function toonMaterial(
 }
 
 /**
+ * Das fertige Material einer Familie -- Zeichnung inbegriffen.
+ *
+ * Der Weg, den man normalerweise nimmt. `toonMaterial()` darüber ist die
+ * nackte Fassung für Fälle, in denen die Karten woanders herkommen (das
+ * amtliche Luftbild etwa); hier kommen sie aus `textur.ts`, und zwar nach
+ * Metern gekachelt statt nach Flächenanteil.
+ *
+ * Warum die Kachelung hierher gehört und nicht an die Aufrufstelle: eine
+ * Standwand von 3 m und eine Hallenwand von 30 m sollen dieselbe Körnung
+ * haben. Wer die Wiederholung selbst setzt, trifft das nie durchgängig, und
+ * dann verrät der Maßstab, dass beides dieselbe Textur ist.
+ */
+export function familienMaterial(
+  familie: Familie,
+  masse?: { breiteM: number; hoeheM: number },
+  zusatz: THREE.MeshToonMaterialParameters = {},
+): THREE.MeshToonMaterial {
+  const zeichnung = familienZeichnung(familie);
+  const map = zeichnung.map.clone();
+  const normalMap = zeichnung.normalMap.clone();
+  if (masse) {
+    const [x, y] = kachelung(familie, masse.breiteM, masse.hoeheM);
+    map.repeat.set(x, y);
+    normalMap.repeat.set(x, y);
+    map.needsUpdate = true;
+    normalMap.needsUpdate = true;
+  }
+  return toonMaterial(familie, { map, normalMap }, zusatz);
+}
+
+/**
  * Das Material der Konturhülle.
  *
  * Es wird nicht beleuchtet -- eine Kontur, die im Schatten heller oder dunkler
@@ -266,6 +299,10 @@ export function konturMaterial(farbe = '#14161a'): THREE.MeshBasicMaterial {
   const material = new THREE.MeshBasicMaterial({
     color: new THREE.Color(farbe),
     side: THREE.BackSide,
+    // Die Hülle schreibt keine Tiefe. Sonst verdeckt der aufgeblasene Rand,
+    // was hinter der Kante liegt -- bei dicken Linien um Türen und Geländer
+    // ein sichtbarer schwarzer Saum vor dem Hintergrund statt einer Kontur.
+    depthWrite: false,
   });
   material.name = `kontur|${farbe}`;
   konturCache.set(farbe, material);

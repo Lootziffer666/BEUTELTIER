@@ -24,6 +24,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { Dataset } from '../data/load';
 import type { GraphNode } from '../routing/graph';
 import { drehungNachX } from './geometry';
+import { FAMILIEN, familienMaterial, konturMaterial } from './stil';
 
 const STEP_RISE_M = 0.175;
 const STEP_RUN_M = 0.29;
@@ -111,7 +112,11 @@ function buildStairsGeometry(riseM: number): THREE.BufferGeometry {
 
 function StairsFlight({ flight }: { flight: Flight }) {
   const geometry = useMemo(() => buildStairsGeometry(flight.riseM), [flight.riseM]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  const material = useMemo(() => familienMaterial(FAMILIEN.M05), []);
+  useEffect(() => () => {
+    geometry.dispose();
+    material.dispose();
+  }, [geometry, material]);
 
   // Lokal +X ist die Lauf-Richtung; nach R_y(yaw) landet sie in der Szene bei
   // (cos yaw, 0, -sin yaw). Damit das der echten Richtung (dirX, -dirY) in
@@ -119,20 +124,53 @@ function StairsFlight({ flight }: { flight: Flight }) {
   // gelten -- also atan2(dirY, dirX), nicht andersherum. Vertauscht war das
   // hier zuvor der Fehler: eine Nord-Süd-Treppe landete Ost-West.
   const yaw = drehungNachX(flight.dirX, flight.dirY);
+  const laenge = Math.max(2, Math.round(flight.riseM / STEP_RISE_M)) * STEP_RUN_M;
+
   return (
     <group position={flight.base} rotation={[0, yaw, 0]}>
-      <mesh geometry={geometry} castShadow receiveShadow>
-        <meshStandardMaterial color="#c9c9cb" roughness={0.85} metalness={0.05} />
-      </mesh>
+      <mesh geometry={geometry} material={material} castShadow receiveShadow />
+      {/* Das Geländer. Eine Treppe ohne Handlauf liest sich als Rampe mit
+          Kerben -- der Handlauf ist die Linie, die den Aufgang erklärt, und
+          er ist in der Stilbibel ausdrücklich Detailstufe A. */}
+      {[-1, 1].map((seite) => (
+        <group key={seite} position={[0, 0, (seite * STAIR_WIDTH_M) / 2]}>
+          <mesh
+            position={[laenge / 2, flight.riseM / 2 + RAIL_HEIGHT_M, 0]}
+            rotation={[0, 0, Math.atan2(flight.riseM, laenge)]}
+            castShadow
+          >
+            <boxGeometry args={[Math.hypot(laenge, flight.riseM), 0.06, 0.06]} />
+            <primitive object={handlaufMaterial()} attach="material" />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
 
 /**
- * Rolltreppe: geneigte Bahn mit Glasbrüstung -- das prägende Bild an jedem
- * Aufgang des Südgeländes. Kein Antrieb, keine Stufenkette: die Bewegung
- * würde in einem statischen GLB ohnehin nicht ankommen, das Erscheinungsbild
- * aber schon.
+ * Der Handlauf ist schwarz und stumpf, nicht metallisch glänzend.
+ *
+ * Auf jeder Referenzaufnahme ist er die kräftigste Linie im Bild -- ein
+ * dunkler Zug, der die Neigung des Aufgangs zeichnet. Deshalb bekommt er das
+ * Konturmaterial und keine Familie: er *ist* Kontur, gebautes Schwarz.
+ */
+function handlaufMaterial(): THREE.MeshBasicMaterial {
+  const material = konturMaterial('#15171b').clone();
+  material.side = THREE.FrontSide;
+  material.depthWrite = true;
+  return material;
+}
+
+/**
+ * Rolltreppe: geneigte Bahn mit Glasbrüstung, Stufenband und Handlauf.
+ *
+ * Kein Antrieb, keine bewegte Stufenkette -- die Bewegung käme in einem
+ * statischen Bild ohnehin nicht an. Die Stufen selbst aber schon: eine glatte
+ * geneigte Platte liest sich als Rampe, und eine Rampe ist eine andere
+ * Aussage über den Weg als eine Rolltreppe. Dazu die Kammplatten in Gelb an
+ * beiden Enden und der schwarze Handlauf, der auf jedem Referenzbild die
+ * kräftigste Linie ist.
  */
 function EscalatorFlight({ flight }: { flight: Flight }) {
   const runM = (flight.riseM / STEP_RISE_M) * STEP_RUN_M;
@@ -141,37 +179,103 @@ function EscalatorFlight({ flight }: { flight: Flight }) {
   // Gleiche Herleitung wie bei StairsFlight: atan2(dirY, dirX), nicht (dirX, dirY).
   const yaw = drehungNachX(flight.dirX, flight.dirY);
 
+  const stufen = useMemo(() => {
+    // Das Stufenband als eine Geometrie: eine Rolltreppe hat gut vierzig
+    // Tritte, und vierzig Meshes je Anlage bei sechzehn Anlagen wären
+    // sechshundert Zeichenaufrufe für ein Detail am Wegrand.
+    const anzahl = Math.max(4, Math.round(length / 0.42));
+    const teile: THREE.BufferGeometry[] = [];
+    for (let i = 0; i < anzahl; i += 1) {
+      const platte = new THREE.BoxGeometry(0.34, 0.05, ESCALATOR_WIDTH_M * 0.92);
+      platte.translate((i + 0.5) * (length / anzahl), 0.11, 0);
+      teile.push(platte);
+    }
+    const netz = mergeGeometries(teile, false) ?? new THREE.BufferGeometry();
+    teile.forEach((teil) => teil.dispose());
+    return netz;
+  }, [length]);
+
+  /**
+   * Der Handlauf als geschlossene Bahn.
+   *
+   * Ein `CatmullRomCurve3` durch acht Punkte in der Laengsebene: unten aus der
+   * Schleife heraus, die Neigung hinauf, oben um den Umlenkbogen und auf der
+   * Unterseite zurueck. `TubeGeometry` legt das Profil darauf -- und weil die
+   * Kurve geschlossen ist, gibt es weder Anfang noch Ende zu verstecken.
+   */
+  const handlauf = useMemo(() => {
+    const oben = RAIL_HEIGHT_M + 0.12;
+    const unten = RAIL_HEIGHT_M - 0.22;
+    const bogen = 0.34;
+    const punkte = [
+      new THREE.Vector3(bogen, oben, 0),
+      new THREE.Vector3(length - bogen, oben, 0),
+      new THREE.Vector3(length + bogen * 0.2, oben - bogen * 0.5, 0),
+      new THREE.Vector3(length + bogen * 0.2, unten + bogen * 0.5, 0),
+      new THREE.Vector3(length - bogen, unten, 0),
+      new THREE.Vector3(bogen, unten, 0),
+      new THREE.Vector3(-bogen * 0.2, unten + bogen * 0.5, 0),
+      new THREE.Vector3(-bogen * 0.2, oben - bogen * 0.5, 0),
+    ];
+    const kurve = new THREE.CatmullRomCurve3(punkte, true, 'catmullrom', 0.4);
+    return new THREE.TubeGeometry(kurve, 96, 0.055, 8, true);
+  }, [length]);
+
+  const materialien = useMemo(() => ({
+    bahn: familienMaterial(FAMILIEN.M02),
+    stufe: familienMaterial(FAMILIEN.M08),
+    blende: familienMaterial(FAMILIEN.M08),
+    handlauf: handlaufMaterial(),
+  }), []);
+  useEffect(() => () => {
+    stufen.dispose();
+    handlauf.dispose();
+    Object.values(materialien).forEach((material) => material.dispose());
+  }, [stufen, handlauf, materialien]);
+
   return (
     <group position={flight.base} rotation={[0, yaw, 0]}>
       <group rotation={[0, 0, angle]}>
-        <mesh position={[length / 2, 0.04, 0]} castShadow receiveShadow>
+        <mesh position={[length / 2, 0.04, 0]} material={materialien.bahn}
+              castShadow receiveShadow>
           <boxGeometry args={[length, 0.08, ESCALATOR_WIDTH_M]} />
-          <meshStandardMaterial color="#2c2e33" roughness={0.4} metalness={0.35} />
         </mesh>
+        <mesh geometry={stufen} material={materialien.stufe} castShadow />
         {/* Kammplatten-Andeutung an den Enden. */}
-        <mesh position={[0.05, 0.09, 0]}>
-          <boxGeometry args={[0.1, 0.02, ESCALATOR_WIDTH_M]} />
-          <meshStandardMaterial color="#f2c744" roughness={0.5} />
-        </mesh>
-        <mesh position={[length - 0.05, 0.09, 0]}>
-          <boxGeometry args={[0.1, 0.02, ESCALATOR_WIDTH_M]} />
-          <meshStandardMaterial color="#f2c744" roughness={0.5} />
-        </mesh>
+        {[0.05, length - 0.05].map((x) => (
+          <mesh key={x} position={[x, 0.14, 0]}>
+            <boxGeometry args={[0.12, 0.03, ESCALATOR_WIDTH_M]} />
+            <meshBasicMaterial color="#f2c744" toneMapped={false} />
+          </mesh>
+        ))}
         {/* Einfaches transparentes Glas statt echter Transmission: die
             zusätzliche Renderpass-Kamera für Transmission ist auf
             Software-GL (Messegelände-Tablets, CI-Sandbox) zu teuer, ohne
             dass der Unterschied auf einer 3-cm-Scheibe sichtbar würde. */}
         {[-1, 1].map((side) => (
-          <mesh key={side} position={[length / 2, RAIL_HEIGHT_M / 2 + 0.08, (side * ESCALATOR_WIDTH_M) / 2]}>
-            <boxGeometry args={[length, RAIL_HEIGHT_M, 0.03]} />
-            <meshStandardMaterial
-              color="#dceaf5"
-              roughness={0.08}
-              metalness={0.1}
-              transparent
-              opacity={0.35}
-            />
-          </mesh>
+          <group key={side} position={[length / 2, 0, (side * ESCALATOR_WIDTH_M) / 2]}>
+            <mesh position={[0, RAIL_HEIGHT_M / 2 + 0.08, 0]}>
+              <boxGeometry args={[length, RAIL_HEIGHT_M, 0.03]} />
+              <meshStandardMaterial
+                color="#dceaf5"
+                roughness={0.08}
+                metalness={0.1}
+                transparent
+                opacity={0.35}
+              />
+            </mesh>
+            {/* Der Handlauf laeuft **um**, er hoert nicht oben auf. Auf dem
+                Referenzbild ist genau das sein Kennzeichen: hoch, oben um,
+                und unten in einer engen Schleife zurueck unter die
+                Balustrade. Ein gerader Balken auf der Bruestung liest sich
+                als Gelaender an einer Rampe -- die Schleife macht daraus
+                eine Rolltreppe. */}
+            <mesh geometry={handlauf} material={materialien.handlauf} castShadow />
+            {/* Die Sockelblende zwischen Stufenband und Balustrade. */}
+            <mesh position={[0, 0.16, side * -0.02]} material={materialien.blende}>
+              <boxGeometry args={[length, 0.28, 0.05]} />
+            </mesh>
+          </group>
         ))}
       </group>
     </group>
