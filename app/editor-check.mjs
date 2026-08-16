@@ -55,6 +55,30 @@ if (start.worldSize !== 1132.8 || start.objects !== 1 || !start.boulevard || !st
   throw new Error(`Falscher Startzustand: ${JSON.stringify(start)}`);
 }
 
+// Ultra Duplo: komplette Messe erst als wenige grobe, direkt greifbare
+// Baukloetze aufbauen. Halle 9 muss sich danach in die verknuepften
+// Bauplan-Details auf- und wieder zuklappen lassen.
+if (!(await page.$('#ultraDuploAll'))) throw new Error('Ultra-Duplo-Schalter fehlt.');
+await page.click('#ultraDuploAll');
+await page.waitForFunction(() => window.__BEUTELTIER_EDITOR__.state().ultraDuploPieces >= 7);
+const duplo = await page.evaluate(() => window.__BEUTELTIER_EDITOR__.state());
+if (!duplo.ultraDuploActive || duplo.ultraDuploPieces < 7) {
+  throw new Error(`Ultra Duplo wurde nicht aufgebaut: ${JSON.stringify(duplo)}`);
+}
+await page.evaluate(() => window.__BEUTELTIER_EDITOR__.ultraDuplo.select('Halle 9.1'));
+await page.click('#ultraDuploDetails');
+await page.waitForFunction(() => window.__BEUTELTIER_EDITOR__.state().ultraDuploExpanded === 1);
+await page.click('#ultraDuploDetails');
+await page.waitForFunction(() => window.__BEUTELTIER_EDITOR__.state().ultraDuploExpanded === 0);
+await page.click('[data-view="top"]');
+await page.waitForTimeout(700);
+await page.screenshot({ path: `${ABLAGE}/editor-ultra-duplo.png` });
+
+// Fuer die bisherigen Rauchproben wieder in den absichtlich kleinen
+// Startzustand zurueckkehren.
+await page.evaluate(() => window.__BEUTELTIER_EDITOR__.newWorld());
+await page.waitForFunction(() => window.__BEUTELTIER_EDITOR__.state().objects === 1);
+
 // Der Boulevard ist wirklich eine gemeinsame, verriegelbare Baugruppe.
 await page.click('#selectBoulevard');
 if ((await page.$eval('#typeInput', (e) => e.value)) !== 'assembly') {
