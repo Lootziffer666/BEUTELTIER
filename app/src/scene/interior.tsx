@@ -1,14 +1,10 @@
 /**
- * Was eine Halle von innen zu einer Halle macht: die Leuchtbänder.
+ * Innenraum der Messehallen: Geometrie, Stützen, Leuchten und Bodenlook.
  *
- * Auf den Referenzfotos ist das prägende Element nicht die Wand und nicht die
- * Decke, sondern die Reihen durchlaufender Leuchtstoffbänder — und ihre
- * Spiegelung im versiegelten Boden. Ohne sie bleibt jeder Innenraum eine
- * gleichmäßig ausgeleuchtete Kiste.
- *
- * Deshalb sind sie **Geometrie und nicht Textur**: eine aufgemalte Lampe
- * spiegelt sich nicht. Ein `InstancedMesh` trägt alle Bänder aller Hallen in
- * einem Zeichenaufruf.
+ * Dieser Stand verbindet die Geometrie-/Rasterkorrekturen aus PR31 mit dem
+ * letzten Opus-Look aus PR32. Die Hallenflächen tragen metrische UVs direkt in
+ * der Geometrie; der dunkle M03-Boden und die Lichtspiegel aus PR32 bleiben
+ * erhalten.
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -17,97 +13,226 @@ import * as THREE from 'three';
 import type { Dataset } from '../data/load';
 import type { Placement2D } from '../data/types';
 import { drehungNachX } from './geometry';
-import { FAMILIEN, familienMaterial } from './stil';
+import { FAMILIEN, familienMaterial, toonMaterial } from './stil';
 import {
   disposeSurface,
   hallenbodenSurface,
   hallendeckeSurface,
   WELT_KACHEL_M,
 } from './materials';
+import { planErlaubt } from './fernsteuerung';
+import konstruktion from '../../public/data/hallen-konstruktion.json';
 
-/** Abstand der Leuchtenreihen quer zur Halle. */
-const ROW_SPACING_M = 11;
-/**
- * Wie weit unter der Decke die Bänder hängen.
- *
- * Nicht dicht unter dem Dach: die Deckenhöhe im Weltmodell ist nicht überall
- * die lichte Höhe aus der Hallentabelle, und ein Band knapp darunter
- * verschwindet dann hinter der Decke. Zwei Meter tiefer ist es in jeder Halle
- * sichtbar -- und entspricht der Traversenhöhe, in der die Leuchten hängen.
- */
-const DROP_M = 2.0;
+const PLAN_ANSICHT =
+  typeof window !== 'undefined' && planErlaubt(window.location.search);
+
+const DROP_M = 0.3;
 const STRIP_WIDTH_M = 0.42;
 const STRIP_THICKNESS_M = 0.12;
-/**
- * Eine Reihe ist keine durchgehende Stange.
- *
- * Ein einzelner 160 m langer Balken war der Grund, warum die Leuchten im
- * Vordergrund wie weiße Bretter über der Kamera lagen: kein Ende, keine Lücke,
- * kein Anhaltspunkt für die Entfernung. Echte Bänder bestehen aus Leuchten von
- * gut fünf Metern mit sichtbarem Spalt dazwischen — und genau diese Folge aus
- * Hell und Dunkel macht die Länge der Halle lesbar.
- */
-const SEGMENT_M = 5.6;
-const GAP_M = 1.1;
 
-/**
- * Wie eine Halle liegt -- Mitte, Länge, Breite und Drehung.
- *
- * Die Hallen sind eingemessen, stehen also schief zu den Weltachsen. Eine
- * achsparallele Hüllbox legte die Leuchtenreihen quer durch die Wände; die
- * Halle blieb dunkel und wirkte wie ein Hof unter freiem Himmel. Gerechnet
- * wird deshalb in den Kanten des Umrisses selbst.
- */
+const SAEULEN_BREITE_M = 0.46;
+const SAEULEN_TIEFE_M = 0.58;
+const SOCKEL_KRAGEN_M = 0.07;
+const SOCKEL_HOEHE_M = 0.22;
+
+export const PFEILERREIHEN_QUER = 5;
+export const RASTER_M = 12;
+export const BAHNEN_JE_FELD = 3;
+
+export function bahnenImFeld(feldbreite = RASTER_M): number[] {
+  const out: number[] = [];
+  for (let b = 1; b <= BAHNEN_JE_FELD; b += 1) {
+    out.push((b / (BAHNEN_JE_FELD + 1)) * feldbreite);
+  }
+  return out;
+}
+
+export function pfeilerreihenQuer(breite: number): number[] {
+  const baender = PFEILERREIHEN_QUER + 1;
+  const out: number[] = [];
+  for (let i = 1; i <= PFEILERREIHEN_QUER; i += 1) {
+    out.push((i / baender - 0.5) * breite);
+  }
+  return out;
+}
+
+const AUSSPARUNG_RADIUS_M = 9;
+
+interface Lage {
+  mx: number;
+  my: number;
+  laenge: number;
+  breite: number;
+  winkel: number;
+  tx: number;
+  ty: number;
+  px: number;
+  py: number;
+}
+
+export function rasterAchsen(laenge: number): number[] {
+  const felder = Math.max(1, Math.floor(laenge / RASTER_M));
+  const spanne = felder * RASTER_M;
+  const achsen: number[] = [];
+  for (let i = 0; i <= felder; i += 1) {
+    achsen.push(i * RASTER_M - spanne / 2);
+  }
+  return achsen;
+}
+
+export function hallenAufbau(baseY: number, lichteHoehe: number) {
+  const deckeY = baseY + lichteHoehe;
+  const lichtY = deckeY - DROP_M;
+  const fassungHoehe = DROP_M - STRIP_THICKNESS_M;
+  return {
+    bodenY: baseY + 0.02,
+    deckeY,
+    schaftVon: baseY + SOCKEL_HOEHE_M,
+    schaftBis: deckeY - SOCKEL_HOEHE_M,
+    sockelUnten: [baseY, baseY + SOCKEL_HOEHE_M] as [number, number],
+    sockelOben: [deckeY - SOCKEL_HOEHE_M, deckeY] as [number, number],
+    band: [
+      lichtY - STRIP_THICKNESS_M / 2,
+      lichtY + STRIP_THICKNESS_M / 2,
+    ] as [number, number],
+    fassung: [
+      lichtY + STRIP_THICKNESS_M / 2,
+      lichtY + STRIP_THICKNESS_M / 2 + fassungHoehe,
+    ] as [number, number],
+  };
+}
+
+interface StuetzenSpec {
+  reihenQuer: number[];
+  laengsStart: number;
+  laengsAbstand: number;
+  laengsAnzahl: number;
+  profil: { breite: number; tiefe: number };
+}
+
+const KONSTRUKTION = konstruktion.hallen as Record<
+  string,
+  { stuetzen: StuetzenSpec }
+>;
+
+export function stuetzenSpec(hallKey: string): StuetzenSpec | null {
+  return KONSTRUKTION[hallKey]?.stuetzen ?? null;
+}
+
+function saeulenraster(
+  lage: Lage,
+  aussparungen: { x: number; y: number }[] = [],
+  spec: StuetzenSpec | null = null,
+) {
+  const { tx, ty, px, py } = lage;
+  const laengsAchsen = spec
+    ? Array.from(
+        { length: spec.laengsAnzahl },
+        (_, i) => spec.laengsStart + i * spec.laengsAbstand,
+      )
+    : rasterAchsen(lage.laenge);
+  const querAchsen = spec ? spec.reihenQuer : pfeilerreihenQuer(lage.breite);
+  const bandbreite =
+    querAchsen.length > 1
+      ? querAchsen[1] - querAchsen[0]
+      : lage.breite / (PFEILERREIHEN_QUER + 1);
+
+  const positionen: { x: number; y: number }[] = [];
+  for (const laengs of laengsAchsen) {
+    for (const quer of querAchsen) {
+      const x = lage.mx + tx * laengs + px * quer;
+      const y = lage.my + ty * laengs + py * quer;
+      if (
+        Math.abs(laengs) > lage.laenge / 2 ||
+        Math.abs(quer) > lage.breite / 2
+      ) {
+        continue;
+      }
+      const verdeckt = aussparungen.some(
+        (a) => Math.hypot(a.x - x, a.y - y) < AUSSPARUNG_RADIUS_M,
+      );
+      if (!verdeckt) positionen.push({ x, y });
+    }
+  }
+
+  return {
+    positionen,
+    laengsAchsen,
+    querAchsen,
+    reihenAbstand: bandbreite,
+    tx,
+    ty,
+    px,
+    py,
+  };
+}
+
 export function hallenlage(footprint: Placement2D[]) {
   if (footprint.length < 3) return null;
+
   let laengste = 0;
-  let winkel = 0;
+  let richtung = 0;
   for (let i = 0; i < footprint.length; i += 1) {
     const a = footprint[i];
     const b = footprint[(i + 1) % footprint.length];
     const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
     if (d > laengste) {
       laengste = d;
-      winkel = drehungNachX(b[0] - a[0], b[1] - a[1]);
+      richtung = Math.atan2(b[1] - a[1], b[0] - a[0]);
     }
   }
   if (laengste < 1) return null;
 
-  const ux = Math.cos(winkel);
-  const uy = Math.sin(winkel);
-  let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity;
+  const tx = Math.cos(richtung);
+  const ty = Math.sin(richtung);
+  const px = -ty;
+  const py = tx;
+
+  let uMin = Infinity;
+  let uMax = -Infinity;
+  let vMin = Infinity;
+  let vMax = -Infinity;
+
   for (const [x, y] of footprint) {
-    const u = x * ux + y * uy;
-    const v = -x * uy + y * ux;
-    uMin = Math.min(uMin, u); uMax = Math.max(uMax, u);
-    vMin = Math.min(vMin, v); vMax = Math.max(vMax, v);
+    const u = x * tx + y * ty;
+    const v = x * px + y * py;
+    uMin = Math.min(uMin, u);
+    uMax = Math.max(uMax, u);
+    vMin = Math.min(vMin, v);
+    vMax = Math.max(vMax, v);
   }
+
   const uM = (uMin + uMax) / 2;
   const vM = (vMin + vMax) / 2;
   return {
-    mx: uM * ux - vM * uy,
-    my: uM * uy + vM * ux,
+    mx: uM * tx + vM * px,
+    my: uM * ty + vM * py,
     laenge: uMax - uMin,
     breite: vMax - vMin,
-    winkel,
+    winkel: drehungNachX(tx, ty),
+    tx,
+    ty,
+    px,
+    py,
   };
 }
 
-/**
- * Boden und Decke einer Halle -- selbst gebaut, nicht aus dem Weltmodell.
- *
- * Das amtliche Modell bringt zwar Dach- und Bodenflächen mit, aber in seinem
- * eigenen Höhendatum: über Halle 9 liegt seine Bodenplatte auf rund sieben
- * Metern, während Stände, Wegenetz und Besucher auf null stehen. Wer darunter
- * läuft, steht in einem Kriechkeller mit einer Platte über dem Kopf statt in
- * einer Halle. Das ist keine Kleinigkeit, die man wegtexturiert.
- *
- * Deshalb kommen die beiden Flächen, auf die es innen ankommt, aus derselben
- * Quelle wie alles andere Begehbare: aus dem Hallenumriss und der lichten
- * Höhe. Damit liegen sie garantiert unter den Füssen und über dem Kopf --
- * und die Decke trägt die Leuchtenfelder, die den Raum überhaupt erst als
- * Halle lesbar machen.
- */
+const kachelCache = new Map<string, THREE.Texture>();
+
+function kachel(quelle: THREE.Texture | undefined) {
+  if (!quelle) return null;
+  let fertig = kachelCache.get(quelle.uuid);
+  if (!fertig) {
+    fertig = quelle.clone();
+    fertig.wrapS = THREE.RepeatWrapping;
+    fertig.wrapT = THREE.RepeatWrapping;
+    fertig.repeat.set(1, 1);
+    fertig.needsUpdate = true;
+    kachelCache.set(quelle.uuid, fertig);
+  }
+  return fertig;
+}
+
 export function Hallenhuelle({
   data,
   centre,
@@ -120,9 +245,7 @@ export function Hallenhuelle({
   const flaechen = useMemo(() => {
     const out: {
       key: string;
-      position: [number, number, number];
-      rotation: [number, number, number];
-      groesse: [number, number];
+      geometry: THREE.BufferGeometry;
       art: 'boden' | 'decke';
     }[] = [];
 
@@ -132,59 +255,86 @@ export function Hallenhuelle({
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
       const hoehe = hall.height?.clearHeightM ?? 8;
 
-      for (const art of ['boden', 'decke'] as const) {
-        out.push({
-          key: `${hall.key}-${art}`,
-          position: [
-            lage.mx - centre[0],
-            hall.baseY + (art === 'boden' ? 0.02 : hoehe),
-            lage.my - centre[1],
-          ],
-          // Die Ebene liegt waagerecht; die Decke schaut nach unten.
-          rotation: [art === 'boden' ? -Math.PI / 2 : Math.PI / 2, 0, -lage.winkel],
-          groesse: [lage.laenge, lage.breite],
-          art,
-        });
+      const hl = lage.laenge / 2;
+      const hb = lage.breite / 2;
+      const lokal = [
+        new THREE.Vector2(-hl, -hb),
+        new THREE.Vector2(hl, -hb),
+        new THREE.Vector2(hl, hb),
+        new THREE.Vector2(-hl, hb),
+      ];
+      const dreiecke = [
+        [0, 1, 2],
+        [0, 2, 3],
+      ];
+
+      for (const art of (
+        PLAN_ANSICHT ? ['boden'] : ['boden', 'decke']
+      ) as readonly ('boden' | 'decke')[]) {
+        const y = hall.baseY + (art === 'boden' ? 0.02 : hoehe);
+        const positions: number[] = [];
+        const uvs: number[] = [];
+        const normals: number[] = [];
+        const reihenfolge = art === 'boden' ? [0, 1, 2] : [0, 2, 1];
+        const kachelM =
+          art === 'boden' ? WELT_KACHEL_M.boden : WELT_KACHEL_M.decke;
+
+        for (const dreieck of dreiecke) {
+          for (const index of reihenfolge) {
+            const p = lokal[dreieck[index]];
+            const gx = lage.mx + p.x * lage.tx + p.y * lage.px;
+            const gy = lage.my + p.x * lage.ty + p.y * lage.py;
+            positions.push(gx - centre[0], y, gy - centre[1]);
+            uvs.push(p.x / kachelM, p.y / kachelM);
+            normals.push(0, art === 'boden' ? 1 : -1, 0);
+          }
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute(
+          'position',
+          new THREE.Float32BufferAttribute(positions, 3),
+        );
+        geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        geometry.setAttribute(
+          'normal',
+          new THREE.Float32BufferAttribute(normals, 3),
+        );
+        out.push({ key: `${hall.key}-${art}`, geometry, art });
       }
     }
+
     return out;
   }, [data, centre]);
+
+  useEffect(
+    () => () => {
+      flaechen.forEach((f) => f.geometry.dispose());
+    },
+    [flaechen],
+  );
 
   const surfaces = useMemo(
     () => ({ boden: hallenbodenSurface(), decke: hallendeckeSurface() }),
     [],
   );
-  useEffect(() => () => {
-    disposeSurface(surfaces.boden);
-    disposeSurface(surfaces.decke);
-  }, [surfaces]);
+  useEffect(
+    () => () => {
+      disposeSurface(surfaces.boden);
+      disposeSurface(surfaces.decke);
+    },
+    [surfaces],
+  );
 
-  // Ein Bodenmaterial je Halle, einmal gebaut. Im JSX erzeugt liefe bei jedem
-  // Bild ein neues Material samt Texturkopien in den Speicher und keines
-  // wieder heraus.
-  const boeden = useMemo(() => {
-    const karten = new Map<string, THREE.MeshToonMaterial>();
-    for (const flaeche of flaechen) {
-      if (flaeche.art !== 'boden') continue;
-      karten.set(flaeche.key, bodenMaterial(
-        flaeche.groesse[0] / WELT_KACHEL_M.boden,
-        flaeche.groesse[1] / WELT_KACHEL_M.boden,
-      ));
-    }
-    return karten;
-  }, [flaechen]);
-  useEffect(() => () => {
-    boeden.forEach((material) => {
-      material.map?.dispose();
-      material.normalMap?.dispose();
-      material.dispose();
-    });
-  }, [boeden]);
-
-  // Eine Kachel misst so viele Meter -- die Ebenen bekommen ihre UVs aus der
-  // Größe, damit Fugen und Leuchtenraster überall gleich groß bleiben.
-  const kacheln = (art: 'boden' | 'decke', groesse: [number, number]) =>
-    [groesse[0] / WELT_KACHEL_M[art], groesse[1] / WELT_KACHEL_M[art]] as [number, number];
+  const boden = useMemo(() => familienMaterial(FAMILIEN.M03), []);
+  useEffect(
+    () => () => {
+      boden.map?.dispose();
+      boden.normalMap?.dispose();
+      boden.dispose();
+    },
+    [boden],
+  );
 
   if (!visible || !flaechen.length) return null;
 
@@ -192,28 +342,20 @@ export function Hallenhuelle({
     <group>
       {flaechen.map((flaeche) => {
         const surface = surfaces[flaeche.art];
-        const [ru, rv] = kacheln(flaeche.art, flaeche.groesse);
         return (
           <mesh
             key={flaeche.key}
-            position={flaeche.position}
-            rotation={flaeche.rotation}
+            geometry={flaeche.geometry}
             receiveShadow={flaeche.art === 'boden'}
           >
-            <planeGeometry args={[flaeche.groesse[0], flaeche.groesse[1]]} />
             {flaeche.art === 'boden' ? (
-              // Der Boden ist im Ego-Blick die groesste Flaeche ueberhaupt --
-              // in der leeren Halle gut die Haelfte des Bildes. Er lief lange
-              // ueber `materials.ts` und blieb damit eine weisse Ebene, waehrend
-              // ringsum alles gestuft und gezeichnet war. Jetzt traegt er M03:
-              // Plattenraster mit Fuge, Laufspuren, Krakelee.
-              <primitive object={boeden.get(flaeche.key)!} attach="material" />
+              <primitive object={boden} attach="material" />
             ) : (
               <meshStandardMaterial
-                map={kachel(surface.map, ru, rv)}
-                normalMap={kachel(surface.normalMap, ru, rv)}
-                roughnessMap={kachel(surface.roughnessMap, ru, rv)}
-                emissiveMap={kachel(surface.emissiveMap, ru, rv)}
+                map={kachel(surface.map)}
+                normalMap={kachel(surface.normalMap)}
+                roughnessMap={kachel(surface.roughnessMap)}
+                emissiveMap={kachel(surface.emissiveMap)}
                 emissive="#fff0d4"
                 emissiveIntensity={1.6}
                 metalness={0.3}
@@ -228,61 +370,203 @@ export function Hallenhuelle({
   );
 }
 
-/**
- * Das Bodenmaterial einer Halle, in Metern gekachelt.
- *
- * Eine eigene Fassung je Wiederholung und nicht ein geteiltes Material: die
- * Wiederholung sitzt an der Textur, nicht am Material, und zwei Hallen
- * verschiedener Groesse brauchen deshalb verschiedene Texturkopien. Geteilt
- * bleibt dabei das Bild selbst -- `familienMaterial` klont nur den Verweis.
- */
-function bodenMaterial(ru: number, rv: number): THREE.MeshToonMaterial {
-  const material = familienMaterial(FAMILIEN.M03);
-  for (const karte of [material.map, material.normalMap]) {
-    if (!karte) continue;
-    karte.repeat.set(ru, rv);
-    karte.needsUpdate = true;
+function leuchtenreihen(lage: Lage) {
+  const { querAchsen, reihenAbstand, px, py } = saeulenraster(lage);
+  const laenge = lage.laenge * 0.94;
+  const grenzen = [-lage.breite / 2, ...querAchsen, lage.breite / 2];
+  const bahnen: {
+    quer: number;
+    laenge: number;
+    px: number;
+    py: number;
+  }[] = [];
+
+  for (let feld = 0; feld < grenzen.length - 1; feld += 1) {
+    const von = grenzen[feld];
+    for (const versatz of bahnenImFeld(reihenAbstand)) {
+      bahnen.push({ quer: von + versatz, laenge, px, py });
+    }
   }
-  return material;
+  return bahnen;
 }
 
-/**
- * Dieselbe Leinwandtextur, aber je Halle anders oft wiederholt.
- *
- * `clone()` teilt das Bild und hält nur die Wiederholung getrennt -- eine
- * Halle von 166 m und eine von 60 m sollen dieselbe Fugenteilung zeigen,
- * ohne dass die Textur zweimal im Speicher liegt.
- */
-const kachelCache = new Map<string, THREE.Texture>();
-function kachel(quelle: THREE.Texture | undefined, u: number, v: number) {
-  if (!quelle) return null;
-  const schluessel = `${quelle.uuid}|${u.toFixed(2)}|${v.toFixed(2)}`;
-  let fertig = kachelCache.get(schluessel);
-  if (!fertig) {
-    fertig = quelle.clone();
-    fertig.wrapS = THREE.RepeatWrapping;
-    fertig.wrapT = THREE.RepeatWrapping;
-    fertig.repeat.set(u, v);
-    fertig.needsUpdate = true;
-    kachelCache.set(schluessel, fertig);
+export function hallenGrundriss(
+  data: Dataset,
+  aussparungen: { x: number; y: number }[] = [],
+) {
+  const out: {
+    key: string;
+    umriss: [number, number][];
+    saeulen: { x: number; y: number }[];
+    reihen: number;
+    baender: number;
+    breite: number;
+    querAchsen: number[];
+    profil: { breite: number; kragen: number };
+    aufbau: ReturnType<typeof hallenAufbau>;
+    bahnen: number[];
+  }[] = [];
+
+  for (const hall of data.site.halls) {
+    if (hall.outdoor) continue;
+    const lage = hallenlage(hall.footprint);
+    if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
+
+    const { positionen } = saeulenraster(
+      lage,
+      aussparungen,
+      stuetzenSpec(hall.key),
+    );
+    const hl = lage.laenge / 2;
+    const hb = lage.breite / 2;
+    const ecke = (u: number, v: number): [number, number] => [
+      lage.mx + u * lage.tx + v * lage.px,
+      lage.my + u * lage.ty + v * lage.py,
+    ];
+
+    out.push({
+      key: hall.key,
+      umriss: [
+        ecke(-hl, -hb),
+        ecke(hl, -hb),
+        ecke(hl, hb),
+        ecke(-hl, hb),
+      ],
+      saeulen: positionen,
+      reihen: PFEILERREIHEN_QUER,
+      baender: PFEILERREIHEN_QUER + 1,
+      breite: lage.breite,
+      querAchsen: saeulenraster(lage, [], stuetzenSpec(hall.key)).querAchsen,
+      profil: { breite: SAEULEN_BREITE_M, kragen: SOCKEL_KRAGEN_M },
+      aufbau: hallenAufbau(hall.baseY, hall.height?.clearHeightM ?? 8),
+      bahnen: leuchtenreihen(lage).map((r) => r.quer),
+    });
   }
-  return fertig;
+
+  return out;
 }
 
-/**
- * Das Licht *in* einer Halle -- mehrere Quellen statt einer.
- *
- * Eine Halbkugel und ein bisschen Umgebungslicht beleuchten alles gleich
- * stark; das ergibt ein Bild ohne Tiefe, in dem eine Wand in dreissig Metern
- * genauso hell ist wie die zwei Meter vor der Nase. Auf den Referenzfotos
- * trägt der Raum genau vom Gegenteil: Lichtinseln unter den Leuchtenfeldern,
- * dazwischen dunklere Zonen, und der Boden gibt beides zurück.
- *
- * Deshalb ein Raster echter Punktlichter unter der Decke -- nur in der Halle,
- * in der man gerade steht, und ohne Schattenwurf. Zwölf schattenwerfende
- * Lichter wären dieselbe Rechnung zwölfmal; die Schatten kommen weiterhin
- * aus der Umgebung.
- */
+export function Hallenstuetzen({
+  data,
+  centre,
+  visible,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  visible: boolean;
+}) {
+  const aussparungen = useMemo(() => {
+    const out: { x: number; y: number }[] = [];
+    for (const node of data.graph.nodes.values()) {
+      if (node.kind !== 'vertical') continue;
+      out.push({ x: node.x, y: node.y });
+    }
+    return out;
+  }, [data]);
+
+  useEffect(() => {
+    if (!PLAN_ANSICHT) return;
+    const global = globalThis as { __GRUNDRISS?: unknown };
+    global.__GRUNDRISS = () => hallenGrundriss(data, aussparungen);
+    return () => {
+      delete global.__GRUNDRISS;
+    };
+  }, [data, aussparungen]);
+
+  const { schaefte, sockel } = useMemo(() => {
+    const schaefte: THREE.Matrix4[] = [];
+    const sockel: THREE.Matrix4[] = [];
+    const dummy = new THREE.Object3D();
+
+    for (const hall of data.site.halls) {
+      if (hall.outdoor) continue;
+      const lage = hallenlage(hall.footprint);
+      if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
+      const hoehe = hall.height?.clearHeightM ?? 8;
+      const { positionen } = saeulenraster(
+        lage,
+        aussparungen,
+        stuetzenSpec(hall.key),
+      );
+      const aufbau = hallenAufbau(hall.baseY, hoehe);
+
+      for (const p of positionen) {
+        const sx = p.x - centre[0];
+        const sz = p.y - centre[1];
+        dummy.rotation.set(0, lage.winkel, 0);
+
+        dummy.position.set(
+          sx,
+          (aufbau.schaftVon + aufbau.schaftBis) / 2,
+          sz,
+        );
+        dummy.scale.set(
+          SAEULEN_BREITE_M,
+          aufbau.schaftBis - aufbau.schaftVon,
+          SAEULEN_TIEFE_M,
+        );
+        dummy.updateMatrix();
+        schaefte.push(dummy.matrix.clone());
+
+        for (const [von, bis] of [aufbau.sockelUnten, aufbau.sockelOben]) {
+          dummy.position.set(sx, (von + bis) / 2, sz);
+          dummy.scale.set(
+            SAEULEN_BREITE_M + 2 * SOCKEL_KRAGEN_M,
+            SOCKEL_HOEHE_M,
+            SAEULEN_TIEFE_M + 2 * SOCKEL_KRAGEN_M,
+          );
+          dummy.updateMatrix();
+          sockel.push(dummy.matrix.clone());
+        }
+      }
+    }
+
+    return { schaefte, sockel };
+  }, [data, centre, aussparungen]);
+
+  const material = useMemo(
+    () => toonMaterial({ ...FAMILIEN.M02, grundton: '#3c4048', stufen: 3 }),
+    [],
+  );
+
+  const setzeMatrizen = (
+    mesh: THREE.InstancedMesh | null,
+    quelle: THREE.Matrix4[],
+  ) => {
+    if (!mesh) return;
+    quelle.forEach((matrix, index) => mesh.setMatrixAt(index, matrix));
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  };
+
+  if (!visible || !schaefte.length) return null;
+
+  return (
+    <group>
+      <instancedMesh
+        ref={(mesh) => setzeMatrizen(mesh, schaefte)}
+        args={[undefined, undefined, schaefte.length]}
+        material={material}
+        castShadow
+        receiveShadow
+        frustumCulled={false}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+      </instancedMesh>
+      <instancedMesh
+        ref={(mesh) => setzeMatrizen(mesh, sockel)}
+        args={[undefined, undefined, sockel.length]}
+        material={material}
+        castShadow
+        receiveShadow
+        frustumCulled={false}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+      </instancedMesh>
+    </group>
+  );
+}
+
 const LICHT_HOEHE_M = 8.6;
 const LICHT_LAENGS = 4;
 const LICHT_QUER = 3;
@@ -308,35 +592,33 @@ export function Hallenlicht({
     const ux = Math.cos(lage.winkel);
     const uy = Math.sin(lage.winkel);
     const out: [number, number, number][] = [];
+
     for (let i = 0; i < LICHT_LAENGS; i += 1) {
-      const laengs = ((i + 0.5) / LICHT_LAENGS - 0.5) * lage.laenge * 0.88;
+      const laengs =
+        ((i + 0.5) / LICHT_LAENGS - 0.5) * lage.laenge * 0.88;
       for (let k = 0; k < LICHT_QUER; k += 1) {
-        const quer = ((k + 0.5) / LICHT_QUER - 0.5) * lage.breite * 0.82;
+        const quer =
+          ((k + 0.5) / LICHT_QUER - 0.5) * lage.breite * 0.82;
         const x = lage.mx + ux * laengs - uy * quer;
         const y = lage.my + uy * laengs + ux * quer;
-        out.push([x - centre[0], hall.baseY + LICHT_HOEHE_M, y - centre[1]]);
+        const lichtHoehe = Math.min(
+          LICHT_HOEHE_M,
+          (hall.height?.clearHeightM ?? 8) - 1,
+        );
+        out.push([x - centre[0], hall.baseY + lichtHoehe, y - centre[1]]);
       }
     }
+
     return out;
   }, [data, centre, hallKey]);
 
-  /**
-   * Der Schatten kommt aus einer einzigen Quelle, nicht aus zwölf.
-   *
-   * Zwölf schattenwerfende Punktlichter wären zwölf Würfelschattenkarten je
-   * Bild -- und sähen falsch aus: unter jedem Stand lägen zwölf sich
-   * kreuzende Schlagschatten. In einer Halle mit durchgehender Leuchtdecke
-   * gibt es das nicht. Dort ist der Schatten fast senkrecht, weich und
-   * kurz -- die Summe vieler Quellen. Genau das leistet ein einzelnes,
-   * leicht geneigtes Licht von oben; die Punktlichter darunter machen
-   * ausschliesslich die Helligkeitsverteilung.
-   */
   const schatten = useMemo(() => {
     if (!hallKey) return null;
     const hall = data.hallsByKey.get(hallKey);
     if (!hall || hall.outdoor) return null;
     const lage = hallenlage(hall.footprint);
     if (!lage) return null;
+
     const mitte: [number, number, number] = [
       lage.mx - centre[0],
       hall.baseY,
@@ -344,8 +626,11 @@ export function Hallenlicht({
     ];
     return {
       mitte,
-      // Leicht schräg, damit senkrechte Flächen nicht flach werden.
-      position: [mitte[0] + 26, mitte[1] + 90, mitte[2] + 16] as [number, number, number],
+      position: [
+        mitte[0] + 26,
+        mitte[1] + 90,
+        mitte[2] + 16,
+      ] as [number, number, number],
       spanne: Math.max(lage.laenge, lage.breite) * 0.62,
     };
   }, [data, centre, hallKey]);
@@ -353,14 +638,6 @@ export function Hallenlicht({
   const ziel = useMemo(() => new THREE.Object3D(), []);
   const sonne = useRef<THREE.DirectionalLight>(null);
 
-  /**
-   * Die Schattenkamera muss neu gerechnet werden, sonst bleibt sie klein.
-   *
-   * Ein gesetztes `shadow-camera-left` ändert nur das Feld; die
-   * Projektionsmatrix entsteht daraus erst beim Aufruf. Ohne ihn behält die
-   * Kamera ihre voreingestellten ±5 m — ein Fleck von zehn Metern mitten in
-   * einer Halle von 166. Genau deshalb lagen überall sonst keine Schatten.
-   */
   useEffect(() => {
     const licht = sonne.current;
     if (!licht || !schatten) return;
@@ -387,7 +664,7 @@ export function Hallenlicht({
             castShadow
             position={schatten.position}
             target={ziel}
-            intensity={2.4}
+            intensity={0.55}
             color="#fff4e2"
             shadow-mapSize={[2048, 2048]}
             shadow-camera-left={-schatten.spanne}
@@ -407,10 +684,7 @@ export function Hallenlicht({
           key={index}
           position={position}
           color="#fff3dc"
-          intensity={70}
-          // Keine Reichweitengrenze: sie zog einen sichtbaren Kreisrand über
-          // den Boden. Der Abfall kommt aus dem Abstandsquadrat, wie beim
-          // echten Licht auch.
+          intensity={38}
           distance={0}
           decay={2}
         />
@@ -428,80 +702,200 @@ export function Deckenleuchten({
   centre: [number, number];
   visible: boolean;
 }) {
-  const mesh = useRef<THREE.InstancedMesh>(null);
-
-  const strips = useMemo(() => {
-    const out: { matrix: THREE.Matrix4 }[] = [];
+  const { strips, gehaeuse } = useMemo(() => {
+    const strips: THREE.Matrix4[] = [];
+    const gehaeuse: THREE.Matrix4[] = [];
     const dummy = new THREE.Object3D();
 
     for (const hall of data.site.halls) {
       if (hall.outdoor) continue;
       const lage = hallenlage(hall.footprint);
-      if (!lage) continue;
-      const { mx, my, laenge, breite, winkel } = lage;
-      if (laenge < 20 || breite < 20) continue;
+      if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
 
-      const ceiling = hall.baseY + (hall.height?.clearHeightM ?? 8) - DROP_M;
-      // Die Bänder laufen längs der langen Seite, wie in der Halle gebaut.
-      const rows = Math.max(2, Math.floor(breite / ROW_SPACING_M));
-      const length = laenge * 0.86;
+      const hoehe = hall.height?.clearHeightM ?? 8;
+      const aufbau = hallenAufbau(hall.baseY, hoehe);
+      const lichtY = (aufbau.band[0] + aufbau.band[1]) / 2;
 
-      const pitch = SEGMENT_M + GAP_M;
-      const segments = Math.max(1, Math.floor(length / pitch));
-      const run = segments * pitch - GAP_M;
+      for (const reihe of leuchtenreihen(lage)) {
+        const x = lage.mx + reihe.px * reihe.quer;
+        const y = lage.my + reihe.py * reihe.quer;
 
-      // Einheitsvektoren der Halle: u längs, v quer.
-      const ux = Math.cos(winkel);
-      const uy = Math.sin(winkel);
-      const vx = -uy;
-      const vy = ux;
+        dummy.position.set(x - centre[0], lichtY, y - centre[1]);
+        dummy.rotation.set(0, lage.winkel, 0);
+        dummy.scale.set(
+          reihe.laenge,
+          STRIP_THICKNESS_M,
+          STRIP_WIDTH_M,
+        );
+        dummy.updateMatrix();
+        strips.push(dummy.matrix.clone());
 
-      for (let row = 1; row <= rows; row += 1) {
-        const quer = (row / (rows + 1) - 0.5) * breite;
-
-        for (let segment = 0; segment < segments; segment += 1) {
-          // Versatz entlang der Reihe, gemessen von ihrer Mitte.
-          const offset = -run / 2 + SEGMENT_M / 2 + segment * pitch;
-          const x = mx + ux * offset + vx * quer;
-          const y = my + uy * offset + vy * quer;
-          dummy.position.set(x - centre[0], ceiling, y - centre[1]);
-          dummy.rotation.set(0, winkel, 0);
-          dummy.scale.set(SEGMENT_M, STRIP_THICKNESS_M, STRIP_WIDTH_M);
-          dummy.updateMatrix();
-          out.push({ matrix: dummy.matrix.clone() });
-        }
+        dummy.position.set(
+          x - centre[0],
+          (aufbau.fassung[0] + aufbau.fassung[1]) / 2,
+          y - centre[1],
+        );
+        dummy.scale.set(
+          reihe.laenge * 1.01,
+          aufbau.fassung[1] - aufbau.fassung[0],
+          STRIP_WIDTH_M * 1.5,
+        );
+        dummy.updateMatrix();
+        gehaeuse.push(dummy.matrix.clone());
       }
     }
-    return out;
+
+    return { strips, gehaeuse };
   }, [data, centre]);
 
-  useEffect(() => {
-    if (!mesh.current) return;
-    strips.forEach((strip, index) => mesh.current!.setMatrixAt(index, strip.matrix));
-    mesh.current.instanceMatrix.needsUpdate = true;
-    mesh.current.computeBoundingSphere();
-  }, [strips]);
+  const gehaeuseMaterial = useMemo(() => toonMaterial(FAMILIEN.M02), []);
+
+  const setzeMatrizen = (
+    mesh: THREE.InstancedMesh | null,
+    quelle: THREE.Matrix4[],
+  ) => {
+    if (!mesh) return;
+    quelle.forEach((matrix, index) => mesh.setMatrixAt(index, matrix));
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  };
 
   if (!strips.length) return null;
 
   return (
-    <instancedMesh
-      ref={mesh}
-      args={[undefined, undefined, strips.length]}
-      visible={visible}
-      frustumCulled={false}
-    >
-      <boxGeometry args={[1, 1, 1]} />
-      {/* Emissiv und nicht beleuchtet: eine Leuchte wird nicht angestrahlt,
-          sie strahlt selbst. Mit Tone Mapping bleibt sie hell, ohne den Rest
-          des Bildes auszubrennen. */}
-      <meshStandardMaterial
-        color="#f6f3ec"
-        emissive="#fff3d8"
-        emissiveIntensity={1.9}
-        roughness={0.35}
-        toneMapped
-      />
-    </instancedMesh>
+    <group visible={visible}>
+      <instancedMesh
+        ref={(mesh) => setzeMatrizen(mesh, gehaeuse)}
+        args={[undefined, undefined, gehaeuse.length]}
+        material={gehaeuseMaterial}
+        castShadow
+        frustumCulled={false}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+      </instancedMesh>
+      <instancedMesh
+        ref={(mesh) => setzeMatrizen(mesh, strips)}
+        args={[undefined, undefined, strips.length]}
+        frustumCulled={false}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial
+          color="#f6f3ec"
+          emissive="#fff3d8"
+          emissiveIntensity={1.9}
+          roughness={0.35}
+          toneMapped
+        />
+      </instancedMesh>
+    </group>
+  );
+}
+
+let scheinTexturCache: THREE.CanvasTexture | null = null;
+
+function scheinTextur(): THREE.CanvasTexture {
+  if (scheinTexturCache) return scheinTexturCache;
+
+  const size = 256;
+  const element = document.createElement('canvas');
+  element.width = size;
+  element.height = size;
+  const ctx = element.getContext('2d')!;
+  const mitte = size / 2;
+  const verlauf = ctx.createLinearGradient(
+    0,
+    mitte - size * 0.4,
+    0,
+    mitte + size * 0.4,
+  );
+  verlauf.addColorStop(0, 'rgba(0,0,0,0)');
+  verlauf.addColorStop(0.5, 'rgba(255,255,255,0.9)');
+  verlauf.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = verlauf;
+  ctx.fillRect(0, 0, size, size);
+
+  ctx.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 220; i += 1) {
+    const x = Math.random() * size;
+    const y = mitte + (Math.random() - 0.5) * size * 0.9;
+    const distanzZurMitte = Math.abs(y - mitte) / (size * 0.4);
+    if (Math.random() > distanzZurMitte * 0.9) continue;
+    ctx.fillStyle = `rgba(0,0,0,${0.15 + Math.random() * 0.35})`;
+    ctx.beginPath();
+    ctx.arc(x, y, 3 + Math.random() * 10, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+
+  scheinTexturCache = new THREE.CanvasTexture(element);
+  return scheinTexturCache;
+}
+
+export function Lichtspiegel({
+  data,
+  centre,
+  visible,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  visible: boolean;
+}) {
+  const flaechen = useMemo(() => {
+    const out: {
+      key: string;
+      position: [number, number, number];
+      drehung: number;
+      laenge: number;
+    }[] = [];
+
+    for (const hall of data.site.halls) {
+      if (hall.outdoor) continue;
+      const lage = hallenlage(hall.footprint);
+      if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
+
+      leuchtenreihen(lage).forEach((reihe, index) => {
+        const x = lage.mx + reihe.px * reihe.quer;
+        const y = lage.my + reihe.py * reihe.quer;
+        out.push({
+          key: `${hall.key}-schein${index}`,
+          position: [x - centre[0], hall.baseY + 0.03, y - centre[1]],
+          drehung: lage.winkel,
+          laenge: reihe.laenge,
+        });
+      });
+    }
+
+    return out;
+  }, [data, centre]);
+
+  const material = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        map: scheinTextur(),
+        color: '#ffdfa8',
+        transparent: true,
+        opacity: 0.55,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    [],
+  );
+
+  if (!visible || !flaechen.length) return null;
+
+  return (
+    <group>
+      {flaechen.map((f) => (
+        <mesh
+          key={f.key}
+          position={f.position}
+          rotation={[-Math.PI / 2, 0, f.drehung]}
+          material={material}
+          renderOrder={1}
+        >
+          <planeGeometry args={[f.laenge, STRIP_WIDTH_M * 7]} />
+        </mesh>
+      ))}
+    </group>
   );
 }
