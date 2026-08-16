@@ -15,13 +15,18 @@ const ultraDuploSource = readFileSync(
 // Bauplan-, Auswahl-, Transform- und GLB-Funktionen direkt wiederverwenden.
 const ultraDuploPlugin = {
   name: 'beuteltier-world-builder-ultra-duplo',
-  transformIndexHtml(html: string) {
-    if (!html.includes('<title>BEUTELTIER World Builder 6</title>')) return html;
-    const marker = '// Startzustand: keine Hallenlawine, sondern die kleinste brauchbare Welt.';
-    if (!html.includes(marker)) {
-      throw new Error('World Builder Ultra Duplo: Einspritzpunkt fehlt.');
-    }
-    return html.replace(marker, `${ultraDuploSource}\n${marker}`);
+  transformIndexHtml: {
+    // Vor vite:build-html laufen: danach ist das Inline-Modul bereits in einen
+    // Chunk umgeschrieben und der Kommentar-Marker nicht mehr vorhanden.
+    order: 'pre' as const,
+    handler(html: string) {
+      if (!html.includes('<title>BEUTELTIER World Builder 6</title>')) return html;
+      const marker = '// Startzustand: keine Hallenlawine, sondern die kleinste brauchbare Welt.';
+      if (!html.includes(marker)) {
+        throw new Error('World Builder Ultra Duplo: Einspritzpunkt fehlt.');
+      }
+      return html.replace(marker, `${ultraDuploSource}\n${marker}`);
+    },
   },
 };
 
