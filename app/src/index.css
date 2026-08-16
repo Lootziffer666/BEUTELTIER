@@ -133,6 +133,12 @@ body {
   color: var(--muted);
   font-style: italic;
 }
+.world-builder-launch {
+  margin-left: auto;
+  white-space: nowrap;
+  border-color: #77552b;
+  background: #2b2115;
+}
 
 .tabs {
   display: flex;

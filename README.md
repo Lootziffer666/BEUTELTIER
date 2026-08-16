@@ -79,6 +79,7 @@ nie, ein unbestätigter Weg sei offen.
 - **Epix Hub** — Kampagnenfenster (28 Tage bis zum letzten Sonntag im August), Quests übernehmen, Links zeitversetzt im normalen Browser öffnen, SteamGifts-Markdown exportieren
 - **Funkwache** — Goodie-Meldungen aus fremden Quellen einlesen, Aussteller und Stand erkennen, bei Mehrdeutigkeit alle Kandidaten zeigen statt zu raten
 - **Register** — 1.520 Aussteller, Viele-zu-viele zwischen Ausstellern und Standflächen, Indie Arena Booth als Compound
+- **World Builder** — 1,13-km-Luftbild-Arbeitsfläche mit verankerbarer Nordboulevard-Baugruppe, Touch-Editor und begehbarem Duplo/Minecraft-Baumodus
 
 ## Bauen
 
@@ -122,6 +123,7 @@ data/
   build/    Erzeugt
 app/        PWA (Vite, React, TypeScript, React Three Fiber)
 editor/     3D-Node-Editor zum Bearbeiten des Wegenetzes
+            plus BEUTELTIER World Builder für den metrischen Blockbau
 ```
 
 ## Nicht-Ziele

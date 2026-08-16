@@ -432,6 +432,13 @@ export default function App() {
             <h1>BEUTELTIER</h1>
             <p className="claim">Finde Beute. Finde den Weg.</p>
           </div>
+          <a
+            className="button world-builder-launch"
+            href={`${import.meta.env.BASE_URL}world-builder.html`}
+            title="Metrischen World Builder öffnen"
+          >
+            🧱 Bauen
+          </a>
         </header>
 
         <nav className="tabs">

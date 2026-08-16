@@ -1,11 +1,40 @@
-# BEUTELTIER Block Editor 5
+# BEUTELTIER World Builder 6
 
-`BEUTELTIER_Block_Editor_v5.html` ist der Blockeditor aus Version 4, erweitert
-um eine Sache: **er lädt, was die App gebaut hat.**
+`app/world-builder.html` ist der World Builder 6. Er startet nicht mehr
+mit der gesamten Messe, sondern mit der kleinsten brauchbaren Arbeitswelt:
 
-Datei im Browser öffnen — mehr ist nicht nötig. Der Bauplan ist in der HTML
-eingetragen und wird beim Start geladen. Three.js kommt weiterhin über ein CDN,
-dafür braucht es eine Internetverbindung.
+- 1.132,8 × 1.132,8 m Asphalt (der echte Luftbildausschnitt)
+- das entzerrte Geobasis-NRW-Luftbild von 2025 als transparente Bodenfolie
+- der Nordboulevard als **eine** gemeinsam bewegliche Baugruppe
+- Begehung mit Kollision, Bauen und Abbauen in 1-m-Schritten
+
+Der alte Pfad `editor/BEUTELTIER_Block_Editor_v5.html` leitet weiter, damit
+bestehende Links nicht brechen.
+
+Am zuverlässigsten wird das Repository lokal über einen kleinen Webserver
+geöffnet, damit das vorhandene Luftbild geladen werden darf. Three.js kommt
+weiterhin über ein CDN, dafür braucht es eine Internetverbindung.
+
+```bash
+cd app && npm run dev
+# dann den World Builder über „🧱 Bauen“ öffnen
+```
+
+## Der neue Arbeitsablauf
+
+1. Die Deckkraft der Kartenfolie so einstellen, dass Dachkanten und Bauteile
+   gleichzeitig sichtbar sind.
+2. `Nordboulevard wählen`, die gesamte Baugruppe verschieben und drehen.
+3. `Verankern`. Danach kann weder der Transform-Gizmo noch der Kloppen-Modus
+   den Boulevard versehentlich verschieben oder löschen.
+4. `Begehen`: WASD/Shift am Desktop, Bildschirmtasten und Wischblick auf Touch.
+   Linksklick nutzt das gewählte Werkzeug, Rechtsklick das jeweilige Gegenteil.
+5. Mit 1-m-Steinen bauen, mit der Spitzhacke wieder abbauen, Projekt im Browser
+   oder als `.beuteltier.json` sichern.
+
+Ein eigenes Kartenbild kann die Standardfolie ersetzen. Position, Außenmaß,
+Drehung, Sichtbarkeit und Deckkraft bleiben editierbar und werden im
+Projektformat v5 mitgespeichert.
 
 ## Was geladen wird
 
@@ -19,7 +48,8 @@ Alles sind **echte Editierobjekte**: verschieben, drehen, skalieren, färben,
 löschen, duplizieren. Kein importiertes GLB, das man nur als Ganzes anfassen
 kann.
 
-- **Alles laden** ersetzt die Szene durch den kompletten Bauplan.
+- **Neue Welt** ersetzt die Szene durch den Nordboulevard als Baugruppe.
+- **Alles laden** ersetzt die Szene weiterhin durch den kompletten Bauplan.
 - **Gruppe dazu** legt eine einzelne Gruppe obendrauf.
 - **Bauplan-Datei** lädt eine neu erzeugte `bauplan.json` statt der eingebauten.
 
@@ -50,7 +80,7 @@ Quelltext, mit dem die App rendert — und schreibt zwei Dinge:
 
 - `editor/bauplan.json`
 - denselben Inhalt zwischen die Marken `/*BAUPLAN*/ … /*/BAUPLAN*/` in
-  `BEUTELTIER_Block_Editor_v5.html`
+  `app/world-builder.html`
 
 Der Abschnitt zwischen den Marken ist generiert und wird bei jedem Lauf
 überschrieben. Von Hand geändert wird dort nichts.
@@ -65,6 +95,9 @@ Der Abschnitt zwischen den Marken ist generiert und wird bei jedem Lauf
 - **Einbahnstraße.** Was im Editor verschoben wird, geht nicht automatisch in
   die App zurück. Der Weg zurück führt über `GLB Hülle` oder `GLB Module` und
   von dort in den Szenenaufbau — von Hand.
+- **Begehung bleibt ein Bauprüfer, kein Character-Controller.** Der Spieler
+  läuft auf Hallenniveau; Gefälle und Treppen sind sichtbar und kollidieren,
+  aber noch nicht als begehbare Höhenprofile ausgewertet.
 - **Halle 5 und 10** liegen jenseits der gebauten 285 m Boulevard und sind dort nicht
   gebaut; ihre Hallenplatten sind trotzdem enthalten.
 
