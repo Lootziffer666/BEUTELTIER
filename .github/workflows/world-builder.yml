@@ -1,0 +1,55 @@
+name: World Builder
+
+on:
+  push:
+    paths:
+      - '.github/workflows/world-builder.yml'
+      - 'app/world-builder.html'
+      - 'app/editor-check.mjs'
+      - 'app/vite.config.ts'
+      - 'app/src/App.tsx'
+      - 'app/src/index.css'
+      - 'app/public/models/gelaende.jpg'
+      - 'editor/bauplan.json'
+  workflow_dispatch:
+
+jobs:
+  acceptance:
+    name: Browser-Akzeptanz
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Abhängigkeiten
+        working-directory: app
+        run: npm ci
+
+      - name: Chromium
+        working-directory: app
+        run: npx playwright install --with-deps chromium
+
+      - name: Produktionsbau
+        working-directory: app
+        run: npm run build
+
+      - name: World Builder im Browser prüfen
+        working-directory: app
+        env:
+          ABLAGE: ../artifacts/world-builder
+        run: |
+          mkdir -p "$ABLAGE"
+          node editor-check.mjs
+
+      - name: Prüfbilder sichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-builder-${{ github.sha }}
+          path: artifacts/world-builder/*.png
+          if-no-files-found: error

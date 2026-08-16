@@ -5,10 +5,12 @@
  * deshalb am Bild, ob dort tatsaechlich ein Gang steht -- und zwar an
  * mehreren Stationen, weil sich die Wandabschnitte laengs unterscheiden.
  *
- * Braucht den Entwicklungsserver, nicht den gebauten Stand: das Setzen der
- * Kamera von aussen gibt es nur dort (siehe SiteScene, `import.meta.env.DEV`).
+ * Laeuft gegen die Vorschau, nicht gegen den Entwicklungsserver: der faehrt
+ * unminifiziertes Three.js und ist unter SwiftShader ein Vielfaches langsamer.
+ * Das Setzen der Kamera von aussen haengt deshalb nicht am Bauzustand, sondern
+ * am Parameter `?setzen` (siehe `src/scene/fernsteuerung.ts`).
  *
- *   npm run dev &
+ *   npm run build && npm run preview &
  *   node gang-check.mjs
  */
 import { chromium } from 'playwright';
@@ -42,8 +44,12 @@ const fehler = [];
 page.on('console', (m) => { if (m.type() === 'error') fehler.push(m.text()); });
 page.on('pageerror', (e) => fehler.push(`pageerror: ${e.message}`));
 
-await page.goto(process.env.BEUTELTIER_URL ?? 'http://localhost:5173/',
-  { waitUntil: 'networkidle' });
+// Der Parameter wird an die Adresse gehaengt, auch an eine von aussen
+// gesetzte: ohne ihn gibt es `__SETZEN` nicht, und der Lauf saehe nur den
+// Startpunkt.
+const ziel = new URL(process.env.BEUTELTIER_URL ?? 'http://localhost:4173/');
+ziel.searchParams.set('setzen', '1');
+await page.goto(ziel.href, { waitUntil: 'networkidle' });
 await page.waitForTimeout(3500);
 await page.getByRole('button', { name: 'Begehen' }).click();
 await page.waitForTimeout(1500);

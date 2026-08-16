@@ -72,10 +72,22 @@ const HALL_FRAGMENT = /* glsl */ `
   void main() {
     float height = vDirection.y;
 
-    // Decke: dunkles Trapezblech, in das die Leuchtbaender eingelassen sind.
-    // Der Streifenanteil bestimmt, wie hell der Boden zurueckwirft.
-    float bands = smoothstep(0.35, 0.95, abs(sin(vDirection.x * 9.0)));
-    vec3 ceiling = mix(deck, lamp, bands);
+    // Decke: dunkles Blech mit einem gleichmaessigen Lichtanteil.
+    //
+    // Hier stand ein Streifenmuster aus sin(vDirection.x * 9.0), das der
+    // Boden als breite Baender zurueckwarf. Diese Baender lagen in der
+    // Welt-X-Achse fest und hatten mit den Leuchtenreihen der Halle, in der
+    // man steht, nichts zu tun -- eine Halle steht schraeg im Gelaende, jede
+    // andere anders. Auf dem Boden kreuzten sich damit zwei Spiegelungen:
+    // die echte aus Lichtspiegel und diese erfundene.
+    //
+    // Die Umgebung liefert jetzt nur noch die Grundhelligkeit von oben. Die
+    // Zeichnung der Baender im Boden kommt von den Baendern selbst.
+    // Nur ein schwacher Anteil: die Umgebung liefert Grundhelligkeit, nicht
+    // das Bild der Leuchten. Bei einem hohen Anteil spiegelt der Boden
+    // ueberall eine gleichmaessig helle Decke und wird flaechig weiss -- die
+    // Baender aus Lichtspiegel verschwinden dann in ihrem eigenen Hof.
+    vec3 ceiling = mix(deck, lamp, 0.16);
 
     vec3 colour = wall;
     colour = mix(colour, ceiling, smoothstep(0.18, 0.62, height));
@@ -163,10 +175,19 @@ export function Beleuchtung({ extent, interior }: { extent: number; interior: bo
     return (
       <>
         {/* Grundhelligkeit, nicht Beleuchtung: was den Raum formt, sind die
-            Leuchtenfelder in der Decke und die Punktlichter darunter. Eine
-            starke Halbkugel würde beides wieder einebnen. */}
-        <hemisphereLight args={['#fff3dd', '#33353b', 0.6]} position={[0, extent, 0]} />
-        <ambientLight intensity={0.09} color="#cfd7e2" />
+            Leuchtenreihen und die Punktlichter darunter, dazu jetzt die
+            Stützen, die echten Schlagschatten werfen. Eine starke Halbkugel
+            würde all das wieder einebnen -- auf den Referenzfotos ist der
+            Raum dunkel, mit klaren hellen Inseln, nicht gleichmässig grau. */}
+        {/* Wieder herauf. Ich hatte beides gedämpft, weil der Boden zu hell
+            wirkte -- der Fehler lag aber an der Bodentextur, nicht an der
+            Helligkeit. Zu wenig Grundlicht heisst: senkrechte Flächen bekommen
+            gar nichts ab, Stützen werden schwarze Silhouetten ohne
+            Flächenunterschied, und ihr Kopf verschwindet vor der ebenfalls
+            schwarzen Decke. Genau das sah nach "reicht nicht bis zur Decke"
+            aus, obwohl beide auf derselben Höhe liegen. */}
+        <hemisphereLight args={['#fff3dd', '#33353b', 0.5]} position={[0, extent, 0]} />
+        <ambientLight intensity={0.14} color="#cfd7e2" />
       </>
     );
   }

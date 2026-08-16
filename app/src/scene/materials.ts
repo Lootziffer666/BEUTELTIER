@@ -382,68 +382,118 @@ export function ceilingSurface(): Surface {
 export const WELT_KACHEL_M = { boden: 16, decke: 12, wand: 30 };
 
 /**
- * Hallenboden von innen: geschliffener Estrich.
+ * Hallenboden von innen: dunkler Plattenbelag.
  *
- * Auf den Referenzfotos ist der Boden kein Belag mit Fugen, sondern eine
- * durchgehende graue Fläche mit den Schleifspuren der Maschine — und er
- * spiegelt die Decke so deutlich, dass die Leuchtenreihen ein zweites Mal
- * darin stehen. Genau das trägt den ganzen Raumeindruck: ohne Spiegelung
- * wirkt jede Halle wie ein Foto bei bedecktem Himmel.
+ * Auf dem Referenzbild ist der Boden **dunkel** -- deutlich dunkler als die
+ * Wände, fast so dunkel wie die Decke -- und in grosse Platten geteilt, deren
+ * Fugen als klares Raster durchs Bild laufen. Genau dieser Kontrast trägt die
+ * Aufnahme: helle Bänder auf dunklem Grund.
+ *
+ * Vorher stand hier ein heller Estrich (#74777c) ohne Plattenteilung. Im Bild
+ * wurde daraus eine fast weisse Fläche, auf der die Reflexe der Leuchten
+ * nicht mehr auffielen -- hell auf hell. Der Belag ist jetzt dunkel, und die
+ * Fugen liegen im Plattenmass statt nur als zwei Dehnfugen je Kachel.
  */
 export function hallenbodenSurface(): Surface {
-  const [colour, ctx] = layer('#74777c');
-  const [height] = layer('#808080');
+  const [colour, ctx] = layer('#3f4247');
+  // War bisher unbemalt: `toNormalMap` las eine reine Fläche und lieferte
+  // damit überall dieselbe, nach oben zeigende Normale -- ein Boden ohne
+  // jede Neigung, so glatt wie Glas, unabhängig davon, was Farbe und Rauheit
+  // zeigten. Jede Spur unten bekommt jetzt auch eine Höhe.
+  const [height, hctx] = layer('#808080');
   // Dunkel = glatt. Der Boden ist überall poliert, aber nicht gleichmässig.
   const [rough, rctx] = layer('#2e2e2e');
 
-  // Schleifbahnen der Maschine: lange, leicht gebogene Züge.
+  // Schleifbahnen der Maschine: lange, leicht gebogene Züge -- als echte
+  // Rillen, nicht nur als Farbwechsel.
   for (let i = 0; i < 90; i += 1) {
     const y = Math.random() * SIZE;
     const strength = 0.03 + Math.random() * 0.05;
-    ctx.strokeStyle = `rgba(${Math.random() < 0.5 ? 120 : 168}, 124, 130, ${strength})`;
-    ctx.lineWidth = 6 + Math.random() * 40;
+    const breite = 6 + Math.random() * 40;
+    ctx.strokeStyle = `rgba(${Math.random() < 0.5 ? 96 : 132}, 100, 108, ${strength})`;
+    ctx.lineWidth = breite;
     ctx.beginPath();
     ctx.moveTo(-20, y);
     ctx.bezierCurveTo(SIZE * 0.3, y + (Math.random() - 0.5) * 60,
                       SIZE * 0.7, y + (Math.random() - 0.5) * 60, SIZE + 20, y);
     ctx.stroke();
     rctx.strokeStyle = `rgba(255,255,255,${strength * 0.8})`;
-    rctx.lineWidth = ctx.lineWidth;
+    rctx.lineWidth = breite;
     rctx.stroke();
+    // Deutlich schwächer als Farbe und Rauheit: eine Rille ist ein sanfter
+    // Wechsel im Relief, keine Kante. Zu kräftige Werte hier ergaben nach
+    // dem Sobel-Filter ein wirres Ringelmuster statt eines Bodens.
+    hctx.strokeStyle = `rgba(0, 0, 0, ${0.1 + Math.random() * 0.08})`;
+    hctx.lineWidth = breite * 0.6;
+    hctx.beginPath();
+    hctx.moveTo(-20, y);
+    hctx.bezierCurveTo(SIZE * 0.3, y + (Math.random() - 0.5) * 60,
+                       SIZE * 0.7, y + (Math.random() - 0.5) * 60, SIZE + 20, y);
+    hctx.stroke();
   }
 
-  // Flecken vom Aufbau: hellere Schleier, wo Kleber und Teppichband sassen.
+  // Flecken vom Aufbau: hellere Schleier, wo Kleber und Teppichband sassen --
+  // flache, breite Erhebungen, kein scharfer Rand.
   for (let i = 0; i < 70; i += 1) {
     const x = Math.random() * SIZE;
     const y = Math.random() * SIZE;
     const radius = 30 + Math.random() * 130;
-    ctx.fillStyle = `rgba(150, 154, 160, ${0.03 + Math.random() * 0.05})`;
+    const dreh = Math.random() * Math.PI;
+    const laenge = radius * (0.3 + Math.random() * 0.5);
+    ctx.fillStyle = `rgba(110, 114, 122, ${0.03 + Math.random() * 0.05})`;
     ctx.beginPath();
-    ctx.ellipse(x, y, radius, radius * (0.3 + Math.random() * 0.5),
-                Math.random() * Math.PI, 0, Math.PI * 2);
+    ctx.ellipse(x, y, radius, laenge, dreh, 0, Math.PI * 2);
     ctx.fill();
     rctx.fillStyle = `rgba(0,0,0,${0.04 + Math.random() * 0.06})`;
     rctx.fill();
+    hctx.fillStyle = `rgba(255, 255, 255, ${0.04 + Math.random() * 0.05})`;
+    hctx.beginPath();
+    hctx.ellipse(x, y, radius, laenge, dreh, 0, Math.PI * 2);
+    hctx.fill();
   }
 
-  // Dehnfugen alle acht Meter -- die einzige Linie, die der Estrich hat.
-  const joint = SIZE / 2;
-  ctx.strokeStyle = 'rgba(70, 72, 78, 0.55)';
+  // Plattenfugen. Die Kachel deckt beim Hallenboden genau ein Stützenfeld ab
+  // (RASTER_M = 12 m, siehe `Hallenhuelle`), geteilt in sechs Platten -- also
+  // zwei Meter je Platte. Damit fällt jede sechste Fuge auf eine
+  // Stützenachse, und Bodenplatten, Stützen und Leuchtbänder stehen in
+  // derselben Flucht statt in drei verschiedenen.
+  const platte = SIZE / 6;
+  ctx.strokeStyle = 'rgba(26, 28, 32, 0.85)';
   ctx.lineWidth = 3;
-  for (let step = 0; step <= SIZE; step += joint) {
-    ctx.beginPath();
-    ctx.moveTo(step, 0);
-    ctx.lineTo(step, SIZE);
-    ctx.moveTo(0, step);
-    ctx.lineTo(SIZE, step);
-    ctx.stroke();
+  hctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+  hctx.lineWidth = 3;
+  // Die Fuge liegt tiefer und ist rauher als die Platte -- sonst spiegelt sie
+  // mit und die Teilung verschwindet in jedem Reflex.
+  rctx.strokeStyle = 'rgba(220, 220, 220, 0.8)';
+  rctx.lineWidth = 3;
+  for (let step = 0; step <= SIZE; step += platte) {
+    for (const context of [ctx, hctx, rctx]) {
+      context.beginPath();
+      context.moveTo(step, 0);
+      context.lineTo(step, SIZE);
+      context.moveTo(0, step);
+      context.lineTo(SIZE, step);
+      context.stroke();
+    }
   }
 
   speckle(ctx, 0.025);
 
+  // Weichzeichnen, bevor daraus Normalen werden: neunzig sich
+  // überlappende Schleifbahnen ergaben scharfkantig ein Ringelmuster wie
+  // ein Fingerabdruck statt eines Bodenreliefs. Ein Bodenschliff hat keine
+  // Kanten, nur sanfte Übergänge -- die Unschärfe ist hier die Zeichnung,
+  // nicht ihr Verlust.
+  hctx.filter = 'blur(7px)';
+  hctx.drawImage(height, 0, 0);
+  hctx.filter = 'none';
+
   return {
     map: texture(colour, [1, 1], true),
-    normalMap: texture(toNormalMap(height, 0.5), [1, 1]),
+    // Massvoll, nicht die 2,6 der Fassade: der Boden ist geschliffen, kein
+    // Sichtbeton. Vorher stand hier faktisch 0 -- eine Hoehenkarte, die nie
+    // bemalt wurde --, jetzt reicht es fuer sichtbares, aber ruhiges Relief.
+    normalMap: texture(toNormalMap(height, 0.8), [1, 1]),
     roughnessMap: texture(rough, [1, 1]),
   };
 }
@@ -464,7 +514,9 @@ export function hallendeckeSurface(): Surface {
   const [colour, ctx] = layer('#17181c');
   const [height, hctx] = layer('#808080');
   const [rough, rctx] = layer('#c0c0c0');
-  const [glow, gctx] = layer('#000000');
+  // Bleibt schwarz: die Decke leuchtet nirgends von sich aus, seit die
+  // gemalten Leuchtfelder heraus sind (siehe unten).
+  const [glow] = layer('#000000');
 
   // Kassettenraster: die Decke ist in Felder von rund 1,5 m geteilt.
   const cell = SIZE / 8;
@@ -495,25 +547,15 @@ export function hallendeckeSurface(): Surface {
     }
   }
 
-  // Leuchtfelder: vier je Kachel, also rund alle sechs Meter eines.
-  const panelW = cell * 1.5;
-  const panelH = cell * 0.62;
-  for (const px of [cell, cell * 5]) {
-    for (const py of [cell, cell * 5]) {
-      const x = px - panelW / 2 + cell / 2;
-      const y = py - panelH / 2 + cell / 2;
-      ctx.fillStyle = '#f6f2e8';
-      ctx.fillRect(x, y, panelW, panelH);
-      gctx.fillStyle = '#fff6e2';
-      gctx.fillRect(x, y, panelW, panelH);
-      // Ein schmaler Hof um die Leuchte -- die Decke daneben wird angestrahlt.
-      gctx.fillStyle = 'rgba(255, 240, 210, 0.22)';
-      gctx.fillRect(x - 14, y - 14, panelW + 28, panelH + 28);
-      rctx.fillStyle = '#e8e8e8';
-      rctx.fillRect(x, y, panelW, panelH);
-    }
-  }
-
+  // Keine aufgemalten Leuchtfelder mehr.
+  //
+  // Hier stand ein Raster heller Rechtecke, vier je Kachel -- gemalte Lampen
+  // in der Decke, zusätzlich zu den echten Leuchtbändern, die `Deckenleuchten`
+  // als Geometrie darunter setzt. Beide gehorchten verschiedenen Rastern und
+  // lagen nie übereinander: das Ergebnis war ein Streumuster heller Flecken,
+  // das mit keiner Lichtquelle der Halle etwas zu tun hatte. Die Decke trägt
+  // jetzt nur noch ihr Tragwerk; Licht kommt ausschliesslich von den echten
+  // Bändern.
   speckle(ctx, 0.02);
 
   return {
