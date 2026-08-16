@@ -9,8 +9,8 @@
  *   node bauplan-export.mjs
  *
  * Erzeugt `editor/bauplan.json` und traegt denselben Inhalt in den Editor
- * `editor/BEUTELTIER_Block_Editor_v5.html` ein, damit er auch ohne Server
- * per Doppelklick funktioniert.
+ * `app/world-builder.html` ein, damit App und Editor denselben Bauplan
+ * ausliefern.
  */
 
 import { readFile, writeFile } from 'node:fs/promises';
@@ -22,7 +22,7 @@ const hier = dirname(fileURLToPath(import.meta.url));
 const WURZEL = resolve(hier, '..');
 const QUELLE = resolve(hier, 'public/data/registered-site.json');
 const ZIEL_JSON = resolve(WURZEL, 'editor/bauplan.json');
-const ZIEL_HTML = resolve(WURZEL, 'editor/BEUTELTIER_Block_Editor_v5.html');
+const ZIEL_HTML = resolve(hier, 'world-builder.html');
 const MARKE_AUF = '/*BAUPLAN*/';
 const MARKE_ZU = '/*/BAUPLAN*/';
 
