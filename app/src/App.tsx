@@ -8,7 +8,7 @@ import { SiteScene, type CameraPreset } from './scene/SiteScene';
 import { findRoute, planTour, type Route } from './routing/route';
 import type { EdgeState } from './routing/graph';
 import { ProceduralStagingNotice } from './scene/ProceduralStagingNotice';
-import { loadLayoutPatches, saveLayoutPatches } from './scene/survey';
+import { loadLayoutPatches } from './scene/survey';
 import type { LayoutPatch } from './scene/walk';
 
 const CAMERA_PRESETS: CameraPreset[] = ['uebersicht', 'halle', 'laufmodus', 'ego'];
@@ -40,7 +40,7 @@ export default function App() {
   const [overrides, setOverrides] = useState<Map<string, EdgeState>>(new Map());
   const [avoidUnconfirmed, setAvoidUnconfirmed] = useState(false);
   const [stepFree, setStepFree] = useState(false);
-  const [layoutPatches, setLayoutPatches] = useState<LayoutPatch[]>(() => loadLayoutPatches());
+  const [layoutPatches] = useState<LayoutPatch[]>(() => loadLayoutPatches());
 
   useEffect(() => {
     loadDataset()
@@ -48,10 +48,6 @@ export default function App() {
       .catch((cause: Error) => setError(cause.message));
     store.edgeOverrides().then(setOverrides);
   }, []);
-
-  useEffect(() => {
-    saveLayoutPatches(layoutPatches);
-  }, [layoutPatches]);
 
   const patchedData = useMemo(() => {
     if (!data) return null;
