@@ -1,12 +1,8 @@
 /**
- * Karte, Route, Sperren.
- *
- * Der Ablauf, den PRD 9 verlangt, ist hier vollständig: Ziel wählen, Route
- * sehen, einen Übergang sperren und die Alternative bekommen. Die Sperre wirkt
- * sofort, weil die Zustände auf den Kanten liegen und nicht in der Geometrie.
+ * Karte, Route, Sperren – bewusst als kompakter Accordion-Stack.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Dataset } from '../data/load';
 import type { EdgeState } from '../routing/graph';
 import type { Route } from '../routing/route';
@@ -34,6 +30,38 @@ const SWITCHABLE: EdgeState[] = [
   'ueberfuellt',
 ];
 
+type SectionId = 'search' | 'selection' | 'route' | 'passages' | 'tour' | 'source';
+
+interface AccordionProps {
+  id: SectionId;
+  icon: string;
+  title: string;
+  badge?: string;
+  openSection: SectionId | null;
+  onOpen: (id: SectionId | null) => void;
+  children: ReactNode;
+}
+
+function AccordionSection(props: AccordionProps) {
+  const open = props.openSection === props.id;
+  return (
+    <section className={`map-accordion ${open ? 'is-open' : ''}`}>
+      <button
+        type="button"
+        className="map-accordion__head"
+        onClick={() => props.onOpen(open ? null : props.id)}
+        aria-expanded={open}
+      >
+        <span className="map-accordion__icon" aria-hidden="true">{props.icon}</span>
+        <span>{props.title}</span>
+        {props.badge && <small>{props.badge}</small>}
+        <span className="map-accordion__chevron" aria-hidden="true">⌄</span>
+      </button>
+      {open && <div className="map-accordion__body">{props.children}</div>}
+    </section>
+  );
+}
+
 interface Props {
   data: Dataset;
   search: ReturnType<typeof buildSearch> | null;
@@ -57,26 +85,22 @@ interface Props {
 export function MapPanel(props: Props) {
   const { data, route } = props;
   const [query, setQuery] = useState('');
+  const [openSection, setOpenSection] = useState<SectionId | null>('search');
+
+  useEffect(() => {
+    if (props.selectedStandId) setOpenSection('selection');
+  }, [props.selectedStandId]);
 
   const hits = useMemo(
     () => (props.search ? props.search.search(query) : []),
     [props.search, query],
   );
 
-  /**
-   * Die Übergänge auf der aktuellen Route.
-   *
-   * Ein Durchgang besteht im Netz aus zwei Kanten -- einer in jede Halle. Für
-   * den Nutzer ist er trotzdem eine Sache: „diese Passage ist zu" schaltet
-   * beide. Zwei gleich benannte Schalter, von denen nur einer wirkt, wären
-   * nur verwirrend.
-   */
   const switchable = useMemo(() => {
     if (!route) return [];
     const groups = new Map<string, { label: string; edgeIds: string[]; state: EdgeState }>();
     for (const step of route.steps) {
       if (!['portal', 'elevator', 'escalator', 'stairs'].includes(step.edge.kind)) continue;
-      // Die Kanten eines Übergangs hängen alle an seinem Knoten.
       const key = step.edge.a.startsWith('a:') ? step.edge.b : step.edge.a;
       const existing = groups.get(key);
       if (existing) {
@@ -92,14 +116,22 @@ export function MapPanel(props: Props) {
     return [...groups.entries()].map(([id, entry]) => ({ id, ...entry }));
   }, [route, props.overrides]);
 
-  /** Alle Kanten eines Übergangs mitschalten. */
   const setPassageState = (edgeIds: string[], state: EdgeState) => {
     for (const edgeId of edgeIds) props.onSetEdgeState(edgeId, state);
   };
 
+  const routeBadge = route ? `${Math.round(route.distanceM)} m · ${Math.round(route.minutes)} min` : undefined;
+
   return (
-    <div className="stack">
-      <section>
+    <div className="map-accordion-stack">
+      <AccordionSection
+        id="search"
+        icon="⌕"
+        title="Suchen"
+        badge={query && hits.length ? `${hits.length}` : undefined}
+        openSection={openSection}
+        onOpen={setOpenSection}
+      >
         <input
           className="search"
           type="search"
@@ -128,28 +160,41 @@ export function MapPanel(props: Props) {
             ))}
           </ul>
         )}
-      </section>
+      </AccordionSection>
 
-      <StandCard
-        data={data}
-        standId={props.selectedStandId}
-        startStandId={props.startStandId}
-        onSetStart={props.onSetStart}
-        inTour={props.selectedStandId ? props.tourStandIds.includes(props.selectedStandId) : false}
-        onToggleTour={props.onToggleTour}
-      />
+      <AccordionSection
+        id="selection"
+        icon="◎"
+        title="Auswahl"
+        badge={props.selectedStandId ?? undefined}
+        openSection={openSection}
+        onOpen={setOpenSection}
+      >
+        <StandCard
+          data={data}
+          standId={props.selectedStandId}
+          startStandId={props.startStandId}
+          onSetStart={props.onSetStart}
+          inTour={props.selectedStandId ? props.tourStandIds.includes(props.selectedStandId) : false}
+          onToggleTour={props.onToggleTour}
+        />
+        {!props.selectedStandId && <p className="muted">Stand oder Halle auf der Karte antippen.</p>}
+      </AccordionSection>
 
-      <section className="card">
-        <h2>Route</h2>
+      <AccordionSection
+        id="route"
+        icon="↝"
+        title="Route"
+        badge={routeBadge}
+        openSection={openSection}
+        onOpen={setOpenSection}
+      >
         {!props.startStandId && <p className="muted">Erst einen Startstand setzen.</p>}
         {props.startStandId && !props.selectedStandId && (
           <p className="muted">Ziel auf der Karte oder über die Suche wählen.</p>
         )}
         {props.startStandId && props.selectedStandId && !route && (
-          <p className="warn">
-            Kein Weg unter den aktuellen Zuständen. Eine Sperre zurücknehmen oder unbestätigte
-            Wege zulassen.
-          </p>
+          <p className="warn">Kein Weg unter den aktuellen Zuständen.</p>
         )}
         {route && (
           <>
@@ -160,15 +205,10 @@ export function MapPanel(props: Props) {
               <span>{route.levelChanges} Ebenenwechsel</span>
             </p>
             {route.unconfirmed.length > 0 && (
-              <p className="warn">
-                {route.unconfirmed.length} Abschnitt
-                {route.unconfirmed.length === 1 ? '' : 'e'} unbestätigt — ob dort offen ist, weiß
-                niemand sicher.
-              </p>
+              <p className="warn">{route.unconfirmed.length} unbestätigte Abschnitte.</p>
             )}
           </>
         )}
-
         <div className="toggles">
           <label>
             <input
@@ -184,17 +224,20 @@ export function MapPanel(props: Props) {
               checked={props.stepFree}
               onChange={(event) => props.onStepFree(event.target.checked)}
             />
-            stufenfrei (Aufzug bevorzugen)
+            stufenfrei
           </label>
         </div>
-      </section>
+      </AccordionSection>
 
       {switchable.length > 0 && (
-        <section className="card">
-          <h2>Übergänge auf dieser Route</h2>
-          <p className="muted">
-            Was hier gerade gilt, steht in keiner Quelle. Umschalten, und die Route rechnet neu.
-          </p>
+        <AccordionSection
+          id="passages"
+          icon="⇄"
+          title="Übergänge"
+          badge={`${switchable.length}`}
+          openSection={openSection}
+          onOpen={setOpenSection}
+        >
           <ul className="edges">
             {switchable.map((passage) => {
               const overridden = passage.edgeIds.some((id) => props.overrides.has(id));
@@ -221,9 +264,7 @@ export function MapPanel(props: Props) {
                       <button
                         type="button"
                         className="ghost"
-                        onClick={() =>
-                          passage.edgeIds.forEach((id) => props.onClearEdgeState(id))
-                        }
+                        onClick={() => passage.edgeIds.forEach((id) => props.onClearEdgeState(id))}
                       >
                         zurücksetzen
                       </button>
@@ -233,12 +274,18 @@ export function MapPanel(props: Props) {
               );
             })}
           </ul>
-        </section>
+        </AccordionSection>
       )}
 
       {props.tourStandIds.length > 0 && (
-        <section className="card">
-          <h2>Beutezug</h2>
+        <AccordionSection
+          id="tour"
+          icon="✦"
+          title="Beutezug"
+          badge={props.tour ? `${Math.round(props.tour.totalM)} m` : `${props.tourStandIds.length}`}
+          openSection={openSection}
+          onOpen={setOpenSection}
+        >
           {props.tour ? (
             <>
               <p className="figures">
@@ -264,36 +311,26 @@ export function MapPanel(props: Props) {
           ) : (
             <p className="muted">Startstand setzen, dann wird die Reihenfolge optimiert.</p>
           )}
-        </section>
+        </AccordionSection>
       )}
 
-      <section className="card card--quiet">
-        <h2>Woher die Karte kommt</h2>
+      <AccordionSection
+        id="source"
+        icon="ⓘ"
+        title="Kartendaten"
+        openSection={openSection}
+        onOpen={setOpenSection}
+      >
         <p className="muted">
           Standflächen metrisch aus dem offiziellen Hallenplan, {data.registry.coverage.withGeometry}{' '}
           von {data.registry.coverage.placements} Belegungen mit exakter Lage. Hallenlagen aus dem
-          gamescom-Plan 2025 eingemessen; {data.site.halls.filter((h) => h.placement.source === 'geschaetzt').length}{' '}
-          Hallen stehen nur geschätzt (rund {Math.round(data.site.referenceFit.crossValidatedM)} m).
+          gamescom-Plan eingemessen; {data.site.halls.filter((h) => h.placement.source === 'geschaetzt').length}{' '}
+          Hallen stehen nur geschätzt.
         </p>
         <p className="muted">
-          Lichte Höhen sind offizielle Hallendaten. Die Bodenhöhe der oberen Ebenen ist daraus
-          gerechnet — lichte Höhe darunter plus Geschossdecke von{' '}
-          {data.site.slabAssumptionM[0]}–{data.site.slabAssumptionM[1]} m. Die Deckenstärke ist
-          die einzige Annahme darin und nicht vermessen.
+          Gebäude aus dem amtlichen LoD2-Modell von Geobasis NRW; Halleninnenflächen bleiben modelliert.
         </p>
-        <p className="muted">
-          Die gezeichneten Hallenumrisse sind der <em>belegte Bereich</em>, nicht der
-          Gebäudeumriss: wo gamescom nur einen Teil einer Halle nutzt, endet der Umriss dort.
-        </p>
-        <p className="muted">
-          Die Gebäude selbst kommen aus dem amtlichen 3D-Modell LoD2 von Geobasis NRW.
-          Der Boden draußen und die Dächer tragen das <strong>Senkrechtluftbild</strong> von
-          2025, 10 cm aufgelöst — ein Foto des Geländes.{' '}
-          <strong>Wände, Hallenböden und Decken sind erfunden</strong>: ein Luftbild zeigt
-          sie nicht, und für sie gibt es keine freie Aufnahme. Sie werden aus Fugen,
-          Abnutzung und Rauschen erzeugt — plausibel, aber nicht gemessen.
-        </p>
-      </section>
+      </AccordionSection>
     </div>
   );
 }
