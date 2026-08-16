@@ -7,6 +7,7 @@ on:
       - 'app/world-builder.html'
       - 'app/editor-check.mjs'
       - 'app/vite.config.ts'
+      - 'app/src/world-builder/ultra-duplo.inc.js'
       - 'app/src/App.tsx'
       - 'app/src/index.css'
       - 'app/public/models/gelaende.jpg'
