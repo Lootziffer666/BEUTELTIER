@@ -4,11 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#f0a03c" />
-    <link rel="icon" href="./brand/lootzy-head.png" />
-    <title>BEUTELTIER — Finde Beute. Finde den Weg.</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+<link rel="icon" href="./brand/lootzy-head.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <title>BEUTELTIER — Finde Beute. Finde den Weg.</title>
+</head>
+<body>
+  <div id="root"></div>
+  <!-- Der Service-Worker wird hier manuell registriert: vite-plugin-pwa
+       ist mit injectRegister:false so konfiguriert, dass er das Skript nicht
+       mehr in jedes Entry (auch nicht in world-builder.html) einbaut. Ein
+       Workbox-SW ruft importScripts() auf und laeuft im Module-Scope des
+       Editors — da bricht der gesamte Boot ab. -->
+  <script id="vite-plugin-pwa:register-sw" src="./registerSW.js"></script>
+  <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

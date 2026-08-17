@@ -17,11 +17,26 @@ export default defineConfig({
       },
     },
   },
+  resolve: {
+    alias: {
+      // three@0.185.1 legt die Addons unter examples/jsm ab. Die Form
+      // "three/addons/..." funktioniert nur, solange Vite die Umleitung
+      // vornimmt -- bei einem file://-Start oder einem anderen Toolchain
+      // bricht der Import ab und der Editor bootet nicht. Auf die echte
+      // Paket-Relativpfad wird hier also standardisiert.
+      'three/addons/': fileURLToPath(new URL('./node_modules/three/examples/jsm/', import.meta.url)),
+    },
+  },
   plugins: [
     react(),
+    // Der Service-Worker wird NUR in die Haupt-App (index.html) eingebaut.
+    // world-builder.html ist ein eigenes, eigenstaendiges Modul: ein
+    // Workbox-SW ruft importScripts() auf und laeuft im Module-Scope des
+    // Editors -- da bricht der gesamte Boot ab.
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['brand/*.png'],
+      injectRegister: false,
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,json}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
@@ -41,5 +56,21 @@ export default defineConfig({
         ],
       },
     }),
+    // world-builder.html ist ein eigenstaendiges Modul und kein PWA-Entry.
+    // Ein <link rel="manifest"> (und damit der PWA-Bootstrap) laesst den
+    // Browser vor dem Modul-Script eine separate Web-App-Kontext initialisieren
+    // und klaut dem Canvas den einzigen WebGL-Kontext. THREE meldet dann
+    // "Canvas has an existing context of a different type" und der Editor
+    // bootet nicht. Die Manifest-Link-Tags werden hier nach dem Build aus
+    // world-builder.html entfernt; index.html behält sie.
+    {
+      name: 'strip-worldbuilder-pwa',
+      apply: 'build',
+      generateBundle(_opts, bundle) {
+        const wb = bundle['world-builder.html'] as { source?: string | Uint8Array } | undefined;
+        if (!wb || typeof wb.source !== 'string') return;
+        wb.source = wb.source.replace(/<link rel="manifest"[^>]*>\s*/g, '');
+      },
+    },
   ],
 });
