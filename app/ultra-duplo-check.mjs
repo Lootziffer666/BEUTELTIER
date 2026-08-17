@@ -29,6 +29,10 @@ function startStatic(root) {
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server)));
 }
 
+function sameVector(a, b, tolerance = .02) {
+  return a.length === b.length && a.every((v, i) => Math.abs(v - b[i]) <= tolerance);
+}
+
 const server = await startStatic(join(HIER, 'dist'));
 const port = server.address().port;
 const browser = await chromium.launch({
@@ -54,14 +58,30 @@ try {
     throw new Error(`Ultra Duplo wurde nicht aufgebaut: ${JSON.stringify(built)}`);
   }
 
-  const selected = await page.evaluate(() => window.__BEUTELTIER_EDITOR__.ultraDuplo.select('Halle 9.1'));
+  const selected = await page.evaluate(() => !!window.__BEUTELTIER_EDITOR__.ultraDuplo.select('Halle 9.1'));
   if (!selected) throw new Error('Halle 9.1 konnte nicht als Duplo-Klotz gewählt werden.');
+
+  const before = await page.evaluate(() => window.__BEUTELTIER_EDITOR__.ultraDuplo.inspect('Halle 9.1'));
+  if (!before || before.detail) throw new Error('Halle 9.1 ist vor dem Aufklappen kein Duplo-Klotz.');
 
   await page.click('#ultraDuploDetails');
   await page.waitForFunction(() => window.__BEUTELTIER_EDITOR__.state().ultraDuploExpanded === 1);
+  const expanded = await page.evaluate(() => window.__BEUTELTIER_EDITOR__.ultraDuplo.inspect('Halle 9.1'));
+  if (!expanded?.detail) throw new Error('Halle 9.1 wurde nicht in Details aufgeklappt.');
 
   await page.click('#ultraDuploDetails');
   await page.waitForFunction(() => window.__BEUTELTIER_EDITOR__.state().ultraDuploExpanded === 0);
+  const after = await page.evaluate(() => window.__BEUTELTIER_EDITOR__.ultraDuplo.inspect('Halle 9.1'));
+  if (!after || after.detail) throw new Error('Halle 9.1 wurde nicht wieder zum Klotz zusammengeklappt.');
+  if (!sameVector(before.dimensions, after.dimensions)) {
+    throw new Error(`Maße gingen beim Detail-Roundtrip verloren: ${before.dimensions} -> ${after.dimensions}`);
+  }
+  if (!sameVector(before.position, after.position)) {
+    throw new Error(`Position ging beim Detail-Roundtrip verloren: ${before.position} -> ${after.position}`);
+  }
+  if (Math.abs(before.rotationY - after.rotationY) > .001) {
+    throw new Error(`Drehung ging beim Detail-Roundtrip verloren: ${before.rotationY} -> ${after.rotationY}`);
+  }
 
   await page.evaluate(() => window.__BEUTELTIER_EDITOR__.ultraDuplo.setSnap(10));
   const snap = await page.$eval('#translateSnap', (e) => Number(e.value));
