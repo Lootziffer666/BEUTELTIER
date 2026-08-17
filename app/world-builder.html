@@ -28,6 +28,10 @@ body.walking #left,body.walking #right,body.walking .float-toggle,body.walking #
 </style>
 </head>
 <body>
+<div id="bootError" role="alert" style="display:none;position:fixed;inset:0;z-index:9999;background:#160b10;color:#ffd7de;font:14px/1.5 system-ui,sans-serif;padding:24px;overflow:auto">
+  <h2 style="margin:0 0 8px;color:#ff9aa9">World Builder konnte nicht gestartet werden</h2>
+  <p id="bootErrorMsg" style="white-space:pre-wrap;margin:0">Die 3D-Oberflaeche hat nicht initialisiert. Bitte ueber den lokalen Server starten (npm run dev bzw. npm run build + Preview), nicht per Doppelklick auf die Quelldatei.</p>
+</div>
 <div id="app">
 <main id="viewport">
   <button id="toggleLeft" class="float-toggle left">☰</button><button id="toggleRight" class="float-toggle right">⚙</button>
@@ -700,13 +704,36 @@ function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.
 updateSnap();resize();bauplanGruppenFuellen();animate();
 window.__BEUTELTIER_EDITOR__={
   state:()=>({worldSize:WORLD_SIZE,objects:objectsRoot.children.length,boulevard:!!findBoulevard(),boulevardLocked:!!findBoulevard()?.userData?.locked,mapVisible:referenceMap.visible,mapOpacity:referenceMapMaterial.opacity,walkActive}),
-  newWorld:()=>neueArbeitswelt(false),placeBlock:placeBlockAtCrosshair,breakBlock:breakBlockAtCrosshair
+  newWorld:()=>neueArbeitswelt(false),placeBlock:placeBlockAtCrosshair,breakBlock:breakBlockAtCrosshair,
+  mode:()=>currentMode,
+  selectedId:()=>selected?.userData?.id||null,
+  transformObjectId:()=>transform.object?.userData?.id||null,
+  objectCount:()=>objectsRoot.children.length,
+  selectById:(id)=>{const o=objectsRoot.children.find(c=>c.userData?.id===id);if(o)selectObject(o);return !!o;}
 };
 // Startzustand: keine Hallenlawine, sondern die kleinste brauchbare Welt.
 (async()=>{
   try{bauplanPruefen(bauplan);neueArbeitswelt(false)}catch(err){setStatus(`Bauplan konnte nicht geladen werden: ${err.message}`,'bad')}
   try{await applyReferenceMapState({kind:'default',x:0,z:0,width:WORLD_SIZE,depth:WORLD_SIZE,rotationDeg:0,opacity:.38,visible:true})}
   catch(err){setStatus('Arbeitswelt steht. Das Standard-Luftbild konnte nicht geladen werden – über „Eigenes Bild“ kann sofort eine Kartenfolie eingesetzt werden.','bad')}
+})();
+</script>
+<script>
+// Boot-Waechter: fall der Editor nie initialisiert (z.B. weil Bare-Module-Imports
+// ausserhalb der Vite-Umgebung scheitern), zeigen wir einen sichtbaren Fehler
+// statt der toten "Nichts ausgewaehlt"-Huelle.
+(function(){
+  function zeige(msg){
+    var el=document.getElementById('bootError');
+    if(!el)return;
+    el.style.display='block';
+    if(msg){var m=document.getElementById('bootErrorMsg');if(m)m.textContent=String(msg);}
+  }
+  window.addEventListener('error',function(e){zeige((e&&e.message)||'Unbekannter Fehler beim Laden des Editors.');});
+  window.addEventListener('unhandledrejection',function(e){zeige((e&&e.reason&&e.reason.message)||'Ein Versprechen wurde abgelehnt.');});
+  setTimeout(function(){
+    if(!window.__BEUTELTIER_EDITOR__){zeige('Der Editor hat nicht initialisiert (window.__BEUTELTIER_EDITOR__ fehlt). Vermutlich wurden die Module nicht aufgeloest – bitte ueber den lokalen Server starten, nicht per Doppelklick auf die Quelldatei.');}
+  },6000);
 })();
 </script>
 </body>

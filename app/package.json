@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && vite build --config wb.config.mjs",
     "lint": "oxlint",
     "preview": "vite preview --host 0.0.0.0 --port 4173 --strictPort",
     "test": "vitest run",
     "e2e": "node e2e.mjs",
-    "bauplan": "node bauplan-export.mjs"
+    "bauplan": "node bauplan-export.mjs",
+    "editor:check": "node editor-check.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -33,6 +34,7 @@
     "playwright": "^1.62.1",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
+    "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^4.1.10"
   }
 }
