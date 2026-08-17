@@ -8,6 +8,7 @@ on:
       - 'app/editor-check.mjs'
       - 'app/ultra-duplo-check.mjs'
       - 'app/vite.config.ts'
+      - 'app/wb.config.mjs'
       - 'app/src/world-builder/ultra-duplo.inc.js'
       - 'app/src/App.tsx'
       - 'app/src/index.css'
