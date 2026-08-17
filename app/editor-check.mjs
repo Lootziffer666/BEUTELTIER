@@ -33,7 +33,13 @@ const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 page.setDefaultTimeout(15000);
 
 const errors = [];
-page.on('console', (m) => { if (m.type() === 'error') errors.push(`console:${m.text()}`); });
+page.on('console', (m) => {
+  if (m.type() !== 'error') return;
+  const t = m.text();
+  // Ein harmloser 404 aufs Favicon ist kein Editor-Defekt.
+  if (/favicon\.ico|404 \(Not Found\)/.test(t)) return;
+  errors.push(`console:${t}`);
+});
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 
 let url;
@@ -140,6 +146,9 @@ const nRedo = await page.$$eval('#objectList .object-item', (n) => n.length);
 check('Redo: Stein wiederhergestellt', nRedo === after, String(nRedo));
 
 // 12. Neue Welt --------------------------------------------------------------
+// Im headless Browser Returns confirm() standardmaessig false; hier wird
+// die Bestaetigung simuliert, wie ein Nutzer, der auf "OK" klickt.
+await page.evaluate(() => { window.confirm = () => true; });
 await page.click('#newWorld');
 await page.waitForTimeout(600);
 const nNew = await page.$$eval('#objectList .object-item', (n) => n.length);
