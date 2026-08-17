@@ -1,6 +1,27 @@
 import { defineConfig } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+
+const ultraDuploSource = readFileSync(
+  fileURLToPath(new URL('./src/world-builder/ultra-duplo.inc.js', import.meta.url)),
+  'utf8',
+);
+
+const ultraDuploPlugin = {
+  name: 'beuteltier-world-builder-ultra-duplo-singlefile',
+  transformIndexHtml: {
+    order: 'pre',
+    handler(html) {
+      if (!html.includes('<title>BEUTELTIER World Builder 6</title>')) return html;
+      const marker = '// Startzustand: keine Hallenlawine, sondern die kleinste brauchbare Welt.';
+      if (!html.includes(marker)) {
+        throw new Error('World Builder Ultra Duplo: Einspritzpunkt fehlt.');
+      }
+      return html.replace(marker, `${ultraDuploSource}\n${marker}`);
+    },
+  },
+};
 
 // Eigener, abhaengigkeitsfreier Build des World Builders.
 //
@@ -14,7 +35,7 @@ import { fileURLToPath } from 'node:url';
 // scheitern ausserhalb der Vite-Modulumgebung still.
 export default defineConfig({
   base: './',
-  plugins: [viteSingleFile()],
+  plugins: [ultraDuploPlugin, viteSingleFile()],
   build: {
     outDir: 'dist',
     emptyOutDir: false,

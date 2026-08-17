@@ -6,7 +6,10 @@ on:
       - '.github/workflows/world-builder.yml'
       - 'app/world-builder.html'
       - 'app/editor-check.mjs'
+      - 'app/ultra-duplo-check.mjs'
       - 'app/vite.config.ts'
+      - 'app/wb.config.mjs'
+      - 'app/src/world-builder/ultra-duplo.inc.js'
       - 'app/src/App.tsx'
       - 'app/src/index.css'
       - 'app/public/models/gelaende.jpg'
@@ -45,6 +48,12 @@ jobs:
         run: |
           mkdir -p "$ABLAGE"
           node editor-check.mjs
+
+      - name: Ultra Duplo im Produktionsbuild prüfen
+        working-directory: app
+        env:
+          ABLAGE: ../artifacts/world-builder
+        run: node ultra-duplo-check.mjs
 
       - name: Prüfbilder sichern
         if: always()

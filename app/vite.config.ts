@@ -1,7 +1,31 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+
+const ultraDuploSource = readFileSync(
+  fileURLToPath(new URL('./src/world-builder/ultra-duplo.inc.js', import.meta.url)),
+  'utf8',
+);
+
+// World Builder ist absichtlich noch eine einzelne HTML-Werkbank. Ultra Duplo
+// wird beim Vite-Bau in denselben Modul-Scope injiziert, damit der Modus die
+// vorhandenen Bauplan-, Auswahl-, Transform- und GLB-Funktionen wiederverwendet.
+const ultraDuploPlugin = {
+  name: 'beuteltier-world-builder-ultra-duplo',
+  transformIndexHtml: {
+    order: 'pre' as const,
+    handler(html: string) {
+      if (!html.includes('<title>BEUTELTIER World Builder 6</title>')) return html;
+      const marker = '// Startzustand: keine Hallenlawine, sondern die kleinste brauchbare Welt.';
+      if (!html.includes(marker)) {
+        throw new Error('World Builder Ultra Duplo: Einspritzpunkt fehlt.');
+      }
+      return html.replace(marker, `${ultraDuploSource}\n${marker}`);
+    },
+  },
+};
 
 // Auf dem Messegelaende bricht das Netz genau dann zusammen, wenn alle es
 // brauchen. Die App muss deshalb vollstaendig aus dem Cache laufen -- Karte,
@@ -18,6 +42,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    ultraDuploPlugin,
     react(),
     VitePWA({
       registerType: 'autoUpdate',
