@@ -97,6 +97,8 @@ async function runChecks(page, label) {
   await page.waitForTimeout(300);
   assert((await page.$eval('#typeInput', (e) => e.value)) === 'assembly', 'Nordboulevard nicht als Baugruppe geladen');
   assert(!(await page.textContent('#selectionTag')).includes('Nichts ausgewaehlt'), 'Auswahl zeigt "Nichts ausgewaehlt"');
+  const tsB = await ev(() => window.__BEUTELTIER_EDITOR__.transformShow());
+  assert(tsB.size > 1.5, 'Gizmo zu klein – Boulevard praktisch nicht greifbar/platzierbar');
 
   // 4 Inspector enthaelt Boulevard-Daten
   const w = parseFloat(await page.$eval('#widthInput', (e) => e.value));
@@ -141,6 +143,8 @@ async function runChecks(page, label) {
   await page.click('#modeRotate');
   await page.waitForTimeout(120);
   assert(await ev(() => window.__BEUTELTIER_EDITOR__.mode()) === 'rotate', 'Modus Rotate nicht aktiv');
+  const tsR = await ev(() => window.__BEUTELTIER_EDITOR__.transformShow());
+  assert(tsR.showY === true && tsR.showX === false && tsR.showZ === false, 'Rotation nicht auf Yaw (Vertikalachse) begrenzt – Objekt liesse sich kippen/neigen');
   assert(await page.$eval('#modeRotate', (e) => e.classList.contains('active')), 'Rotate-Button nicht aktiv');
   await page.click('#modeScale');
   await page.waitForTimeout(120);
