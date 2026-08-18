@@ -1328,6 +1328,7 @@ function CameraRig({
   const { camera } = useThree();
   const target = useRef(new THREE.Vector3());
   const wanted = useRef(new THREE.Vector3());
+  const resetting = useRef(true);
 
   useEffect(() => {
     const centre = focus ?? new THREE.Vector3(0, 0, 0);
@@ -1344,7 +1345,12 @@ function CameraRig({
 
   useFrame((_, delta) => {
     const speed = Math.min(1, delta * 3);
-    camera.position.lerp(wanted.current, speed);
+    if (resetting.current) {
+      camera.position.lerp(wanted.current, speed);
+      if (camera.position.distanceTo(wanted.current) < 0.05) {
+        resetting.current = false;
+      }
+    }
     if (controls.current) {
       controls.current.target.lerp(target.current, speed);
       controls.current.update();
@@ -1356,9 +1362,9 @@ function CameraRig({
       ref={controls as never}
       enableDamping
       dampingFactor={0.12}
-      maxPolarAngle={Math.PI / 2.05}
       minDistance={30}
       maxDistance={extent * 2.4}
+      onStart={() => { resetting.current = false; }}
     />
   );
 }
