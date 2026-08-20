@@ -265,6 +265,22 @@ function Gelaende({
 }) {
   const { scene } = useGLTF(MODEL_URL);
   const ortho = useMemo(() => orthoTexture(ORTHO_URL), []);
+  
+  // Facade textures from the GLB extras
+  const facadeTextures = useMemo(() => {
+    const refs = (scene.userData as any)?.facades ?? {};
+    return Object.fromEntries(
+      Object.entries(refs).map(([key, path]) => {
+        const url = `${import.meta.env.BASE_URL}models/${path}`;
+        const tex = new THREE.TextureLoader().load(url);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.wrapS = THREE.ClampToEdgeWrapping;
+        tex.wrapT = THREE.ClampToEdgeWrapping;
+        tex.anisotropy = 8;
+        return [key, tex];
+      })
+    );
+  }, [scene.userData]);
 
   // Drei Flächenarten, drei Materialsätze — jeder mit Farbe, Normale und
   // Rauheit. Erzeugt wird einmal, nicht je Halle.
@@ -291,8 +307,10 @@ function Gelaende({
 
       // Welche Fläche welche Herkunft bekommt, steht im Modell selbst —
       // build_buildings.py schreibt es beim Erzeugen hinein.
-      const roof = (source.userData?.texture ?? '') === 'ortho';
+      const texName = source.userData?.texture ?? '';
+      const roof = texName === 'ortho';
       const kind = (source.name ?? '').toLowerCase();
+      const facadeKey = texName.startsWith('facade_') ? texName.replace(/^facade_/, '') : null;
 
       if (roof && !interior) {
         material.map = ortho;
@@ -308,7 +326,7 @@ function Gelaende({
         material.color.set('#8d919a');
         material.metalness = 0.45;
         material.envMapIntensity = 0.6;
-      } else if (kind === 'ground') {
+       } else if (kind === 'ground') {
         const surface = surfaces.floor;
         material.map = surface.map;
         material.normalMap = surface.normalMap;
@@ -318,6 +336,15 @@ function Gelaende({
         // Der Boden ist das hellste Element auf den Referenzfotos, weil er
         // die Leuchtbänder zurückwirft. Genau dafür die hohe Intensität.
         material.envMapIntensity = 1.5;
+      } else if (facadeKey && facadeTextures[facadeKey]) {
+        // Hall-Fassade mit echtem Foto von dz.nrw.de
+        const facadeTex = facadeTextures[facadeKey];
+        material.map = facadeTex;
+        material.roughness = 0.85;
+        material.metalness = 0.05;
+        material.emissive.set('#101820');
+        material.emissiveIntensity = 0.25;
+        material.envMapIntensity = 0.8;
       } else {
         const surface = interior ? surfaces.interior : surfaces.facade;
         material.map = surface.map;
@@ -339,13 +366,14 @@ function Gelaende({
       node.receiveShadow = true;
     });
     return clone;
-  }, [scene, opacity, interior, ortho, surfaces]);
+  }, [scene, opacity, interior, ortho, surfaces, facadeTextures]);
 
   useEffect(
     () => () => {
       model.traverse((node) => {
         if (node instanceof THREE.Mesh) (node.material as THREE.Material).dispose();
       });
+      Object.values(facadeTextures).forEach((tex) => tex.dispose());
     },
     [model],
   );

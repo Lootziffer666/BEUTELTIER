@@ -125,6 +125,53 @@
       },
       "status": "local",
       "available": true
+    },
+    {
+      "id": "terrain_2m_full",
+      "uri": "models/world/terrain.glb",
+      "role": "terrain",
+      "variant": "2m-full",
+      "status": "available",
+      "available": true,
+      "bytes": 167665252,
+      "triangles": 1996002,
+      "note": "160MB, dupliziert"
+    },
+    {
+      "id": "terrain_2m",
+      "uri": "models/world/terrain_2m_compact.glb",
+      "role": "terrain",
+      "variant": "2m-compact",
+      "status": "available",
+      "available": true,
+      "bytes": 47953120,
+      "triangles": 1996002
+    },
+    {
+      "id": "terrain_4m",
+      "uri": "models/world/terrain_4m.glb",
+      "role": "terrain",
+      "variant": "4m",
+      "status": "available",
+      "available": true,
+      "bytes": 11977096,
+      "triangles": 498002
+    },
+    {
+      "id": "distant/skyline",
+      "uri": "models/world/distant/skyline.glb",
+      "role": "distant",
+      "status": "local",
+      "available": true,
+      "bytes": 344820,
+      "triangles": 864,
+      "features": "Dom,KölnTriangle,Messeturm + Bahnhof Messe/Deutz-Cluster",
+      "origin": [
+        358300.0,
+        5645800.0,
+        40.0
+      ],
+      "note": "bei Waehrposition; Dom 161m, Messe/Deutz-Station 60m+57m + 4 Hotels a 28m"
     }
   ],
   "data": {
@@ -141,7 +188,11 @@
     "collisionSurfaces": "data/collision-surfaces.json",
     "registeredLayout": "data/registered-layout.json",
     "registeredGraph": "data/registered-graph.json",
-    "registeredSite": "data/registered-site.json"
+    "registeredSite": "data/registered-site.json",
+    "terrain": "data/terrain.json",
+    "terrainVariants": "data/terrain.json",
+    "firstRow": "data/first-row.json",
+    "skyline": "data/skyline.json"
   },
   "registrationSummary": {
     "total": 17,
