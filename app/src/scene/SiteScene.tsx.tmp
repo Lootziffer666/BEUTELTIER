@@ -1080,84 +1080,6 @@ function HallLabels({
 /** Steigen/Sinken im No-Clip-Flug -- kein Kollisionsgitter kennt „oben". */
 const FLY_SPEED_M_PER_S = 2.4;
 
-/**
- * Terrain-Höhenabfrage über eine Heightmap-Tabelle.
- *
- * Die Heightmap ist ein Flözelliges Float-Array, das vom DGM1-WCS-Download
- * (5 m Raster) stammt. Für jede (x, y) Position wird bilinear interpoliert --
- * das kostet O(1) und ist für First-Person ausreichend schnell.
- *
- * Konstruiert aus dem JSON, das build_terrain.py exportiert. Ladefehler
- * (Offline, alte Snapshots) lassen die Höhe auf 0.0 fallen -- dann läuft
- * der Spieler über das flache Orthofoto statt über das Gelände.
- */
-function useTerrainHeightmap(centre: [number, number]): (x: number, y: number) => number | null {
-  const cache = useRef<{
-    origin: [number, number, number];
-    stepM: number;
-    cols: number;
-    rows: number;
-    heights: Float32Array | null;
-  } | null>(null);
-
-  // Lazy-load: beim ersten Aufruf die Heightmap-JSON laden
-  useEffect(() => {
-    const abort = new AbortController();
-    fetch(`${import.meta.env.BASE_URL}data/terrain.json`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((meta: any | null) => {
-        if (!meta?.heightmap || abort.signal.aborted) return;
-        cache.current = {
-          origin: meta.origin,
-          stepM: meta.stepM,
-          cols: meta.cols,
-          rows: meta.rows,
-          heights: Float32Array.from(meta.heightmap),
-        };
-      })
-      .catch(() => {
-        cache.current = null;
-      });
-    return () => abort.abort();
-  }, []);
-
-  return useCallback((x: number, y: number): number | null => {
-    const m = cache.current;
-    if (!m || !m.heights) return null;
-
-    // Umrechnen von Scene-Koordinaten in Gelände-Koordinaten
-    const gx = x + centre[0];
-    const gy = y + centre[1];
-
-    // Relative Position im Grid
-    const relX = gx - m.origin[0];
-    const relY = gy - m.origin[1];
-    const fx = relX / m.stepM;
-    const fy = relY / m.stepM;
-
-    const ix0 = Math.floor(fx);
-    const iy0 = Math.floor(fy);
-    if (ix0 < 0 || iy0 < 0 || ix0 >= m.cols - 1 || iy0 >= m.rows - 1) return null;
-
-    const fx1 = fx - ix0;
-    const fy1 = fy - iy0;
-
-    // Bilineare Interpolation über 4 Nachbarpunkte
-    const idx = (iy: number, ix: number) => iy * m.cols + ix;
-    const h00 = m.heights[idx(iy0, ix0)];
-    const h01 = m.heights[idx(iy0, ix0 + 1)];
-    const h10 = m.heights[idx(iy0 + 1, ix0)];
-    const h11 = m.heights[idx(iy0 + 1, ix0 + 1)];
-
-    const h0 = h00 * (1 - fx1) + h01 * fx1;
-    const h1 = h10 * (1 - fx1) + h11 * fx1;
-    const height = h0 * (1 - fy1) + h1 * fy1;
-
-    // Subtrahiere das Gelände-Ursprungs-Z (ORIGIN[2] = 40.0)
-    return height - m.origin[2];
-  }, [centre]);
-}
-
 function WalkControls({
   data,
   centre,
@@ -1167,7 +1089,6 @@ function WalkControls({
   noClip = false,
   frozen = false,
   viewfinderOpen = false,
-  terrainHeight,
   onToggleNoClip,
   onToggleFreeze,
   onToggleViewfinder,
@@ -1182,7 +1103,6 @@ function WalkControls({
   noClip?: boolean;
   frozen?: boolean;
   viewfinderOpen?: boolean;
-  terrainHeight: (x: number, y: number) => number | null;
   onToggleNoClip?: () => void;
   onToggleFreeze?: () => void;
   onToggleViewfinder?: () => void;
@@ -1395,36 +1315,22 @@ function WalkControls({
         (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0);
       const climb = (pressed.has(' ') ? 1 : 0) - (pressed.has('control') ? 1 : 0);
 
-      // Terrain-Höhenabfrage: Wenn WalkGrid.move() nicht bewegt hat (blockiert),
-      // prüfen wir, ob es ein nicht-blockiertes Außengebiet mit Terrain ist.
-      const tryTerrainMove = (from: { x: number; y: number; z: number }, dx: number, dy: number) => {
-        const footing = data.walk.footingAt(from.x + dx, from.y + dy, from.z);
-        if (!footing.blocked) {
-          // Im Freien: Terrain-Höhe über Heightmap (O(1), kein Raycast nötig)
-          const terrainZ = terrainHeight(from.x + dx, from.y + dy);
-          const z = terrainZ !== null ? terrainZ : from.z;
-          return { x: from.x + dx, y: from.y + dy, z };
-        }
-        return from;
-      };
-
       if (forward || strafe) {
         const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
         const { yaw } = look.current;
+        // Die Kamera blickt nach -Z, und Szenen-Z zeigt nach Sueden -- der
+        // Blick geht also nach Norden, und Norden ist in Gelaendemetern das
+        // kleinere y. Deshalb steht vor dy ein Minus und vor dx keines.
+        // Wer das hier verwechselt, laeuft seitwaerts statt geradeaus.
         const dx = (-Math.sin(yaw) * forward + Math.cos(yaw) * strafe) * speed;
         const dy = (-Math.cos(yaw) * forward - Math.sin(yaw) * strafe) * speed;
-        if (noClipRef.current) {
-          position.current = { ...position.current, x: position.current.x + dx, y: position.current.y + dy };
-        } else {
-          const moved = data.walk.move(position.current, dx, dy);
-          if (moved.x !== position.current.x || moved.y !== position.current.y) {
-            position.current = moved;
-          } else {
-            position.current = tryTerrainMove(position.current, dx, dy);
-          }
-        }
+        position.current = noClipRef.current
+          ? { ...position.current, x: position.current.x + dx, y: position.current.y + dy }
+          : data.walk.move(position.current, dx, dy);
       }
 
+      // Vertikal fliegen gibt es nur ohne Kollision -- das Gitter kennt keine
+      // Höhe über der eigenen Ebene, ein "oben" ergäbe dort keinen Sinn.
       if (noClipRef.current && climb) {
         position.current = {
           ...position.current,
@@ -1512,8 +1418,6 @@ export function SiteScene(props: SceneProps) {
   const { data, upperOpacity, route, preset, focusHallKey } = props;
   const cel = props.cel ?? true;
   const centre = useMemo(() => siteCentre(data.site), [data.site]);
-  const terrainHeight = useTerrainHeightmap(centre);
-  /** Referenz auf das Terrain-GLB für Raycast-basierte Höhenabfrage im First-Person-Modus. */
   const registered = data.spatialMode === 'registered';
 
   /**
@@ -1678,7 +1582,6 @@ export function SiteScene(props: SceneProps) {
           noClip={props.noClip}
           frozen={props.frozen}
           viewfinderOpen={props.viewfinderOpen}
-          terrainHeight={terrainHeight}
           onToggleNoClip={props.onToggleNoClip}
           onToggleFreeze={props.onToggleFreeze}
           onToggleViewfinder={props.onToggleViewfinder}

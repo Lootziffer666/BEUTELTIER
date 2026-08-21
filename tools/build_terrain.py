@@ -26,7 +26,7 @@ from beuteltier.gltf import write_glb, FLOAT, UNSIGNED_INT, ARRAY_BUFFER, ELEMEN
 
 ORIGIN = (358300.0, 5645800.0, 40.0)
 EXTENT_C = (357300.0, 5642800.0, 359300.0, 5646900.0)
-STEP_M = 2.0
+STEP_M = 5.0
 OUT_GLB = ROOT / "app" / "public" / "models" / "terrain.glb"
 OUT_META = ROOT / "data" / "build" / "terrain.json"
 WCS_URL = ("https://www.wcs.nrw.de/geobasis/wcs_nw_dgm?"
@@ -153,13 +153,13 @@ def parse_tiff(tiff_data: bytes, cols: int, rows: int) -> list[list[float]]:
         val_size = bits // 8
         for i in range(len(raw) // val_size):
             if sample_type == 3 and bits == 32:
-                val = f32(i * 4)  # Read from decompressed buffer
+                val = struct.unpack_from(f"{endian}f", raw, i * val_size)[0]
             elif bits == 16:
                 val = float(struct.unpack_from(f"{endian}H", raw, i * val_size)[0])
             elif bits == 8:
                 val = float(struct.unpack_from(f"{endian}B", raw, i * val_size)[0])
             else:
-                val = float(u32(i * 4))
+                val = float(struct.unpack_from(f"{endian}I", raw, i * val_size)[0])
             pixels.append(val)
 
     # Reshape to rows x cols
@@ -297,6 +297,8 @@ def main() -> int:
     triangles = part.triangle_count
     print(f"  {triangles} Dreiecke, {size / 1e6:.1f} MB -> {OUT_GLB}")
     
+    # Heightmap: flaches Float-Array für O(1)-Interpolation in der App
+    flat_heights = [h for row in raster for h in row]
     payload = {
         "schema": "beuteltier.terrain.v1",
         "source": {
@@ -309,6 +311,11 @@ def main() -> int:
         },
         "model": "models/terrain.glb",
         "raster": f"{len(raster[0])}x{len(raster)}",
+        "origin": list(ORIGIN),
+        "stepM": STEP_M,
+        "heightmap": flat_heights,
+        "cols": len(raster[0]),
+        "rows": len(raster),
     }
     OUT_META.parent.mkdir(parents=True, exist_ok=True)
     OUT_META.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
