@@ -84,6 +84,35 @@ export const LEGACY_OPEN_OUTSIDE: SurfaceProvider = {
   footingAt: () => ({ z: 0, blocked: false, surfaceId: 'legacy-open-outside' }),
 };
 
+/** Terrain-Höhenfunktion für Offline-First-Person-Bewegung im Freien. */
+export interface TerrainSampler {
+  (x: number, y: number): number | null;
+}
+
+/**
+ * Erweitert WalkGrid um eine Terrain-Höhenfunktion.
+ * Im Freien (kein Hall-Grid) wird die Kamera an die Terrain-Höhe gebunden.
+ */
+export function withTerrainHeight(grid: WalkGrid, sampleHeight: TerrainSampler): WalkGrid {
+  const originalMove = grid.move.bind(grid);
+  grid.move = (from: { x: number; y: number; z: number }, dx: number, dy: number) => {
+    const result = originalMove(from, dx, dy);
+    // Wenn WalkGrid uns nicht bewegt hat, ist der Weg blockiert (z.B. Wand)
+    // oder im Freien. Im Freien: erlaube Bewegung, aber halte Terrain-Höhe.
+    if (result.x === from.x && result.y === from.y) {
+      const footing = grid.footingAt(from.x + dx, from.y + dy, from.z);
+      if (!footing.blocked && !footing.hallKey) {
+        // Freier Raum: bewege und halte Terrain-Höhe
+        const terrainZ = sampleHeight(from.x + dx, from.y + dy);
+        const z = terrainZ !== null ? terrainZ : from.z;
+        return { x: from.x + dx, y: from.y + dy, z };
+      }
+    }
+    return result;
+  };
+  return grid;
+}
+
 function decodeBits(base64: string): Uint8Array {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);

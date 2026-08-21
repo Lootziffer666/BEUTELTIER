@@ -259,9 +259,9 @@ function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] })
   */
 
 /** Das amtliche DGM1-Terrain der Koelnmesse-Umgebung. */
-function Terrain({ centre }: { centre: [number, number] }) {
+function Terrain({ centre, ref }: { centre: [number, number]; ref: React.Ref<THREE.Object3D> }) {
   const { scene } = useGLTF(TERRAIN_URL);
-  return <primitive object={scene} position={[-centre[0], -39.5, -centre[1]]} />;
+  return <primitive object={scene} position={[-centre[0], -39.5, -centre[1]]} ref={ref} />;
 }
 
 /** Die Skyline der weiteren Umgebung (Dom, KölnTriangle, Messeturm, Hbf). */
@@ -1080,6 +1080,24 @@ function HallLabels({
 /** Steigen/Sinken im No-Clip-Flug -- kein Kollisionsgitter kennt „oben". */
 const FLY_SPEED_M_PER_S = 2.4;
 
+/**
+ * Samplet die Höhe des Terrain-GLB-Meshes an einer (x, y) Position in
+ * Geländemetern. Raycast von oben nach unten.
+ *
+ * Einfach und schlank: kein Bounding-Volume-Hierarchy, kein Caching.
+ * Das Mesh hat ~1 Mio. Dreiecke -- ein Raycast kostet <1 ms und ist
+ * für First-Person ausreichend. Bei Bedarf wird später optimiert.
+ */
+function sampleTerrainHeight(terrain: THREE.Object3D, x: number, y: number): number | null {
+  const raycaster = new THREE.Raycaster();
+  // Ray von 500 m über dem Punkt, senkrecht nach unten
+  const from = new THREE.Vector3(x, 500, y);
+  raycaster.set(from, new THREE.Vector3(0, -1, 0));
+  const intersects = raycaster.intersectObject(terrain, true);
+  if (intersects.length === 0) return null;
+  return intersects[0].point.y;
+}
+
 function WalkControls({
   data,
   centre,
@@ -1089,6 +1107,7 @@ function WalkControls({
   noClip = false,
   frozen = false,
   viewfinderOpen = false,
+  terrainRef,
   onToggleNoClip,
   onToggleFreeze,
   onToggleViewfinder,
@@ -1103,6 +1122,7 @@ function WalkControls({
   noClip?: boolean;
   frozen?: boolean;
   viewfinderOpen?: boolean;
+  terrainRef: React.RefObject<THREE.Object3D | null>;
   onToggleNoClip?: () => void;
   onToggleFreeze?: () => void;
   onToggleViewfinder?: () => void;
@@ -1315,22 +1335,37 @@ function WalkControls({
         (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0);
       const climb = (pressed.has(' ') ? 1 : 0) - (pressed.has('control') ? 1 : 0);
 
+      // Terrain-Höhenabfrage: Wenn WalkGrid.move() nicht bewegt hat (blockiert),
+      // prüfen wir, ob es ein nicht-blockiertes Außengebiet mit Terrain ist.
+      const tryTerrainMove = (from: { x: number; y: number; z: number }, dx: number, dy: number) => {
+        const footing = data.walk.footingAt(from.x + dx, from.y + dy, from.z);
+        if (!footing.blocked) {
+          const terrainZ = terrainRef.current
+            ? sampleTerrainHeight(terrainRef.current, from.x + dx + centre[0], from.y + dy + centre[1])
+            : null;
+          const z = terrainZ !== null ? terrainZ : from.z;
+          return { x: from.x + dx, y: from.y + dy, z };
+        }
+        return from;
+      };
+
       if (forward || strafe) {
         const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
         const { yaw } = look.current;
-        // Die Kamera blickt nach -Z, und Szenen-Z zeigt nach Sueden -- der
-        // Blick geht also nach Norden, und Norden ist in Gelaendemetern das
-        // kleinere y. Deshalb steht vor dy ein Minus und vor dx keines.
-        // Wer das hier verwechselt, laeuft seitwaerts statt geradeaus.
         const dx = (-Math.sin(yaw) * forward + Math.cos(yaw) * strafe) * speed;
         const dy = (-Math.cos(yaw) * forward - Math.sin(yaw) * strafe) * speed;
-        position.current = noClipRef.current
-          ? { ...position.current, x: position.current.x + dx, y: position.current.y + dy }
-          : data.walk.move(position.current, dx, dy);
+        if (noClipRef.current) {
+          position.current = { ...position.current, x: position.current.x + dx, y: position.current.y + dy };
+        } else {
+          const moved = data.walk.move(position.current, dx, dy);
+          if (moved.x !== position.current.x || moved.y !== position.current.y) {
+            position.current = moved;
+          } else {
+            position.current = tryTerrainMove(position.current, dx, dy);
+          }
+        }
       }
 
-      // Vertikal fliegen gibt es nur ohne Kollision -- das Gitter kennt keine
-      // Höhe über der eigenen Ebene, ein "oben" ergäbe dort keinen Sinn.
       if (noClipRef.current && climb) {
         position.current = {
           ...position.current,
@@ -1418,6 +1453,8 @@ export function SiteScene(props: SceneProps) {
   const { data, upperOpacity, route, preset, focusHallKey } = props;
   const cel = props.cel ?? true;
   const centre = useMemo(() => siteCentre(data.site), [data.site]);
+  /** Referenz auf das Terrain-GLB für Raycast-basierte Höhenabfrage im First-Person-Modus. */
+  const terrainRef = useRef<THREE.Object3D>(null);
   const registered = data.spatialMode === 'registered';
 
   /**
@@ -1489,7 +1526,7 @@ export function SiteScene(props: SceneProps) {
 
       {/* Das amtliche DGM1-Terrain -- das Fundament, auf dem alles steht. */}
       <Suspense fallback={null}>
-        <Terrain centre={centre} />
+        <Terrain centre={centre} ref={terrainRef} />
       </Suspense>
       {/* Die Skyline der weiteren Umgebung im Hintergrund. */}
       <Suspense fallback={null}>
@@ -1582,6 +1619,7 @@ export function SiteScene(props: SceneProps) {
           noClip={props.noClip}
           frozen={props.frozen}
           viewfinderOpen={props.viewfinderOpen}
+          terrainRef={terrainRef}
           onToggleNoClip={props.onToggleNoClip}
           onToggleFreeze={props.onToggleFreeze}
           onToggleViewfinder={props.onToggleViewfinder}
