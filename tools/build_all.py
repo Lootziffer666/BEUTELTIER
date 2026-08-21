@@ -21,7 +21,8 @@ TOOLS = Path(__file__).resolve().parent
 STEPS = ["build_world_origin.py",
          "build_site.py", "build_graph.py", "build_registry.py",
          "build_lod2_inventory.py",
-         "build_buildings.py", "build_hall_registrations.py",
+         "build_buildings.py", "build_terrain.py", "build_skyline.py",
+         "build_hall_registrations.py",
          "build_registered_layout.py",
          "build_material_classes.py",
          "build_surface_analysis.py",
@@ -103,12 +104,22 @@ def main() -> int:
                      "world-manifest.json",
                      "material-classes.json",
                      "walkable-surfaces.json", "portals.json",
-                     "graph.json", "registry.json", "buildings.json",
-                     "footprints.json", "surroundings.json", "ortho.json"):
+                      "graph.json", "registry.json", "buildings.json",
+                      "footprints.json", "surroundings.json", "ortho.json",
+                      "terrain.json", "skyline.json",
+                      "world-manifest.json"):
             source = ROOT / "data" / "build" / name
             if source.exists():
                 shutil.copyfile(source, app_data / name)
         print(f"\nDatenstand nach {app_data} kopiert")
+
+    # Kopiere Modelle ins App-Public-Verzeichnis
+    models_src = ROOT / "app" / "public" / "models"
+    if models_src.exists():
+        for glb in ["terrain.glb", "distant/skyline.glb"]:
+            src = models_src / glb
+            if src.exists():
+                print(f"  Modell vorhanden: {glb} ({src.stat().st_size // 1024:,} KB)")
 
     print("\n=== Bericht " + "=" * 56)
     estimated = [h for h in site["halls"] if h["placement"]["source"] == "geschaetzt"]

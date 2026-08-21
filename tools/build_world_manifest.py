@@ -63,6 +63,8 @@ def build_product(origin: dict, registrations: dict) -> dict:
         },
         "packages": [
             local_asset("models/messe.glb", "render-world"),
+            local_asset("models/terrain.glb", "render-terrain", "local"),
+            local_asset("models/distant/skyline.glb", "render-distant", "local"),
             diagnostic_asset(),
             *planned_world_packages(),
         ],

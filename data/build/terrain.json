@@ -1,0 +1,18 @@
+{
+  "schema": "beuteltier.terrain.v1",
+  "source": {
+    "title": "Digitales Gelaendemodell 1 (DGM1)",
+    "provider": "Geobasis NRW",
+    "licence": "Datenlizenz Deutschland Zero 2.0",
+    "crs": "EPSG:25832",
+    "resolutionM": 5.0,
+    "extent": [
+      357300.0,
+      5642800.0,
+      359300.0,
+      5646900.0
+    ]
+  },
+  "model": "models/terrain.glb",
+  "raster": "401x821"
+}

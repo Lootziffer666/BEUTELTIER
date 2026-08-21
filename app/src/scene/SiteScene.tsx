@@ -119,6 +119,10 @@ const STAND_HEIGHT_M = 2.6;
 
 /** Das eingepasste LoD2-Modell der Koelnmesse, gebaut von tools/build_buildings.py. */
 const MODEL_URL = `${import.meta.env.BASE_URL}models/messe.glb`;
+/** Das DGM1-Terrain, gebaut von tools/build_terrain.py. */
+const TERRAIN_URL = `${import.meta.env.BASE_URL}models/terrain.glb`;
+/** Die Skyline der weiteren Umgebung, gebaut von tools/build_skyline.py. */
+const SKYLINE_URL = `${import.meta.env.BASE_URL}models/distant/skyline.glb`;
 /** Das entzerrte Senkrechtluftbild, gebaut von tools/build_ortho.py. */
 const ORTHO_URL = `${import.meta.env.BASE_URL}models/gelaende.jpg`;
 /**
@@ -249,10 +253,23 @@ function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] })
  * Das amtliche Gebäudemodell als Gelände.
  *
  * Die Grundrisse kommen aus dem LoD2-Modell der Geobasis NRW und stehen in
- * denselben Geländemetern wie alles andere — eingepasst mit 96 % Treffern.
- * Die Wände bleiben durchscheinend: das Gebäude ist der Rahmen, die Stände
- * sind der Inhalt. Erst im Laufmodus wird daraus eine Wand, an der man steht.
- */
+  * denselben Geländemetern wie alles andere — eingepasst mit 96 % Treffern.
+  * Die Wände bleiben durchscheinend: das Gebäude ist der Rahmen, die Stände
+  * sind der Inhalt. Erst im Laufmodus wird daraus eine Wand, an der man steht.
+  */
+
+/** Das amtliche DGM1-Terrain der Koelnmesse-Umgebung. */
+function Terrain({ centre }: { centre: [number, number] }) {
+  const { scene } = useGLTF(TERRAIN_URL);
+  return <primitive object={scene} position={[-centre[0], -39.5, -centre[1]]} />;
+}
+
+/** Die Skyline der weiteren Umgebung (Dom, KölnTriangle, Messeturm, Hbf). */
+function Skyline({ centre }: { centre: [number, number] }) {
+  const { scene } = useGLTF(SKYLINE_URL);
+  return <primitive object={scene} position={[-centre[0], 0, -centre[1]]} />;
+}
+
 function Gelaende({
   centre,
   opacity,
@@ -1469,6 +1486,15 @@ export function SiteScene(props: SceneProps) {
         ]}
       />
       <Beleuchtung extent={extent} interior={preset === 'ego'} />
+
+      {/* Das amtliche DGM1-Terrain -- das Fundament, auf dem alles steht. */}
+      <Suspense fallback={null}>
+        <Terrain centre={centre} />
+      </Suspense>
+      {/* Die Skyline der weiteren Umgebung im Hintergrund. */}
+      <Suspense fallback={null}>
+        <Skyline centre={centre} />
+      </Suspense>
 
       {/* Das Orthofoto bleibt Bodenreferenz, solange kein amtlicher Boden aus
           den Weltpaketen zur Verfügung steht -- auch im registrierten Modus. */}
