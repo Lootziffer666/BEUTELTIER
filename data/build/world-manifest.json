@@ -33,6 +33,14 @@
       "available": true
     },
     {
+      "id": "terrain_heightmap",
+      "role": "collision-heightmap",
+      "status": "local",
+      "uri": "data/terrain_heightmap.json",
+      "bytes": 5818267,
+      "available": true
+    },
+    {
       "id": "skyline",
       "role": "render-distant",
       "status": "local",
@@ -155,6 +163,7 @@
     "surfaceClassification": "data/surface-classification.json",
     "visibilityAnalysis": "data/visibility-analysis.json",
     "collisionSurfaces": "data/collision-surfaces.json",
+    "terrainHeightmap": "data/terrain_heightmap.json",
     "registeredLayout": "data/registered-layout.json",
     "registeredGraph": "data/registered-graph.json",
     "registeredSite": "data/registered-site.json"
