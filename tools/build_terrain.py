@@ -27,7 +27,6 @@ from beuteltier.gltf import write_glb, FLOAT, UNSIGNED_INT, ARRAY_BUFFER, ELEMEN
 ORIGIN = (358300.0, 5645800.0, 40.0)
 EXTENT_C = (357300.0, 5642800.0, 359300.0, 5646900.0)
 STEP_M = 2.0
-
 OUT_GLB = ROOT / "app" / "public" / "models" / "terrain.glb"
 OUT_META = ROOT / "data" / "build" / "terrain.json"
 WCS_URL = ("https://www.wcs.nrw.de/geobasis/wcs_nw_dgm?"
@@ -95,7 +94,12 @@ def lzw_decompress_tiff(data: bytes) -> bytes:
 
 
 def parse_tiff(tiff_data: bytes, cols: int, rows: int) -> list[list[float]]:
-    """Parst ein GeoTIFF und gibt die Pixelwerte als Raster zurück."""
+    """Parst ein GeoTIFF und gibt die Pixelwerte als Raster zurück.
+
+    Unterstützt TIFF mit LZW-Kompression und IEEE 32-Bit Float SampleFormat.
+    Das Bild wird auf das Zielraster (cols × rows) zurückgestellt, wenn
+    die Quellauflösung nicht exakt passt.
+    """
     little = tiff_data[:2] == b"II"
     endian = "<" if little else ">"
 
@@ -108,8 +112,8 @@ def parse_tiff(tiff_data: bytes, cols: int, rows: int) -> list[list[float]]:
     def f32(offset: int) -> float:
         return struct.unpack_from(f"{endian}f", tiff_data, offset)[0]
 
-    # TIFF-IFD
-    ifd_offset = u32(4)  # IFD Offset im Header
+    # TIFF-IFD am Offset 8 (standard)
+    ifd_offset = u32(4)
     num_entries = u16(ifd_offset)
 
     width, height, bits, sample_type, compression, strip_offsets, strip_counts = 0, 0, 0, 0, 1, [], []
@@ -140,7 +144,7 @@ def parse_tiff(tiff_data: bytes, cols: int, rows: int) -> list[list[float]]:
             else:
                 strip_counts.extend(u32(value_or_offset + i * 4) for i in range(count))
 
-    # Read pixel data
+    # Read pixel data - each strip decompressed separately
     pixels = []
     for soff, scount in zip(strip_offsets, strip_counts):
         raw = tiff_data[soff:soff + scount]
@@ -149,13 +153,13 @@ def parse_tiff(tiff_data: bytes, cols: int, rows: int) -> list[list[float]]:
         val_size = bits // 8
         for i in range(len(raw) // val_size):
             if sample_type == 3 and bits == 32:
-                val = struct.unpack_from(f"{endian}f", raw, i * val_size)[0]
+                val = f32(i * 4)  # Read from decompressed buffer
             elif bits == 16:
                 val = float(struct.unpack_from(f"{endian}H", raw, i * val_size)[0])
             elif bits == 8:
                 val = float(struct.unpack_from(f"{endian}B", raw, i * val_size)[0])
             else:
-                val = float(struct.unpack_from(f"{endian}I", raw, i * val_size)[0])
+                val = float(u32(i * 4))
             pixels.append(val)
 
     # Reshape to rows x cols
