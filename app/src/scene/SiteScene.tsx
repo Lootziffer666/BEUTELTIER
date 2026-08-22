@@ -119,6 +119,10 @@ const STAND_HEIGHT_M = 2.6;
 
 /** Das eingepasste LoD2-Modell der Koelnmesse, gebaut von tools/build_buildings.py. */
 const MODEL_URL = `${import.meta.env.BASE_URL}models/messe.glb`;
+/** Das DGM1-Terrain, gebaut von tools/build_terrain.py. */
+const TERRAIN_URL = `${import.meta.env.BASE_URL}models/terrain.glb`;
+/** Die Skyline der weiteren Umgebung, gebaut von tools/build_skyline.py. */
+const SKYLINE_URL = `${import.meta.env.BASE_URL}models/distant/skyline.glb`;
 /** Das entzerrte Senkrechtluftbild, gebaut von tools/build_ortho.py. */
 const ORTHO_URL = `${import.meta.env.BASE_URL}models/gelaende.jpg`;
 /**
@@ -249,10 +253,23 @@ function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] })
  * Das amtliche Gebäudemodell als Gelände.
  *
  * Die Grundrisse kommen aus dem LoD2-Modell der Geobasis NRW und stehen in
- * denselben Geländemetern wie alles andere — eingepasst mit 96 % Treffern.
- * Die Wände bleiben durchscheinend: das Gebäude ist der Rahmen, die Stände
- * sind der Inhalt. Erst im Laufmodus wird daraus eine Wand, an der man steht.
- */
+  * denselben Geländemetern wie alles andere — eingepasst mit 96 % Treffern.
+  * Die Wände bleiben durchscheinend: das Gebäude ist der Rahmen, die Stände
+  * sind der Inhalt. Erst im Laufmodus wird daraus eine Wand, an der man steht.
+  */
+
+/** Das amtliche DGM1-Terrain der Koelnmesse-Umgebung. */
+function Terrain({ centre }: { centre: [number, number] }) {
+  const { scene } = useGLTF(TERRAIN_URL);
+  return <primitive object={scene} position={[-centre[0], -39.5, -centre[1]]} />;
+}
+
+/** Die Skyline der weiteren Umgebung (Dom, KölnTriangle, Messeturm, Hbf). */
+function Skyline({ centre }: { centre: [number, number] }) {
+  const { scene } = useGLTF(SKYLINE_URL);
+  return <primitive object={scene} position={[-centre[0], 0, -centre[1]]} />;
+}
+
 function Gelaende({
   centre,
   opacity,
@@ -265,6 +282,22 @@ function Gelaende({
 }) {
   const { scene } = useGLTF(MODEL_URL);
   const ortho = useMemo(() => orthoTexture(ORTHO_URL), []);
+  
+  // Facade textures from the GLB extras
+  const facadeTextures = useMemo(() => {
+    const refs = (scene.userData as any)?.facades ?? {};
+    return Object.fromEntries(
+      Object.entries(refs).map(([key, path]) => {
+        const url = `${import.meta.env.BASE_URL}models/${path}`;
+        const tex = new THREE.TextureLoader().load(url);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.wrapS = THREE.ClampToEdgeWrapping;
+        tex.wrapT = THREE.ClampToEdgeWrapping;
+        tex.anisotropy = 8;
+        return [key, tex];
+      })
+    );
+  }, [scene.userData]);
 
   // Drei Flächenarten, drei Materialsätze — jeder mit Farbe, Normale und
   // Rauheit. Erzeugt wird einmal, nicht je Halle.
@@ -291,8 +324,10 @@ function Gelaende({
 
       // Welche Fläche welche Herkunft bekommt, steht im Modell selbst —
       // build_buildings.py schreibt es beim Erzeugen hinein.
-      const roof = (source.userData?.texture ?? '') === 'ortho';
+      const texName = source.userData?.texture ?? '';
+      const roof = texName === 'ortho';
       const kind = (source.name ?? '').toLowerCase();
+      const facadeKey = texName.startsWith('facade_') ? texName.replace(/^facade_/, '') : null;
 
       if (roof && !interior) {
         material.map = ortho;
@@ -308,7 +343,7 @@ function Gelaende({
         material.color.set('#8d919a');
         material.metalness = 0.45;
         material.envMapIntensity = 0.6;
-      } else if (kind === 'ground') {
+       } else if (kind === 'ground') {
         const surface = surfaces.floor;
         material.map = surface.map;
         material.normalMap = surface.normalMap;
@@ -318,6 +353,15 @@ function Gelaende({
         // Der Boden ist das hellste Element auf den Referenzfotos, weil er
         // die Leuchtbänder zurückwirft. Genau dafür die hohe Intensität.
         material.envMapIntensity = 1.5;
+      } else if (facadeKey && facadeTextures[facadeKey]) {
+        // Hall-Fassade mit echtem Foto von dz.nrw.de
+        const facadeTex = facadeTextures[facadeKey];
+        material.map = facadeTex;
+        material.roughness = 0.85;
+        material.metalness = 0.05;
+        material.emissive.set('#101820');
+        material.emissiveIntensity = 0.25;
+        material.envMapIntensity = 0.8;
       } else {
         const surface = interior ? surfaces.interior : surfaces.facade;
         material.map = surface.map;
@@ -339,13 +383,14 @@ function Gelaende({
       node.receiveShadow = true;
     });
     return clone;
-  }, [scene, opacity, interior, ortho, surfaces]);
+  }, [scene, opacity, interior, ortho, surfaces, facadeTextures]);
 
   useEffect(
     () => () => {
       model.traverse((node) => {
         if (node instanceof THREE.Mesh) (node.material as THREE.Material).dispose();
       });
+      Object.values(facadeTextures).forEach((tex) => tex.dispose());
     },
     [model],
   );
@@ -1035,6 +1080,164 @@ function HallLabels({
 /** Steigen/Sinken im No-Clip-Flug -- kein Kollisionsgitter kennt „oben". */
 const FLY_SPEED_M_PER_S = 2.4;
 
+/**
+ * Terrain-Höhenabfrage über eine Heightmap-Tabelle.
+ *
+ * Die Heightmap ist ein Flözelliges Float-Array, das vom DGM1-WCS-Download
+ * (5 m Raster) stammt. Für jede (x, y) Position wird bilinear interpoliert --
+ * das kostet O(1) und ist für First-Person ausreichend schnell.
+ *
+ * Konstruiert aus dem JSON, das build_terrain.py exportiert. Ladefehler
+ * (Offline, alte Snapshots) lassen die Höhe auf 0.0 fallen -- dann läuft
+ * der Spieler über das flache Orthofoto statt über das Gelände.
+ */
+function useTerrainHeightmap(centre: [number, number]): (x: number, y: number) => number | null {
+  const cache = useRef<{
+    origin: [number, number, number];
+    stepM: number;
+    cols: number;
+    rows: number;
+    heights: Float32Array | null;
+    sceneOffset: number;
+    /** Gecachtes Fenster in UTM-Koordinaten */
+    windowCenterX: number;
+    windowCenterY: number;
+    windowSize: number;
+    /** Grid-Anweisungen für das aktuelle Fenster */
+    winStartX: number;
+    winStartY: number;
+    winCols: number;
+    winRows: number;
+    /** Gecachte Höhen im Fenster */
+    windowHeights: Float32Array | null;
+  } | null>(null);
+
+  const WINDOW_M = 32; // 32×32m Caching-Fenster
+
+  // Lazy-load: Binary-Heightmap beim ersten Render
+  useEffect(() => {
+    const abort = new AbortController();
+    fetch(`${import.meta.env.BASE_URL}data/terrain_heightmap.bin`)
+      .then((r) => (r.ok ? r.arrayBuffer() : null))
+      .then((buf: ArrayBuffer | null) => {
+        if (!buf || abort.signal.aborted) return;
+        const view = new DataView(buf);
+        cache.current = {
+          origin: [view.getFloat64(0, true), view.getFloat64(8, true), view.getFloat64(16, true)],
+          stepM: view.getFloat64(24, true),
+          cols: view.getUint32(32, true),
+          rows: view.getUint32(36, true),
+          sceneOffset: view.getFloat64(40, true),
+          heights: new Float32Array(buf, 44),
+          windowCenterX: 0,
+          windowCenterY: 0,
+          windowSize: WINDOW_M,
+          winStartX: 0,
+          winStartY: 0,
+          winCols: 0,
+          winRows: 0,
+          windowHeights: null,
+        };
+      })
+      .catch(() => {
+        cache.current = null;
+      });
+    return () => abort.abort();
+  }, []);
+
+  return useCallback((x: number, y: number): number | null => {
+    const m = cache.current;
+    if (!m || !m.heights) return null;
+
+    // Scene -> UTM
+    const utmX = x + centre[0];
+    const utmY = y + centre[1];
+    const halfWin = m.windowSize / 2;
+
+    // Prüfe ob (utmX, utmY) im aktuellen Cache-Fenster liegt
+    // Fenster ist zentriert auf (windowCenterX, windowCenterY)
+    const needRefresh = !m.windowHeights ||
+      Math.abs(utmX - m.windowCenterX) > halfWin ||
+      Math.abs(utmY - m.windowCenterY) > halfWin;
+
+    if (needRefresh) {
+      // Verschiebe Fenster zum neuen Zentrum
+      m.windowCenterX = utmX;
+      m.windowCenterY = utmY;
+      m.winStartX = utmX - halfWin;
+      m.winStartY = utmY - halfWin;
+      m.winCols = Math.ceil(m.windowSize / m.stepM) + 1;
+      m.winRows = Math.ceil(m.windowSize / m.stepM) + 1;
+      const winSize = m.winCols * m.winRows;
+      m.windowHeights = new Float32Array(winSize);
+
+      // Fülle Fenster mit interpolierten Höhenwerten
+      for (let wy = 0; wy < m.winRows; wy++) {
+        const utmRowY = m.winStartY + wy * m.stepM;
+        const relY = (utmRowY - m.origin[1]) / m.stepM;
+        const iy0 = Math.floor(relY);
+        const fy1 = relY - iy0;
+        for (let wx = 0; wx < m.winCols; wx++) {
+          const utmColX = m.winStartX + wx * m.stepM;
+          const relX = (utmColX - m.origin[0]) / m.stepM;
+          const ix0 = Math.floor(relX);
+          const fx1 = relX - ix0;
+          const idx = (iy: number, ix: number) => iy * m.cols + ix;
+          if (ix0 < 0 || iy0 < 0 || ix0 >= m.cols - 1 || iy0 >= m.rows - 1) {
+            m.windowHeights[wy * m.winCols + wx] = NaN;
+            continue;
+          }
+          const h00 = m.heights[idx(iy0, ix0)];
+          const h01 = m.heights[idx(iy0, ix0 + 1)];
+          const h10 = m.heights[idx(iy0 + 1, ix0)];
+          const h11 = m.heights[idx(iy0 + 1, ix0 + 1)];
+          const h0 = h00 * (1 - fx1) + h01 * fx1;
+          const h1 = h10 * (1 - fx1) + h11 * fx1;
+          m.windowHeights[wy * m.winCols + wx] = h0 * (1 - fy1) + h1 * fy1;
+        }
+      }
+    }
+
+    // Sample aus gecachtem Fenster
+    const fx = (utmX - m.winStartX) / m.stepM;
+    const fy = (utmY - m.winStartY) / m.stepM;
+    const ix0 = Math.floor(fx);
+    const iy0 = Math.floor(fy);
+
+    if (ix0 < 0 || iy0 < 0 || ix0 >= m.winCols - 1 || iy0 >= m.winRows - 1) {
+      // Outside window: global sample (shouldn't happen if window is centered)
+      const relX = (utmX - m.origin[0]) / m.stepM;
+      const relY = (utmY - m.origin[1]) / m.stepM;
+      const ixG = Math.floor(relX);
+      const iyG = Math.floor(relY);
+      if (ixG < 0 || iyG < 0 || ixG >= m.cols - 1 || iyG >= m.rows - 1) return null;
+      const fxG1 = relX - ixG;
+      const fyG1 = relY - iyG;
+      const idx = (iy: number, ix: number) => iy * m.cols + ix;
+      const h00 = m.heights[idx(iyG, ixG)];
+      const h01 = m.heights[idx(iyG, ixG + 1)];
+      const h10 = m.heights[idx(iyG + 1, ixG)];
+      const h11 = m.heights[idx(iyG + 1, ixG + 1)];
+      const h0 = h00 * (1 - fxG1) + h01 * fxG1;
+      const h1 = h10 * (1 - fxG1) + h11 * fxG1;
+      const h = h0 * (1 - fyG1) + h1 * fyG1;
+      return h !== h ? null : h + m.sceneOffset;
+    }
+
+    // Bilineare Interpolation aus gecachtem Fenster-Fenster
+    const fx1 = fx - ix0;
+    const fy1 = fy - iy0;
+    const h00 = m.windowHeights![iy0 * m.winCols + ix0];
+    const h01 = m.windowHeights![iy0 * m.winCols + ix0 + 1];
+    const h10 = m.windowHeights![(iy0 + 1) * m.winCols + ix0];
+    const h11 = m.windowHeights![(iy0 + 1) * m.winCols + ix0 + 1];
+    const h0 = h00 * (1 - fx1) + h01 * fx1;
+    const h1 = h10 * (1 - fx1) + h11 * fx1;
+    const h = h0 * (1 - fy1) + h1 * fy1;
+    return h !== h ? null : h + m.sceneOffset;
+  }, [centre]);
+}
+
 function WalkControls({
   data,
   centre,
@@ -1044,6 +1247,7 @@ function WalkControls({
   noClip = false,
   frozen = false,
   viewfinderOpen = false,
+  terrainHeight,
   onToggleNoClip,
   onToggleFreeze,
   onToggleViewfinder,
@@ -1058,6 +1262,7 @@ function WalkControls({
   noClip?: boolean;
   frozen?: boolean;
   viewfinderOpen?: boolean;
+  terrainHeight: (x: number, y: number) => number | null;
   onToggleNoClip?: () => void;
   onToggleFreeze?: () => void;
   onToggleViewfinder?: () => void;
@@ -1270,22 +1475,36 @@ function WalkControls({
         (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0);
       const climb = (pressed.has(' ') ? 1 : 0) - (pressed.has('control') ? 1 : 0);
 
+      // Terrain-Höhenabfrage: Wenn WalkGrid.move() nicht bewegt hat (blockiert),
+      // prüfen wir, ob es ein nicht-blockiertes Außengebiet mit Terrain ist.
+      const tryTerrainMove = (from: { x: number; y: number; z: number }, dx: number, dy: number) => {
+        const footing = data.walk.footingAt(from.x + dx, from.y + dy, from.z);
+        if (!footing.blocked) {
+          // Im Freien: Terrain-Höhe über Heightmap (O(1), kein Raycast nötig)
+          const terrainZ = terrainHeight(from.x + dx, from.y + dy);
+          const z = terrainZ !== null ? terrainZ : from.z;
+          return { x: from.x + dx, y: from.y + dy, z };
+        }
+        return from;
+      };
+
       if (forward || strafe) {
         const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
         const { yaw } = look.current;
-        // Die Kamera blickt nach -Z, und Szenen-Z zeigt nach Sueden -- der
-        // Blick geht also nach Norden, und Norden ist in Gelaendemetern das
-        // kleinere y. Deshalb steht vor dy ein Minus und vor dx keines.
-        // Wer das hier verwechselt, laeuft seitwaerts statt geradeaus.
         const dx = (-Math.sin(yaw) * forward + Math.cos(yaw) * strafe) * speed;
         const dy = (-Math.cos(yaw) * forward - Math.sin(yaw) * strafe) * speed;
-        position.current = noClipRef.current
-          ? { ...position.current, x: position.current.x + dx, y: position.current.y + dy }
-          : data.walk.move(position.current, dx, dy);
+        if (noClipRef.current) {
+          position.current = { ...position.current, x: position.current.x + dx, y: position.current.y + dy };
+        } else {
+          const moved = data.walk.move(position.current, dx, dy);
+          if (moved.x !== position.current.x || moved.y !== position.current.y) {
+            position.current = moved;
+          } else {
+            position.current = tryTerrainMove(position.current, dx, dy);
+          }
+        }
       }
 
-      // Vertikal fliegen gibt es nur ohne Kollision -- das Gitter kennt keine
-      // Höhe über der eigenen Ebene, ein "oben" ergäbe dort keinen Sinn.
       if (noClipRef.current && climb) {
         position.current = {
           ...position.current,
@@ -1373,6 +1592,8 @@ export function SiteScene(props: SceneProps) {
   const { data, upperOpacity, route, preset, focusHallKey } = props;
   const cel = props.cel ?? true;
   const centre = useMemo(() => siteCentre(data.site), [data.site]);
+  const terrainHeight = useTerrainHeightmap(centre);
+  /** Referenz auf das Terrain-GLB für Raycast-basierte Höhenabfrage im First-Person-Modus. */
   const registered = data.spatialMode === 'registered';
 
   /**
@@ -1441,6 +1662,15 @@ export function SiteScene(props: SceneProps) {
         ]}
       />
       <Beleuchtung extent={extent} interior={preset === 'ego'} />
+
+      {/* Das amtliche DGM1-Terrain -- das Fundament, auf dem alles steht. */}
+      <Suspense fallback={null}>
+        <Terrain centre={centre} />
+      </Suspense>
+      {/* Die Skyline der weiteren Umgebung im Hintergrund. */}
+      <Suspense fallback={null}>
+        <Skyline centre={centre} />
+      </Suspense>
 
       {/* Das Orthofoto bleibt Bodenreferenz, solange kein amtlicher Boden aus
           den Weltpaketen zur Verfügung steht -- auch im registrierten Modus. */}
@@ -1528,6 +1758,7 @@ export function SiteScene(props: SceneProps) {
           noClip={props.noClip}
           frozen={props.frozen}
           viewfinderOpen={props.viewfinderOpen}
+          terrainHeight={terrainHeight}
           onToggleNoClip={props.onToggleNoClip}
           onToggleFreeze={props.onToggleFreeze}
           onToggleViewfinder={props.onToggleViewfinder}

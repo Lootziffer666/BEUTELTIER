@@ -21,7 +21,31 @@
       "role": "render-world",
       "status": "legacy",
       "uri": "models/messe.glb",
-      "bytes": 2764812,
+      "bytes": 3553028,
+      "available": true
+    },
+    {
+      "id": "terrain",
+      "role": "render-terrain",
+      "status": "local",
+      "uri": "models/terrain.glb",
+      "bytes": 15774556,
+      "available": true
+    },
+    {
+      "id": "terrain_heightmap",
+      "role": "collision-heightmap",
+      "status": "local",
+      "uri": "data/terrain_heightmap.json",
+      "bytes": 5818267,
+      "available": true
+    },
+    {
+      "id": "skyline",
+      "role": "render-distant",
+      "status": "local",
+      "uri": "models/distant/skyline.glb",
+      "bytes": 9160,
       "available": true
     },
     {
@@ -139,6 +163,7 @@
     "surfaceClassification": "data/surface-classification.json",
     "visibilityAnalysis": "data/visibility-analysis.json",
     "collisionSurfaces": "data/collision-surfaces.json",
+    "terrainHeightmap": "data/terrain_heightmap.json",
     "registeredLayout": "data/registered-layout.json",
     "registeredGraph": "data/registered-graph.json",
     "registeredSite": "data/registered-site.json"
@@ -148,7 +173,8 @@
     "draft": 3,
     "registered": 0,
     "constrained": 14,
-    "withTargetFeatures": 14
+    "withTargetFeatures": 14,
+    "standKorrekturen": 14
   },
   "fallback": {
     "orthophoto": true,

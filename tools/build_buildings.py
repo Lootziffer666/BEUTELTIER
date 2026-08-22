@@ -72,6 +72,8 @@ COLOURS = {
 # Boeden und Waende bekommen prozedurale Texturen in der App.
 TEXTURED = {"roof": "ortho"}
 
+FACADE_DIR = ROOT / "data" / "textures" / "buildings" / "facades"
+
 # Wie oft sich die Fassade waagerecht wiederholt. Eine Kachel traegt sechs
 # Stuetzenachsen; 30 m entspricht damit rund 5 m Achsmass, wie gebaut.
 FACADE_TILE_M = 30.0
@@ -318,6 +320,30 @@ def main() -> int:
     print(f"  {len(hall_building)} Hallenebenen einem Gebaeude zugeordnet, "
           f"{named} Gebaeude benannt")
 
+    # --- Facade-Texturen zuordnen ---------------------------------------------
+    facade_textures = {}
+    if FACADE_DIR.exists():
+        for jpg in FACADE_DIR.glob("*.jpg"):
+            facade_textures[jpg.stem] = jpg.name
+        for png in FACADE_DIR.glob("*.png"):
+            facade_textures[png.stem] = png.name
+        if facade_textures:
+            print(f"  {len(facade_textures)} Facade-Texturen gefunden")
+
+    # Hilfsfunktion: prueft, ob ein Gebaeude zu einer hallennamen-getaggten Halle gehoert
+    def facade_for_building(record):
+        for key in record.get("hallKeys", []):
+            if key in facade_textures:
+                return facade_textures[key]
+        return None
+
+    # Map Gebaeude-ID -> Facade-Texturname
+    building_facade_map = {}
+    for record in records:
+        tex = facade_for_building(record)
+        if tex:
+            building_facade_map[record["id"]] = tex
+
     payload = {
         "schema": "beuteltier.buildings.v1",
         "source": {
@@ -390,17 +416,23 @@ def main() -> int:
 
         return uv
 
-    parts = {kind: gltf.Part(name=kind, colour=colour,
-                             texture=(TEXTURED.get(kind) if ortho else None))
-             for kind, colour in COLOURS.items()}
+    # Grundteile mit prozeduralen Farben und UV-Koordinaten
+    parts: dict[str, gltf.Part] = {
+        kind: gltf.Part(name=kind, colour=colour,
+                        texture=(TEXTURED.get(kind) if ortho else None))
+        for kind, colour in COLOURS.items()}
+    # Facade-Texturen werden dynamisch pro Gebaeude erstellt
+    facade_parts: dict[str, gltf.Part] = {}
     skipped = 0
     for building in buildings:
+        facade_tex = None
+        if building.id in building_facade_map:
+            facade_tex = building_facade_map[building.id]
+        
         for surface in building.surfaces:
             part = parts.get(surface.kind)
             if part is None:
                 continue
-            # Triangulierung und Punktliste muessen dieselbe Anbindung der
-            # Loecher benutzen, sonst zeigen die Indizes ins Leere.
             triangles, points = lod2.triangulate_with_points(
                 surface.ring, surface.holes)
             if not triangles:
@@ -415,19 +447,41 @@ def main() -> int:
             else:
                 low, high = building.height_range()
                 uv = wall_uv(low - ground_level, high - ground_level)
+            target_part = part
+            # Wenn ein Gebaeude eine Facade-Textur hat, leite Wandflächen davon ab
+            if surface.kind == "wall" and facade_tex:
+                fp = facade_parts.get(facade_tex)
+                if fp is None:
+                    fp = gltf.Part(name=f"facade_{facade_tex}",
+                                   colour=(1.0, 1.0, 1.0, 1.0),
+                                   texture=facade_tex,
+                                   metallic=0.0, roughness=0.9)
+                    facade_parts[facade_tex] = fp
+                target_part = fp
             for a, b, c in triangles:
-                part.add_triangle(scene[a], scene[b], scene[c], uv)
+                target_part.add_triangle(scene[a], scene[b], scene[c], uv)
 
+    facade_texture_refs = {}
+    for tex_name, part in facade_parts.items():
+        src = FACADE_DIR / tex_name
+        if src.exists():
+            dst = OUT_GLB.parent / "facades" / tex_name
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_bytes(src.read_bytes())
+            facade_texture_refs[tex_name] = f"facades/{tex_name}"
+    
+    all_parts = list(parts.values()) + list(facade_parts.values())
     OUT_GLB.parent.mkdir(parents=True, exist_ok=True)
     size = gltf.write_glb(
-        OUT_GLB, list(parts.values()),
+        OUT_GLB, all_parts,
         generator="BEUTELTIER aus LoD2 (Geobasis NRW)",
         extras={"crsNote": "BEUTELTIER-Gelaendemeter, x rechts, y hoch, z sued",
                 "groundReferenceM": round(ground_level, 2),
                 "licence": "Datenlizenz Deutschland Zero 2.0",
                 **({"ortho": ortho["image"], "orthoExtent": ortho["extent"]}
-                   if ortho else {})})
-    triangles = sum(part.triangle_count for part in parts.values())
+                   if ortho else {}),
+                **({"facades": facade_texture_refs} if facade_texture_refs else {})})
+    triangles = sum(part.triangle_count for part in all_parts)
     print(f"{triangles} Dreiecke, {size / 1e6:.1f} MB -> {OUT_GLB}")
     if skipped:
         print(f"  {skipped} Flaechen ohne Triangulierung uebersprungen")
