@@ -1098,21 +1098,45 @@ function useTerrainHeightmap(centre: [number, number]): (x: number, y: number) =
     cols: number;
     rows: number;
     heights: Float32Array | null;
+    sceneOffset: number;
+    /** Gecachtes Fenster in UTM-Koordinaten */
+    windowCenterX: number;
+    windowCenterY: number;
+    windowSize: number;
+    /** Grid-Anweisungen für das aktuelle Fenster */
+    winStartX: number;
+    winStartY: number;
+    winCols: number;
+    winRows: number;
+    /** Gecachte Höhen im Fenster */
+    windowHeights: Float32Array | null;
   } | null>(null);
 
-  // Lazy-load: beim ersten Aufruf die Heightmap-JSON laden
+  const WINDOW_M = 32; // 32×32m Caching-Fenster
+
+  // Lazy-load: Binary-Heightmap beim ersten Render
   useEffect(() => {
     const abort = new AbortController();
-    fetch(`${import.meta.env.BASE_URL}data/terrain.json`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((meta: any | null) => {
-        if (!meta?.heightmap || abort.signal.aborted) return;
+    fetch(`${import.meta.env.BASE_URL}data/terrain_heightmap.bin`)
+      .then((r) => (r.ok ? r.arrayBuffer() : null))
+      .then((buf: ArrayBuffer | null) => {
+        if (!buf || abort.signal.aborted) return;
+        const view = new DataView(buf);
         cache.current = {
-          origin: meta.origin,
-          stepM: meta.stepM,
-          cols: meta.cols,
-          rows: meta.rows,
-          heights: Float32Array.from(meta.heightmap),
+          origin: [view.getFloat64(0, true), view.getFloat64(8, true), view.getFloat64(16, true)],
+          stepM: view.getFloat64(24, true),
+          cols: view.getUint32(32, true),
+          rows: view.getUint32(36, true),
+          sceneOffset: view.getFloat64(40, true),
+          heights: new Float32Array(buf, 44),
+          windowCenterX: 0,
+          windowCenterY: 0,
+          windowSize: WINDOW_M,
+          winStartX: 0,
+          winStartY: 0,
+          winCols: 0,
+          winRows: 0,
+          windowHeights: null,
         };
       })
       .catch(() => {
@@ -1125,36 +1149,92 @@ function useTerrainHeightmap(centre: [number, number]): (x: number, y: number) =
     const m = cache.current;
     if (!m || !m.heights) return null;
 
-    // Umrechnen von Scene-Koordinaten in Gelände-Koordinaten
-    const gx = x + centre[0];
-    const gy = y + centre[1];
+    // Scene -> UTM
+    const utmX = x + centre[0];
+    const utmY = y + centre[1];
+    const halfWin = m.windowSize / 2;
 
-    // Relative Position im Grid
-    const relX = gx - m.origin[0];
-    const relY = gy - m.origin[1];
-    const fx = relX / m.stepM;
-    const fy = relY / m.stepM;
+    // Prüfe ob (utmX, utmY) im aktuellen Cache-Fenster liegt
+    // Fenster ist zentriert auf (windowCenterX, windowCenterY)
+    const needRefresh = !m.windowHeights ||
+      Math.abs(utmX - m.windowCenterX) > halfWin ||
+      Math.abs(utmY - m.windowCenterY) > halfWin;
 
+    if (needRefresh) {
+      // Verschiebe Fenster zum neuen Zentrum
+      m.windowCenterX = utmX;
+      m.windowCenterY = utmY;
+      m.winStartX = utmX - halfWin;
+      m.winStartY = utmY - halfWin;
+      m.winCols = Math.ceil(m.windowSize / m.stepM) + 1;
+      m.winRows = Math.ceil(m.windowSize / m.stepM) + 1;
+      const winSize = m.winCols * m.winRows;
+      m.windowHeights = new Float32Array(winSize);
+
+      // Fülle Fenster mit interpolierten Höhenwerten
+      for (let wy = 0; wy < m.winRows; wy++) {
+        const utmRowY = m.winStartY + wy * m.stepM;
+        const relY = (utmRowY - m.origin[1]) / m.stepM;
+        const iy0 = Math.floor(relY);
+        const fy1 = relY - iy0;
+        for (let wx = 0; wx < m.winCols; wx++) {
+          const utmColX = m.winStartX + wx * m.stepM;
+          const relX = (utmColX - m.origin[0]) / m.stepM;
+          const ix0 = Math.floor(relX);
+          const fx1 = relX - ix0;
+          const idx = (iy: number, ix: number) => iy * m.cols + ix;
+          if (ix0 < 0 || iy0 < 0 || ix0 >= m.cols - 1 || iy0 >= m.rows - 1) {
+            m.windowHeights[wy * m.winCols + wx] = NaN;
+            continue;
+          }
+          const h00 = m.heights[idx(iy0, ix0)];
+          const h01 = m.heights[idx(iy0, ix0 + 1)];
+          const h10 = m.heights[idx(iy0 + 1, ix0)];
+          const h11 = m.heights[idx(iy0 + 1, ix0 + 1)];
+          const h0 = h00 * (1 - fx1) + h01 * fx1;
+          const h1 = h10 * (1 - fx1) + h11 * fx1;
+          m.windowHeights[wy * m.winCols + wx] = h0 * (1 - fy1) + h1 * fy1;
+        }
+      }
+    }
+
+    // Sample aus gecachtem Fenster
+    const fx = (utmX - m.winStartX) / m.stepM;
+    const fy = (utmY - m.winStartY) / m.stepM;
     const ix0 = Math.floor(fx);
     const iy0 = Math.floor(fy);
-    if (ix0 < 0 || iy0 < 0 || ix0 >= m.cols - 1 || iy0 >= m.rows - 1) return null;
 
+    if (ix0 < 0 || iy0 < 0 || ix0 >= m.winCols - 1 || iy0 >= m.winRows - 1) {
+      // Outside window: global sample (shouldn't happen if window is centered)
+      const relX = (utmX - m.origin[0]) / m.stepM;
+      const relY = (utmY - m.origin[1]) / m.stepM;
+      const ixG = Math.floor(relX);
+      const iyG = Math.floor(relY);
+      if (ixG < 0 || iyG < 0 || ixG >= m.cols - 1 || iyG >= m.rows - 1) return null;
+      const fxG1 = relX - ixG;
+      const fyG1 = relY - iyG;
+      const idx = (iy: number, ix: number) => iy * m.cols + ix;
+      const h00 = m.heights[idx(iyG, ixG)];
+      const h01 = m.heights[idx(iyG, ixG + 1)];
+      const h10 = m.heights[idx(iyG + 1, ixG)];
+      const h11 = m.heights[idx(iyG + 1, ixG + 1)];
+      const h0 = h00 * (1 - fxG1) + h01 * fxG1;
+      const h1 = h10 * (1 - fxG1) + h11 * fxG1;
+      const h = h0 * (1 - fyG1) + h1 * fyG1;
+      return h !== h ? null : h + m.sceneOffset;
+    }
+
+    // Bilineare Interpolation aus gecachtem Fenster-Fenster
     const fx1 = fx - ix0;
     const fy1 = fy - iy0;
-
-    // Bilineare Interpolation über 4 Nachbarpunkte
-    const idx = (iy: number, ix: number) => iy * m.cols + ix;
-    const h00 = m.heights[idx(iy0, ix0)];
-    const h01 = m.heights[idx(iy0, ix0 + 1)];
-    const h10 = m.heights[idx(iy0 + 1, ix0)];
-    const h11 = m.heights[idx(iy0 + 1, ix0 + 1)];
-
+    const h00 = m.windowHeights![iy0 * m.winCols + ix0];
+    const h01 = m.windowHeights![iy0 * m.winCols + ix0 + 1];
+    const h10 = m.windowHeights![(iy0 + 1) * m.winCols + ix0];
+    const h11 = m.windowHeights![(iy0 + 1) * m.winCols + ix0 + 1];
     const h0 = h00 * (1 - fx1) + h01 * fx1;
     const h1 = h10 * (1 - fx1) + h11 * fx1;
-    const height = h0 * (1 - fy1) + h1 * fy1;
-
-    // Subtrahiere das Gelände-Ursprungs-Z (ORIGIN[2] = 40.0)
-    return height - m.origin[2];
+    const h = h0 * (1 - fy1) + h1 * fy1;
+    return h !== h ? null : h + m.sceneOffset;
   }, [centre]);
 }
 
