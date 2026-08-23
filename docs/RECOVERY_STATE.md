@@ -9,24 +9,25 @@ Autoritative Ausgangsstaende:
 - SHADED Recovery-Branch: `recovery/honest-spatial-path`, Remote-Commit
   `e4062a1`, PR [SHADED #73](https://github.com/Lootziffer666/SHADED/pull/73)
   (lokal inhaltlich gleicher Tree: `ec3235a`)
-- BEUTELTIER Recovery-Branch: `recovery/wednesday-corridor`, Remote-Commit
-  `8dfd219`, PR
+- BEUTELTIER Recovery-Branch: `recovery/wednesday-corridor`, PR
   [BEUTELTIER #43](https://github.com/Lootziffer666/BEUTELTIER/pull/43)
-  (lokal inhaltlich gleicher Tree: `a5f67bd`)
 
 ## NOW
 
-Die kleinsten Mittwoch-Aenderungen sind gebaut, getestet und als zwei PRs
-gegen die auditierten `main`-Staende bereitgestellt. Offen ist ein echter
-Browserlauf auf einem Rechner mit installiertem Chromium sowie Review/Merge.
-Der fehlende Browser wird nicht als bestandene Sichtpruefung ausgegeben.
+PR #43 wird nach der ersten Sichtpruefung korrigiert: Der gelbe Korridor lag
+zwar auf den echten Weltpaketen, der aktive Uebersichtspfad reduzierte diese
+aber wieder auf 18--35 % Deckkraft und legte transparente Legacy-Hallen
+darueber. Im Demokorridor stehen Kern und Umgebung jetzt bei 100 %; die
+Legacy-Hallen werden dort nicht gerendert. Offen ist die Sichtpruefung dieses
+neuen Vercel-Builds sowie Review/Merge. Ein fehlender WebGL-Bildnachweis wird
+nicht als bestandene Sichtpruefung ausgegeben.
 
 ## PROVEN WORKING
 
 ### BEUTELTIER
 
 - 138 Python-Pipeline-Tests bestehen in einer frischen Umgebung.
-- 285 Frontend-Tests bestehen; App- und World-Builder-Produktionsbuild
+- 288 Frontend-Tests bestehen; App- und World-Builder-Produktionsbuild
   entstehen.
 - Der aktive registrierte Modus fuehrt Hallen, Graph, Orthofoto, OSM-Wege und
   ALKIS-Luecken jetzt im selben `sceneX/sceneZ`-Raum. Der eingecheckte Marker
@@ -41,6 +42,11 @@ Der fehlende Browser wird nicht als bestandene Sichtpruefung ausgegeben.
 - Die Oberfläche zeigt Start, Ziel, fuenf Etappen, OSM-Quellenmass,
   Darstellungsart `ROUTE_GRAPH_POLYLINE` und die Unsicherheit gleichzeitig.
   Wird eine benoetigte Verbindung gesperrt, meldet sie `FAILED` statt Erfolg.
+- Der registrierte Demokorridor schaltet die vorhandenen amtlichen Render-GLBs
+  fuer Messekern und Umgebung auf 100 % Deckkraft und entfernt dort die
+  transparenten Legacy-Hallenkörper. Das Routenband bleibt als bewusstes
+  Karten-Overlay sichtbar. Diese Policy ist getestet; die reale WebGL-Ausgabe
+  des neuen Deployments bleibt bis zur Sichtpruefung `UNKNOWN`.
 - LoD2, DGM1-Terrain, OSM-Snapshot, Hallenplaene, registrierte Halle 10.1,
   Fassadenreferenzen und amtliche Weltpakete bleiben unveraendert erhalten.
 
@@ -107,14 +113,15 @@ Der fehlende Browser wird nicht als bestandene Sichtpruefung ausgegeben.
 - BEUTELTIERs Abschnitt Eingang Sued -> Piazza/Boulevard ist beobachtet, aber
   nicht als metrische Innenachse vermessen. Die vorhandene Passage 5-10 traegt
   46,8 m Lageunsicherheit und bleibt `unbestaetigt`.
-- Ein Browser-E2E-Lauf ist blockiert: kein Chromium und kein funktionierender
-  Browser-Download in dieser Arbeitsumgebung.
+- Die oeffentliche Vercel-Seite laedt im Cloud-Browser, dessen sandboxed Chrome
+  kann jedoch keinen WebGL-Kontext erzeugen. Die PR-Vorschau ist zusaetzlich
+  durch Vercel-Login geschuetzt. Deshalb existiert hier kein Bild-PASS.
 
 ## WEDNESDAY PATH
 
-1. Auf einem Rechner mit Chromium BEUTELTIER oeffnen, `Korridor zeigen`
-   anklicken und Start, Etappen, gelbe Unsicherheit sowie Ziel Halle 10.1
-   visuell pruefen.
+1. Den neuen Build von PR #43 in einem WebGL-faehigen Browser oeffnen,
+   `Korridor zeigen` anklicken und pruefen: massive Messe-/Umgebungsmodelle,
+   keine transparenten Legacy-Hallen, gelbe Unsicherheit und Ziel Halle 10.1.
 2. PR #43 und PR #73 reviewen; nur bei weiterhin gruenen Checks und nach der
    Sichtpruefung mergen.
 3. Genau diesen Korridor zeigen. Keine weitere Halle und keinen neuen

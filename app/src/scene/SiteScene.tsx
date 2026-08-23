@@ -54,8 +54,9 @@ import {
 import { KACHEL_M } from './textur';
 import { Kontur } from './Kontur';
 import { Ausstattung } from './Ausstattung';
+import { worldPresentation, type WorldPreset } from './worldPresentation';
 
-export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
+export type CameraPreset = WorldPreset;
 
 export interface SceneProps {
   data: Dataset;
@@ -66,6 +67,9 @@ export interface SceneProps {
   route: Route | null;
   preset: CameraPreset;
   focusHallKey: string | null;
+  /** Zeigt im Demokorridor die vorhandenen Weltpakete als Welt statt als
+   * durchsichtige Kartenreferenz. */
+  solidWorld?: boolean;
   onSelectStand: (standId: string | null) => void;
   /** Verlässt die Ego-Perspektive, wenn der Nutzer Escape drückt. */
   onLeaveEgo?: () => void;
@@ -479,25 +483,6 @@ function weltFlaechen(interior: boolean) {
   return satz;
 }
 
-/**
- * Wie deckend die amtlichen Weltpakete je Preset stehen.
- *
- * Aus der Übersicht ist das Modell eine Karte: die Hülle bleibt als Andeutung
- * stehen, sonst verdeckt sie genau die Stände, wegen derer man hinsieht. Auf
- * Augenhöhe ist sie das Gebäude und steht undurchsichtig.
- *
- * Der Kern bleibt im Ego-Blick bei 1,0 und nicht bei den vorgeschlagenen 0,92:
- * drinnen kommen die Wände aus `Hallenhuelle`, und ein Schleier darauf liesse
- * die Nachbarhalle durchscheinen. Draussen hat das Modell keine Meinung, dort
- * gelten die gemessenen Profile.
- */
-const WELT_DECKKRAFT: Record<CameraPreset, { kern: number; umgebung: number }> = {
-  uebersicht: { kern: 0.18, umgebung: 0.35 },
-  halle: { kern: 0.35, umgebung: 0.25 },
-  laufmodus: { kern: 0.18, umgebung: 0.3 },
-  ego: { kern: 1.0, umgebung: 0.15 },
-};
-
 /** Legt den Preset-Schleier auf ein Material. 1,0 lässt es unberührt. */
 function schleier(material: THREE.Material, deckkraft: number) {
   if (deckkraft > 0.99) return;
@@ -673,15 +658,16 @@ function OfficialWorld({
   centre,
   preset,
   cel,
+  deckkraft,
 }: {
   data: Dataset;
   centre: [number, number];
   preset: CameraPreset;
   cel: boolean;
+  deckkraft: { kern: number; umgebung: number };
 }) {
   const interior = preset === 'ego';
   const surfaces = weltFlaechen(interior);
-  const deckkraft = WELT_DECKKRAFT[preset];
 
   const packages = data.world?.manifest.packages.filter(
     (entry) => entry.available && entry.role === 'render',
@@ -1042,12 +1028,14 @@ function RouteRibbon({
 
   const hasUnconfirmed = (route?.unconfirmed.length ?? 0) > 0;
   return (
-    <mesh geometry={geometry}>
+    <mesh geometry={geometry} renderOrder={50}>
       <meshStandardMaterial
         color={hasUnconfirmed ? COLOURS.routeUnconfirmed : COLOURS.route}
         emissive={hasUnconfirmed ? COLOURS.routeUnconfirmed : COLOURS.route}
         emissiveIntensity={0.65}
         roughness={0.4}
+        depthTest={false}
+        depthWrite={false}
       />
     </mesh>
   );
@@ -1624,6 +1612,7 @@ export function SiteScene(props: SceneProps) {
   const terrainHeight = useTerrainHeightmap(centre);
   /** Referenz auf das Terrain-GLB für Raycast-basierte Höhenabfrage im First-Person-Modus. */
   const registered = data.spatialMode === 'registered';
+  const presentation = worldPresentation(preset, registered, props.solidWorld ?? false);
 
   /**
    * In welcher Halle die Kamera gerade steht.
@@ -1739,7 +1728,13 @@ export function SiteScene(props: SceneProps) {
       )}
       {registered && (
         <Suspense fallback={null}>
-          <OfficialWorld data={data} centre={centre} preset={preset} cel={cel} />
+          <OfficialWorld
+            data={data}
+            centre={centre}
+            preset={preset}
+            cel={cel}
+            deckkraft={presentation.deckkraft}
+          />
         </Suspense>
       )}
       {(preset === 'halle' || preset === 'ego') && focusHallKey && !LEER_ERLAUBT && (
@@ -1755,7 +1750,7 @@ export function SiteScene(props: SceneProps) {
           Augenhöhe stehen sie als farbiger Schleier vor der Nase und legen
           sich über genau das, was man sehen will -- dort sind die Wände des
           Gebäudemodells die Halle, nicht ein eingefärbter Block darüber. */}
-      {preset !== 'ego' && (
+      {presentation.showHallOverlay && (
         <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
       )}
       {!LEER_ERLAUBT && (

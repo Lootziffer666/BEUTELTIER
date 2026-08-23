@@ -174,6 +174,7 @@ export default function App() {
           route={route}
           preset={preset}
           focusHallKey={focusHallKey}
+          solidWorld={demoActive}
           previewSafe={previewSafe}
           cel={cel}
           onSelectStand={(standId) => {
