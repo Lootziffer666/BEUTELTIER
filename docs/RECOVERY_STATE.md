@@ -6,15 +6,20 @@ Autoritative Ausgangsstaende:
 
 - SHADED `origin/main`: `732c24b98e304f3278b76e82dd164467497e60c3`
 - BEUTELTIER `origin/main`: `963251a004090450055c27454c175d744f58547b`
-- SHADED Recovery-Commit: `ec3235a` auf `recovery/honest-spatial-path`
-- BEUTELTIER Recovery-Commit: `4dc7713` auf `recovery/wednesday-corridor`
+- SHADED Recovery-Branch: `recovery/honest-spatial-path`, Remote-Commit
+  `e4062a1`, PR [SHADED #73](https://github.com/Lootziffer666/SHADED/pull/73)
+  (lokal inhaltlich gleicher Tree: `ec3235a`)
+- BEUTELTIER Recovery-Branch: `recovery/wednesday-corridor`, Remote-Commit
+  `8dfd219`, PR
+  [BEUTELTIER #43](https://github.com/Lootziffer666/BEUTELTIER/pull/43)
+  (lokal inhaltlich gleicher Tree: `a5f67bd`)
 
 ## NOW
 
-Die kleinsten Mittwoch-Aenderungen sind gebaut und lokal belegt. Offen sind
-nur noch Remote-Abgleich, PR/Handoff und ein echter Browserlauf auf einem
-Rechner mit installiertem Chromium. Der fehlende Browser wird nicht als
-bestandene Sichtpruefung ausgegeben.
+Die kleinsten Mittwoch-Aenderungen sind gebaut, getestet und als zwei PRs
+gegen die auditierten `main`-Staende bereitgestellt. Offen ist ein echter
+Browserlauf auf einem Rechner mit installiertem Chromium sowie Review/Merge.
+Der fehlende Browser wird nicht als bestandene Sichtpruefung ausgegeben.
 
 ## PROVEN WORKING
 
@@ -107,11 +112,11 @@ bestandene Sichtpruefung ausgegeben.
 
 ## WEDNESDAY PATH
 
-1. Recovery-Branches gegen den letzten Stand von `origin/main` pruefen und
-   als kleine PRs bereitstellen.
-2. Auf einem Rechner mit Chromium BEUTELTIER oeffnen, `Korridor zeigen`
+1. Auf einem Rechner mit Chromium BEUTELTIER oeffnen, `Korridor zeigen`
    anklicken und Start, Etappen, gelbe Unsicherheit sowie Ziel Halle 10.1
    visuell pruefen.
+2. PR #43 und PR #73 reviewen; nur bei weiterhin gruenen Checks und nach der
+   Sichtpruefung mergen.
 3. Genau diesen Korridor zeigen. Keine weitere Halle und keinen neuen
    SHADED-Provider vor Mittwoch einbauen.
 
