@@ -162,6 +162,29 @@ function Ground({
   ortho: Ortho | null;
 }) {
   const ortho = useMemo(() => (meta ? orthoTexture(ORTHO_URL) : null), [meta]);
+  const registeredGeometry = useMemo(() => {
+    if (!meta?.corners) return null;
+    const [p00, p10, p01, p11] = meta.corners;
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute([
+      p00[0] - centre[0], -0.4, p00[1] - centre[1],
+      p10[0] - centre[0], -0.4, p10[1] - centre[1],
+      p01[0] - centre[0], -0.4, p01[1] - centre[1],
+      p11[0] - centre[0], -0.4, p11[1] - centre[1],
+    ], 3));
+    // Dieselbe UV-Orientierung wie die bisherige, um -90 Grad gedrehte
+    // PlaneGeometry. Nur die vier Ecken liegen jetzt im amtlichen Raum.
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute([
+      0, 1,
+      1, 1,
+      0, 0,
+      1, 0,
+    ], 2));
+    geometry.setIndex([0, 2, 1, 2, 3, 1]);
+    geometry.computeVertexNormals();
+    return geometry;
+  }, [meta, centre]);
+  useEffect(() => () => registeredGeometry?.dispose(), [registeredGeometry]);
   if (!meta || !ortho) {
     return (
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]} receiveShadow>
@@ -183,10 +206,16 @@ function Ground({
         <planeGeometry args={[extent * 3, extent * 3]} />
         <meshStandardMaterial color={COLOURS.ground} roughness={1} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[midX, -0.4, midZ]} receiveShadow>
-        <planeGeometry args={[width, height]} />
-        <meshStandardMaterial map={ortho} roughness={0.88} envMapIntensity={0.6} />
-      </mesh>
+      {registeredGeometry ? (
+        <mesh geometry={registeredGeometry} receiveShadow>
+          <meshStandardMaterial map={ortho} roughness={0.88} envMapIntensity={0.6} />
+        </mesh>
+      ) : (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[midX, -0.4, midZ]} receiveShadow>
+          <planeGeometry args={[width, height]} />
+          <meshStandardMaterial map={ortho} roughness={0.88} envMapIntensity={0.6} />
+        </mesh>
+      )}
     </group>
   );
 }
@@ -1617,20 +1646,41 @@ export function SiteScene(props: SceneProps) {
   }, [props.onCameraSnapshot]);
   const lichtHallKey = preset === 'ego' ? (egoHallKey ?? focusHallKey) : focusHallKey;
 
-  const extent = useMemo(() => {
+  const viewBounds = useMemo(() => {
     const points = data.site.halls.flatMap((hall) => hall.footprint);
+    for (const nodeId of route?.nodeIds ?? []) {
+      const node = data.graph.nodes.get(nodeId);
+      if (node) points.push([node.x, node.y]);
+    }
     const xs = points.map((point) => point[0]);
     const ys = points.map((point) => point[1]);
-    return Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
-  }, [data.site]);
+    return {
+      minX: Math.min(...xs),
+      maxX: Math.max(...xs),
+      minY: Math.min(...ys),
+      maxY: Math.max(...ys),
+    };
+  }, [data.site, data.graph, route]);
+
+  const extent = Math.max(viewBounds.maxX - viewBounds.minX, viewBounds.maxY - viewBounds.minY);
 
   const focus = useMemo(() => {
-    if (!focusHallKey) return null;
-    const hall = data.hallsByKey.get(focusHallKey);
-    if (!hall) return null;
-    const [cx, cy] = polygonCentre(hall.footprint);
-    return toScene(cx, cy, hall.baseY, centre);
-  }, [focusHallKey, data, centre]);
+    if (focusHallKey) {
+      const hall = data.hallsByKey.get(focusHallKey);
+      if (!hall) return null;
+      const [cx, cy] = polygonCentre(hall.footprint);
+      return toScene(cx, cy, hall.baseY, centre);
+    }
+    if (route && preset === 'uebersicht') {
+      return toScene(
+        (viewBounds.minX + viewBounds.maxX) / 2,
+        (viewBounds.minY + viewBounds.maxY) / 2,
+        0,
+        centre,
+      );
+    }
+    return null;
+  }, [focusHallKey, data, centre, route, preset, viewBounds]);
 
   return (
     <Canvas

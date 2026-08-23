@@ -70,6 +70,7 @@ interface Props {
   startStandId: string | null;
   onSetStart: (standId: string | null) => void;
   route: Route | null;
+  routeContext: { startLabel: string; targetLabel: string } | null;
   tour: { order: string[]; totalM: number; minutes: number } | null;
   tourStandIds: string[];
   onToggleTour: (standId: string) => void;
@@ -90,6 +91,10 @@ export function MapPanel(props: Props) {
   useEffect(() => {
     if (props.selectedStandId) setOpenSection('selection');
   }, [props.selectedStandId]);
+
+  useEffect(() => {
+    if (props.routeContext) setOpenSection('route');
+  }, [props.routeContext]);
 
   const hits = useMemo(
     () => (props.search ? props.search.search(query) : []),
@@ -189,11 +194,18 @@ export function MapPanel(props: Props) {
         openSection={openSection}
         onOpen={setOpenSection}
       >
-        {!props.startStandId && <p className="muted">Erst einen Startstand setzen.</p>}
-        {props.startStandId && !props.selectedStandId && (
+        {props.routeContext && (
+          <p className="route-context">
+            <strong>{props.routeContext.startLabel}</strong>
+            <span aria-hidden="true">→</span>
+            <strong>{props.routeContext.targetLabel}</strong>
+          </p>
+        )}
+        {!props.routeContext && !props.startStandId && <p className="muted">Erst einen Startstand setzen.</p>}
+        {!props.routeContext && props.startStandId && !props.selectedStandId && (
           <p className="muted">Ziel auf der Karte oder über die Suche wählen.</p>
         )}
-        {props.startStandId && props.selectedStandId && !route && (
+        {!props.routeContext && props.startStandId && props.selectedStandId && !route && (
           <p className="warn">Kein Weg unter den aktuellen Zuständen.</p>
         )}
         {route && (
@@ -209,7 +221,7 @@ export function MapPanel(props: Props) {
             )}
           </>
         )}
-        <div className="toggles">
+        {!props.routeContext && <div className="toggles">
           <label>
             <input
               type="checkbox"
@@ -226,7 +238,7 @@ export function MapPanel(props: Props) {
             />
             stufenfrei
           </label>
-        </div>
+        </div>}
       </AccordionSection>
 
       {switchable.length > 0 && (

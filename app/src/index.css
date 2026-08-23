@@ -318,6 +318,83 @@ textarea {
   color: var(--text);
 }
 
+.demo-corridor {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #4b3923;
+  border-radius: var(--radius);
+  background: linear-gradient(145deg, rgba(240, 160, 60, 0.12), rgba(23, 27, 38, 0.92));
+}
+.demo-corridor.is-active {
+  border-color: var(--accent);
+}
+.demo-corridor__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.demo-corridor__head > div {
+  display: grid;
+  gap: 2px;
+}
+.demo-corridor__head small,
+.demo-corridor__stages small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.demo-corridor__stages {
+  display: grid;
+  gap: 0;
+  margin: 12px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.demo-corridor__stages li {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: 8px;
+  min-height: 34px;
+}
+.demo-corridor__stages li > span {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+}
+.demo-corridor__stages li:not(:last-child) > span::after {
+  position: absolute;
+  top: 7px;
+  left: 1px;
+  width: 2px;
+  height: 28px;
+  background: #6e5637;
+  content: '';
+}
+.demo-corridor__stages li > div {
+  display: grid;
+}
+.demo-corridor__source,
+.demo-corridor__failed {
+  margin: 7px 0 0;
+  font-size: 12px;
+}
+.demo-corridor__source {
+  color: var(--muted);
+}
+.demo-corridor__failed {
+  color: var(--danger);
+}
+.route-context {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 0 8px;
+  font-size: 12px;
+}
+
 .badge {
   font-size: 11px;
   border: 1px solid var(--line);

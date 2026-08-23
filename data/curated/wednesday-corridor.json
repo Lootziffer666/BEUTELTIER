@@ -1,0 +1,40 @@
+{
+  "schema": "beuteltier.demo-corridor-recipe.v1",
+  "id": "gamescom-2026-station-south-10-1",
+  "title": "Koeln Messe/Deutz -> Eingang Sued -> Halle 10.1",
+  "osm": {
+    "snapshot": "data/raw/osm/koelnmesse.json",
+    "sourceMetadata": "data/raw/osm/QUELLE.json",
+    "startNodeId": 2019682768,
+    "startLabel": "Koeln Messe/Deutz, Ausgang Ottoplatz",
+    "southEntranceNodeId": 3063838345,
+    "southEntranceLabel": "Eingang Sued",
+    "walkableHighways": [
+      "footway",
+      "pedestrian",
+      "path",
+      "steps",
+      "living_street",
+      "residential",
+      "service",
+      "track",
+      "unclassified",
+      "tertiary",
+      "secondary",
+      "primary"
+    ]
+  },
+  "venue": {
+    "boulevard": "data/build/boulevard.json",
+    "piazzaLabel": "Piazza / Messeboulevard",
+    "targetConnectorId": "p:PA:5.1:10.1",
+    "targetHallKey": "10.1",
+    "targetLabel": "Halle 10.1",
+    "evidence": [
+      "wegweisung-piazza-nord",
+      "rolltreppe-verbindet-10.1-und-10.2"
+    ],
+    "state": "unbestaetigt",
+    "reason": "Der Verlauf Eingang Sued bis Piazza ist beobachtet, aber nicht als metrische Innenachse vermessen. Die Passage 5-10 ist amtlich benannt, ihre Laufzeitlage traegt 46,8 m Unsicherheit."
+  }
+}

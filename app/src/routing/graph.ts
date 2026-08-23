@@ -27,6 +27,7 @@ export type AccessGroup = 'consumer' | 'business' | 'presse';
 
 export type EdgeKind =
   | 'aisle'
+  | 'outdoor'
   | 'portal'
   | 'stand_access'
   | 'elevator'
@@ -94,6 +95,8 @@ interface CompactConnector {
 
 export interface CompactGraph {
   schema: string;
+  coordinatePlane?: string;
+  origin?: [number, number, number];
   gridM: number;
   grids: CompactGrid[];
   standLinks: { standId: string; hallKey: string; cell: [number, number] }[];
@@ -185,6 +188,9 @@ export class RouteGraph {
       graph.link(`s:${link.standId}`, anchor.id, 'stand_access');
     }
 
+    // Erst alle Knoten, dann alle Kanten. `nodeId` ist Teil des kompakten
+    // Vertrags; eine Kette von Aussenwegpunkten darf deshalb nicht davon
+    // abhaengen, ob ihr Ziel zufaellig schon vorher im JSON stand.
     for (const connector of compact.connectors) {
       graph.addNode({
         id: connector.id,
@@ -198,9 +204,13 @@ export class RouteGraph {
         meta: connector.meta,
       });
 
-      const kind: EdgeKind =
-        connector.kind === 'vertical'
-          ? ((connector.meta?.kind as EdgeKind) ?? 'elevator')
+    }
+
+    for (const connector of compact.connectors) {
+      const kind: EdgeKind = connector.kind === 'vertical'
+        ? ((connector.meta?.kind as EdgeKind) ?? 'elevator')
+        : connector.kind === 'outdoor'
+          ? 'outdoor'
           : 'portal';
 
       for (const end of connector.ends) {
