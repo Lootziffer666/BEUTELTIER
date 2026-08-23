@@ -19,9 +19,9 @@ Die registrierten Weltpakete sind in jeder Ansicht massiv, Standkoerper sind
 standardmaessig aus und zuschaltbar, die Auswahl markiert das zugeordnete
 amtliche Gebaeudefeature. Das reale DGM1 wird in seiner belegten Hoehe
 gerendert; das registrierte Orthofoto liegt auf dem Terrain und auf den
-amtlichen Dachflaechen im Bildausschnitt. Offen sind Deployment und mobile
-WebGL-Sichtpruefung. Ein fehlender Bildnachweis wird nicht als bestanden
-ausgegeben.
+amtlichen Dachflaechen im Bildausschnitt. Die Vercel-Vorschau des PR-Branches
+ist `Ready`; offen ist die mobile WebGL-Sichtpruefung. Ein fehlender
+Bildnachweis wird nicht als bestanden ausgegeben.
 
 ## PROVEN WORKING
 
