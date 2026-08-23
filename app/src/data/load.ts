@@ -762,7 +762,10 @@ export async function loadDataset(): Promise<Dataset> {
     fetchJson<CompactGraph>('graph.json'),
     fetchJson<Site>('registered-site.json').catch(() => null),
     fetchJson<CompactGraph>('registered-graph.json').catch(() => null),
-    fetchJson<BuildingsSnapshot>('buildings.json').catch(() => null),
+    // Die Passung ist im registrierten Build zwingende Geometriequelle.
+    // Ein HTTP-Fehler darf nicht zu einem spaeteren, irrefuehrenden
+    // "buildings.fit fehlt" umetikettiert werden.
+    fetchJson<BuildingsSnapshot>('buildings.json'),
   ]);
   const site = registeredSite ?? legacySite;
   const compact = registeredSite && registeredCompact ? registeredCompact : legacyCompact;
