@@ -1,6 +1,6 @@
 # Recovery State — SHADED + BEUTELTIER
 
-Stand: 2026-08-23. Harte Grenze: 2026-08-26 07:00 Europe/Berlin.
+Stand: 2026-08-24. Harte Grenze: 2026-08-26 07:00 Europe/Berlin.
 
 Autoritative Ausgangsstaende:
 
@@ -14,20 +14,21 @@ Autoritative Ausgangsstaende:
 
 ## NOW
 
-PR #43 wird nach der ersten Sichtpruefung korrigiert: Der gelbe Korridor lag
-zwar auf den echten Weltpaketen, der aktive Uebersichtspfad reduzierte diese
-aber wieder auf 18--35 % Deckkraft und legte transparente Legacy-Hallen
-darueber. Im Demokorridor stehen Kern und Umgebung jetzt bei 100 %; die
-Legacy-Hallen werden dort nicht gerendert. Offen ist die Sichtpruefung dieses
-neuen Vercel-Builds sowie Review/Merge. Ein fehlender WebGL-Bildnachweis wird
-nicht als bestandene Sichtpruefung ausgegeben.
+PR #43 erhaelt die kleinste sichtbare Korrektur aus der mobilen Sichtpruefung:
+Die registrierten Weltpakete sind in jeder Ansicht massiv, Standkoerper sind
+standardmaessig aus und zuschaltbar, die Auswahl markiert das zugeordnete
+amtliche Gebaeudefeature. Das reale DGM1 wird in seiner belegten Hoehe
+gerendert; das registrierte Orthofoto liegt auf dem Terrain und auf den
+amtlichen Dachflaechen im Bildausschnitt. Offen sind Deployment und mobile
+WebGL-Sichtpruefung. Ein fehlender Bildnachweis wird nicht als bestanden
+ausgegeben.
 
 ## PROVEN WORKING
 
 ### BEUTELTIER
 
-- 138 Python-Pipeline-Tests bestehen in einer frischen Umgebung.
-- 288 Frontend-Tests bestehen; App- und World-Builder-Produktionsbuild
+- 140 Python-Pipeline-Tests bestehen in einer frischen Umgebung.
+- 297 Frontend-Tests bestehen; App- und World-Builder-Produktionsbuild
   entstehen.
 - Der aktive registrierte Modus fuehrt Hallen, Graph, Orthofoto, OSM-Wege und
   ALKIS-Luecken jetzt im selben `sceneX/sceneZ`-Raum. Der eingecheckte Marker
@@ -42,11 +43,24 @@ nicht als bestandene Sichtpruefung ausgegeben.
 - Die Oberfläche zeigt Start, Ziel, fuenf Etappen, OSM-Quellenmass,
   Darstellungsart `ROUTE_GRAPH_POLYLINE` und die Unsicherheit gleichzeitig.
   Wird eine benoetigte Verbindung gesperrt, meldet sie `FAILED` statt Erfolg.
-- Der registrierte Demokorridor schaltet die vorhandenen amtlichen Render-GLBs
-  fuer Messekern und Umgebung auf 100 % Deckkraft und entfernt dort die
-  transparenten Legacy-Hallenkörper. Das Routenband bleibt als bewusstes
-  Karten-Overlay sichtbar. Diese Policy ist getestet; die reale WebGL-Ausgabe
-  des neuen Deployments bleibt bis zur Sichtpruefung `UNKNOWN`.
+- Registrierte amtliche Render-GLBs stehen in allen Presets bei 100 %
+  Deckkraft; transparente Legacy-Hallen werden dort nie gerendert. Stände
+  beginnen ausgeschaltet und koennen als eigene Ebene zugeschaltet werden.
+  Nur der demonstrative Korridor darf als Kartenband vor Geometrie liegen.
+- Das eingecheckte `terrain.glb` enthaelt 329.221 reale DGM1-Messpunkte mit
+  relativen Hoehen von -1,28 bis 10,54 m. Sein alter Index enthielt 1.203
+  ungueltige Referenzen; der aktive Renderer baut daraus nun deterministisch
+  1.968.000 gueltige Indizes bis maximal 329.220. Der Generator ist ebenfalls
+  korrigiert und bricht ohne DGM1 ab, statt ein Flachraster vorzutäuschen.
+- Das reale Geobasis-NRW-Orthofoto wird affine in denselben registrierten
+  Szenenraum projiziert. Der Asset-Nachweis ergibt 104.716 ueberdeckte
+  Terrain-Dreiecke; Daecher innerhalb desselben Ausschnitts erhalten dieselbe
+  reale Bildquelle. Die Wandmaterialien bleiben ehrlich prozedural, weil die
+  vorhandenen sogenannten Fassadenbilder keine belastbaren Hallenfassaden
+  zeigen.
+- Die binaere Hoehenabfrage liest den belegten 48-Byte-Header und denselben
+  DGM-Raster wie das GLB. Lade- und Formatfehler werden sichtbar gemeldet,
+  nicht mehr auf eine behauptete flache Hoehe reduziert.
 - LoD2, DGM1-Terrain, OSM-Snapshot, Hallenplaene, registrierte Halle 10.1,
   Fassadenreferenzen und amtliche Weltpakete bleiben unveraendert erhalten.
 
@@ -91,6 +105,8 @@ nicht als bestandene Sichtpruefung ausgegeben.
 | BEUTELTIER Standrouting | REAL + ACTIVE | bestehender `RouteGraph` und `findRoute()` |
 | BEUTELTIER Bahnhof -> Eingang Sued | REAL + ACTIVE auf Recovery-Branch | Dijkstra aus eingechecktem OSM-Snapshot |
 | BEUTELTIER Eingang Sued -> Halle 10.1 | PARTIAL | durchgaengiger Graph, aber Venue-Abschnitt sichtbar `unbestaetigt` |
+| BEUTELTIER DGM1 + Orthofoto | REAL + ACTIVE auf Recovery-Branch | gemessene Hoehen; gueltig repariertes Raster; registrierte Bildprojektion auf Terrain/Daecher |
+| BEUTELTIER angebliche Fassadenfotos | BROKEN + UNUSED | vorhandene JPGs zeigen nicht belastbar die bezeichneten Hallen und bleiben isoliert |
 | BEUTELTIER Browserdarstellung | UNKNOWN | Builds/Komponententests bestanden; Chromium in Arbeitsumgebung nicht verfuegbar |
 
 ## BROKEN / FAKE / DEAD
@@ -113,15 +129,23 @@ nicht als bestandene Sichtpruefung ausgegeben.
 - BEUTELTIERs Abschnitt Eingang Sued -> Piazza/Boulevard ist beobachtet, aber
   nicht als metrische Innenachse vermessen. Die vorhandene Passage 5-10 traegt
   46,8 m Lageunsicherheit und bleibt `unbestaetigt`.
+- Das eingecheckte alte `terrain.glb` hat einen kaputten Index. Der aktive
+  Branch repariert ihn beim Laden aus der belegten Rasterordnung; ein spaeter
+  neu gebautes Asset kommt aus dem korrigierten Generator. Das binaere Asset
+  selbst wird nicht heimlich als generierte PR-Beilage ersetzt.
+- `app/public/models/facades/*.jpg` und die entsprechenden Texturatlanten sind
+  keine belastbaren Bilder der so bezeichneten Hallen. Sie bleiben unbenutzt;
+  echte Fassadentexturierung ist damit noch nicht belegt.
 - Die oeffentliche Vercel-Seite laedt im Cloud-Browser, dessen sandboxed Chrome
   kann jedoch keinen WebGL-Kontext erzeugen. Die PR-Vorschau ist zusaetzlich
   durch Vercel-Login geschuetzt. Deshalb existiert hier kein Bild-PASS.
 
 ## WEDNESDAY PATH
 
-1. Den neuen Build von PR #43 in einem WebGL-faehigen Browser oeffnen,
-   `Korridor zeigen` anklicken und pruefen: massive Messe-/Umgebungsmodelle,
-   keine transparenten Legacy-Hallen, gelbe Unsicherheit und Ziel Halle 10.1.
+1. Den neuen Build von PR #43 in einem WebGL-faehigen Browser oeffnen und
+   pruefen: massive Welt bereits beim Start, Stände aus und zuschaltbar,
+   sichtbares Orthofoto auf reliefiertem Terrain und Daechern, ausgewaehlte
+   Halle gelb markiert, Demokorridor weiterhin lesbar.
 2. PR #43 und PR #73 reviewen; nur bei weiterhin gruenen Checks und nach der
    Sichtpruefung mergen.
 3. Genau diesen Korridor zeigen. Keine weitere Halle und keinen neuen
@@ -132,6 +156,8 @@ nicht als bestandene Sichtpruefung ausgegeben.
 - Integration und Operator-Zerlegung des grossen SHADED-Provider-/Paper-Katalogs.
 - Neue Rekonstruktionsprovider oder Modellinstallationen.
 - Vollstaendige Koelnmesse-Rekonstruktion jenseits des Demo-Korridors.
+- Erweiterung der Welt von Bahnhof bis A3/Parkhaeuser sowie ostwaerts und
+  westwaerts ueber den Rhein einschliesslich vollstaendiger Skyline.
 - Ausbau von `Can THEY Run It?`; vorhandene Benchmarkdaten bleiben erhalten.
 - Aktivierung/Pruefung eines Mesh-Renderers fuer SHADED.
 - Ausbau der SHADED-Weltgesetze. Nach Gamescom kehrt die Arbeit zu World,

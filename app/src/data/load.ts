@@ -256,6 +256,7 @@ export interface WorldDiagnostics {
   hallRegistrations: {
     registrations: Array<{
       hallKey: string;
+      targetFeatureIds: string[];
       status: 'draft' | 'constrained' | 'registered';
       source: string;
       residualM: number | null;

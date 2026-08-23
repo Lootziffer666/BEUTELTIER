@@ -63,7 +63,16 @@ page.on('console', (message) => {
 await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.waitForSelector('canvas', { timeout: 30000 });
 await page.waitForTimeout(3500);
-check('Gelände wird gerendert', true);
+const webglActive = await page.locator('canvas').evaluate((canvas) =>
+  Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl')),
+);
+check('WebGL-Kontext ist aktiv', webglActive);
+const terrainErrors = await page.locator('.scene-data-error').allTextContents();
+check(
+  'Terrain-Datenpfad meldet keinen Fehler',
+  terrainErrors.length === 0,
+  terrainErrors.join(' | '),
+);
 await aufnehmen(page, `${OUT}/app-1-gelaende-nordost.png`);
 
 // Die Gesamtansicht aus mehreren reproduzierbaren Orbit-Perspektiven sichern.

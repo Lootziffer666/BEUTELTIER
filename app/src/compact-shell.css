@@ -80,13 +80,25 @@
   padding: 0 8px 8px;
 }
 
-.icon-grid--two {
-  grid-template-columns: repeat(2, 1fr);
+.icon-grid--three {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .icon-choice {
   width: 100%;
   min-width: 0;
+}
+
+.scene-data-error {
+  max-width: min(440px, 78vw);
+  padding: 8px 10px;
+  border: 1px solid #d66b57;
+  border-radius: 8px;
+  background: rgba(28, 12, 12, 0.94);
+  color: #ffd8d0;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
 }
 
 .compact-slider {

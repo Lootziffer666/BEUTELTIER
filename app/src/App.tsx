@@ -31,6 +31,7 @@ export default function App() {
   const [stagingObjectCount, setStagingObjectCount] = useState(0);
   const [previewSafe, setPreviewSafe] = useState(true);
   const [cel, setCel] = useState(true);
+  const [showStands, setShowStands] = useState(false);
   const [toolboxOpen, setToolboxOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(() =>
     typeof window === 'undefined' ? true : window.matchMedia('(min-width: 901px)').matches,
@@ -174,12 +175,17 @@ export default function App() {
           route={route}
           preset={preset}
           focusHallKey={focusHallKey}
-          solidWorld={demoActive}
+          highlightHallKey={demoActive ? patchedData.demoCorridor?.target.hallKey ?? null : focusHallKey}
+          showStands={showStands}
+          routeOnTop={demoActive}
           previewSafe={previewSafe}
           cel={cel}
           onSelectStand={(standId) => {
             setDemoActive(false);
             setSelectedStandId(standId);
+            if (standId) {
+              setFocusHallKey(patchedData.standsById.get(standId)?.hallKey ?? null);
+            }
           }}
           onLeaveEgo={() => setPreset('uebersicht')}
           onStagingObjectCount={setStagingObjectCount}
@@ -187,6 +193,7 @@ export default function App() {
 
         <ProceduralStagingNotice
           visible={
+            showStands &&
             Boolean(focusHallKey) &&
             (preset === 'halle' || preset === 'ego') &&
             stagingObjectCount > 0
@@ -245,7 +252,7 @@ export default function App() {
 
             <details>
               <summary>Darstellung</summary>
-              <div className="icon-grid icon-grid--two">
+              <div className="icon-grid icon-grid--three" role="group" aria-label="Darstellung">
                 <button
                   type="button"
                   className={`icon-choice ${cel ? 'is-active' : ''}`}
@@ -263,6 +270,16 @@ export default function App() {
                   aria-label="Glasmodus umschalten"
                 >
                   ◇
+                </button>
+                <button
+                  type="button"
+                  className={`icon-choice ${showStands ? 'is-active' : ''}`}
+                  onClick={() => setShowStands((value) => !value)}
+                  title={showStands ? 'Stände ausblenden' : 'Stände einblenden'}
+                  aria-label={showStands ? 'Stände ausblenden' : 'Stände einblenden'}
+                  aria-pressed={showStands}
+                >
+                  ▥
                 </button>
               </div>
             </details>

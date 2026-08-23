@@ -55,6 +55,15 @@ import { KACHEL_M } from './textur';
 import { Kontur } from './Kontur';
 import { Ausstattung } from './Ausstattung';
 import { worldPresentation, type WorldPreset } from './worldPresentation';
+import {
+  applyRegisteredOrthoUv,
+  orthophotoTerrainGeometry,
+  parseTerrainHeightmap,
+  repairTerrainGrid,
+  sampleRegisteredTerrainHeight,
+  type RegisteredCorners,
+  type TerrainHeightmap,
+} from './terrainGeometry';
 
 export type CameraPreset = WorldPreset;
 
@@ -67,9 +76,12 @@ export interface SceneProps {
   route: Route | null;
   preset: CameraPreset;
   focusHallKey: string | null;
-  /** Zeigt im Demokorridor die vorhandenen Weltpakete als Welt statt als
-   * durchsichtige Kartenreferenz. */
-  solidWorld?: boolean;
+  /** Darf vom Kamerafokus abweichen, etwa beim Ziel des Gesamtkorridors. */
+  highlightHallKey?: string | null;
+  /** Standkoerper sind eine zuschaltbare Informationsebene, nicht die Welt. */
+  showStands: boolean;
+  /** Nur der Demokorridor darf als demonstrative Linie vor Geometrie stehen. */
+  routeOnTop?: boolean;
   onSelectStand: (standId: string | null) => void;
   /** Verlässt die Ego-Perspektive, wenn der Nutzer Escape drückt. */
   onLeaveEgo?: () => void;
@@ -159,45 +171,25 @@ const RUN_SPEED_M_PER_S = 4.2;
 function Ground({
   extent,
   centre,
-  ortho: meta,
+  ortho,
+  map,
+  backdropY,
 }: {
   extent: number;
   centre: [number, number];
   ortho: Ortho | null;
+  map: THREE.Texture | null;
+  backdropY: number;
 }) {
-  const ortho = useMemo(() => (meta ? orthoTexture(ORTHO_URL) : null), [meta]);
-  const registeredGeometry = useMemo(() => {
-    if (!meta?.corners) return null;
-    const [p00, p10, p01, p11] = meta.corners;
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute([
-      p00[0] - centre[0], -0.4, p00[1] - centre[1],
-      p10[0] - centre[0], -0.4, p10[1] - centre[1],
-      p01[0] - centre[0], -0.4, p01[1] - centre[1],
-      p11[0] - centre[0], -0.4, p11[1] - centre[1],
-    ], 3));
-    // Dieselbe UV-Orientierung wie die bisherige, um -90 Grad gedrehte
-    // PlaneGeometry. Nur die vier Ecken liegen jetzt im amtlichen Raum.
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute([
-      0, 1,
-      1, 1,
-      0, 0,
-      1, 0,
-    ], 2));
-    geometry.setIndex([0, 2, 1, 2, 3, 1]);
-    geometry.computeVertexNormals();
-    return geometry;
-  }, [meta, centre]);
-  useEffect(() => () => registeredGeometry?.dispose(), [registeredGeometry]);
-  if (!meta || !ortho) {
+  if (!ortho || !map) {
     return (
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]} receiveShadow>
-        <planeGeometry args={[extent * 2.2, extent * 2.2]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, backdropY, 0]} receiveShadow>
+        <planeGeometry args={[extent * 3, extent * 3]} />
         <meshStandardMaterial color={COLOURS.ground} roughness={1} />
       </mesh>
     );
   }
-  const extentM = meta.extent;
+  const extentM = ortho.extent;
   const width = extentM[2] - extentM[0];
   const height = extentM[3] - extentM[1];
   const midX = (extentM[0] + extentM[2]) / 2 - centre[0];
@@ -206,20 +198,14 @@ function Ground({
   return (
     <group>
       {/* Dahinter, damit der Horizont nicht abreisst. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.6, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, backdropY, 0]} receiveShadow>
         <planeGeometry args={[extent * 3, extent * 3]} />
         <meshStandardMaterial color={COLOURS.ground} roughness={1} />
       </mesh>
-      {registeredGeometry ? (
-        <mesh geometry={registeredGeometry} receiveShadow>
-          <meshStandardMaterial map={ortho} roughness={0.88} envMapIntensity={0.6} />
-        </mesh>
-      ) : (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[midX, -0.4, midZ]} receiveShadow>
-          <planeGeometry args={[width, height]} />
-          <meshStandardMaterial map={ortho} roughness={0.88} envMapIntensity={0.6} />
-        </mesh>
-      )}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[midX, -0.4, midZ]} receiveShadow>
+        <planeGeometry args={[width, height]} />
+        <meshStandardMaterial map={map} roughness={0.88} envMapIntensity={0.6} />
+      </mesh>
     </group>
   );
 }
@@ -291,10 +277,78 @@ function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] })
   * sind der Inhalt. Erst im Laufmodus wird daraus eine Wand, an der man steht.
   */
 
-/** Das amtliche DGM1-Terrain der Koelnmesse-Umgebung. */
-function Terrain({ centre }: { centre: [number, number] }) {
+/** Das amtliche DGM1-Terrain mit dem registrierten Luftbild als Oberflaeche. */
+function Terrain({
+  centre,
+  ortho,
+  map,
+}: {
+  centre: [number, number];
+  ortho: Ortho | null;
+  map: THREE.Texture | null;
+}) {
   const { scene } = useGLTF(TERRAIN_URL);
-  return <primitive object={scene} position={[-centre[0], -39.5, -centre[1]]} />;
+  const prepared = useMemo(() => {
+    try {
+      let source: THREE.BufferGeometry | null = null;
+      scene.traverse((node) => {
+        if (!source && node instanceof THREE.Mesh) source = node.geometry;
+      });
+      if (!source) throw new Error('Terrain-GLB enthaelt kein Mesh.');
+      const repaired = repairTerrainGrid(source);
+      const drape = ortho?.corners && map
+        ? orthophotoTerrainGeometry(
+            repaired.geometry,
+            repaired.cols,
+            repaired.rows,
+            ortho.corners as RegisteredCorners,
+          )
+        : null;
+      return { ...repaired, drape, error: null };
+    } catch (cause) {
+      return {
+        geometry: null,
+        drape: null,
+        cols: 0,
+        rows: 0,
+        error: cause instanceof Error ? cause.message : String(cause),
+      };
+    }
+  }, [scene, ortho, map]);
+
+  useEffect(() => () => {
+    prepared.drape?.dispose();
+    prepared.geometry?.dispose();
+  }, [prepared]);
+
+  if (prepared.error || !prepared.geometry) {
+    return (
+      <Html position={[0, 8, 0]} center>
+        <div className="scene-data-error">Gelände nicht verfügbar: {prepared.error}</div>
+      </Html>
+    );
+  }
+
+  return (
+    <group position={[-centre[0], 0, -centre[1]]}>
+      <mesh geometry={prepared.geometry} receiveShadow>
+        <meshStandardMaterial color="#4f5a55" roughness={1} />
+      </mesh>
+      {prepared.drape && map && (
+        <mesh geometry={prepared.drape} receiveShadow renderOrder={1}>
+          <meshStandardMaterial
+            map={map}
+            color="#ffffff"
+            roughness={0.9}
+            envMapIntensity={0.5}
+            polygonOffset
+            polygonOffsetFactor={-1}
+            polygonOffsetUnits={-1}
+          />
+        </mesh>
+      )}
+    </group>
+  );
 }
 
 /** Die Skyline der weiteren Umgebung (Dom, KölnTriangle, Messeturm, Hbf). */
@@ -450,6 +504,22 @@ function bauteil(name: string): 'roof' | 'ground' | 'wall' | null {
   return 'wall';
 }
 
+function featureId(name: string): string | null {
+  const [id, featureClass] = (name ?? '').split('|');
+  return id && (featureClass === 'Building' || featureClass === 'BuildingPart') ? id : null;
+}
+
+interface RegisteredOrthophoto {
+  map: THREE.Texture;
+  corners: RegisteredCorners;
+}
+
+function hallenHighlight(material: THREE.MeshStandardMaterial | THREE.MeshToonMaterial) {
+  material.color.set('#ffc247');
+  material.emissive.set('#6b3700');
+  material.emissiveIntensity = 0.55;
+}
+
 /**
  * Fertig behandelte Weltmodelle, nach Datei und Blickrichtung.
  *
@@ -524,6 +594,8 @@ function OfficialPackage({
   behandeln,
   deckkraft,
   cel,
+  orthophoto,
+  highlightFeatureIds,
 }: {
   uri: string;
   interior: boolean;
@@ -534,6 +606,10 @@ function OfficialPackage({
   deckkraft: number;
   /** Cel-Shading statt PBR: gestufte Beleuchtung und eine Kontur am Kern. */
   cel: boolean;
+  /** Reales Luftbild, nur fuer belegte Dachflaechen im Bildausschnitt. */
+  orthophoto: RegisteredOrthophoto | null;
+  /** Amtliche Feature-IDs der ausgewaehlten Halle. */
+  highlightFeatureIds: readonly string[];
 }) {
   const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
 
@@ -541,11 +617,19 @@ function OfficialPackage({
     // Umgebaut wird nur, was man von drinnen sieht -- von aussen bleibt das
     // Weltmodell inhaltlich, wie es geliefert wird.
     const umbauen = behandeln && !!surfaces && interior;
-    // Ohne Umbau, ohne Schleier und ohne Cel-Look gibt es nichts zu tun; dann
-    // ist die gelieferte Szene das Ergebnis und wird nicht einmal geklont.
-    if (!umbauen && deckkraft > 0.99 && !cel) return scene;
+    const highlightKey = [...highlightFeatureIds].sort().join(',');
+    // Ohne Umbau, Schleier, Luftbild, Highlight und Cel-Look gibt es nichts
+    // zu tun; dann ist die gelieferte Szene das Ergebnis und wird nicht geklont.
+    if (!umbauen && deckkraft > 0.99 && !cel && !orthophoto && !highlightKey) return scene;
 
-    const schluessel = `${uri}|${interior}|${deckkraft.toFixed(2)}|${cel}`;
+    const schluessel = [
+      uri,
+      interior,
+      deckkraft.toFixed(2),
+      cel,
+      orthophoto ? 'ortho' : 'ohne-ortho',
+      highlightKey,
+    ].join('|');
     const fertig = weltCache.get(schluessel);
     if (fertig) return fertig;
 
@@ -560,6 +644,7 @@ function OfficialPackage({
       for (const mesh of meshes) {
         const quelle = mesh.material as THREE.MeshStandardMaterial;
         const teil = bauteil(quelle.name) ?? 'wall';
+        const highlighted = highlightFeatureIds.includes(featureId(quelle.name) ?? '');
         const familie = familieFuer(teil, behandeln);
         if (umbauen && teil !== 'wall') {
           // Drinnen kommen Boden und Decke aus `Hallenhuelle` -- siehe unten.
@@ -574,11 +659,17 @@ function OfficialPackage({
         // Pappschachtel. Wo keine Karte mitkommt, zeichnet jetzt die Familie
         // selbst, projiziert in Metern statt über die Fläche gestreckt.
         const eigeneKarte = umbauen && surfaces ? surfaces.wand : null;
+        const realesDach = teil === 'roof' && orthophoto
+          ? applyRegisteredOrthoUv(mesh.geometry, orthophoto.corners)
+          : false;
         let material: THREE.MeshToonMaterial;
         if (eigeneKarte) {
           material = toonMaterial(familie, {
             map: eigeneKarte.map, normalMap: eigeneKarte.normalMap,
           }, { side: THREE.DoubleSide });
+        } else if (realesDach && orthophoto) {
+          material = toonMaterial(familie, { map: orthophoto.map }, { side: THREE.DoubleSide });
+          material.color.set('#ffffff');
         } else if (quelle.map) {
           material = toonMaterial(familie, {
             map: quelle.map, normalMap: quelle.normalMap,
@@ -587,6 +678,7 @@ function OfficialPackage({
           projiziereUV(mesh.geometry, KACHEL_M[familie.id] ?? 6);
           material = familienMaterial(familie, undefined, { side: THREE.DoubleSide });
         }
+        if (highlighted) hallenHighlight(material);
         schleier(material, deckkraft);
         mesh.material = material;
         mesh.receiveShadow = true;
@@ -606,12 +698,22 @@ function OfficialPackage({
       if (!(node instanceof THREE.Mesh)) return;
       const quelle = node.material as THREE.MeshStandardMaterial;
       const teil = bauteil(quelle.name);
+      const highlighted = highlightFeatureIds.includes(featureId(quelle.name) ?? '');
+      const realesDach = teil === 'roof' && orthophoto
+        ? applyRegisteredOrthoUv(node.geometry, orthophoto.corners)
+        : false;
       if (!umbauen || !teil || !surfaces) {
-        // Nur der Schleier. Das Material wird geklont, weil die Vorlage aus
-        // dem GLB-Cache kommt und von anderen Presets weiterbenutzt wird --
-        // sie hier zu veraendern faerbte auch die Übersicht ein.
-        if (deckkraft <= 0.99) {
+        // Schleier, reales Dachbild und Highlight brauchen eine eigene Kopie:
+        // die Vorlage kommt aus dem GLB-Cache und wird von anderen Ansichten
+        // weiterbenutzt.
+        if (deckkraft <= 0.99 || realesDach || highlighted) {
           const kopie = quelle.clone();
+          if (realesDach && orthophoto) {
+            kopie.map = orthophoto.map;
+            kopie.color.set('#ffffff');
+            kopie.roughness = 0.9;
+          }
+          if (highlighted) hallenHighlight(kopie);
           schleier(kopie, deckkraft);
           node.material = kopie;
         }
@@ -640,6 +742,7 @@ function OfficialPackage({
       material.metalness = 0.18;
       material.envMapIntensity = 0.9;
       material.normalScale = new THREE.Vector2(1.0, 1.0);
+      if (highlighted) hallenHighlight(material);
       schleier(material, deckkraft);
       node.material = material;
       node.receiveShadow = true;
@@ -648,7 +751,17 @@ function OfficialPackage({
 
     weltCache.set(schluessel, clone);
     return clone;
-  }, [scene, interior, surfaces, behandeln, uri, deckkraft, cel]);
+  }, [
+    scene,
+    interior,
+    surfaces,
+    behandeln,
+    uri,
+    deckkraft,
+    cel,
+    orthophoto,
+    highlightFeatureIds,
+  ]);
 
   return <primitive object={model} />;
 }
@@ -659,12 +772,16 @@ function OfficialWorld({
   preset,
   cel,
   deckkraft,
+  orthophoto,
+  highlightHallKey,
 }: {
   data: Dataset;
   centre: [number, number];
   preset: CameraPreset;
   cel: boolean;
   deckkraft: { kern: number; umgebung: number };
+  orthophoto: RegisteredOrthophoto | null;
+  highlightHallKey: string | null;
 }) {
   const interior = preset === 'ego';
   const surfaces = weltFlaechen(interior);
@@ -672,6 +789,12 @@ function OfficialWorld({
   const packages = data.world?.manifest.packages.filter(
     (entry) => entry.available && entry.role === 'render',
   ) ?? [];
+  const highlightFeatureIds = useMemo(() => {
+    if (!highlightHallKey) return [];
+    return data.world?.hallRegistrations?.registrations.find(
+      (entry) => entry.hallKey === highlightHallKey,
+    )?.targetFeatureIds ?? [];
+  }, [data.world, highlightHallKey]);
 
   if (!packages.length) return null;
   // Die GLB-Pakete stehen im selben rechtshaendigen System wie alles andere:
@@ -696,6 +819,8 @@ function OfficialWorld({
             behandeln={kern}
             deckkraft={kern ? deckkraft.kern : deckkraft.umgebung}
             cel={cel}
+            orthophoto={orthophoto}
+            highlightFeatureIds={highlightFeatureIds}
           />
         );
       })}
@@ -1007,10 +1132,12 @@ function RouteRibbon({
   data,
   route,
   centre,
+  onTop,
 }: {
   data: Dataset;
   route: Route | null;
   centre: [number, number];
+  onTop: boolean;
 }) {
   const geometry = useMemo(() => {
     if (!route || route.steps.length === 0) return null;
@@ -1028,14 +1155,14 @@ function RouteRibbon({
 
   const hasUnconfirmed = (route?.unconfirmed.length ?? 0) > 0;
   return (
-    <mesh geometry={geometry} renderOrder={50}>
+    <mesh geometry={geometry} renderOrder={onTop ? 50 : 0}>
       <meshStandardMaterial
         color={hasUnconfirmed ? COLOURS.routeUnconfirmed : COLOURS.route}
         emissive={hasUnconfirmed ? COLOURS.routeUnconfirmed : COLOURS.route}
         emissiveIntensity={0.65}
         roughness={0.4}
-        depthTest={false}
-        depthWrite={false}
+        depthTest={!onTop}
+        depthWrite={!onTop}
       />
     </mesh>
   );
@@ -1100,159 +1227,60 @@ const FLY_SPEED_M_PER_S = 2.4;
 /**
  * Terrain-Höhenabfrage über eine Heightmap-Tabelle.
  *
- * Die Heightmap ist ein Flözelliges Float-Array, das vom DGM1-WCS-Download
- * (5 m Raster) stammt. Für jede (x, y) Position wird bilinear interpoliert --
+ * Die Heightmap ist ein flaches Float-Array, ein eingecheckter 10-m-Abgriff
+ * des DGM1-WCS-Rasters. Fuer jede (x, y) Position wird bilinear interpoliert --
  * das kostet O(1) und ist für First-Person ausreichend schnell.
  *
- * Konstruiert aus dem JSON, das build_terrain.py exportiert. Ladefehler
- * (Offline, alte Snapshots) lassen die Höhe auf 0.0 fallen -- dann läuft
- * der Spieler über das flache Orthofoto statt über das Gelände.
+ * Konstruiert aus dem eingecheckten DGM1-Binaersnapshot. Ein Lade- oder
+ * Formatfehler wird sichtbar gemeldet; es gibt keinen behaupteten
+ * Terrain-Erfolg auf einer erfundenen flachen Hoehe.
  */
-function useTerrainHeightmap(centre: [number, number]): (x: number, y: number) => number | null {
+function useTerrainHeightmap(worldOrigin: [number, number, number] | null): {
+  sample: (x: number, y: number) => number | null;
+  error: string | null;
+} {
+  const [error, setError] = useState<string | null>(null);
   const cache = useRef<{
-    origin: [number, number, number];
-    stepM: number;
-    cols: number;
-    rows: number;
-    heights: Float32Array | null;
-    sceneOffset: number;
-    /** Gecachtes Fenster in UTM-Koordinaten */
-    windowCenterX: number;
-    windowCenterY: number;
-    windowSize: number;
-    /** Grid-Anweisungen für das aktuelle Fenster */
-    winStartX: number;
-    winStartY: number;
-    winCols: number;
-    winRows: number;
-    /** Gecachte Höhen im Fenster */
-    windowHeights: Float32Array | null;
+    worldOrigin: [number, number, number];
+    map: TerrainHeightmap;
   } | null>(null);
-
-  const WINDOW_M = 32; // 32×32m Caching-Fenster
 
   // Lazy-load: Binary-Heightmap beim ersten Render
   useEffect(() => {
     const abort = new AbortController();
+    if (!worldOrigin) {
+      setError('Amtlicher Szenenursprung fehlt.');
+      return () => abort.abort();
+    }
     fetch(`${import.meta.env.BASE_URL}data/terrain_heightmap.bin`)
-      .then((r) => (r.ok ? r.arrayBuffer() : null))
-      .then((buf: ArrayBuffer | null) => {
-        if (!buf || abort.signal.aborted) return;
-        const view = new DataView(buf);
-        cache.current = {
-          origin: [view.getFloat64(0, true), view.getFloat64(8, true), view.getFloat64(16, true)],
-          stepM: view.getFloat64(24, true),
-          cols: view.getUint32(32, true),
-          rows: view.getUint32(36, true),
-          sceneOffset: view.getFloat64(40, true),
-          heights: new Float32Array(buf, 44),
-          windowCenterX: 0,
-          windowCenterY: 0,
-          windowSize: WINDOW_M,
-          winStartX: 0,
-          winStartY: 0,
-          winCols: 0,
-          winRows: 0,
-          windowHeights: null,
-        };
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.arrayBuffer();
       })
-      .catch(() => {
+      .then((buf: ArrayBuffer) => {
+        if (abort.signal.aborted) return;
+        cache.current = {
+          worldOrigin,
+          map: parseTerrainHeightmap(buf),
+        };
+        setError(null);
+      })
+      .catch((cause: unknown) => {
+        if (abort.signal.aborted) return;
         cache.current = null;
+        setError(cause instanceof Error ? cause.message : String(cause));
       });
     return () => abort.abort();
+  }, [worldOrigin]);
+
+  const sample = useCallback((x: number, y: number): number | null => {
+    const loaded = cache.current;
+    return loaded
+      ? sampleRegisteredTerrainHeight(loaded.map, loaded.worldOrigin, x, y)
+      : null;
   }, []);
 
-  return useCallback((x: number, y: number): number | null => {
-    const m = cache.current;
-    if (!m || !m.heights) return null;
-
-    // Scene -> UTM
-    const utmX = x + centre[0];
-    const utmY = y + centre[1];
-    const halfWin = m.windowSize / 2;
-
-    // Prüfe ob (utmX, utmY) im aktuellen Cache-Fenster liegt
-    // Fenster ist zentriert auf (windowCenterX, windowCenterY)
-    const needRefresh = !m.windowHeights ||
-      Math.abs(utmX - m.windowCenterX) > halfWin ||
-      Math.abs(utmY - m.windowCenterY) > halfWin;
-
-    if (needRefresh) {
-      // Verschiebe Fenster zum neuen Zentrum
-      m.windowCenterX = utmX;
-      m.windowCenterY = utmY;
-      m.winStartX = utmX - halfWin;
-      m.winStartY = utmY - halfWin;
-      m.winCols = Math.ceil(m.windowSize / m.stepM) + 1;
-      m.winRows = Math.ceil(m.windowSize / m.stepM) + 1;
-      const winSize = m.winCols * m.winRows;
-      m.windowHeights = new Float32Array(winSize);
-
-      // Fülle Fenster mit interpolierten Höhenwerten
-      for (let wy = 0; wy < m.winRows; wy++) {
-        const utmRowY = m.winStartY + wy * m.stepM;
-        const relY = (utmRowY - m.origin[1]) / m.stepM;
-        const iy0 = Math.floor(relY);
-        const fy1 = relY - iy0;
-        for (let wx = 0; wx < m.winCols; wx++) {
-          const utmColX = m.winStartX + wx * m.stepM;
-          const relX = (utmColX - m.origin[0]) / m.stepM;
-          const ix0 = Math.floor(relX);
-          const fx1 = relX - ix0;
-          const idx = (iy: number, ix: number) => iy * m.cols + ix;
-          if (ix0 < 0 || iy0 < 0 || ix0 >= m.cols - 1 || iy0 >= m.rows - 1) {
-            m.windowHeights[wy * m.winCols + wx] = NaN;
-            continue;
-          }
-          const h00 = m.heights[idx(iy0, ix0)];
-          const h01 = m.heights[idx(iy0, ix0 + 1)];
-          const h10 = m.heights[idx(iy0 + 1, ix0)];
-          const h11 = m.heights[idx(iy0 + 1, ix0 + 1)];
-          const h0 = h00 * (1 - fx1) + h01 * fx1;
-          const h1 = h10 * (1 - fx1) + h11 * fx1;
-          m.windowHeights[wy * m.winCols + wx] = h0 * (1 - fy1) + h1 * fy1;
-        }
-      }
-    }
-
-    // Sample aus gecachtem Fenster
-    const fx = (utmX - m.winStartX) / m.stepM;
-    const fy = (utmY - m.winStartY) / m.stepM;
-    const ix0 = Math.floor(fx);
-    const iy0 = Math.floor(fy);
-
-    if (ix0 < 0 || iy0 < 0 || ix0 >= m.winCols - 1 || iy0 >= m.winRows - 1) {
-      // Outside window: global sample (shouldn't happen if window is centered)
-      const relX = (utmX - m.origin[0]) / m.stepM;
-      const relY = (utmY - m.origin[1]) / m.stepM;
-      const ixG = Math.floor(relX);
-      const iyG = Math.floor(relY);
-      if (ixG < 0 || iyG < 0 || ixG >= m.cols - 1 || iyG >= m.rows - 1) return null;
-      const fxG1 = relX - ixG;
-      const fyG1 = relY - iyG;
-      const idx = (iy: number, ix: number) => iy * m.cols + ix;
-      const h00 = m.heights[idx(iyG, ixG)];
-      const h01 = m.heights[idx(iyG, ixG + 1)];
-      const h10 = m.heights[idx(iyG + 1, ixG)];
-      const h11 = m.heights[idx(iyG + 1, ixG + 1)];
-      const h0 = h00 * (1 - fxG1) + h01 * fxG1;
-      const h1 = h10 * (1 - fxG1) + h11 * fxG1;
-      const h = h0 * (1 - fyG1) + h1 * fyG1;
-      return h !== h ? null : h + m.sceneOffset;
-    }
-
-    // Bilineare Interpolation aus gecachtem Fenster-Fenster
-    const fx1 = fx - ix0;
-    const fy1 = fy - iy0;
-    const h00 = m.windowHeights![iy0 * m.winCols + ix0];
-    const h01 = m.windowHeights![iy0 * m.winCols + ix0 + 1];
-    const h10 = m.windowHeights![(iy0 + 1) * m.winCols + ix0];
-    const h11 = m.windowHeights![(iy0 + 1) * m.winCols + ix0 + 1];
-    const h0 = h00 * (1 - fx1) + h01 * fx1;
-    const h1 = h10 * (1 - fx1) + h11 * fx1;
-    const h = h0 * (1 - fy1) + h1 * fy1;
-    return h !== h ? null : h + m.sceneOffset;
-  }, [centre]);
+  return { sample, error };
 }
 
 function WalkControls({
@@ -1492,19 +1520,6 @@ function WalkControls({
         (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0);
       const climb = (pressed.has(' ') ? 1 : 0) - (pressed.has('control') ? 1 : 0);
 
-      // Terrain-Höhenabfrage: Wenn WalkGrid.move() nicht bewegt hat (blockiert),
-      // prüfen wir, ob es ein nicht-blockiertes Außengebiet mit Terrain ist.
-      const tryTerrainMove = (from: { x: number; y: number; z: number }, dx: number, dy: number) => {
-        const footing = data.walk.footingAt(from.x + dx, from.y + dy, from.z);
-        if (!footing.blocked) {
-          // Im Freien: Terrain-Höhe über Heightmap (O(1), kein Raycast nötig)
-          const terrainZ = terrainHeight(from.x + dx, from.y + dy);
-          const z = terrainZ !== null ? terrainZ : from.z;
-          return { x: from.x + dx, y: from.y + dy, z };
-        }
-        return from;
-      };
-
       if (forward || strafe) {
         const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
         const { yaw } = look.current;
@@ -1515,9 +1530,15 @@ function WalkControls({
         } else {
           const moved = data.walk.move(position.current, dx, dy);
           if (moved.x !== position.current.x || moved.y !== position.current.y) {
-            position.current = moved;
-          } else {
-            position.current = tryTerrainMove(position.current, dx, dy);
+            const footing = data.walk.footingAt(moved.x, moved.y, moved.z);
+            // WalkGrid laesst den unbekannten Aussenraum bewusst bei z=0
+            // offen. Nur dort ersetzt das echte DGM1 diese Arbeitsebene;
+            // Hallen, Rampen und belegte Boulevardflaechen behalten ihre
+            // jeweils autoritative Hoehe.
+            const terrainZ = !footing.hallKey && footing.surfaceId === 'legacy-open-outside'
+              ? terrainHeight(moved.x, moved.y)
+              : null;
+            position.current = terrainZ === null ? moved : { ...moved, z: terrainZ };
           }
         }
       }
@@ -1609,10 +1630,18 @@ export function SiteScene(props: SceneProps) {
   const { data, upperOpacity, route, preset, focusHallKey } = props;
   const cel = props.cel ?? true;
   const centre = useMemo(() => siteCentre(data.site), [data.site]);
-  const terrainHeight = useTerrainHeightmap(centre);
-  /** Referenz auf das Terrain-GLB für Raycast-basierte Höhenabfrage im First-Person-Modus. */
   const registered = data.spatialMode === 'registered';
-  const presentation = worldPresentation(preset, registered, props.solidWorld ?? false);
+  const terrainHeightmap = useTerrainHeightmap(data.world?.manifest.origin ?? null);
+  const terrainHeight = terrainHeightmap.sample;
+  const presentation = worldPresentation(preset, registered);
+  // Eine Texturinstanz fuer Terrain und Dachprojektion. Sie bleibt wie die
+  // Weltmodelle fuer die Sitzung im Cache; deren Materialien verweisen darauf.
+  const orthoMap = useMemo(() => (data.ortho ? orthoTexture(ORTHO_URL) : null), [data.ortho]);
+  const registeredOrthophoto = useMemo<RegisteredOrthophoto | null>(() => (
+    registered && data.ortho?.corners && orthoMap
+      ? { map: orthoMap, corners: data.ortho.corners as RegisteredCorners }
+      : null
+  ), [registered, data.ortho, orthoMap]);
 
   /**
    * In welcher Halle die Kamera gerade steht.
@@ -1702,18 +1731,34 @@ export function SiteScene(props: SceneProps) {
       />
       <Beleuchtung extent={extent} interior={preset === 'ego'} />
 
+      {terrainHeightmap.error && (
+        <Html position={[0, 12, 0]} center>
+          <div className="scene-data-error">
+            Gelände-Höhenabfrage nicht verfügbar: {terrainHeightmap.error}
+          </div>
+        </Html>
+      )}
+
       {/* Das amtliche DGM1-Terrain -- das Fundament, auf dem alles steht. */}
-      <Suspense fallback={null}>
-        <Terrain centre={centre} />
-      </Suspense>
+      {registered && (
+        <Suspense fallback={null}>
+          <Terrain centre={centre} ortho={data.ortho} map={orthoMap} />
+        </Suspense>
+      )}
       {/* Die Skyline der weiteren Umgebung im Hintergrund. */}
       <Suspense fallback={null}>
         <Skyline centre={centre} />
       </Suspense>
 
-      {/* Das Orthofoto bleibt Bodenreferenz, solange kein amtlicher Boden aus
-          den Weltpaketen zur Verfügung steht -- auch im registrierten Modus. */}
-      <Ground extent={extent} centre={centre} ortho={data.ortho} />
+      {/* Im registrierten Modus liegt das Luftbild auf dem DGM1 oben. Die
+          flache Variante bleibt nur fuer den alten Planraum erhalten. */}
+      <Ground
+        extent={extent}
+        centre={centre}
+        ortho={registered ? null : data.ortho}
+        map={registered ? null : orthoMap}
+        backdropY={registered ? -2 : -0.6}
+      />
       <Umgebung data={data} centre={centre} />
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
           tragen sie weiterhin. Deshalb Suspense ohne Ersatzdarstellung. */}
@@ -1734,10 +1779,12 @@ export function SiteScene(props: SceneProps) {
             preset={preset}
             cel={cel}
             deckkraft={presentation.deckkraft}
+            orthophoto={registeredOrthophoto}
+            highlightHallKey={props.highlightHallKey ?? focusHallKey}
           />
         </Suspense>
       )}
-      {(preset === 'halle' || preset === 'ego') && focusHallKey && !LEER_ERLAUBT && (
+      {props.showStands && (preset === 'halle' || preset === 'ego') && focusHallKey && !LEER_ERLAUBT && (
         <ProceduralStaging
           data={data}
           centre={centre}
@@ -1753,7 +1800,7 @@ export function SiteScene(props: SceneProps) {
       {presentation.showHallOverlay && (
         <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
       )}
-      {!LEER_ERLAUBT && (
+      {props.showStands && !LEER_ERLAUBT && (
         <Stands
           data={data}
           centre={centre}
@@ -1765,7 +1812,7 @@ export function SiteScene(props: SceneProps) {
           onSelectStand={props.onSelectStand}
         />
       )}
-      {!LEER_ERLAUBT && (
+      {props.showStands && !LEER_ERLAUBT && (
         <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
       )}
       <Hallenhuelle data={data} centre={centre} visible={preset === 'ego'} />
@@ -1789,7 +1836,12 @@ export function SiteScene(props: SceneProps) {
         active={preset === 'ego'}
       />
       <Vertikalverbindungen data={data} centre={centre} />
-      <RouteRibbon data={data} route={route} centre={centre} />
+      <RouteRibbon
+        data={data}
+        route={route}
+        centre={centre}
+        onTop={props.routeOnTop ?? false}
+      />
       {preset !== 'ego' && (
         <HallLabels data={data} centre={centre} upperOpacity={upperOpacity} />
       )}

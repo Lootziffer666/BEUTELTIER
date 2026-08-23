@@ -232,25 +232,23 @@ def build_terrain_mesh(raster: list[list[float]]) -> Part:
     def scene_xy(grid_x: int, grid_y: int) -> tuple[float, float]:
         return (ox0 + grid_x * STEP_M, -oy0 - grid_y * STEP_M)
     
-    def uv(grid_x: int, grid_y: int) -> tuple[float, float]:
-        return (grid_x / (cols - 1), grid_y / (rows - 1))
-    
-    base = 0
     for gy in range(rows):
         for gx in range(cols):
             sx, sz = scene_xy(gx, gy)
             h = raster[gy][gx]
             sy = h - ORIGIN[2]
             part.positions.extend([sx, sy, sz])
-            if gy > 0 and gx > 0:
-                a = base + gx + gy * cols
-                b = a + 1
-                c = a + cols
-                d = b + cols
-                part.indices.extend([a, c, b, b, c, d])
-    
-    for i in range(len(part.positions) // 3):
-        part.uvs.append((i % (cols - 1)) / (cols - 1) if cols > 1 else 0)
+            part.uvs.extend((gx / (cols - 1), gy / (rows - 1)))
+
+    for gy in range(rows - 1):
+        for gx in range(cols - 1):
+            a = gx + gy * cols
+            b = a + 1
+            c = a + cols
+            d = c + 1
+            # sceneZ nimmt zeilenweise ab. Diese Reihenfolge zeigt nach +Y
+            # und referenziert ausschliesslich vorhandene Rasterpunkte.
+            part.indices.extend([a, b, c, b, d, c])
     
     count = len(part.positions) // 3
     for i in range(count):
@@ -262,15 +260,13 @@ def build_terrain_mesh(raster: list[list[float]]) -> Part:
 
 def main() -> int:
     print("Terrain aus DGM1 bauen ...")
-    
+
     try:
         raster = load_dgm1_raster()
     except Exception as e:
         print(f"  Fehler beim Laden: {e}", file=sys.stderr)
-        print("  Verwende Fallback-Raster (Konstant 40m)", file=sys.stderr)
-        cols = int((EXTENT_C[2] - EXTENT_C[0]) / STEP_M) + 1
-        rows = int((EXTENT_C[3] - EXTENT_C[1]) / STEP_M) + 1
-        raster = [[ORIGIN[2]] * cols for _ in range(rows)]
+        print("  Abbruch: kein simuliertes Flachraster wird erzeugt.", file=sys.stderr)
+        return 1
     
     print(f"  Raster: {len(raster)}×{len(raster[0])} Punkte")
     part = build_terrain_mesh(raster)
