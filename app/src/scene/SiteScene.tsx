@@ -56,6 +56,7 @@ import { Ausstattung } from './Ausstattung';
 import { worldPresentation, type WorldPreset } from './worldPresentation';
 import {
   applyRegisteredOrthoUv,
+  bareTerrainGeometry,
   orthophotoTerrainGeometry,
   parseTerrainHeightmap,
   registeredOrthoContains,
@@ -370,11 +371,21 @@ function Terrain({
             ortho.corners as RegisteredCorners,
           )
         : null;
-      return { ...repaired, drape, error: null };
+      // Grundnetz und Luftbild-Haut lagen bislang deckungsgleich uebereinander
+      // und verliessen sich auf `polygonOffset`, um im Tiefentest zu
+      // gewinnen. An steilen Kanten (grosser Hoehensprung auf kurzer
+      // Strecke, etwa an wieder geschlossenen Gebaeudemasken) kippt dieser
+      // Test lokal um, und das unbelichtete Grundmaterial blitzt als dunkler
+      // Fleck durch. `bare` traegt deshalb nur noch die Dreiecke, die das
+      // Luftbild nicht bereits zeichnet -- ausserhalb seiner Abdeckung, wo
+      // das Grundnetz weiterhin der einzige Bodenkontakt ist.
+      const bare = drape ? bareTerrainGeometry(repaired.geometry, drape) : repaired.geometry;
+      return { ...repaired, drape, bare, error: null };
     } catch (cause) {
       return {
         geometry: null,
         drape: null,
+        bare: null,
         cols: 0,
         rows: 0,
         error: cause instanceof Error ? cause.message : String(cause),
@@ -384,6 +395,7 @@ function Terrain({
 
   useEffect(() => () => {
     prepared.drape?.dispose();
+    if (prepared.bare !== prepared.geometry) prepared.bare?.dispose();
     prepared.geometry?.dispose();
   }, [prepared]);
 
@@ -397,9 +409,11 @@ function Terrain({
 
   return (
     <group position={[-centre[0], 0, -centre[1]]}>
-      <mesh geometry={prepared.geometry} receiveShadow>
-        <meshStandardMaterial color="#4f5a55" roughness={1} />
-      </mesh>
+      {prepared.bare && (
+        <mesh geometry={prepared.bare} receiveShadow>
+          <meshStandardMaterial color="#4f5a55" roughness={1} />
+        </mesh>
+      )}
       {prepared.drape && map && (
         <mesh geometry={prepared.drape} receiveShadow renderOrder={1}>
           <meshStandardMaterial
@@ -632,7 +646,7 @@ function schleier(material: THREE.Material, deckkraft: number) {
  * auch nicht. Glas, Metall und Vegetation bekommen ihre Familien dort, wo sie
  * als eigene Objekte entstehen, nicht hier.
  */
-function familieFuer(teil: 'roof' | 'ground' | 'wall', kern: boolean): Familie {
+function familieFuer(teil: 'roof' | 'ground' | 'wall'): Familie {
   // Die Umgebung ist Hintergrund und bleibt gedeckt -- aber sie ist deshalb
   // nicht **eine** Fläche. Hier stand `return FAMILIEN.M05` für alles, und
   // M05 ist Aussenbeton: ein Plattenraster mit Fuge. Jede Wand jedes
@@ -641,9 +655,23 @@ function familieFuer(teil: 'roof' | 'ground' | 'wall', kern: boolean): Familie {
   //
   // Boden bleibt Boden, Wand wird Wand. Dass die Umgebung ruhiger ist als der
   // Kern, entscheidet die Deckkraft und nicht eine falsche Familie.
-  if (!kern) return teil === 'ground' ? FAMILIEN.M05 : FAMILIEN.M01;
-  if (teil === 'roof') return FAMILIEN.M02;
-  if (teil === 'ground') return FAMILIEN.M03;
+  //
+  // `ground` ist die amtliche LoD2-Grundflaeche des Gebaeudes -- draussen der
+  // Fussabdruck auf dem Vorplatz, nicht der Hallenboden. M03 (FLOOR_DARK) ist
+  // fuer den dunklen *Innen*boden gedacht; drinnen wird diese Flaeche ohnehin
+  // ausgeblendet und durch `Hallenhuelle` ersetzt (siehe `umbauen` oben). Bis
+  // hierher stand fuer den Kern trotzdem M03, und zwar unabhaengig davon, ob
+  // man drinnen oder draussen steht -- der Kernhallen-Fussabdruck erschien von
+  // aussen deshalb als dunkler Fleck im hellen Aussengelaende, wo eigentlich
+  // derselbe Aussenbeton wie um jedes andere Gebaeude steht.
+  // `roof` ist der zweite Fall ohne Lichtbild: fehlt fuer eine Dachflaeche das
+  // reale Orthofoto (ausserhalb des belegten Bildausschnitts, oder Paket ohne
+  // `orthophoto`-Prop), griff hier bisher M02 -- STRUCTURE_DARK, "Stuetzen,
+  // Deckentraeger, dunkle Hallenstruktur". Das ist eine senkrechte
+  // Tragwerksfarbe, keine Dachfarbe: der Kern-Fussabdruck bekam dadurch ein
+  // fast schwarzes Dach, sobald das Foto fehlte, sichtbar als dunkler Block
+  // mitten im hellen Aussengelaende.
+  if (teil === 'roof' || teil === 'ground') return FAMILIEN.M05;
   return FAMILIEN.M01;
 }
 
@@ -717,7 +745,7 @@ function OfficialPackage({
         };
         const teil = bauteil(quelle.name) ?? 'wall';
         const highlighted = highlightFeatureIds.includes(featureId(quelle.name) ?? '');
-        const familie = familieFuer(teil, behandeln);
+        const familie = familieFuer(teil);
         if (umbauen && teil !== 'wall') {
           // Drinnen kommen Boden und Decke aus `Hallenhuelle` -- siehe unten.
           mesh.visible = false;
@@ -726,8 +754,15 @@ function OfficialPackage({
         if (umbauen && surfaces) projiziereUV(editierbareGeometrie(), WELT_KACHEL_M.wand);
         // Die amtlichen GLB-Pakete bringen fuer Waende kein Foto mit. Aussen
         // bleibt die Wand deshalb bewusst eine saubere Materialklasse statt
-        // einer erfundenen Fassadentextur. Nur Innenwaende erhalten die aus
-        // Referenzbildern abgeleitete Familienzeichnung.
+        // einer erfundenen Fassadentextur -- aber "Materialklasse" heisst die
+        // gezeichnete Familienstruktur (Fugen, Platten), nicht eine einzelne
+        // flache Farbe ohne jede Zeichnung. Hier stand fuer die Aussenwand ein
+        // eigener Zweig, der `familienMaterial` genau umging und nur die
+        // nackte Grundfarbe der Familie setzte -- deshalb blieben Fassaden
+        // aussen eine einfarbige Flaeche, waehrend dieselbe Familie innen (mit
+        // `familienMaterial` unten) sichtbar strukturiert ist. Der allgemeine
+        // Zweig unten deckt Waende jetzt mit ab: er projiziert dieselbe
+        // Familienzeichnung, kein Foto.
         const eigeneKarte = umbauen && surfaces ? surfaces.wand : null;
         const realesDach = teil === 'roof' && orthophoto
           ? applyRegisteredOrthoUv(editierbareGeometrie(), orthophoto.corners)
@@ -744,8 +779,6 @@ function OfficialPackage({
           material = toonMaterial(familie, {
             map: quelle.map, normalMap: quelle.normalMap,
           }, { side: THREE.DoubleSide });
-        } else if (teil === 'wall' && !interior) {
-          material = toonMaterial(familie, {}, { side: THREE.DoubleSide });
         } else {
           projiziereUV(editierbareGeometrie(), KACHEL_M[familie.id] ?? 6);
           material = familienMaterial(familie, undefined, { side: THREE.DoubleSide });

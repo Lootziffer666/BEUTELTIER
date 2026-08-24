@@ -410,3 +410,53 @@ export function orthophotoTerrainGeometry(
   geometry.computeBoundingSphere();
   return geometry;
 }
+
+/**
+ * Das nackte DGM1 abzueglich der Dreiecke, die `orthophotoTerrainGeometry`
+ * bereits als zweite Haut zeichnet.
+ *
+ * Beide Netze standen bislang deckungsgleich uebereinander -- dieselben
+ * Positionen, zweimal indiziert -- und verliessen sich allein auf
+ * `polygonOffset`, um beim Tiefentest zu gewinnen. Auf flachem Gelaende
+ * reicht das; an den steilen Kanten, an denen die Gebaeudemaske wieder
+ * geschlossen wird (grosser Tiefenunterschied auf kurzer Strecke), kippt der
+ * Tiefentest lokal um, und das unbelichtete Grundmaterial blitzt als dunkler
+ * Fleck durch das Luftbild. Der einzige Weg, der auf jedem Renderer sicher
+ * ist: dort gar nicht erst zwei Dreiecke uebereinanderlegen. Wo das Luftbild
+ * greift, bleibt vom Grundnetz nichts uebrig; nur ausserhalb seiner
+ * Abdeckung wird das Grundmaterial ueberhaupt gezeichnet.
+ */
+export function bareTerrainGeometry(
+  terrain: THREE.BufferGeometry,
+  drape: THREE.BufferGeometry,
+): THREE.BufferGeometry | null {
+  const terrainIndex = terrain.getIndex();
+  const drapeIndex = drape.getIndex();
+  if (!terrainIndex || !drapeIndex) return null;
+
+  const covered = new Set<string>();
+  for (let offset = 0; offset < drapeIndex.count; offset += 3) {
+    const tri = [drapeIndex.getX(offset), drapeIndex.getX(offset + 1), drapeIndex.getX(offset + 2)]
+      .sort((a, b) => a - b);
+    covered.add(tri.join(':'));
+  }
+
+  const indices: number[] = [];
+  for (let offset = 0; offset < terrainIndex.count; offset += 3) {
+    const a = terrainIndex.getX(offset);
+    const b = terrainIndex.getX(offset + 1);
+    const c = terrainIndex.getX(offset + 2);
+    const key = [a, b, c].sort((x, y) => x - y).join(':');
+    if (covered.has(key)) continue;
+    indices.push(a, b, c);
+  }
+  if (indices.length === 0) return null;
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', terrain.getAttribute('position'));
+  geometry.setAttribute('normal', terrain.getAttribute('normal'));
+  geometry.setIndex(new THREE.BufferAttribute(Uint32Array.from(indices), 1));
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  return geometry;
+}

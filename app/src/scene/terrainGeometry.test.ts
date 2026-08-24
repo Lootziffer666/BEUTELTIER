@@ -3,6 +3,7 @@ import * as THREE from 'three';
 
 import {
   applyRegisteredOrthoUv,
+  bareTerrainGeometry,
   lod2TerrainConnectionGeometry,
   orthophotoTerrainGeometry,
   parseTerrainHeightmap,
@@ -94,6 +95,42 @@ describe('DGM1 terrain geometry', () => {
     );
     expect(drape.getIndex()!.count).toBe(12);
     expect(Array.from(drape.getAttribute('uv').array.slice(0, 6))).toEqual([0, 0, 0.5, 0, 1, 0]);
+  });
+
+  it('leaves no bare terrain where the orthophoto covers the grid fully', () => {
+    // Grundnetz und Luftbild-Haut lagen deckungsgleich uebereinander und
+    // verliessen sich auf `polygonOffset`, um im Tiefentest zu gewinnen --
+    // an steilen, wieder geschlossenen Gebaeudemasken kippte das lokal um,
+    // und das unbelichtete Grundmaterial blitzte durch. `bareTerrainGeometry`
+    // darf deshalb dort, wo das Luftbild bereits jedes Dreieck zeichnet,
+    // buchstaeblich nichts mehr uebrig lassen.
+    const repaired = repairTerrainGrid(twoByThreeGrid());
+    const drape = orthophotoTerrainGeometry(
+      repaired.geometry,
+      repaired.cols,
+      repaired.rows,
+      corners,
+    );
+    expect(bareTerrainGeometry(repaired.geometry, drape)).toBeNull();
+  });
+
+  it('keeps only the terrain the orthophoto does not already cover', () => {
+    const repaired = repairTerrainGrid(twoByThreeGrid());
+    // Deckt nur die westliche Haelfte des Rasters ab (x < 5): die oestliche
+    // Spalte (x = 10) bleibt ausserhalb des Bildausschnitts.
+    const halfCorners: RegisteredCorners = [[0, 10], [5, 10], [0, 5], [5, 5]];
+    const drape = orthophotoTerrainGeometry(
+      repaired.geometry,
+      repaired.cols,
+      repaired.rows,
+      halfCorners,
+    );
+    const bare = bareTerrainGeometry(repaired.geometry, drape);
+    expect(bare).not.toBeNull();
+    // Nur das eine Dreieckspaar an der unbedeckten Ostkante bleibt uebrig --
+    // nicht das ganze Grundnetz noch einmal.
+    expect(bare!.getIndex()!.count).toBeLessThan(repaired.geometry.getIndex()!.count);
+    expect(bare!.getIndex()!.count).toBeGreaterThan(0);
   });
 
   it('only applies roof UVs inside the registered image', () => {
