@@ -1794,11 +1794,26 @@ export function SiteScene(props: SceneProps) {
    * einem echten Wechsel neu gesetzt.
    */
   const [egoHallKey, setEgoHallKey] = useState<string | null>(null);
+  const [egoSnapshotSeen, setEgoSnapshotSeen] = useState(false);
+  const defaultEgoHallKey = useMemo(() => {
+    const spawn = data.walk.spawn(focusHallKey ?? undefined);
+    return spawn
+      ? data.walk.footingAt(spawn.x, spawn.y, spawn.z).hallKey
+      : null;
+  }, [data, focusHallKey]);
+  useEffect(() => {
+    if (preset !== 'ego') return;
+    setEgoSnapshotSeen(false);
+    setEgoHallKey(null);
+  }, [preset]);
   const onCameraSnapshot = useCallback((snapshot: CameraSnapshot) => {
+    setEgoSnapshotSeen(true);
     setEgoHallKey((bisher) => (bisher === snapshot.hallKey ? bisher : snapshot.hallKey));
     props.onCameraSnapshot?.(snapshot);
   }, [props.onCameraSnapshot]);
-  const lichtHallKey = preset === 'ego' ? (egoHallKey ?? focusHallKey) : focusHallKey;
+  const lichtHallKey = preset === 'ego'
+    ? (egoSnapshotSeen ? egoHallKey : (focusHallKey ?? defaultEgoHallKey))
+    : focusHallKey;
 
   const viewBounds = useMemo(() => {
     const points = data.site.halls.flatMap((hall) => hall.footprint);
@@ -1955,20 +1970,45 @@ export function SiteScene(props: SceneProps) {
       {props.showStands && !LEER_ERLAUBT && (
         <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
       )}
-      <Hallenhuelle data={data} centre={centre} visible={preset === 'ego'} />
-      <Hallenstuetzen data={data} centre={centre} visible={preset === 'ego'} />
-      <Lichtspiegel data={data} centre={centre} visible={preset === 'ego'} />
+      <Hallenhuelle
+        data={data}
+        centre={centre}
+        hallKey={lichtHallKey}
+        visible={preset === 'ego'}
+      />
+      <Hallenstuetzen
+        data={data}
+        centre={centre}
+        hallKey={lichtHallKey}
+        visible={preset === 'ego'}
+      />
+      <Lichtspiegel
+        data={data}
+        centre={centre}
+        hallKey={lichtHallKey}
+        visible={preset === 'ego'}
+      />
       <Boulevard
         data={data}
         centre={centre}
         visible={preset === 'ego'}
         previewSafe={props.previewSafe ?? true}
       />
-      <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
+      <Deckenleuchten
+        data={data}
+        centre={centre}
+        hallKey={lichtHallKey}
+        visible={preset === 'ego'}
+      />
       {/* Die A-Stufen der Detailhierarchie: Deckenraster, Fassadengliederung,
           Hallennummern, Zaun. Ohne sie bleiben M02, M07, M08 und M10 Familien
           ohne Traeger -- Materialien, die in der Welt niemand anhat. */}
-      <Ausstattung data={data} centre={centre} drinnen={preset === 'ego'} />
+      <Ausstattung
+        data={data}
+        centre={centre}
+        drinnen={preset === 'ego'}
+        hallKey={lichtHallKey}
+      />
       <Hallenlicht
         data={data}
         centre={centre}
