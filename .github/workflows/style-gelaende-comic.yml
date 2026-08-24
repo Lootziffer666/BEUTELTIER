@@ -1,0 +1,47 @@
+name: Style gelaende comic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/public/models/gelaende.jpg'
+      - 'tools/style_gelaende_comic.py'
+      - '.github/workflows/style-gelaende-comic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  stylize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Pillow
+        run: python -m pip install --upgrade pillow
+      - name: Stylize exact-size terrain texture
+        run: python tools/style_gelaende_comic.py
+      - name: Verify exact dimensions
+        run: |
+          python - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          p = Path('app/public/models/gelaende-borderlands.jpg')
+          size = Image.open(p).size
+          assert size == (8192, 3511), size
+          print(f'{p}: {size[0]}x{size[1]}')
+          PY
+      - name: Commit generated texture
+        run: |
+          if git diff --quiet -- app/public/models/gelaende-borderlands.jpg; then
+            echo 'No generated changes.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/public/models/gelaende-borderlands.jpg
+          git commit -m 'Generate exact-size comic terrain texture [skip ci]'
+          git push
