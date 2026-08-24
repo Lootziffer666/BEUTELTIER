@@ -17,8 +17,9 @@ nur vier Rohdatenkacheln und liess die neuen Fetcher trotzdem aus; die
 World-Builder-Akzeptanz verlangte zugleich eine Gizmo-Groesse, der der aktive
 Editor absichtlich widerspricht. Beide Vertraege sind lokal korrigiert. Der
 vollstaendige 21+21-Kachel-Bau, 146 Python-Tests, 303 Frontendtests,
-TypeScript und beide Produktionsbuilds sind gruen. Remote-Checks und ein
-WebGL-Sichttest des neuen Deployments stehen noch aus.
+TypeScript und beide Produktionsbuilds sind gruen. GitHub meldet PR #43 am
+geprueften Head `4a6d2dc` als `mergeable_state: clean`; Vercel hat genau
+diesen SHA als `READY` gebaut. Ein echter WebGL-Sichttest steht noch aus.
 
 ## PROVEN WORKING
 
@@ -70,6 +71,10 @@ WebGL-Sichttest des neuen Deployments stehen noch aus.
   erzeugte Service Worker nutzt fuer Weltassets `NetworkFirst` und neue
   v2-Caches: online gewinnt das aktuelle Deployment, offline nur der letzte
   erfolgreiche Abruf. Vorher wird keine Offline-Verfuegbarkeit behauptet.
+- Das neue Vercel-Preview startet ohne weissen Bildschirm. Korridor-Schalter,
+  Route (901 m / 16 min) und Begehen-Schalter reagieren; die ausgelieferte
+  Terrain-Metadatei belegt das 701-x-301-Weitraster und die 8.002 maskierten
+  Zellen. Das ist ein DOM-/Daten-PASS, kein WebGL-Bild-PASS.
 
 ### SHADED
 
@@ -103,10 +108,10 @@ WebGL-Sichttest des neuen Deployments stehen noch aus.
 
 ## BROKEN / FAKE / DEAD
 
-- Die neue Szene hat noch keinen WebGL-Bild-PASS. Der lokale Build ist gruen,
-  aber der externe Browser darf den lokalen HTTP-Port nicht oeffnen. Ein
-  Build-PASS wird nicht als Sichtnachweis ausgegeben; geprueft wird das neue
-  oeffentliche Preview nach dem Push.
+- Die neue Szene hat noch keinen WebGL-Bild-PASS. Der externe Browser oeffnet
+  das reale Preview, meldet aber `GL_VENDOR/GL_RENDERER = Disabled` und kann
+  deshalb keinen WebGL-Kontext erzeugen. Der schwarze Canvas dort ist eine
+  belegte Browsergrenze, weder App-PASS noch App-FAIL.
 - Die bereits beschafften weiteren LoD2-Gebaeude westlich des Rheins und bis
   A3 sind noch nicht in die mobilen Runtimepakete uebernommen. Der aktive
   LoD2-Ausschnitt bleibt `[357700,5645200,358900,5646500]`.
@@ -129,13 +134,12 @@ WebGL-Sichttest des neuen Deployments stehen noch aus.
 
 ## WEDNESDAY PATH
 
-1. PR #43 pushen und beide zuvor roten GitHub-Checks gruen belegen.
-2. Neuen PR-Preview auf einem WebGL-faehigen Browser pruefen: kein weisser
+1. Neuen PR-Preview auf einem WebGL-faehigen Mobilgeraet pruefen: kein weisser
    Bildschirm; Luftbild bis Rhein/A3; Hallen nicht im/unter Terrain; keine
    Fake-Kontur; Kamera verschiebbar; Presets und Touch-Begehen reagieren.
-3. Nur beobachtete Restfehler korrigieren. Keine weitere Forschungs- oder
+2. Nur beobachtete Restfehler korrigieren. Keine weitere Forschungs- oder
    Providerarbeit beginnen.
-4. PR #43 bei gruenen Checks und bestandenem Sichttest mergen; danach nur den
+3. PR #43 bei gruenen Checks und bestandenem Sichttest mergen; danach nur den
    Bahnhof -> Eingang Sued -> Halle-10.1-Korridor demonstrieren.
 
 ## PARKED
