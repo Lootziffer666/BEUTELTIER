@@ -33,7 +33,10 @@ ORIGIN = (358300.0, 5645800.0, 40.0)
 EXTENT_C = WORLD_BOUNDS
 STEP_M = 10.0
 OUT_GLB = ROOT / "app" / "public" / "models" / "terrain.glb"
-OUT_META = ROOT / "data" / "build" / "terrain.json"
+# Die aktive 7-x-3-km-Laufzeitwelt besitzt eigene Metadaten. Das bestehende
+# hochaufgeloeste Kernartefakt data/build/terrain.json bleibt dadurch erhalten
+# und wird nicht mehr bei jedem mobilen Weitbereichsbau ueberschrieben.
+OUT_META = ROOT / "data" / "build" / "terrain-wide.json"
 OUT_HEIGHTMAP = ROOT / "app" / "public" / "data" / "terrain_heightmap.bin"
 OUT_HEIGHTMAP_META = ROOT / "app" / "public" / "data" / "terrain_heightmap.json"
 LOD2_DIR = ROOT / "data" / "raw" / "lod2"

@@ -1,0 +1,58 @@
+{
+  "schema": "beuteltier.terrain.v1",
+  "source": {
+    "title": "Digitales Gelaendemodell 1 (DGM1)",
+    "provider": "Geobasis NRW",
+    "licence": "Datenlizenz Deutschland Zero 2.0",
+    "crs": "EPSG:25832",
+    "sourceResolutionM": 1.0,
+    "sampleStepM": 10.0,
+    "extent": [
+      355000.0,
+      5644000.0,
+      362000.0,
+      5647000.0
+    ]
+  },
+  "model": "models/terrain.glb",
+  "raster": "701x301",
+  "origin": [
+    358300.0,
+    5645800.0,
+    40.0
+  ],
+  "stepM": 10.0,
+  "cols": 701,
+  "rows": 301,
+  "buildingMask": {
+    "source": "LoD2 GroundSurface (Geobasis NRW)",
+    "bounds": [
+      357700.0,
+      5645200.0,
+      358900.0,
+      5646500.0
+    ],
+    "featureCount": 2567,
+    "maskedCells": 8002,
+    "method": "10-m cell overlap with official GroundSurface"
+  },
+  "heightmap": {
+    "binary": "terrain_heightmap.bin",
+    "bytes": 844052,
+    "sha256": "a1be97e63f071e809a8de676248f9299b933aa209fe02ea9a9b8722b106ea1ae",
+    "origin": [
+      355000.0,
+      5644000.0,
+      40.0
+    ],
+    "stepM": 10.0,
+    "cols": 701,
+    "rows": 301,
+    "samples": 211001,
+    "heightRangeM": [
+      40.92,
+      81.58
+    ],
+    "rowOrder": "south-to-north"
+  }
+}

@@ -9,6 +9,13 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
 import build_terrain  # noqa: E402
+import build_all  # noqa: E402
+
+
+def test_wide_runtime_terrain_cannot_overwrite_preserved_core_artifact():
+    assert build_terrain.OUT_META.name == "terrain-wide.json"
+    assert "terrain.json" not in build_all.APP_DATA_PRODUCTS
+    assert build_all.APP_DATA_ALIASES == {"terrain-wide.json": "terrain.json"}
 
 
 def test_terrain_grid_indices_stay_inside_measured_vertices():

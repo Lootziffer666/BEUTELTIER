@@ -1,9 +1,9 @@
 name: BEUTELTIER
 
 # Der Bau laeuft hier vollstaendig durch -- einschliesslich des Schritts, der
-# 43 MB amtliche Gebaeudedaten holt. Die Kacheln liegen nicht im Repository;
-# sie kommen bei jedem Lauf frisch von Geobasis NRW und werden zwischen den
-# Laeufen gecacht.
+# amtliche Gebaeude- und Luftbilddaten holt. Die Kacheln liegen nicht im
+# Repository; ein Cache beschleunigt den Lauf, die idempotenten Fetcher
+# pruefen aber bei jedem Lauf jede erwartete Kachel einzeln.
 
 on:
   push:
@@ -26,20 +26,17 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Amtliche Rohdaten aus dem Cache
-        id: geocache
         uses: actions/cache@v4
         with:
           path: |
             data/raw/lod2
             data/raw/dop
-          key: geobasis-messe-v2
+          key: geobasis-world-v3-${{ hashFiles('tools/fetch_lod2.py', 'tools/fetch_orthophoto.py', 'tools/beuteltier/world_extent.py') }}
 
       - name: LoD2-Kacheln holen
-        if: steps.geocache.outputs.cache-hit != 'true'
         run: python3 tools/fetch_lod2.py
 
       - name: Orthophotos holen
-        if: steps.geocache.outputs.cache-hit != 'true'
         run: python3 tools/fetch_orthophoto.py
 
       - name: Gesamtbau
