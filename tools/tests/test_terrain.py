@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import struct
 import sys
+from io import BytesIO
 from pathlib import Path
+
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
@@ -52,6 +55,60 @@ def test_wcs_rows_are_reordered_from_north_to_south_once():
     north_first = [[50.0, 51.0], [40.0, 41.0], [30.0, 31.0]]
     assert build_terrain.south_to_north(north_first) == [
         [30.0, 31.0], [40.0, 41.0], [50.0, 51.0],
+    ]
+
+
+def test_lzw_float_tiff_is_decoded_by_pixel_instead_of_returning_plausible_garbage():
+    source = Image.new("F", (3, 2))
+    source.putdata([45.91, 45.92, 45.93, 46.01, 46.02, 46.03])
+    payload = BytesIO()
+    source.save(payload, format="TIFF", compression="tiff_lzw")
+
+    assert build_terrain.parse_tiff(payload.getvalue(), 3, 2) == [
+        [45.90999984741211, 45.91999816894531, 45.93000030517578],
+        [46.0099983215332, 46.02000045776367, 46.029998779296875],
+    ]
+
+
+def test_native_dgm_is_decimated_locally_without_wcs_resampling():
+    source = Image.new("F", (21, 11))
+    source.putdata([float(y * 100 + x) for y in range(11) for x in range(21)])
+    payload = BytesIO()
+    source.save(payload, format="TIFF", compression="tiff_lzw")
+
+    assert build_terrain.parse_tiff(payload.getvalue(), 21, 11, 10) == [
+        [0.0, 10.0, 20.0],
+        [1000.0, 1010.0, 1020.0],
+    ]
+
+
+def test_multipart_parser_uses_declared_closing_boundary_not_payload_dashes():
+    tiff = b"II*\x00prefix\n--bytes-inside-compressed-image"
+    payload = b"headers\r\n" + tiff + b"\r\n--wcs--\r\n"
+
+    assert build_terrain.extract_tiff(payload, "wcs") == tiff
+
+
+def test_tiled_wcs_is_stitched_once_and_shared_edges_must_agree(monkeypatch):
+    monkeypatch.setattr(build_terrain, "EXTENT_C", (0.0, 0.0, 20.0, 20.0))
+    monkeypatch.setattr(build_terrain, "WCS_TILE_M", 10.0)
+    monkeypatch.setattr(build_terrain, "STEP_M", 5.0)
+
+    def tile(bounds):
+        min_x, min_y, _max_x, _max_y = bounds
+        return [
+            [min_x + x + (min_y + y) * 10 for x in (0.0, 5.0, 10.0)]
+            for y in (0.0, 5.0, 10.0)
+        ]
+
+    monkeypatch.setattr(build_terrain, "load_dgm1_tile", tile)
+
+    assert build_terrain.load_dgm1_raster() == [
+        [0.0, 5.0, 10.0, 15.0, 20.0],
+        [50.0, 55.0, 60.0, 65.0, 70.0],
+        [100.0, 105.0, 110.0, 115.0, 120.0],
+        [150.0, 155.0, 160.0, 165.0, 170.0],
+        [200.0, 205.0, 210.0, 215.0, 220.0],
     ]
 
 

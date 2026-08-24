@@ -39,7 +39,7 @@
   "heightmap": {
     "binary": "terrain_heightmap.bin",
     "bytes": 844052,
-    "sha256": "a1be97e63f071e809a8de676248f9299b933aa209fe02ea9a9b8722b106ea1ae",
+    "sha256": "65cc36011e4015519c5edf30ecc95edd8a61facfdb8c0ec584ec7342448f7aa5",
     "origin": [
       355000.0,
       5644000.0,
@@ -50,8 +50,8 @@
     "rows": 301,
     "samples": 211001,
     "heightRangeM": [
-      40.92,
-      81.58
+      37.43,
+      81.46
     ],
     "rowOrder": "south-to-north"
   }

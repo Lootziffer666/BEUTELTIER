@@ -18,9 +18,13 @@ import struct
 import sys
 import urllib.request
 from array import array
+from concurrent.futures import ThreadPoolExecutor
 from hashlib import sha256
+from io import BytesIO
 from math import floor, isfinite
 from pathlib import Path
+
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
@@ -32,6 +36,7 @@ from beuteltier.world_extent import ACTIVE_LOD2_BOUNDS, WORLD_BOUNDS  # noqa: E4
 ORIGIN = (358300.0, 5645800.0, 40.0)
 EXTENT_C = WORLD_BOUNDS
 STEP_M = 10.0
+WCS_TILE_M = 1000.0
 OUT_GLB = ROOT / "app" / "public" / "models" / "terrain.glb"
 # Die aktive 7-x-3-km-Laufzeitwelt besitzt eigene Metadaten. Das bestehende
 # hochaufgeloeste Kernartefakt data/build/terrain.json bleibt dadurch erhalten
@@ -46,194 +51,191 @@ WCS_URL = ("https://www.wcs.nrw.de/geobasis/wcs_nw_dgm?"
            "&BBOX={minx},{miny},{maxx},{maxy}&WIDTH={cols}&HEIGHT={rows}")
 
 
-def lzw_decompress_tiff(data: bytes) -> bytes:
-    """LZW-Dekompression für TIFF (MSB-first, EarlyChange aktiviert)."""
-    bit_pos = 0
-    code_width = 9
-
-    def get_bits(n: int) -> int:
-        nonlocal bit_pos
-        result = 0
-        for _ in range(n):
-            byte_idx = bit_pos // 8
-            bit_idx = 7 - (bit_pos % 8)
-            bit = (data[byte_idx] >> bit_idx) & 1 if byte_idx < len(data) else 0
-            result = (result << 1) | bit
-            bit_pos += 1
-        return result
-
-    clear_code = 256
-    eod_code = 257
-    dict_size = 258
-    dictionary: dict[int, bytes] = {}
-
-    result = bytearray()
-    prev_code = None
-
-    while True:
-        code = get_bits(code_width)
-        if code == eod_code:
-            break
-        if code == clear_code:
-            code_width = 9
-            dict_size = 258
-            prev_code = None
-            continue
-
-        if code < dict_size and code not in dictionary:
-            dictionary[code] = bytes([code])
-
-        if code in dictionary:
-            entry = dictionary[code]
-        elif prev_code is not None and prev_code in dictionary:
-            entry = dictionary[prev_code] + dictionary[prev_code][:1]
-        else:
-            entry = bytes([code])
-
-        result.extend(entry)
-
-        if prev_code is not None and prev_code in dictionary:
-            new_code = dict_size
-            dictionary[new_code] = dictionary[prev_code] + entry[:1]
-            dict_size += 1
-            if dict_size == (1 << code_width) - 1 and code_width < 12:
-                code_width += 1
-
-        prev_code = code
-
-    return bytes(result)
-
-
-def parse_tiff(tiff_data: bytes, cols: int, rows: int) -> list[list[float]]:
+def parse_tiff(
+    tiff_data: bytes,
+    cols: int,
+    rows: int,
+    sample_stride: int = 1,
+) -> list[list[float]]:
     """Parst ein GeoTIFF und gibt die Pixelwerte als Raster zurück.
 
-    Unterstützt TIFF mit LZW-Kompression und IEEE 32-Bit Float SampleFormat.
-    Das Bild wird auf das Zielraster (cols × rows) zurückgestellt, wenn
-    die Quellauflösung nicht exakt passt.
+    Pillow ist bereits die verbindliche Bildabhaengigkeit der Datenpipeline.
+    Dessen TIFF-Decoder liest Strip-Grenzen, Predictor und LZW korrekt. Der
+    fruehere handgeschriebene LZW-Pfad lieferte nach laengeren Codefolgen zwar
+    plausible Float-Werte, ordnete sie aber falschen Pixeln zu. Dadurch stand
+    die Piazza laut Laufzeitdaten bei 66 m NHN statt bei rund 46 m NHN.
+
+    Der Dienst muss exakt die angeforderte Pixelzahl liefern. Die Laufzeitwelt
+    nimmt anschliessend jeden zehnten nativen DGM1-Punkt; der WCS-Dienst darf
+    das Gelaende nicht selbst auf zehn Meter resamplen, weil dessen Ergebnis
+    von der Groesse der Anfrage abhaengt.
     """
-    little = tiff_data[:2] == b"II"
-    endian = "<" if little else ">"
+    with Image.open(BytesIO(tiff_data)) as source:
+        image = source.convert("F") if source.mode != "F" else source.copy()
+    if image.size != (cols, rows):
+        raise ValueError(
+            f"DGM1-TIFF hat {image.width}×{image.height} statt {cols}×{rows} Pixeln"
+        )
+    if (
+        sample_stride < 1 or
+        (cols - 1) % sample_stride != 0 or
+        (rows - 1) % sample_stride != 0
+    ):
+        raise ValueError(f"DGM1-Raster ist nicht durch Schritt {sample_stride} teilbar")
 
-    def u16(offset: int) -> int:
-        return struct.unpack_from(f"{endian}H", tiff_data, offset)[0]
-
-    def u32(offset: int) -> int:
-        return struct.unpack_from(f"{endian}I", tiff_data, offset)[0]
-
-    def f32(offset: int) -> float:
-        return struct.unpack_from(f"{endian}f", tiff_data, offset)[0]
-
-    # TIFF-IFD am Offset 8 (standard)
-    ifd_offset = u32(4)
-    num_entries = u16(ifd_offset)
-
-    width, height, bits, sample_type, compression, strip_offsets, strip_counts = 0, 0, 0, 0, 1, [], []
-    type_sizes = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8}
-    for i in range(num_entries):
-        entry_offset = ifd_offset + 2 + i * 12
-        tag, typ, count, value_or_offset = struct.unpack_from(f"{endian}HHII", tiff_data, entry_offset)
-        entry_size = count * type_sizes.get(typ, 1)
-
-        if tag == 256:  # ImageWidth
-            width = value_or_offset
-        elif tag == 257:  # ImageLength
-            height = value_or_offset
-        elif tag == 258:  # BitsPerSample
-            bits = value_or_offset
-        elif tag == 259:  # Compression: 1=None, 5=LZW, 32773=PackBits
-            compression = value_or_offset
-        elif tag == 339:  # SampleFormat: 3 = IEEE float
-            sample_type = value_or_offset
-        elif tag == 273:  # StripOffsets
-            if entry_size <= 4:
-                strip_offsets.append(value_or_offset)
-            else:
-                strip_offsets.extend(u32(value_or_offset + i * 4) for i in range(count))
-        elif tag == 279:  # StripByteCounts
-            if entry_size <= 4:
-                strip_counts.append(value_or_offset)
-            else:
-                strip_counts.extend(u32(value_or_offset + i * 4) for i in range(count))
-
-    # Read pixel data - each strip decompressed separately
-    pixels = []
-    for soff, scount in zip(strip_offsets, strip_counts):
-        raw = tiff_data[soff:soff + scount]
-        if compression == 5:
-            raw = lzw_decompress_tiff(raw)
-        val_size = bits // 8
-        for i in range(len(raw) // val_size):
-            if sample_type == 3 and bits == 32:
-                val = struct.unpack_from(f"{endian}f", raw, i * val_size)[0]
-            elif bits == 16:
-                val = float(struct.unpack_from(f"{endian}H", raw, i * val_size)[0])
-            elif bits == 8:
-                val = float(struct.unpack_from(f"{endian}B", raw, i * val_size)[0])
-            else:
-                val = float(struct.unpack_from(f"{endian}I", raw, i * val_size)[0])
-            pixels.append(val)
-
-    # Reshape to rows x cols
-    raster = []
-    for r in range(height):
-        row = pixels[r * width:(r + 1) * width]
-        if len(row) != cols:
-            row = row[:cols] or [row[0] if row else 0.0] * cols
-        raster.append(row)
-
-    # Resize if needed
-    if height != rows or width != cols:
-        step_x = width / cols
-        step_y = height / rows
-        resized = []
-        for r in range(rows):
-            row = []
-            for c in range(cols):
-                src_x = min(int(c * step_x), width - 1)
-                src_y = min(int(r * step_y), height - 1)
-                row.append(pixels[src_y * width + src_x])
-            resized.append(row)
-        raster = resized
-
-    flat = [v for row in raster for v in row]
-    print(f"  DGM1 Raster: {cols}×{rows} (min={min(flat):.1f}m, max={max(flat):.1f}m)")
+    pixels = image.load()
+    raster = [
+        [float(pixels[x, y]) for x in range(0, cols, sample_stride)]
+        for y in range(0, rows, sample_stride)
+    ]
+    sampled = [value for row in raster for value in row]
+    print(
+        f"  DGM1 Quelle: {cols}×{rows}, Ausgabe: "
+        f"{len(raster[0])}×{len(raster)} "
+        f"(min={min(sampled):.1f}m, max={max(sampled):.1f}m)"
+    )
     return raster
 
 
-def load_dgm1_raster() -> list[list[float]]:
-    """Lädt den DGM1-Raster für Extent C als Gitterpunkte.
-
-    Der WCS gibt ein MIME-Multipart zurück, das XML, Geodaten und das
-    eigentliche GeoTIFF als Anhang enthält. Wir extrahieren das TIFF.
-    """
-    minx, miny, maxx, maxy = EXTENT_C
-    cols = int((maxx - minx) / STEP_M) + 1
-    rows = int((maxy - miny) / STEP_M) + 1
-    url = WCS_URL.format(minx=minx, miny=miny, maxx=maxx, maxy=maxy,
-                         cols=cols, rows=rows)
-
-    req = urllib.request.Request(url, headers={"User-Agent": "BEUTELTIER/1.0"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        data = resp.read()
-
-    # Extract TIFF from MIME multipart
+def extract_tiff(data: bytes, boundary: str | None) -> bytes:
+    """Extrahiert das TIFF ohne Trennung an zufaelligen Nutzdaten-Bytes."""
     tiff_start = data.find(b"II*\x00")
     if tiff_start == -1:
         tiff_start = data.find(b"MM\x00*")
     if tiff_start == -1:
         raise ValueError("Kein TIFF in der WCS-Antwort gefunden")
 
-    tiff_data = data[tiff_start:]
-    # TIFF ends where the MIME boundary starts again or at end
-    boundary_end = tiff_data.find(b"\n--")
-    if boundary_end > 0:
-        tiff_data = tiff_data[:boundary_end]
+    if boundary is None:
+        return data[tiff_start:]
+    closing_marker = b"\r\n--" + boundary.encode("ascii") + b"--"
+    tiff_end = data.rfind(closing_marker)
+    if tiff_end <= tiff_start:
+        raise ValueError("Multipart-Ende der WCS-Antwort fehlt")
+    return data[tiff_start:tiff_end]
 
-    # GeoTIFF ist TopLeft orientiert: Zeile 0 liegt am maximalen Nordwert.
-    # Unser binaeres Laufzeitraster beginnt dagegen explizit bei minY und
-    # zaehlt nach Norden. Ohne diese einmalige Umkehrung lagen die Hoehen
-    # mehrere Kilometer gespiegelt unter Luftbild und Hallen.
-    return south_to_north(parse_tiff(tiff_data, cols, rows))
+
+def load_dgm1_tile(bounds: tuple[float, float, float, float]) -> list[list[float]]:
+    """Laedt eine begrenzte DGM1-WCS-Kachel mit echten Gitterpunkten.
+
+    Der NRW-Dienst liefert bei einer einzelnen 7-x-3-km-Anfrage nachweislich
+    andere Werte als bei einer lokalen 1-m-Gegenprobe (Piazza: 66 statt
+    46 m NHN). 1-km-Kacheln mit 10-m-Punkten stimmen an derselben Koordinate
+    mit der 1-m-Abfrage ueberein. Deshalb wird der belegte Bereich gekachelt
+    abgerufen und nicht serverseitig als Grossbild heruntergerechnet.
+    """
+    minx, miny, maxx, maxy = bounds
+    width = maxx - minx
+    height = maxy - miny
+    source_cols = int(width) + 1
+    source_rows = int(height) + 1
+    sample_stride = round(STEP_M)
+    if (
+        abs(source_cols - 1 - width) > 1e-6 or
+        abs(source_rows - 1 - height) > 1e-6 or
+        abs(sample_stride - STEP_M) > 1e-6
+    ):
+        raise ValueError("DGM1-Kachel und Ausgabeschritt muessen auf ganze Meter passen")
+    url = WCS_URL.format(minx=minx, miny=miny, maxx=maxx, maxy=maxy,
+                         cols=source_cols, rows=source_rows)
+
+    req = urllib.request.Request(url, headers={"User-Agent": "BEUTELTIER/1.0"})
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        boundary = resp.headers.get_boundary()
+        data = resp.read()
+
+    return south_to_north(parse_tiff(
+        extract_tiff(data, boundary),
+        source_cols,
+        source_rows,
+        sample_stride,
+    ))
+
+
+def load_dgm1_raster() -> list[list[float]]:
+    """Laedt und vernäht den belegten DGM1-Bereich aus 1-km-Kacheln.
+
+    Benachbarte WCS-Kacheln enthalten dieselbe Randzeile bzw. Randspalte.
+    Diese Werte muessen auf fuenf Zentimeter uebereinstimmen; andernfalls
+    wird abgebrochen. Ein stiller Versatz wuerde wieder ein plausibles, aber
+    falsches Terrain erzeugen.
+    """
+    minx, miny, maxx, maxy = EXTENT_C
+    width = maxx - minx
+    height = maxy - miny
+    tiles_x = round(width / WCS_TILE_M)
+    tiles_y = round(height / WCS_TILE_M)
+    if (
+        tiles_x < 1 or tiles_y < 1 or
+        abs(tiles_x * WCS_TILE_M - width) > 1e-6 or
+        abs(tiles_y * WCS_TILE_M - height) > 1e-6
+    ):
+        raise ValueError(
+            f"DGM-Ausdehnung {EXTENT_C} ist nicht auf {WCS_TILE_M:g}-m-Kacheln ausgerichtet"
+        )
+
+    specs = [
+        (
+            tile_x,
+            tile_y,
+            (
+                minx + tile_x * WCS_TILE_M,
+                miny + tile_y * WCS_TILE_M,
+                minx + (tile_x + 1) * WCS_TILE_M,
+                miny + (tile_y + 1) * WCS_TILE_M,
+            ),
+        )
+        for tile_y in range(tiles_y)
+        for tile_x in range(tiles_x)
+    ]
+    print(f"  DGM1-WCS: {len(specs)} Kacheln à {WCS_TILE_M:g} m")
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        loaded = list(pool.map(lambda spec: load_dgm1_tile(spec[2]), specs))
+    tiles = {
+        (tile_x, tile_y): raster
+        for (tile_x, tile_y, _bounds), raster in zip(specs, loaded)
+    }
+
+    stitched: list[list[float]] = []
+    seam_tolerance_m = 0.05
+    for tile_y in range(tiles_y):
+        band: list[list[float]] = []
+        for tile_x in range(tiles_x):
+            tile = tiles[(tile_x, tile_y)]
+            if not band:
+                band = [row[:] for row in tile]
+                continue
+            if len(tile) != len(band):
+                raise ValueError(f"DGM-Kachelreihe {tile_x}/{tile_y} besitzt eine andere Hoehe")
+            for row_index, row in enumerate(tile):
+                if abs(band[row_index][-1] - row[0]) > seam_tolerance_m:
+                    raise ValueError(
+                        f"DGM-Naht X {tile_x}/{tile_y} weicht um mehr als "
+                        f"{seam_tolerance_m:.2f} m ab"
+                    )
+                band[row_index].extend(row[1:])
+
+        if stitched:
+            if len(stitched[-1]) != len(band[0]):
+                raise ValueError(f"DGM-Kachelband {tile_y} besitzt eine andere Breite")
+            if any(
+                abs(south - north) > seam_tolerance_m
+                for south, north in zip(stitched[-1], band[0])
+            ):
+                raise ValueError(
+                    f"DGM-Naht Y {tile_y} weicht um mehr als {seam_tolerance_m:.2f} m ab"
+                )
+            stitched.extend(band[1:])
+        else:
+            stitched.extend(band)
+
+    expected_cols = int(width / STEP_M) + 1
+    expected_rows = int(height / STEP_M) + 1
+    if len(stitched) != expected_rows or any(len(row) != expected_cols for row in stitched):
+        raise ValueError(
+            f"Vernähtes DGM hat {len(stitched)}×"
+            f"{len(stitched[0]) if stitched else 0} statt {expected_rows}×{expected_cols} Punkten"
+        )
+    return stitched
 
 
 def south_to_north(raster: list[list[float]]) -> list[list[float]]:
