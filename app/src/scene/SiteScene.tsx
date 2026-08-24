@@ -40,6 +40,7 @@ import { Boulevard } from './boulevard';
 import { Markenstaende } from './Markenstaende';
 import { MARKEN_STAND_IDS } from './marken';
 import { Vertikalverbindungen } from './vertical';
+import { Suedeingang } from './suedeingang';
 import type { CameraSnapshot } from './survey';
 import { ProceduralStaging } from './ProceduralStaging';
 import {
@@ -2118,6 +2119,9 @@ export function SiteScene(props: SceneProps) {
         visible={preset === 'ego'}
         previewSafe={props.previewSafe ?? true}
       />
+      {registered && (
+        <Suedeingang data={data} centre={centre} terrainHeight={terrainHeight} />
+      )}
       <Deckenleuchten
         data={data}
         centre={centre}
