@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BEUTELTIER Photo Pose Editor</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #0b0d10; color: #eef2f7; overflow: hidden; }
+    body { display: grid; grid-template-rows: auto 1fr auto; }
+    header, footer {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      background: #12161c; border-color: #262d37; border-style: solid; border-width: 0 0 1px 0;
+    }
+    footer { border-width: 1px 0 0 0; font-size: 12px; color: #b6c0cc; justify-content: space-between; }
+    button, .fileLabel, input[type="range"] { font: inherit; }
+    button, .fileLabel {
+      border: 1px solid #394454; border-radius: 8px; background: #1a2029; color: #f7f9fb;
+      padding: 8px 11px; cursor: pointer; white-space: nowrap;
+    }
+    button:hover, .fileLabel:hover { background: #242c37; }
+    button.primary { background: #254f78; border-color: #3974aa; }
+    button.good { background: #245a3f; border-color: #347f5a; }
+    button:disabled { opacity: .45; cursor: default; }
+    .fileLabel input { display: none; }
+    .group { display: flex; align-items: center; gap: 7px; }
+    .grow { flex: 1; }
+    label.small { font-size: 12px; color: #b6c0cc; display: flex; align-items: center; gap: 6px; }
+    input[type="range"] { width: 120px; }
+    #workspace {
+      position: relative; min-height: 0; background: #050608; display: flex; align-items: center; justify-content: center;
+    }
+    #stage {
+      position: relative; overflow: hidden; background: #090b0e; box-shadow: 0 0 0 1px #202631;
+      width: 100%; height: 100%;
+    }
+    #stage canvas, #photoOverlay {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+    }
+    #photoOverlay {
+      object-fit: fill; pointer-events: none; user-select: none; -webkit-user-drag: none;
+      opacity: .5; display: none;
+    }
+    #hud {
+      position: absolute; left: 12px; top: 12px; padding: 8px 10px; border-radius: 8px;
+      background: rgba(5,8,12,.72); backdrop-filter: blur(5px); color: #dbe4ee; font-size: 12px;
+      line-height: 1.45; pointer-events: none; max-width: 420px;
+    }
+    #crosshair {
+      position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      pointer-events: none; opacity: .7;
+    }
+    #crosshair::before, #crosshair::after { content: ""; position: absolute; background: rgba(255,255,255,.9); }
+    #crosshair::before { width: 14px; height: 1px; left: 0; top: 6px; }
+    #crosshair::after { width: 1px; height: 14px; left: 6px; top: 0; }
+    #toast {
+      position: absolute; right: 12px; bottom: 12px; padding: 9px 11px; border-radius: 8px;
+      background: rgba(20,28,37,.9); border: 1px solid #354355; font-size: 12px; display: none;
+    }
+    #status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    kbd { border: 1px solid #4a5565; border-bottom-width: 2px; border-radius: 4px; padding: 1px 4px; background: #1b212a; color: #e8eef5; }
+    @media (max-width: 980px) { header { flex-wrap: wrap; } .grow { flex-basis: 100%; height: 0; } }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <label class="fileLabel">1. GLB laden<input id="glbInput" type="file" accept=".glb,.gltf,model/gltf-binary,model/gltf+json"></label>
+    <label class="fileLabel">2. Fotos laden<input id="photoInput" type="file" accept="image/*" multiple></label>
+    <button id="fitBtn">Modell finden</button>
+    <div class="grow"></div>
+    <div class="group">
+      <button id="prevBtn" disabled>← Foto</button>
+      <span id="photoCounter">0 / 0</span>
+      <button id="nextBtn" disabled>Foto →</button>
+    </div>
+    <label class="small">Foto <input id="opacity" type="range" min="0" max="1" value="0.50" step="0.01"><span id="opacityValue">50%</span></label>
+    <label class="small">FOV <input id="fov" type="range" min="15" max="110" value="55" step="0.1"><span id="fovValue">55.0°</span></label>
+    <button id="saveBtn" class="good" disabled>Pose speichern</button>
+    <button id="exportBtn" class="primary" disabled>JSON exportieren</button>
+  </header>
+
+  <main id="workspace">
+    <div id="stage">
+      <img id="photoOverlay" alt="">
+      <div id="crosshair"></div>
+      <div id="hud">
+        <strong>Navigation</strong><br>
+        Klick ins Bild = Maussteuerung · <kbd>Esc</kbd> = Maus frei<br>
+        <kbd>WASD</kbd> laufen · <kbd>Q</kbd>/<kbd>E</kbd> runter/hoch · <kbd>Shift</kbd> schnell<br>
+        <kbd>Enter</kbd> Pose speichern · <kbd>[</kbd>/<kbd>]</kbd> vorheriges/nächstes Foto
+      </div>
+      <div id="toast"></div>
+    </div>
+  </main>
+
+  <footer>
+    <span id="status">GLB laden, dann Fotos laden.</span>
+    <span id="poseStatus">0 Posen gespeichert</span>
+  </footer>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+    const $ = (id) => document.getElementById(id);
+    const workspace = $('workspace');
+    const stage = $('stage');
+    const overlay = $('photoOverlay');
+    const status = $('status');
+    const poseStatus = $('poseStatus');
+    const toast = $('toast');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0d10);
+
+    const camera = new THREE.PerspectiveCamera(55, 16/9, 0.01, 100000);
+    camera.position.set(0, 1.7, 5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    stage.prepend(renderer.domElement);
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x405060, 1.8));
+    const dir = new THREE.DirectionalLight(0xffffff, 2.0);
+    dir.position.set(5, 10, 7);
+    scene.add(dir);
+
+    const controls = new PointerLockControls(camera, renderer.domElement);
+
+    let modelRoot = null;
+    let modelBounds = null;
+    let photos = [];
+    let photoIndex = -1;
+    const poses = new Map();
+    const keys = new Set();
+    let moveSpeed = 1.5;
+    let lastFrame = performance.now();
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.style.display = 'block';
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.style.display = 'none', 1800);
+    }
+
+    function setStatus(message) { status.textContent = message; }
+    function naturalSort(a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }); }
+
+    function matrixRows(m) {
+      const e = m.elements;
+      return [
+        [e[0], e[4], e[8],  e[12]],
+        [e[1], e[5], e[9],  e[13]],
+        [e[2], e[6], e[10], e[14]],
+        [e[3], e[7], e[11], e[15]],
+      ];
+    }
+
+    function intrinsicsFor(photo) {
+      const fy = 0.5 * photo.height / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+      const fx = fy;
+      return [[fx, 0, photo.width / 2], [0, fy, photo.height / 2], [0, 0, 1]];
+    }
+
+    function worldToOpenCV() {
+      camera.updateMatrixWorld(true);
+      const worldToThreeCam = camera.matrixWorld.clone().invert();
+      const threeCamToOpenCV = new THREE.Matrix4().set(
+        1,  0,  0, 0,
+        0, -1,  0, 0,
+        0,  0, -1, 0,
+        0,  0,  0, 1
+      );
+      return threeCamToOpenCV.multiply(worldToThreeCam);
+    }
+
+    function fitStage() {
+      const aw = Math.max(1, workspace.clientWidth);
+      const ah = Math.max(1, workspace.clientHeight);
+      let aspect = aw / ah;
+      if (photoIndex >= 0 && photos[photoIndex]) aspect = photos[photoIndex].width / photos[photoIndex].height;
+      let w, h;
+      if (aw / ah > aspect) { h = ah; w = h * aspect; } else { w = aw; h = w / aspect; }
+      w = Math.max(1, Math.floor(w)); h = Math.max(1, Math.floor(h));
+      stage.style.width = `${w}px`; stage.style.height = `${h}px`;
+      renderer.setSize(w, h, false);
+      camera.aspect = aspect;
+      camera.updateProjectionMatrix();
+    }
+
+    function fitModel() {
+      if (!modelBounds) return;
+      const center = modelBounds.getCenter(new THREE.Vector3());
+      const size = modelBounds.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z, 1);
+      camera.position.set(center.x, center.y + Math.max(1.6, size.y * 0.15), center.z + maxDim * 0.9);
+      camera.lookAt(center);
+      camera.updateMatrixWorld(true);
+      moveSpeed = Math.max(0.2, maxDim / 40);
+      setStatus(`Modell zentriert. Bewegungstempo ${moveSpeed.toFixed(2)} Einheiten/s.`);
+    }
+
+    async function imageMeta(file) {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      const loaded = new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+      img.src = url;
+      await loaded;
+      return { file, name: file.name, url, width: img.naturalWidth, height: img.naturalHeight };
+    }
+
+    function restorePoseForCurrentPhoto() {
+      if (photoIndex < 0) return;
+      const p = poses.get(photos[photoIndex].name);
+      if (!p) return;
+      camera.position.fromArray(p.position);
+      camera.quaternion.fromArray(p.quaternion);
+      camera.fov = p.fov_deg;
+      $('fov').value = camera.fov;
+      $('fovValue').textContent = `${camera.fov.toFixed(1)}°`;
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld(true);
+      showToast('Gespeicherte Pose geladen');
+    }
+
+    function showPhoto(index) {
+      if (!photos.length) return;
+      photoIndex = (index + photos.length) % photos.length;
+      const p = photos[photoIndex];
+      overlay.src = p.url;
+      overlay.style.display = 'block';
+      $('photoCounter').textContent = `${photoIndex + 1} / ${photos.length}`;
+      $('prevBtn').disabled = false; $('nextBtn').disabled = false; $('saveBtn').disabled = false;
+      $('exportBtn').disabled = poses.size === 0;
+      setStatus(`${p.name} — ${p.width}×${p.height}. Klick ins Bild für WASD + Maus.`);
+      fitStage();
+      restorePoseForCurrentPhoto();
+    }
+
+    function savePose() {
+      if (photoIndex < 0) return;
+      const photo = photos[photoIndex];
+      camera.updateMatrixWorld(true);
+      const pose = {
+        name: `photo_${String(photoIndex + 1).padStart(4, '0')}`,
+        image: photo.name,
+        image_name: photo.name,
+        width: photo.width,
+        height: photo.height,
+        intrinsics: intrinsicsFor(photo),
+        extrinsics_world_to_camera: matrixRows(worldToOpenCV()),
+        camera_world_matrix_three: matrixRows(camera.matrixWorld),
+        position: camera.position.toArray(),
+        quaternion: camera.quaternion.toArray(),
+        fov_deg: camera.fov,
+      };
+      poses.set(photo.name, pose);
+      $('exportBtn').disabled = false;
+      poseStatus.textContent = `${poses.size} / ${photos.length} Posen gespeichert`;
+      showToast(`Pose gespeichert: ${photo.name}`);
+    }
+
+    function exportJson() {
+      if (!poses.size) return;
+      const ordered = photos.filter(p => poses.has(p.name)).map(p => {
+        const { position, quaternion, ...exported } = poses.get(p.name);
+        return exported;
+      });
+      const payload = {
+        format: 'SHADED.manually-posed-cameras.v1',
+        world_units: 'GLB scene units',
+        camera_convention: 'OpenCV world-to-camera (+X right, +Y down, +Z forward)',
+        source_model: modelRoot?.userData?.sourceFile || null,
+        views: ordered,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'posed_cameras.json'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast(`JSON exportiert: ${ordered.length} Posen`);
+    }
+
+    $('glbInput').addEventListener('change', (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      setStatus(`Lade ${file.name} …`);
+      if (modelRoot) scene.remove(modelRoot);
+      const url = URL.createObjectURL(file);
+      new GLTFLoader().load(url, (gltf) => {
+        URL.revokeObjectURL(url);
+        modelRoot = gltf.scene;
+        modelRoot.userData.sourceFile = file.name;
+        scene.add(modelRoot);
+        modelBounds = new THREE.Box3().setFromObject(modelRoot);
+        fitModel();
+        setStatus(`${file.name} geladen. Jetzt Fotos laden.`);
+      }, (progress) => {
+        if (progress.total) setStatus(`Lade ${file.name}: ${Math.round(progress.loaded / progress.total * 100)}%`);
+      }, (error) => {
+        console.error(error); setStatus(`GLB konnte nicht geladen werden: ${error.message || error}`);
+      });
+    });
+
+    $('photoInput').addEventListener('change', async (event) => {
+      const files = [...(event.target.files || [])].sort(naturalSort);
+      if (!files.length) return;
+      setStatus(`Lese ${files.length} Fotos …`);
+      for (const p of photos) URL.revokeObjectURL(p.url);
+      photos = []; poses.clear();
+      poseStatus.textContent = '0 Posen gespeichert'; $('exportBtn').disabled = true;
+      for (let i = 0; i < files.length; i++) {
+        photos.push(await imageMeta(files[i]));
+        setStatus(`Lese Fotos: ${i + 1} / ${files.length}`);
+      }
+      showPhoto(0);
+    });
+
+    $('fitBtn').addEventListener('click', fitModel);
+    $('prevBtn').addEventListener('click', () => showPhoto(photoIndex - 1));
+    $('nextBtn').addEventListener('click', () => showPhoto(photoIndex + 1));
+    $('saveBtn').addEventListener('click', savePose);
+    $('exportBtn').addEventListener('click', exportJson);
+    $('opacity').addEventListener('input', (e) => {
+      const value = Number(e.target.value); overlay.style.opacity = value; $('opacityValue').textContent = `${Math.round(value * 100)}%`;
+    });
+    $('fov').addEventListener('input', (e) => {
+      camera.fov = Number(e.target.value); camera.updateProjectionMatrix(); $('fovValue').textContent = `${camera.fov.toFixed(1)}°`;
+    });
+
+    renderer.domElement.addEventListener('click', () => { if (!controls.isLocked) controls.lock(); });
+    controls.addEventListener('lock', () => setStatus('Maussteuerung aktiv. Esc zum Freigeben.'));
+    controls.addEventListener('unlock', () => { if (photoIndex >= 0) setStatus(`${photos[photoIndex].name} — Maus frei.`); });
+
+    window.addEventListener('keydown', (e) => {
+      keys.add(e.code);
+      if (e.code === 'Enter' && photoIndex >= 0) { e.preventDefault(); savePose(); }
+      if (e.code === 'BracketLeft' && photos.length) { e.preventDefault(); showPhoto(photoIndex - 1); }
+      if (e.code === 'BracketRight' && photos.length) { e.preventDefault(); showPhoto(photoIndex + 1); }
+    });
+    window.addEventListener('keyup', (e) => keys.delete(e.code));
+    window.addEventListener('blur', () => keys.clear());
+    window.addEventListener('resize', fitStage);
+
+    function updateMovement(dt) {
+      if (!controls.isLocked) return;
+      const speed = moveSpeed * (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 5 : 1);
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward); forward.y = 0;
+      if (forward.lengthSq() < 1e-6) forward.set(0, 0, -1);
+      forward.normalize();
+      const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+      const delta = new THREE.Vector3();
+      if (keys.has('KeyW')) delta.add(forward);
+      if (keys.has('KeyS')) delta.sub(forward);
+      if (keys.has('KeyD')) delta.add(right);
+      if (keys.has('KeyA')) delta.sub(right);
+      if (keys.has('KeyE') || keys.has('Space')) delta.y += 1;
+      if (keys.has('KeyQ') || keys.has('KeyC')) delta.y -= 1;
+      if (delta.lengthSq() > 0) camera.position.add(delta.normalize().multiplyScalar(speed * dt));
+    }
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
+      updateMovement(dt);
+      renderer.render(scene, camera);
+    }
+
+    fitStage();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
