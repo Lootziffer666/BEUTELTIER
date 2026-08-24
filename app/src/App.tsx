@@ -30,7 +30,10 @@ export default function App() {
   const [focusHallKey, setFocusHallKey] = useState<string | null>(null);
   const [stagingObjectCount, setStagingObjectCount] = useState(0);
   const [previewSafe, setPreviewSafe] = useState(true);
-  const [cel, setCel] = useState(false);
+  // Der BEUTELTIER-Look (Cel-Shading, Konturen) ist das Ziel, nicht ein
+  // Experiment hinter einem Schalter -- er startet deshalb an. Der Schalter
+  // bleibt fuer den direkten Vergleich mit dem alten PBR-Look erhalten.
+  const [cel, setCel] = useState(true);
   const [showStands, setShowStands] = useState(false);
   const [toolboxOpen, setToolboxOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(() =>
