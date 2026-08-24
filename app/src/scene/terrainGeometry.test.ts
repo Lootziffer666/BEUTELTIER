@@ -55,11 +55,14 @@ describe('DGM1 terrain geometry', () => {
     expect(repaired.geometry.getAttribute('normal').getY(0)).toBeGreaterThan(0);
   });
 
-  it('preserves a valid terrain mask instead of filling building cells again', () => {
+  it('closes coarse building-mask holes with the measured terrain grid', () => {
     const source = twoByThreeGrid();
     source.setIndex([1, 2, 4, 2, 5, 4]);
     const repaired = repairTerrainGrid(source);
-    expect(Array.from(repaired.geometry.getIndex()!.array)).toEqual([1, 2, 4, 2, 5, 4]);
+    expect(Array.from(repaired.geometry.getIndex()!.array)).toEqual([
+      0, 1, 3, 1, 4, 3,
+      1, 2, 4, 2, 5, 4,
+    ]);
 
     const drape = orthophotoTerrainGeometry(
       repaired.geometry,
@@ -67,7 +70,10 @@ describe('DGM1 terrain geometry', () => {
       repaired.rows,
       corners,
     );
-    expect(Array.from(drape.getIndex()!.array)).toEqual([1, 2, 4, 2, 5, 4]);
+    expect(Array.from(drape.getIndex()!.array)).toEqual([
+      0, 1, 3, 1, 4, 3,
+      1, 2, 4, 2, 5, 4,
+    ]);
   });
 
   it('maps the southern image edge to v=0 without a second vertical flip', () => {
