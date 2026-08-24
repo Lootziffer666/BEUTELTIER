@@ -84,10 +84,11 @@ export function sampleRegisteredTerrainHeight(
 }
 
 /**
- * Alte Terrain-GLBs hatten Indizes ausserhalb ihres Vertex-Arrays. Nur dann
- * wird die regelmaessige Raster-Topologie aus den vorhandenen, gemessenen
- * Positionen rekonstruiert. Ein gueltiger neuer Index bleibt unveraendert:
- * er enthaelt die nach realen LoD2-Grundflaechen ausgesparten Gebaeudezellen.
+ * Die regelmaessige Raster-Topologie wird aus den vorhandenen, gemessenen
+ * Positionen rekonstruiert. Der Index wird immer aus dem vollstaendigen
+ * Raster aufgebaut. Gebaeude stehen auf dem gemessenen DGM; grobe
+ * 10-m-Aussparungen unter ihren Grundrissen wuerden ausserhalb der exakten
+ * LoD2-Kante als sichtbare, gezackte Loecher bis zum Hintergrund reichen.
  */
 export function repairTerrainGrid(source: THREE.BufferGeometry): {
   geometry: THREE.BufferGeometry;
@@ -133,32 +134,25 @@ export function repairTerrainGrid(source: THREE.BufferGeometry): {
   }
 
   const geometry = source.clone();
-  const sourceIndex = source.getIndex();
-  const sourceIndexValid = sourceIndex !== null &&
-    sourceIndex.count > 0 &&
-    sourceIndex.count % 3 === 0 &&
-    Array.from(sourceIndex.array).every((value) => value < position.count);
-  if (!sourceIndexValid) {
-    const indices = new Uint32Array((cols - 1) * (rows - 1) * 6);
-    let cursor = 0;
-    for (let row = 0; row < rows - 1; row += 1) {
-      for (let col = 0; col < cols - 1; col += 1) {
-        const a = row * cols + col;
-        const b = a + 1;
-        const c = a + cols;
-        const d = c + 1;
-        // Raster-Z nimmt im Asset von Zeile zu Zeile ab. Diese Reihenfolge
-        // zeigt deshalb nach +Y und bleibt von oben sichtbar.
-        indices[cursor++] = a;
-        indices[cursor++] = b;
-        indices[cursor++] = c;
-        indices[cursor++] = b;
-        indices[cursor++] = d;
-        indices[cursor++] = c;
-      }
+  const indices = new Uint32Array((cols - 1) * (rows - 1) * 6);
+  let cursor = 0;
+  for (let row = 0; row < rows - 1; row += 1) {
+    for (let col = 0; col < cols - 1; col += 1) {
+      const a = row * cols + col;
+      const b = a + 1;
+      const c = a + cols;
+      const d = c + 1;
+      // Raster-Z nimmt im Asset von Zeile zu Zeile ab. Diese Reihenfolge
+      // zeigt deshalb nach +Y und bleibt von oben sichtbar.
+      indices[cursor++] = a;
+      indices[cursor++] = b;
+      indices[cursor++] = c;
+      indices[cursor++] = b;
+      indices[cursor++] = d;
+      indices[cursor++] = c;
     }
-    geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   }
+  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   geometry.computeVertexNormals();
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
