@@ -6,10 +6,12 @@
 import { describe, expect, it } from 'vitest';
 
 import gemessen from '../../public/data/boulevard.json';
+import standort from '../../public/data/registered-site.json';
 import type { BoulevardPlan } from '../data/load';
 import {
   boulevardAchse,
   BODEN_Y,
+  boulevardBoden,
   durchgangsbereiche,
   ohneDurchgaenge,
   TUER_VERSATZ_M,
@@ -26,6 +28,7 @@ import {
 // Der JSON-Import kommt als weit gefasster Typ herein ("art" ist dort jeder
 // String); dass die Datei wirklich zum Schema passt, prueft der Ladepfad.
 const plan = gemessen as unknown as BoulevardPlan;
+const hallenboden = (key: string) => standort.halls.find((hall) => hall.key === key)!.baseY;
 const achse = boulevardAchse({ boulevard: plan })!;
 const flaechen = new BoulevardSurfaces(plan, achse);
 
@@ -57,7 +60,7 @@ describe('Nordgang', () => {
   it('traegt in der Mitte einen Fussboden', () => {
     const fuss = fussAuf(140, 0);
     expect(fuss.blocked).toBe(false);
-    expect(fuss.z).toBeCloseTo(BODEN_Y, 6);
+    expect(fuss.z).toBeCloseTo(boulevardBoden(plan), 6);
     expect(fuss.surfaceId).toBe('boulevard:nord');
   });
 
@@ -83,7 +86,8 @@ describe('Freitreppe', () => {
     const kopf = fussAuf(treppe.bisM - 0.5, 0);
     expect(fuss.blocked).toBe(false);
     expect(kopf.blocked).toBe(false);
-    expect(fuss.z).toBeLessThan(1);
+    expect(fuss.z).toBeGreaterThan(treppe.untenM);
+    expect(fuss.z).toBeLessThan(treppe.untenM + 1);
     expect(kopf.z).toBeGreaterThan(oben - 1);
     expect(kopf.z).toBeLessThanOrEqual(oben + 1e-9);
   });
@@ -91,8 +95,8 @@ describe('Freitreppe', () => {
   it('steigt gleichmaessig und nicht in einem Satz', () => {
     const treppe = plan.treppe!;
     const mitte = fussAuf((treppe.vonM + treppe.bisM) / 2, 0);
-    expect(mitte.z).toBeGreaterThan(2);
-    expect(mitte.z).toBeLessThan(6);
+    expect(mitte.z).toBeGreaterThan(treppe.untenM + 2);
+    expect(mitte.z).toBeLessThan(treppe.obenM! - 2);
   });
 
   it('traegt neben ihrem Lauf nichts -- dort ist gesperrt, nicht Hoehe null', () => {
@@ -273,7 +277,7 @@ describe('Aussengelaende', () => {
       const fuss = fussAuf(s, q);
       expect(fuss.surfaceId).toBe(hof.id);
       expect(fuss.blocked).toBe(false);
-      expect(fuss.z).toBe(0);
+      expect(fuss.z).toBeCloseTo(boulevardBoden(plan), 6);
     }
   });
 
@@ -512,20 +516,23 @@ describe('Aussengelaende 9/10', () => {
   };
 
   it('legt die obere Ebene auf den Fussboden von Halle 10.2', () => {
-    expect(aussen.ebene1.hoeheM).toBeCloseTo(7.45, 2);
-    expect(auf(400, -120).z).toBeCloseTo(7.45, 2);
+    expect(aussen.ebene1.hoeheM).toBeCloseTo(hallenboden('10.2'), 2);
+    expect(auf(400, -120).z).toBeCloseTo(hallenboden('10.2'), 2);
   });
 
   it('legt die untere Ebene auf Hallenniveau', () => {
-    expect(aussen.ebene0.hoeheM).toBe(0);
-    expect(auf(195, -180).z).toBeCloseTo(0, 6);
+    expect(aussen.ebene0.hoeheM).toBeCloseTo(hallenboden('9.1'), 6);
+    expect(auf(195, -180).z).toBeCloseTo(hallenboden('9.1'), 6);
   });
 
   it('behaelt die vor Ort gemessene Hoehe als Zahl, auch wenn sie nicht gilt', () => {
-    // Gemessen 8,33 m, gebaut 7,45 m nach den amtlichen Hallenboeden. Die
+    // Gemessen 8,33 m, gebaut nach den registrierten amtlichen Hallenboeden. Die
     // Abweichung darf nicht stillschweigend verschwinden.
     expect(aussen.schraege.hoeheGemessenM).toBeCloseTo(8.33, 2);
-    expect(aussen.schraege.obenM - aussen.schraege.untenM).toBeCloseTo(7.45, 2);
+    expect(aussen.schraege.obenM - aussen.schraege.untenM).toBeCloseTo(
+      hallenboden('10.2') - hallenboden('9.1'),
+      2,
+    );
   });
 
   it('faellt ueber die Schraege gleichmaessig ab', () => {
@@ -543,8 +550,8 @@ describe('Aussengelaende 9/10', () => {
     // Ein Prozent unter der Oberkante fehlen sieben Zentimeter auf 7,45 m --
     // die Grenzen stehen deshalb als Zahl und nicht als Rundungsstelle.
     const fall = aussen.schraege.obenM - aussen.schraege.untenM;
-    expect(hoehen[0]).toBeGreaterThan(fall * 0.98);
-    expect(hoehen[hoehen.length - 1]).toBeLessThan(fall * 0.02);
+    expect(hoehen[0] - aussen.schraege.untenM).toBeGreaterThan(fall * 0.98);
+    expect(hoehen[hoehen.length - 1] - aussen.schraege.untenM).toBeLessThan(fall * 0.02);
   });
 
   it('traegt zwischen oberer Ebene und unterer keinen Absatz und kein Loch', () => {
@@ -561,7 +568,7 @@ describe('Aussengelaende 9/10', () => {
   it('schiebt die Platten unter die Hallenkanten', () => {
     expect(aussen.ueberlappM).toBeGreaterThan(0);
     // Ein Meter innerhalb der Grenze traegt die obere Ebene noch.
-    expect(auf(aussen.grenzeM + 1, -120).z).toBeCloseTo(7.45, 2);
+    expect(auf(aussen.grenzeM + 1, -120).z).toBeCloseTo(hallenboden('10.2'), 2);
   });
 });
 

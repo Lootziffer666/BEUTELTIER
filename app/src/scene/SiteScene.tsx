@@ -12,7 +12,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Html, OrbitControls, useGLTF, type OrbitControlsProps } from '@react-three/drei';
+import { Html, MapControls, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
 import type { Dataset } from '../data/load';
@@ -45,7 +45,6 @@ import { ProceduralStaging } from './ProceduralStaging';
 import {
   FAMILIEN,
   familienMaterial,
-  konturHuelle,
   konturStaerke,
   stufenTextur,
   toonMaterial,
@@ -54,8 +53,20 @@ import {
 import { KACHEL_M } from './textur';
 import { Kontur } from './Kontur';
 import { Ausstattung } from './Ausstattung';
+import { worldPresentation, type WorldPreset } from './worldPresentation';
+import {
+  applyRegisteredOrthoUv,
+  orthophotoTerrainGeometry,
+  parseTerrainHeightmap,
+  registeredOrthoContains,
+  repairTerrainGrid,
+  sampleRegisteredTerrainHeight,
+  terrainDrapedSegments,
+  type RegisteredCorners,
+  type TerrainHeightmap,
+} from './terrainGeometry';
 
-export type CameraPreset = 'uebersicht' | 'halle' | 'laufmodus' | 'ego';
+export type CameraPreset = WorldPreset;
 
 export interface SceneProps {
   data: Dataset;
@@ -66,6 +77,12 @@ export interface SceneProps {
   route: Route | null;
   preset: CameraPreset;
   focusHallKey: string | null;
+  /** Darf vom Kamerafokus abweichen, etwa beim Ziel des Gesamtkorridors. */
+  highlightHallKey?: string | null;
+  /** Standkoerper sind eine zuschaltbare Informationsebene, nicht die Welt. */
+  showStands: boolean;
+  /** Nur der Demokorridor darf als demonstrative Linie vor Geometrie stehen. */
+  routeOnTop?: boolean;
   onSelectStand: (standId: string | null) => void;
   /** Verlässt die Ego-Perspektive, wenn der Nutzer Escape drückt. */
   onLeaveEgo?: () => void;
@@ -121,8 +138,6 @@ const STAND_HEIGHT_M = 2.6;
 const MODEL_URL = `${import.meta.env.BASE_URL}models/messe.glb`;
 /** Das DGM1-Terrain, gebaut von tools/build_terrain.py. */
 const TERRAIN_URL = `${import.meta.env.BASE_URL}models/terrain.glb`;
-/** Die Skyline der weiteren Umgebung, gebaut von tools/build_skyline.py. */
-const SKYLINE_URL = `${import.meta.env.BASE_URL}models/distant/skyline.glb`;
 /** Das entzerrte Senkrechtluftbild, gebaut von tools/build_ortho.py. */
 const ORTHO_URL = `${import.meta.env.BASE_URL}models/gelaende.jpg`;
 /**
@@ -155,22 +170,25 @@ const RUN_SPEED_M_PER_S = 4.2;
 function Ground({
   extent,
   centre,
-  ortho: meta,
+  ortho,
+  map,
+  backdropY,
 }: {
   extent: number;
   centre: [number, number];
   ortho: Ortho | null;
+  map: THREE.Texture | null;
+  backdropY: number;
 }) {
-  const ortho = useMemo(() => (meta ? orthoTexture(ORTHO_URL) : null), [meta]);
-  if (!meta || !ortho) {
+  if (!ortho || !map) {
     return (
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]} receiveShadow>
-        <planeGeometry args={[extent * 2.2, extent * 2.2]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, backdropY, 0]} receiveShadow>
+        <planeGeometry args={[extent * 3, extent * 3]} />
         <meshStandardMaterial color={COLOURS.ground} roughness={1} />
       </mesh>
     );
   }
-  const extentM = meta.extent;
+  const extentM = ortho.extent;
   const width = extentM[2] - extentM[0];
   const height = extentM[3] - extentM[1];
   const midX = (extentM[0] + extentM[2]) / 2 - centre[0];
@@ -179,48 +197,110 @@ function Ground({
   return (
     <group>
       {/* Dahinter, damit der Horizont nicht abreisst. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.6, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, backdropY, 0]} receiveShadow>
         <planeGeometry args={[extent * 3, extent * 3]} />
         <meshStandardMaterial color={COLOURS.ground} roughness={1} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[midX, -0.4, midZ]} receiveShadow>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial map={ortho} roughness={0.88} envMapIntensity={0.6} />
+        <meshStandardMaterial map={map} roughness={0.88} envMapIntensity={0.6} />
       </mesh>
     </group>
   );
 }
 
 /** OSM-Wege/POIs und nur die von LoD2 nicht abgedeckten ALKIS-Nebenbauten. */
-function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] }) {
+function Umgebung({
+  data,
+  centre,
+  registered,
+  terrainHeight,
+  terrainReady,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  registered: boolean;
+  terrainHeight: (x: number, z: number) => number | null;
+  terrainReady: boolean;
+}) {
+  const orthoCorners = registered && data.ortho?.corners
+    ? data.ortho.corners as RegisteredCorners
+    : null;
   const roads = useMemo(() => {
+    const positions = registered
+      ? (terrainReady ? terrainDrapedSegments(
+          (data.surroundings?.roads ?? []).map((road) => road.points),
+          terrainHeight,
+          orthoCorners,
+        ) : [])
+      : (data.surroundings?.roads ?? []).flatMap((road) => {
+          const line: number[] = [];
+          for (let index = 1; index < road.points.length; index += 1) {
+            for (const point of [road.points[index - 1], road.points[index]]) {
+              line.push(point[0], -0.24, point[1]);
+            }
+          }
+          return line;
+        });
+    for (let index = 0; index < positions.length; index += 3) {
+      positions[index] -= centre[0];
+      positions[index + 2] -= centre[1];
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    return geometry;
+  }, [data.surroundings, centre, registered, terrainHeight, terrainReady, orthoCorners]);
+  const markers = useMemo(() => {
     const positions: number[] = [];
-    for (const road of data.surroundings?.roads ?? []) {
-      for (let index = 1; index < road.points.length; index += 1) {
-        for (const point of [road.points[index - 1], road.points[index]]) {
-          positions.push(point[0] - centre[0], -0.24, point[1] - centre[1]);
-        }
+    for (const { point } of data.surroundings?.markers ?? []) {
+      if (registered) {
+        if (!terrainReady || (orthoCorners && !registeredOrthoContains(
+          point[0], point[1], orthoCorners,
+        ))) continue;
+        const height = terrainHeight(point[0], point[1]);
+        if (height === null) continue;
+        positions.push(point[0] - centre[0], height + 0.15, point[1] - centre[1]);
+      } else {
+        positions.push(point[0] - centre[0], 0.15, point[1] - centre[1]);
       }
     }
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     return geometry;
-  }, [data.surroundings, centre]);
-  const markers = useMemo(() => {
-    const positions = (data.surroundings?.markers ?? []).flatMap(({ point }) =>
-      [point[0] - centre[0], 0.15, point[1] - centre[1]]);
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    return geometry;
-  }, [data.surroundings, centre]);
+  }, [data.surroundings, centre, registered, terrainHeight, terrainReady, orthoCorners]);
   const gaps = useMemo(() => (data.footprints?.footprints ?? [])
     .filter((one) => !one.lod2Covered)
-    .map((one) => {
+    .flatMap((one) => {
+      if (registered && !terrainReady) return [];
       const shape = new THREE.Shape(one.footprint.map(([x, y]) =>
         // Gegengespiegelt: die Drehung beim Einhängen legt lokales Y auf -Z.
         new THREE.Vector2(x - centre[0], centre[1] - y)));
-      return { id: one.id, geometry: new THREE.ShapeGeometry(shape) };
-    }), [data.footprints, centre]);
+      const geometry = new THREE.ShapeGeometry(shape);
+      if (registered) {
+        const position = geometry.getAttribute('position');
+        let complete = true;
+        for (let index = 0; index < position.count; index += 1) {
+          const worldX = position.getX(index) + centre[0];
+          const worldZ = centre[1] - position.getY(index);
+          if (orthoCorners && !registeredOrthoContains(worldX, worldZ, orthoCorners)) {
+            complete = false;
+            break;
+          }
+          const height = terrainHeight(worldX, worldZ);
+          if (height === null) {
+            complete = false;
+            break;
+          }
+          position.setZ(index, height + 0.03);
+        }
+        if (!complete) {
+          geometry.dispose();
+          return [];
+        }
+        geometry.computeVertexNormals();
+      }
+      return [{ id: one.id, geometry }];
+    }), [data.footprints, centre, registered, terrainHeight, terrainReady, orthoCorners]);
   useEffect(() => () => {
     roads.dispose();
     markers.dispose();
@@ -236,7 +316,12 @@ function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] })
         <pointsMaterial color="#ffca52" size={2.2} sizeAttenuation />
       </points>
       {gaps.map(({ id, geometry }) => (
-        <mesh key={id} geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.18, 0]}>
+        <mesh
+          key={id}
+          geometry={geometry}
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, registered ? 0 : -0.18, 0]}
+        >
           {/* Die Umgebung hat keine Familie: die Stilbibel fuehrt zehn fuer
               die Messe, und Nachbargebaeude sind keine davon. Sie behalten
               ihr gedecktes Grau und bekommen nur die Stufen -- als Familie
@@ -258,16 +343,78 @@ function Umgebung({ data, centre }: { data: Dataset; centre: [number, number] })
   * sind der Inhalt. Erst im Laufmodus wird daraus eine Wand, an der man steht.
   */
 
-/** Das amtliche DGM1-Terrain der Koelnmesse-Umgebung. */
-function Terrain({ centre }: { centre: [number, number] }) {
+/** Das amtliche DGM1-Terrain mit dem registrierten Luftbild als Oberflaeche. */
+function Terrain({
+  centre,
+  ortho,
+  map,
+}: {
+  centre: [number, number];
+  ortho: Ortho | null;
+  map: THREE.Texture | null;
+}) {
   const { scene } = useGLTF(TERRAIN_URL);
-  return <primitive object={scene} position={[-centre[0], -39.5, -centre[1]]} />;
-}
+  const prepared = useMemo(() => {
+    try {
+      let source: THREE.BufferGeometry | null = null;
+      scene.traverse((node) => {
+        if (!source && node instanceof THREE.Mesh) source = node.geometry;
+      });
+      if (!source) throw new Error('Terrain-GLB enthaelt kein Mesh.');
+      const repaired = repairTerrainGrid(source);
+      const drape = ortho?.corners && map
+        ? orthophotoTerrainGeometry(
+            repaired.geometry,
+            repaired.cols,
+            repaired.rows,
+            ortho.corners as RegisteredCorners,
+          )
+        : null;
+      return { ...repaired, drape, error: null };
+    } catch (cause) {
+      return {
+        geometry: null,
+        drape: null,
+        cols: 0,
+        rows: 0,
+        error: cause instanceof Error ? cause.message : String(cause),
+      };
+    }
+  }, [scene, ortho, map]);
 
-/** Die Skyline der weiteren Umgebung (Dom, KölnTriangle, Messeturm, Hbf). */
-function Skyline({ centre }: { centre: [number, number] }) {
-  const { scene } = useGLTF(SKYLINE_URL);
-  return <primitive object={scene} position={[-centre[0], 0, -centre[1]]} />;
+  useEffect(() => () => {
+    prepared.drape?.dispose();
+    prepared.geometry?.dispose();
+  }, [prepared]);
+
+  if (prepared.error || !prepared.geometry) {
+    return (
+      <Html position={[0, 8, 0]} center>
+        <div className="scene-data-error">Gelände nicht verfügbar: {prepared.error}</div>
+      </Html>
+    );
+  }
+
+  return (
+    <group position={[-centre[0], 0, -centre[1]]}>
+      <mesh geometry={prepared.geometry} receiveShadow>
+        <meshStandardMaterial color="#4f5a55" roughness={1} />
+      </mesh>
+      {prepared.drape && map && (
+        <mesh geometry={prepared.drape} receiveShadow renderOrder={1}>
+          <meshStandardMaterial
+            map={map}
+            color="#ffffff"
+            roughness={0.9}
+            envMapIntensity={0.5}
+            polygonOffset
+            polygonOffsetFactor={-1}
+            polygonOffsetUnits={-1}
+          />
+        </mesh>
+      )}
+    </group>
+  );
 }
 
 function Gelaende({
@@ -417,6 +564,22 @@ function bauteil(name: string): 'roof' | 'ground' | 'wall' | null {
   return 'wall';
 }
 
+function featureId(name: string): string | null {
+  const [id, featureClass] = (name ?? '').split('|');
+  return id && (featureClass === 'Building' || featureClass === 'BuildingPart') ? id : null;
+}
+
+interface RegisteredOrthophoto {
+  map: THREE.Texture;
+  corners: RegisteredCorners;
+}
+
+function hallenHighlight(material: THREE.MeshStandardMaterial | THREE.MeshToonMaterial) {
+  material.color.set('#ffc247');
+  material.emissive.set('#6b3700');
+  material.emissiveIntensity = 0.55;
+}
+
 /**
  * Fertig behandelte Weltmodelle, nach Datei und Blickrichtung.
  *
@@ -449,25 +612,6 @@ function weltFlaechen(interior: boolean) {
   }
   return satz;
 }
-
-/**
- * Wie deckend die amtlichen Weltpakete je Preset stehen.
- *
- * Aus der Übersicht ist das Modell eine Karte: die Hülle bleibt als Andeutung
- * stehen, sonst verdeckt sie genau die Stände, wegen derer man hinsieht. Auf
- * Augenhöhe ist sie das Gebäude und steht undurchsichtig.
- *
- * Der Kern bleibt im Ego-Blick bei 1,0 und nicht bei den vorgeschlagenen 0,92:
- * drinnen kommen die Wände aus `Hallenhuelle`, und ein Schleier darauf liesse
- * die Nachbarhalle durchscheinen. Draussen hat das Modell keine Meinung, dort
- * gelten die gemessenen Profile.
- */
-const WELT_DECKKRAFT: Record<CameraPreset, { kern: number; umgebung: number }> = {
-  uebersicht: { kern: 0.18, umgebung: 0.35 },
-  halle: { kern: 0.35, umgebung: 0.25 },
-  laufmodus: { kern: 0.18, umgebung: 0.3 },
-  ego: { kern: 1.0, umgebung: 0.15 },
-};
 
 /** Legt den Preset-Schleier auf ein Material. 1,0 lässt es unberührt. */
 function schleier(material: THREE.Material, deckkraft: number) {
@@ -510,6 +654,8 @@ function OfficialPackage({
   behandeln,
   deckkraft,
   cel,
+  orthophoto,
+  highlightFeatureIds,
 }: {
   uri: string;
   interior: boolean;
@@ -520,6 +666,10 @@ function OfficialPackage({
   deckkraft: number;
   /** Cel-Shading statt PBR: gestufte Beleuchtung und eine Kontur am Kern. */
   cel: boolean;
+  /** Reales Luftbild, nur fuer belegte Dachflaechen im Bildausschnitt. */
+  orthophoto: RegisteredOrthophoto | null;
+  /** Amtliche Feature-IDs der ausgewaehlten Halle. */
+  highlightFeatureIds: readonly string[];
 }) {
   const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
 
@@ -527,11 +677,21 @@ function OfficialPackage({
     // Umgebaut wird nur, was man von drinnen sieht -- von aussen bleibt das
     // Weltmodell inhaltlich, wie es geliefert wird.
     const umbauen = behandeln && !!surfaces && interior;
-    // Ohne Umbau, ohne Schleier und ohne Cel-Look gibt es nichts zu tun; dann
-    // ist die gelieferte Szene das Ergebnis und wird nicht einmal geklont.
-    if (!umbauen && deckkraft > 0.99 && !cel) return scene;
+    const highlightKey = [...highlightFeatureIds].sort().join(',');
+    // Ohne Umbau, Schleier, Luftbild, Highlight und Cel-Look gibt es nichts
+    // zu tun; dann ist die gelieferte Szene das Ergebnis und wird nicht geklont.
+    if (
+      !umbauen && deckkraft > 0.99 && !cel && !orthophoto && !highlightKey
+    ) return scene;
 
-    const schluessel = `${uri}|${interior}|${deckkraft.toFixed(2)}|${cel}`;
+    const schluessel = [
+      uri,
+      interior,
+      deckkraft.toFixed(2),
+      cel,
+      orthophoto ? 'ortho' : 'ohne-ortho',
+      highlightKey,
+    ].join('|');
     const fertig = weltCache.get(schluessel);
     if (fertig) return fertig;
 
@@ -545,45 +705,56 @@ function OfficialPackage({
       });
       for (const mesh of meshes) {
         const quelle = mesh.material as THREE.MeshStandardMaterial;
+        let eigeneGeometrie = false;
+        const editierbareGeometrie = () => {
+          if (!eigeneGeometrie) {
+            // scene.clone(true) teilt die Geometrie mit dem useGLTF-Cache.
+            // UV-Projektion darf deshalb nie die geladene Vorlage veraendern.
+            mesh.geometry = mesh.geometry.clone();
+            eigeneGeometrie = true;
+          }
+          return mesh.geometry;
+        };
         const teil = bauteil(quelle.name) ?? 'wall';
+        const highlighted = highlightFeatureIds.includes(featureId(quelle.name) ?? '');
         const familie = familieFuer(teil, behandeln);
         if (umbauen && teil !== 'wall') {
           // Drinnen kommen Boden und Decke aus `Hallenhuelle` -- siehe unten.
           mesh.visible = false;
           continue;
         }
-        if (umbauen && surfaces) projiziereUV(mesh.geometry, WELT_KACHEL_M.wand);
-        // Der Punkt, an dem der Look bisher verlorenging: die amtlichen
-        // GLB-Pakete sind aus Gebäudeumringen gerechnet und bringen **keine**
-        // Textur mit. `quelle.map` ist dort schlicht `null`, und was blieb,
-        // war eine gestufte Beleuchtung auf einer leeren Farbfläche -- eine
-        // Pappschachtel. Wo keine Karte mitkommt, zeichnet jetzt die Familie
-        // selbst, projiziert in Metern statt über die Fläche gestreckt.
+        if (umbauen && surfaces) projiziereUV(editierbareGeometrie(), WELT_KACHEL_M.wand);
+        // Die amtlichen GLB-Pakete bringen fuer Waende kein Foto mit. Aussen
+        // bleibt die Wand deshalb bewusst eine saubere Materialklasse statt
+        // einer erfundenen Fassadentextur. Nur Innenwaende erhalten die aus
+        // Referenzbildern abgeleitete Familienzeichnung.
         const eigeneKarte = umbauen && surfaces ? surfaces.wand : null;
+        const realesDach = teil === 'roof' && orthophoto
+          ? applyRegisteredOrthoUv(editierbareGeometrie(), orthophoto.corners)
+          : false;
         let material: THREE.MeshToonMaterial;
         if (eigeneKarte) {
           material = toonMaterial(familie, {
             map: eigeneKarte.map, normalMap: eigeneKarte.normalMap,
           }, { side: THREE.DoubleSide });
+        } else if (realesDach && orthophoto) {
+          material = toonMaterial(familie, { map: orthophoto.map }, { side: THREE.DoubleSide });
+          material.color.set('#ffffff');
         } else if (quelle.map) {
           material = toonMaterial(familie, {
             map: quelle.map, normalMap: quelle.normalMap,
           }, { side: THREE.DoubleSide });
+        } else if (teil === 'wall' && !interior) {
+          material = toonMaterial(familie, {}, { side: THREE.DoubleSide });
         } else {
-          projiziereUV(mesh.geometry, KACHEL_M[familie.id] ?? 6);
+          projiziereUV(editierbareGeometrie(), KACHEL_M[familie.id] ?? 6);
           material = familienMaterial(familie, undefined, { side: THREE.DoubleSide });
         }
+        if (highlighted) hallenHighlight(material);
         schleier(material, deckkraft);
         mesh.material = material;
         mesh.receiveShadow = true;
         mesh.castShadow = !interior && behandeln;
-        // Die Kontur trägt nur der Kern. Die Umgebung ist Hintergrund, und
-        // eine Linie um jedes Nebengebäude macht aus der Karte ein Netz.
-        // Durchsichtige Flächen bekommen auch keine: die Linie stünde vor
-        // dem, was man durch sie hindurch sehen will.
-        if (!behandeln || deckkraft <= 0.99) continue;
-        const huelle = konturHuelle(mesh, konturStaerke(familie.kontur));
-        if (huelle) mesh.add(huelle);
       }
       weltCache.set(schluessel, clone);
       return clone;
@@ -591,13 +762,31 @@ function OfficialPackage({
     clone.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       const quelle = node.material as THREE.MeshStandardMaterial;
+      let eigeneGeometrie = false;
+      const editierbareGeometrie = () => {
+        if (!eigeneGeometrie) {
+          node.geometry = node.geometry.clone();
+          eigeneGeometrie = true;
+        }
+        return node.geometry;
+      };
       const teil = bauteil(quelle.name);
+      const highlighted = highlightFeatureIds.includes(featureId(quelle.name) ?? '');
+      const realesDach = teil === 'roof' && orthophoto
+        ? applyRegisteredOrthoUv(editierbareGeometrie(), orthophoto.corners)
+        : false;
       if (!umbauen || !teil || !surfaces) {
-        // Nur der Schleier. Das Material wird geklont, weil die Vorlage aus
-        // dem GLB-Cache kommt und von anderen Presets weiterbenutzt wird --
-        // sie hier zu veraendern faerbte auch die Übersicht ein.
-        if (deckkraft <= 0.99) {
+        // Schleier, reales Dachbild und Highlight brauchen eine eigene Kopie:
+        // die Vorlage kommt aus dem GLB-Cache und wird von anderen Ansichten
+        // weiterbenutzt.
+        if (deckkraft <= 0.99 || realesDach || highlighted) {
           const kopie = quelle.clone();
+          if (realesDach && orthophoto) {
+            kopie.map = orthophoto.map;
+            kopie.color.set('#ffffff');
+            kopie.roughness = 0.9;
+          }
+          if (highlighted) hallenHighlight(kopie);
           schleier(kopie, deckkraft);
           node.material = kopie;
         }
@@ -618,7 +807,7 @@ function OfficialPackage({
         node.visible = false;
         return;
       }
-      projiziereUV(node.geometry, WELT_KACHEL_M.wand);
+      projiziereUV(editierbareGeometrie(), WELT_KACHEL_M.wand);
       material.map = surfaces.wand.map;
       material.normalMap = surfaces.wand.normalMap;
       material.roughnessMap = surfaces.wand.roughnessMap;
@@ -626,6 +815,7 @@ function OfficialPackage({
       material.metalness = 0.18;
       material.envMapIntensity = 0.9;
       material.normalScale = new THREE.Vector2(1.0, 1.0);
+      if (highlighted) hallenHighlight(material);
       schleier(material, deckkraft);
       node.material = material;
       node.receiveShadow = true;
@@ -634,7 +824,17 @@ function OfficialPackage({
 
     weltCache.set(schluessel, clone);
     return clone;
-  }, [scene, interior, surfaces, behandeln, uri, deckkraft, cel]);
+  }, [
+    scene,
+    interior,
+    surfaces,
+    behandeln,
+    uri,
+    deckkraft,
+    cel,
+    orthophoto,
+    highlightFeatureIds,
+  ]);
 
   return <primitive object={model} />;
 }
@@ -644,19 +844,30 @@ function OfficialWorld({
   centre,
   preset,
   cel,
+  deckkraft,
+  orthophoto,
+  highlightHallKey,
 }: {
   data: Dataset;
   centre: [number, number];
   preset: CameraPreset;
   cel: boolean;
+  deckkraft: { kern: number; umgebung: number };
+  orthophoto: RegisteredOrthophoto | null;
+  highlightHallKey: string | null;
 }) {
   const interior = preset === 'ego';
   const surfaces = weltFlaechen(interior);
-  const deckkraft = WELT_DECKKRAFT[preset];
 
   const packages = data.world?.manifest.packages.filter(
     (entry) => entry.available && entry.role === 'render',
   ) ?? [];
+  const highlightFeatureIds = useMemo(() => {
+    if (!highlightHallKey) return [];
+    return data.world?.hallRegistrations?.registrations.find(
+      (entry) => entry.hallKey === highlightHallKey,
+    )?.targetFeatureIds ?? [];
+  }, [data.world, highlightHallKey]);
 
   if (!packages.length) return null;
   // Die GLB-Pakete stehen im selben rechtshaendigen System wie alles andere:
@@ -681,6 +892,8 @@ function OfficialWorld({
             behandeln={kern}
             deckkraft={kern ? deckkraft.kern : deckkraft.umgebung}
             cel={cel}
+            orthophoto={orthophoto}
+            highlightFeatureIds={highlightFeatureIds}
           />
         );
       })}
@@ -992,10 +1205,12 @@ function RouteRibbon({
   data,
   route,
   centre,
+  onTop,
 }: {
   data: Dataset;
   route: Route | null;
   centre: [number, number];
+  onTop: boolean;
 }) {
   const geometry = useMemo(() => {
     if (!route || route.steps.length === 0) return null;
@@ -1013,56 +1228,16 @@ function RouteRibbon({
 
   const hasUnconfirmed = (route?.unconfirmed.length ?? 0) > 0;
   return (
-    <mesh geometry={geometry}>
+    <mesh geometry={geometry} renderOrder={onTop ? 50 : 0}>
       <meshStandardMaterial
         color={hasUnconfirmed ? COLOURS.routeUnconfirmed : COLOURS.route}
         emissive={hasUnconfirmed ? COLOURS.routeUnconfirmed : COLOURS.route}
         emissiveIntensity={0.65}
         roughness={0.4}
+        depthTest={!onTop}
+        depthWrite={!onTop}
       />
     </mesh>
-  );
-}
-
-function HallLabels({
-  data,
-  centre,
-  upperOpacity,
-}: {
-  data: Dataset;
-  centre: [number, number];
-  upperOpacity: number;
-}) {
-  return (
-    <group>
-      {data.site.halls.map((hall) => {
-        const [cx, cy] = polygonCentre(hall.footprint);
-        const estimated = hall.placement.source === 'geschaetzt';
-        const dim = hall.level > 1 && upperOpacity < 0.2;
-        if (dim) return null;
-        return (
-          <Html
-            key={hall.key}
-            position={toScene(cx, cy, hall.baseY + hall.wallHeightM + 6, centre)}
-            center
-            distanceFactor={340}
-            occlude={false}
-          >
-            <div className={`hall-label${estimated ? ' hall-label--estimated' : ''}`}>
-              {hall.outdoor ? hall.name : hall.key}
-              {estimated && (
-                <span
-                  className="hall-label__badge"
-                  title={`Lage geschätzt, rund ${Math.round(hall.placement.residualM ?? 0)} m genau`}
-                >
-                  ±{Math.round(hall.placement.residualM ?? 0)} m
-                </span>
-              )}
-            </div>
-          </Html>
-        );
-      })}
-    </group>
   );
 }
 
@@ -1083,159 +1258,67 @@ const FLY_SPEED_M_PER_S = 2.4;
 /**
  * Terrain-Höhenabfrage über eine Heightmap-Tabelle.
  *
- * Die Heightmap ist ein Flözelliges Float-Array, das vom DGM1-WCS-Download
- * (5 m Raster) stammt. Für jede (x, y) Position wird bilinear interpoliert --
+ * Die Heightmap ist ein flaches Float-Array, ein eingecheckter 10-m-Abgriff
+ * des DGM1-WCS-Rasters. Fuer jede (x, y) Position wird bilinear interpoliert --
  * das kostet O(1) und ist für First-Person ausreichend schnell.
  *
- * Konstruiert aus dem JSON, das build_terrain.py exportiert. Ladefehler
- * (Offline, alte Snapshots) lassen die Höhe auf 0.0 fallen -- dann läuft
- * der Spieler über das flache Orthofoto statt über das Gelände.
+ * Konstruiert aus dem eingecheckten DGM1-Binaersnapshot. Ein Lade- oder
+ * Formatfehler wird sichtbar gemeldet; es gibt keinen behaupteten
+ * Terrain-Erfolg auf einer erfundenen flachen Hoehe.
  */
-function useTerrainHeightmap(centre: [number, number]): (x: number, y: number) => number | null {
+function useTerrainHeightmap(worldOrigin: [number, number, number] | null): {
+  sample: (x: number, y: number) => number | null;
+  error: string | null;
+  ready: boolean;
+} {
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const cache = useRef<{
-    origin: [number, number, number];
-    stepM: number;
-    cols: number;
-    rows: number;
-    heights: Float32Array | null;
-    sceneOffset: number;
-    /** Gecachtes Fenster in UTM-Koordinaten */
-    windowCenterX: number;
-    windowCenterY: number;
-    windowSize: number;
-    /** Grid-Anweisungen für das aktuelle Fenster */
-    winStartX: number;
-    winStartY: number;
-    winCols: number;
-    winRows: number;
-    /** Gecachte Höhen im Fenster */
-    windowHeights: Float32Array | null;
+    worldOrigin: [number, number, number];
+    map: TerrainHeightmap;
   } | null>(null);
-
-  const WINDOW_M = 32; // 32×32m Caching-Fenster
 
   // Lazy-load: Binary-Heightmap beim ersten Render
   useEffect(() => {
     const abort = new AbortController();
+    cache.current = null;
+    setReady(false);
+    if (!worldOrigin) {
+      setError('Amtlicher Szenenursprung fehlt.');
+      return () => abort.abort();
+    }
+    setError(null);
     fetch(`${import.meta.env.BASE_URL}data/terrain_heightmap.bin`)
-      .then((r) => (r.ok ? r.arrayBuffer() : null))
-      .then((buf: ArrayBuffer | null) => {
-        if (!buf || abort.signal.aborted) return;
-        const view = new DataView(buf);
-        cache.current = {
-          origin: [view.getFloat64(0, true), view.getFloat64(8, true), view.getFloat64(16, true)],
-          stepM: view.getFloat64(24, true),
-          cols: view.getUint32(32, true),
-          rows: view.getUint32(36, true),
-          sceneOffset: view.getFloat64(40, true),
-          heights: new Float32Array(buf, 44),
-          windowCenterX: 0,
-          windowCenterY: 0,
-          windowSize: WINDOW_M,
-          winStartX: 0,
-          winStartY: 0,
-          winCols: 0,
-          winRows: 0,
-          windowHeights: null,
-        };
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.arrayBuffer();
       })
-      .catch(() => {
+      .then((buf: ArrayBuffer) => {
+        if (abort.signal.aborted) return;
+        cache.current = {
+          worldOrigin,
+          map: parseTerrainHeightmap(buf),
+        };
+        setError(null);
+        setReady(true);
+      })
+      .catch((cause: unknown) => {
+        if (abort.signal.aborted) return;
         cache.current = null;
+        setReady(false);
+        setError(cause instanceof Error ? cause.message : String(cause));
       });
     return () => abort.abort();
+  }, [worldOrigin]);
+
+  const sample = useCallback((x: number, y: number): number | null => {
+    const loaded = cache.current;
+    return loaded
+      ? sampleRegisteredTerrainHeight(loaded.map, loaded.worldOrigin, x, y)
+      : null;
   }, []);
 
-  return useCallback((x: number, y: number): number | null => {
-    const m = cache.current;
-    if (!m || !m.heights) return null;
-
-    // Scene -> UTM
-    const utmX = x + centre[0];
-    const utmY = y + centre[1];
-    const halfWin = m.windowSize / 2;
-
-    // Prüfe ob (utmX, utmY) im aktuellen Cache-Fenster liegt
-    // Fenster ist zentriert auf (windowCenterX, windowCenterY)
-    const needRefresh = !m.windowHeights ||
-      Math.abs(utmX - m.windowCenterX) > halfWin ||
-      Math.abs(utmY - m.windowCenterY) > halfWin;
-
-    if (needRefresh) {
-      // Verschiebe Fenster zum neuen Zentrum
-      m.windowCenterX = utmX;
-      m.windowCenterY = utmY;
-      m.winStartX = utmX - halfWin;
-      m.winStartY = utmY - halfWin;
-      m.winCols = Math.ceil(m.windowSize / m.stepM) + 1;
-      m.winRows = Math.ceil(m.windowSize / m.stepM) + 1;
-      const winSize = m.winCols * m.winRows;
-      m.windowHeights = new Float32Array(winSize);
-
-      // Fülle Fenster mit interpolierten Höhenwerten
-      for (let wy = 0; wy < m.winRows; wy++) {
-        const utmRowY = m.winStartY + wy * m.stepM;
-        const relY = (utmRowY - m.origin[1]) / m.stepM;
-        const iy0 = Math.floor(relY);
-        const fy1 = relY - iy0;
-        for (let wx = 0; wx < m.winCols; wx++) {
-          const utmColX = m.winStartX + wx * m.stepM;
-          const relX = (utmColX - m.origin[0]) / m.stepM;
-          const ix0 = Math.floor(relX);
-          const fx1 = relX - ix0;
-          const idx = (iy: number, ix: number) => iy * m.cols + ix;
-          if (ix0 < 0 || iy0 < 0 || ix0 >= m.cols - 1 || iy0 >= m.rows - 1) {
-            m.windowHeights[wy * m.winCols + wx] = NaN;
-            continue;
-          }
-          const h00 = m.heights[idx(iy0, ix0)];
-          const h01 = m.heights[idx(iy0, ix0 + 1)];
-          const h10 = m.heights[idx(iy0 + 1, ix0)];
-          const h11 = m.heights[idx(iy0 + 1, ix0 + 1)];
-          const h0 = h00 * (1 - fx1) + h01 * fx1;
-          const h1 = h10 * (1 - fx1) + h11 * fx1;
-          m.windowHeights[wy * m.winCols + wx] = h0 * (1 - fy1) + h1 * fy1;
-        }
-      }
-    }
-
-    // Sample aus gecachtem Fenster
-    const fx = (utmX - m.winStartX) / m.stepM;
-    const fy = (utmY - m.winStartY) / m.stepM;
-    const ix0 = Math.floor(fx);
-    const iy0 = Math.floor(fy);
-
-    if (ix0 < 0 || iy0 < 0 || ix0 >= m.winCols - 1 || iy0 >= m.winRows - 1) {
-      // Outside window: global sample (shouldn't happen if window is centered)
-      const relX = (utmX - m.origin[0]) / m.stepM;
-      const relY = (utmY - m.origin[1]) / m.stepM;
-      const ixG = Math.floor(relX);
-      const iyG = Math.floor(relY);
-      if (ixG < 0 || iyG < 0 || ixG >= m.cols - 1 || iyG >= m.rows - 1) return null;
-      const fxG1 = relX - ixG;
-      const fyG1 = relY - iyG;
-      const idx = (iy: number, ix: number) => iy * m.cols + ix;
-      const h00 = m.heights[idx(iyG, ixG)];
-      const h01 = m.heights[idx(iyG, ixG + 1)];
-      const h10 = m.heights[idx(iyG + 1, ixG)];
-      const h11 = m.heights[idx(iyG + 1, ixG + 1)];
-      const h0 = h00 * (1 - fxG1) + h01 * fxG1;
-      const h1 = h10 * (1 - fxG1) + h11 * fxG1;
-      const h = h0 * (1 - fyG1) + h1 * fyG1;
-      return h !== h ? null : h + m.sceneOffset;
-    }
-
-    // Bilineare Interpolation aus gecachtem Fenster-Fenster
-    const fx1 = fx - ix0;
-    const fy1 = fy - iy0;
-    const h00 = m.windowHeights![iy0 * m.winCols + ix0];
-    const h01 = m.windowHeights![iy0 * m.winCols + ix0 + 1];
-    const h10 = m.windowHeights![(iy0 + 1) * m.winCols + ix0];
-    const h11 = m.windowHeights![(iy0 + 1) * m.winCols + ix0 + 1];
-    const h0 = h00 * (1 - fx1) + h01 * fx1;
-    const h1 = h10 * (1 - fx1) + h11 * fx1;
-    const h = h0 * (1 - fy1) + h1 * fy1;
-    return h !== h ? null : h + m.sceneOffset;
-  }, [centre]);
+  return { sample, error, ready };
 }
 
 function WalkControls({
@@ -1248,6 +1331,7 @@ function WalkControls({
   frozen = false,
   viewfinderOpen = false,
   terrainHeight,
+  terrainReady,
   onToggleNoClip,
   onToggleFreeze,
   onToggleViewfinder,
@@ -1263,6 +1347,7 @@ function WalkControls({
   frozen?: boolean;
   viewfinderOpen?: boolean;
   terrainHeight: (x: number, y: number) => number | null;
+  terrainReady: boolean;
   onToggleNoClip?: () => void;
   onToggleFreeze?: () => void;
   onToggleViewfinder?: () => void;
@@ -1274,6 +1359,14 @@ function WalkControls({
   const look = useRef({ yaw: 0, pitch: 0 });
   const keys = useRef(new Set<string>());
   const locked = useRef(false);
+  const touchMovement = useRef({ forward: 0, strafe: 0 });
+  const touchPointers = useRef(new Map<number, {
+    role: 'move' | 'look';
+    startX: number;
+    startY: number;
+    lastX: number;
+    lastY: number;
+  }>());
 
   // Als Refs gespiegelt, damit der Ereignis-Effekt nicht bei jedem Tastendruck
   // oder jedem Render der Elternkomponente neu gebunden werden muss -- die
@@ -1356,22 +1449,35 @@ function WalkControls({
       }
     }
     if (!footing) footing = data.walk.spawn();
-    if (footing) position.current = footing;
+    if (footing) {
+      const surface = data.walk.footingAt(footing.x, footing.y, footing.z);
+      const piazzaId = data.boulevard?.plaetze?.find((platz) => platz.name === 'Piazza')?.id;
+      const terrainZ = !surface.hallKey && (
+        surface.surfaceId === 'legacy-open-outside' ||
+        (surface.surfaceId?.startsWith('platz-') && surface.surfaceId !== piazzaId)
+      )
+        ? terrainHeight(footing.x, footing.y)
+        : null;
+      position.current = terrainZ === null ? footing : { ...footing, z: terrainZ };
+    }
     look.current = { yaw: 0, pitch: 0 };
-  }, [active, start, data, centre]);
+  }, [active, start, data, centre, terrainHeight, terrainReady]);
 
   useEffect(() => {
     if (!active) return;
     const canvas = gl.domElement;
+    const activeKeys = keys.current;
+    const activePointers = touchPointers.current;
     const isTyping = (target: EventTarget | null) =>
       target instanceof HTMLElement && ['INPUT', 'TEXTAREA'].includes(target.tagName);
 
     const request = () => {
+      if (window.matchMedia('(pointer: coarse)').matches) return;
       if (!locked.current && !viewfinderRef.current) void canvas.requestPointerLock?.();
     };
     const onLockChange = () => {
       locked.current = document.pointerLockElement === canvas;
-      if (!locked.current) keys.current.clear();
+      if (!locked.current) activeKeys.clear();
     };
     const onMove = (event: MouseEvent) => {
       if (!locked.current || frozenRef.current) return;
@@ -1412,26 +1518,75 @@ function WalkControls({
         });
         return;
       }
-      keys.current.add(key);
+      activeKeys.add(key);
     };
     const onUp = (event: KeyboardEvent) => {
       if (isTyping(event.target)) return;
-      keys.current.delete(event.key.toLowerCase());
+      activeKeys.delete(event.key.toLowerCase());
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse' || frozenRef.current || viewfinderRef.current) return;
+      event.preventDefault();
+      const role: 'move' | 'look' = event.clientX < window.innerWidth / 2 ? 'move' : 'look';
+      if ([...activePointers.values()].some((pointer) => pointer.role === role)) return;
+      activePointers.set(event.pointerId, {
+        role,
+        startX: event.clientX,
+        startY: event.clientY,
+        lastX: event.clientX,
+        lastY: event.clientY,
+      });
+      canvas.setPointerCapture?.(event.pointerId);
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      const pointer = activePointers.get(event.pointerId);
+      if (!pointer || frozenRef.current) return;
+      event.preventDefault();
+      if (pointer.role === 'look') {
+        look.current.yaw -= (event.clientX - pointer.lastX) * 0.006;
+        look.current.pitch = Math.max(
+          -1.2,
+          Math.min(1.2, look.current.pitch - (event.clientY - pointer.lastY) * 0.006),
+        );
+        pointer.lastX = event.clientX;
+        pointer.lastY = event.clientY;
+        return;
+      }
+      const strafe = Math.max(-1, Math.min(1, (event.clientX - pointer.startX) / 70));
+      const forward = Math.max(-1, Math.min(1, (pointer.startY - event.clientY) / 70));
+      const length = Math.max(1, Math.hypot(strafe, forward));
+      touchMovement.current = { strafe: strafe / length, forward: forward / length };
+    };
+    const onPointerEnd = (event: PointerEvent) => {
+      const pointer = activePointers.get(event.pointerId);
+      if (pointer?.role === 'move') touchMovement.current = { forward: 0, strafe: 0 };
+      activePointers.delete(event.pointerId);
+      if (canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
     };
 
     canvas.addEventListener('click', request);
+    canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
+    canvas.addEventListener('pointermove', onPointerMove, { passive: false });
+    canvas.addEventListener('pointerup', onPointerEnd);
+    canvas.addEventListener('pointercancel', onPointerEnd);
     document.addEventListener('pointerlockchange', onLockChange);
     document.addEventListener('mousemove', onMove);
     window.addEventListener('keydown', onDown);
     window.addEventListener('keyup', onUp);
     return () => {
       canvas.removeEventListener('click', request);
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerup', onPointerEnd);
+      canvas.removeEventListener('pointercancel', onPointerEnd);
       document.removeEventListener('pointerlockchange', onLockChange);
       document.removeEventListener('mousemove', onMove);
       window.removeEventListener('keydown', onDown);
       window.removeEventListener('keyup', onUp);
       if (document.pointerLockElement === canvas) document.exitPointerLock?.();
-      keys.current.clear();
+      activeKeys.clear();
+      activePointers.clear();
+      touchMovement.current = { forward: 0, strafe: 0 };
     };
     // Bewusst ohne die Callback-Props in den Abhängigkeiten -- sie sind in
     // App.tsx inline definiert (neue Funktion bei jedem Render) und würden
@@ -1469,24 +1624,11 @@ function WalkControls({
       const pressed = keys.current;
       const forward =
         (pressed.has('w') || pressed.has('arrowup') ? 1 : 0) -
-        (pressed.has('s') || pressed.has('arrowdown') ? 1 : 0);
+        (pressed.has('s') || pressed.has('arrowdown') ? 1 : 0) + touchMovement.current.forward;
       const strafe =
         (pressed.has('d') || pressed.has('arrowright') ? 1 : 0) -
-        (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0);
+        (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0) + touchMovement.current.strafe;
       const climb = (pressed.has(' ') ? 1 : 0) - (pressed.has('control') ? 1 : 0);
-
-      // Terrain-Höhenabfrage: Wenn WalkGrid.move() nicht bewegt hat (blockiert),
-      // prüfen wir, ob es ein nicht-blockiertes Außengebiet mit Terrain ist.
-      const tryTerrainMove = (from: { x: number; y: number; z: number }, dx: number, dy: number) => {
-        const footing = data.walk.footingAt(from.x + dx, from.y + dy, from.z);
-        if (!footing.blocked) {
-          // Im Freien: Terrain-Höhe über Heightmap (O(1), kein Raycast nötig)
-          const terrainZ = terrainHeight(from.x + dx, from.y + dy);
-          const z = terrainZ !== null ? terrainZ : from.z;
-          return { x: from.x + dx, y: from.y + dy, z };
-        }
-        return from;
-      };
 
       if (forward || strafe) {
         const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
@@ -1498,9 +1640,20 @@ function WalkControls({
         } else {
           const moved = data.walk.move(position.current, dx, dy);
           if (moved.x !== position.current.x || moved.y !== position.current.y) {
-            position.current = moved;
-          } else {
-            position.current = tryTerrainMove(position.current, dx, dy);
+            const footing = data.walk.footingAt(moved.x, moved.y, moved.z);
+            // WalkGrid laesst den unbekannten Aussenraum bewusst bei z=0
+            // offen. Nur dort ersetzt das echte DGM1 diese Arbeitsebene;
+            // Hallen, Rampen und belegte Boulevardflaechen behalten ihre
+            // jeweils autoritative Hoehe.
+            const piazzaId = data.boulevard?.plaetze
+              ?.find((platz) => platz.name === 'Piazza')?.id;
+            const terrainZ = !footing.hallKey && (
+              footing.surfaceId === 'legacy-open-outside' ||
+              (footing.surfaceId?.startsWith('platz-') && footing.surfaceId !== piazzaId)
+            )
+              ? terrainHeight(moved.x, moved.y)
+              : null;
+            position.current = terrainZ === null ? moved : { ...moved, z: terrainZ };
           }
         }
       }
@@ -1531,7 +1684,14 @@ function WalkControls({
     camera.rotateX(look.current.pitch);
   });
 
-  return null;
+  return (
+    <Html fullscreen style={{ pointerEvents: 'none' }}>
+      <div className="walk-touch-guide" aria-hidden="true">
+        <span>ziehen · bewegen</span>
+        <span>ziehen · umsehen</span>
+      </div>
+    </Html>
+  );
 }
 
 function CameraRig({
@@ -1543,7 +1703,7 @@ function CameraRig({
   focus: THREE.Vector3 | null;
   extent: number;
 }) {
-  const controls = useRef<OrbitControlsProps & { target: THREE.Vector3; update: () => void }>(null);
+  const controls = useRef<{ target: THREE.Vector3; update: () => void } | null>(null);
   const { camera } = useThree();
   const target = useRef(new THREE.Vector3());
   const wanted = useRef(new THREE.Vector3());
@@ -1560,6 +1720,7 @@ function CameraRig({
     } else {
       wanted.current.set(centre.x + extent * 0.5, centre.y + extent * 0.62, centre.z + extent * 0.85);
     }
+    resetting.current = true;
   }, [preset, focus, extent]);
 
   useFrame((_, delta) => {
@@ -1577,12 +1738,25 @@ function CameraRig({
   });
 
   return (
-    <OrbitControls
+    <MapControls
       ref={controls as never}
       enableDamping
       dampingFactor={0.12}
-      minDistance={30}
+      enablePan
+      screenSpacePanning={false}
+      minPolarAngle={0.05}
+      maxPolarAngle={Math.PI / 2 - 0.02}
+      minDistance={4}
       maxDistance={extent * 2.4}
+      mouseButtons={{
+        LEFT: THREE.MOUSE.PAN,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.ROTATE,
+      }}
+      touches={{
+        ONE: THREE.TOUCH.PAN,
+        TWO: THREE.TOUCH.DOLLY_ROTATE,
+      }}
       onStart={() => { resetting.current = false; }}
     />
   );
@@ -1592,9 +1766,18 @@ export function SiteScene(props: SceneProps) {
   const { data, upperOpacity, route, preset, focusHallKey } = props;
   const cel = props.cel ?? true;
   const centre = useMemo(() => siteCentre(data.site), [data.site]);
-  const terrainHeight = useTerrainHeightmap(centre);
-  /** Referenz auf das Terrain-GLB für Raycast-basierte Höhenabfrage im First-Person-Modus. */
   const registered = data.spatialMode === 'registered';
+  const terrainHeightmap = useTerrainHeightmap(data.world?.manifest.origin ?? null);
+  const terrainHeight = terrainHeightmap.sample;
+  const presentation = worldPresentation(preset, registered);
+  // Eine Texturinstanz fuer Terrain und Dachprojektion. Sie bleibt wie die
+  // Weltmodelle fuer die Sitzung im Cache; deren Materialien verweisen darauf.
+  const orthoMap = useMemo(() => (data.ortho ? orthoTexture(ORTHO_URL) : null), [data.ortho]);
+  const registeredOrthophoto = useMemo<RegisteredOrthophoto | null>(() => (
+    registered && data.ortho?.corners && orthoMap
+      ? { map: orthoMap, corners: data.ortho.corners as RegisteredCorners }
+      : null
+  ), [registered, data.ortho, orthoMap]);
 
   /**
    * In welcher Halle die Kamera gerade steht.
@@ -1611,26 +1794,62 @@ export function SiteScene(props: SceneProps) {
    * einem echten Wechsel neu gesetzt.
    */
   const [egoHallKey, setEgoHallKey] = useState<string | null>(null);
+  const [egoSnapshotSeen, setEgoSnapshotSeen] = useState(false);
+  const defaultEgoHallKey = useMemo(() => {
+    const spawn = data.walk.spawn(focusHallKey ?? undefined);
+    return spawn
+      ? data.walk.footingAt(spawn.x, spawn.y, spawn.z).hallKey
+      : null;
+  }, [data, focusHallKey]);
+  useEffect(() => {
+    if (preset !== 'ego') return;
+    setEgoSnapshotSeen(false);
+    setEgoHallKey(null);
+  }, [preset]);
   const onCameraSnapshot = useCallback((snapshot: CameraSnapshot) => {
+    setEgoSnapshotSeen(true);
     setEgoHallKey((bisher) => (bisher === snapshot.hallKey ? bisher : snapshot.hallKey));
     props.onCameraSnapshot?.(snapshot);
   }, [props.onCameraSnapshot]);
-  const lichtHallKey = preset === 'ego' ? (egoHallKey ?? focusHallKey) : focusHallKey;
+  const lichtHallKey = preset === 'ego'
+    ? (egoSnapshotSeen ? egoHallKey : (focusHallKey ?? defaultEgoHallKey))
+    : focusHallKey;
 
-  const extent = useMemo(() => {
+  const viewBounds = useMemo(() => {
     const points = data.site.halls.flatMap((hall) => hall.footprint);
+    for (const nodeId of route?.nodeIds ?? []) {
+      const node = data.graph.nodes.get(nodeId);
+      if (node) points.push([node.x, node.y]);
+    }
     const xs = points.map((point) => point[0]);
     const ys = points.map((point) => point[1]);
-    return Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
-  }, [data.site]);
+    return {
+      minX: Math.min(...xs),
+      maxX: Math.max(...xs),
+      minY: Math.min(...ys),
+      maxY: Math.max(...ys),
+    };
+  }, [data.site, data.graph, route]);
+
+  const extent = Math.max(viewBounds.maxX - viewBounds.minX, viewBounds.maxY - viewBounds.minY);
 
   const focus = useMemo(() => {
-    if (!focusHallKey) return null;
-    const hall = data.hallsByKey.get(focusHallKey);
-    if (!hall) return null;
-    const [cx, cy] = polygonCentre(hall.footprint);
-    return toScene(cx, cy, hall.baseY, centre);
-  }, [focusHallKey, data, centre]);
+    if (focusHallKey) {
+      const hall = data.hallsByKey.get(focusHallKey);
+      if (!hall) return null;
+      const [cx, cy] = polygonCentre(hall.footprint);
+      return toScene(cx, cy, hall.baseY, centre);
+    }
+    if (route && preset === 'uebersicht') {
+      return toScene(
+        (viewBounds.minX + viewBounds.maxX) / 2,
+        (viewBounds.minY + viewBounds.maxY) / 2,
+        0,
+        centre,
+      );
+    }
+    return null;
+  }, [focusHallKey, data, centre, route, preset, viewBounds]);
 
   return (
     <Canvas
@@ -1638,6 +1857,7 @@ export function SiteScene(props: SceneProps) {
       dpr={[1, 1.8]}
       shadows="soft"
       gl={{ antialias: true, alpha: false }}
+      style={{ touchAction: 'none' }}
       onCreated={({ gl }) => {
         // Ohne Tone Mapping kippt alles Helle nach Weiß, und genau das ließ
         // die Szene wie ein eingefärbtes Drahtgitter aussehen.
@@ -1663,19 +1883,38 @@ export function SiteScene(props: SceneProps) {
       />
       <Beleuchtung extent={extent} interior={preset === 'ego'} />
 
-      {/* Das amtliche DGM1-Terrain -- das Fundament, auf dem alles steht. */}
-      <Suspense fallback={null}>
-        <Terrain centre={centre} />
-      </Suspense>
-      {/* Die Skyline der weiteren Umgebung im Hintergrund. */}
-      <Suspense fallback={null}>
-        <Skyline centre={centre} />
-      </Suspense>
+      {registered && terrainHeightmap.error && (
+        <Html position={[0, 12, 0]} center>
+          <div className="scene-data-error">
+            Gelände-Höhenabfrage nicht verfügbar: {terrainHeightmap.error}
+          </div>
+        </Html>
+      )}
 
-      {/* Das Orthofoto bleibt Bodenreferenz, solange kein amtlicher Boden aus
-          den Weltpaketen zur Verfügung steht -- auch im registrierten Modus. */}
-      <Ground extent={extent} centre={centre} ortho={data.ortho} />
-      <Umgebung data={data} centre={centre} />
+      {/* Das amtliche DGM1-Terrain -- das Fundament, auf dem alles steht. */}
+      {registered && (
+        <Suspense fallback={null}>
+          <Terrain centre={centre} ortho={data.ortho} map={orthoMap} />
+        </Suspense>
+      )}
+      {/* Im registrierten Modus liegt das Luftbild auf dem DGM1 oben. Die
+          flache Variante bleibt nur fuer den alten Planraum erhalten. */}
+      {!registered && (
+        <Ground
+          extent={extent}
+          centre={centre}
+          ortho={data.ortho}
+          map={orthoMap}
+          backdropY={-0.6}
+        />
+      )}
+      <Umgebung
+        data={data}
+        centre={centre}
+        registered={registered}
+        terrainHeight={terrainHeight}
+        terrainReady={terrainHeightmap.ready}
+      />
       {/* Fällt das Modell aus, bleibt die Karte benutzbar -- die Hallenkörper
           tragen sie weiterhin. Deshalb Suspense ohne Ersatzdarstellung. */}
       {!registered && (
@@ -1689,10 +1928,18 @@ export function SiteScene(props: SceneProps) {
       )}
       {registered && (
         <Suspense fallback={null}>
-          <OfficialWorld data={data} centre={centre} preset={preset} cel={cel} />
+          <OfficialWorld
+            data={data}
+            centre={centre}
+            preset={preset}
+            cel={cel}
+            deckkraft={presentation.deckkraft}
+            orthophoto={registeredOrthophoto}
+            highlightHallKey={props.highlightHallKey ?? focusHallKey}
+          />
         </Suspense>
       )}
-      {(preset === 'halle' || preset === 'ego') && focusHallKey && !LEER_ERLAUBT && (
+      {props.showStands && (preset === 'halle' || preset === 'ego') && focusHallKey && !LEER_ERLAUBT && (
         <ProceduralStaging
           data={data}
           centre={centre}
@@ -1705,10 +1952,10 @@ export function SiteScene(props: SceneProps) {
           Augenhöhe stehen sie als farbiger Schleier vor der Nase und legen
           sich über genau das, was man sehen will -- dort sind die Wände des
           Gebäudemodells die Halle, nicht ein eingefärbter Block darüber. */}
-      {preset !== 'ego' && (
+      {presentation.showHallOverlay && (
         <Halls data={data} centre={centre} upperOpacity={upperOpacity} />
       )}
-      {!LEER_ERLAUBT && (
+      {props.showStands && !LEER_ERLAUBT && (
         <Stands
           data={data}
           centre={centre}
@@ -1720,23 +1967,48 @@ export function SiteScene(props: SceneProps) {
           onSelectStand={props.onSelectStand}
         />
       )}
-      {!LEER_ERLAUBT && (
+      {props.showStands && !LEER_ERLAUBT && (
         <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
       )}
-      <Hallenhuelle data={data} centre={centre} visible={preset === 'ego'} />
-      <Hallenstuetzen data={data} centre={centre} visible={preset === 'ego'} />
-      <Lichtspiegel data={data} centre={centre} visible={preset === 'ego'} />
+      <Hallenhuelle
+        data={data}
+        centre={centre}
+        hallKey={lichtHallKey}
+        visible={preset === 'ego'}
+      />
+      <Hallenstuetzen
+        data={data}
+        centre={centre}
+        hallKey={lichtHallKey}
+        visible={preset === 'ego'}
+      />
+      <Lichtspiegel
+        data={data}
+        centre={centre}
+        hallKey={lichtHallKey}
+        visible={preset === 'ego'}
+      />
       <Boulevard
         data={data}
         centre={centre}
         visible={preset === 'ego'}
         previewSafe={props.previewSafe ?? true}
       />
-      <Deckenleuchten data={data} centre={centre} visible={preset === 'ego'} />
+      <Deckenleuchten
+        data={data}
+        centre={centre}
+        hallKey={lichtHallKey}
+        visible={preset === 'ego'}
+      />
       {/* Die A-Stufen der Detailhierarchie: Deckenraster, Fassadengliederung,
           Hallennummern, Zaun. Ohne sie bleiben M02, M07, M08 und M10 Familien
           ohne Traeger -- Materialien, die in der Welt niemand anhat. */}
-      <Ausstattung data={data} centre={centre} drinnen={preset === 'ego'} />
+      <Ausstattung
+        data={data}
+        centre={centre}
+        drinnen={preset === 'ego'}
+        hallKey={lichtHallKey}
+      />
       <Hallenlicht
         data={data}
         centre={centre}
@@ -1744,10 +2016,12 @@ export function SiteScene(props: SceneProps) {
         active={preset === 'ego'}
       />
       <Vertikalverbindungen data={data} centre={centre} />
-      <RouteRibbon data={data} route={route} centre={centre} />
-      {preset !== 'ego' && (
-        <HallLabels data={data} centre={centre} upperOpacity={upperOpacity} />
-      )}
+      <RouteRibbon
+        data={data}
+        route={route}
+        centre={centre}
+        onTop={props.routeOnTop ?? false}
+      />
       {preset === 'ego' ? (
         <WalkControls
           data={data}
@@ -1759,6 +2033,7 @@ export function SiteScene(props: SceneProps) {
           frozen={props.frozen}
           viewfinderOpen={props.viewfinderOpen}
           terrainHeight={terrainHeight}
+          terrainReady={terrainHeightmap.ready}
           onToggleNoClip={props.onToggleNoClip}
           onToggleFreeze={props.onToggleFreeze}
           onToggleViewfinder={props.onToggleViewfinder}

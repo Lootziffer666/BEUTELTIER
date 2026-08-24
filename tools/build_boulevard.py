@@ -37,6 +37,7 @@ import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from statistics import median
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -574,14 +575,33 @@ def main() -> int:
                                    1.0 if seite == "west" else -1.0, 0.0, LAENGE_M)
         seiten[seite] = abschnitte(belegung, 0.0, LAENGE_M)
 
+    hoehen = hallenhoehen()
     sued = suedteil(gebaeude, ziel, station, laengs, quer, achse_q, registrations,
-                    rahmen)
+                    rahmen, hoehen)
+
+    # Der Nordboulevard dockt direkt an 6.1, 7.1 und 9.1 an. Deren amtliche
+    # LoD2-Unterkanten liegen nur fuenf Zentimeter auseinander; der Median ist
+    # deshalb ein belegter gemeinsamer Bezug und kein frei gewaehlter Offset.
+    nord_hallen = sorted({
+        teil["hallKey"]
+        for seite in seiten.values()
+        for teil in seite
+        if teil.get("hallKey") in hoehen
+    })
+    if not nord_hallen:
+        raise RuntimeError("Nordboulevard hat keine Halle mit registrierter Bodenhoehe")
+    nord_werte = [hoehen[key] for key in nord_hallen]
+    nord_boden = round(median(nord_werte), 3)
+
+    halle8_boden = hoehen.get("8.1")
+    if halle8_boden is None:
+        raise RuntimeError("Aussengelaende Halle 8 ohne registrierte Hallenhoehe: 8.1")
 
     # Das Aussengelaende. Die Ostseite ist bewusst noch nicht dabei: dort
     # liegen Parkhaus, Eingang Ost und der Messeplatz ineinander, und das ist
     # ein eigener Schritt.
     _osm_bauten, osm_roh = osm_flaechen(origin)
-    knick = nordknoten(gebaeude, rahmen)
+    knick = nordknoten(gebaeude, rahmen, nord_boden, nord_hallen, nord_werte)
     aussen = hoefe(seiten["west"], gebaeude, rahmen, "west")
 
     plan = {
@@ -605,6 +625,13 @@ def main() -> int:
         "laengeM": LAENGE_M,
         "breiteM": round(breite, 2),
         "hoeheM": HOEHE_M,
+        "bodenM": nord_boden,
+        "bodenHerkunft": (
+            "Median der registrierten amtlichen LoD2-Unterkanten der direkt "
+            "andockenden Hallen"
+        ),
+        "bodenHallKeys": nord_hallen,
+        "bodenSpanneM": [round(min(nord_werte), 3), round(max(nord_werte), 3)],
         # Wo die beiden Wandlinien liegen, quer zur Achse gemessen. Steht hier,
         # damit niemand raten muss, welche Seite die Ostseite ist.
         "seitenQ": {
@@ -627,20 +654,24 @@ def main() -> int:
         # Nordboulevard, wo 45 Stufen 7,45 m ueberwinden.
         "knoten": {
             "riegel": {"vonM": 377.4, "bisM": 400.3,
-                       "hoeheM": round(26 * 7.60 / 46, 2)},
+                       "hoeheM": round(sued["untenM"] + 26 *
+                                       (sued["obenM"] - sued["untenM"]) / 46, 2)},
             "treppeM": round(20 * 0.30, 2),
             # Das Treppenhaus zu Halle 10: es sitzt am Ostrand des Riegels
             # und faellt quer zur Achse auf Hallenniveau ab.
             "qOstM": -12.1,
             "stufenOst": 26,
             "piazzaVonM": 485.0,
-            "piazzaHoeheM": round(20 * 0.1656, 2),
-        } if sued else None,
+            "piazzaHoeheM": round(sued["untenM"] + 20 * 0.1656, 2),
+        } if sued and sued.get("obenM") is not None else None,
         "piazza": {
-            "hoeheM": round(20 * 0.1656, 2),
+            "hoeheM": round(sued["untenM"] + 20 * 0.1656, 2),
             "stufen": 20,
-            "herkunft": "gezaehlt (Halle 11 -> Piazza), Halle 11 ebenerdig wie 10.1",
-        },
+            "herkunft": (
+                "gezaehlt (Halle 11 -> Piazza), Halle 11 ebenerdig wie 10.1; "
+                "Bezug = registrierter Boden Halle 10.1"
+            ),
+        } if sued else None,
         "seiten": seiten,
         # Das Aussengelaende: die Hoefe zwischen den Hallen und das freie
         # Gelaende hinter Halle 8. Dort, wo der Gang "Aussenflaeche" meldet,
@@ -652,10 +683,10 @@ def main() -> int:
         "plaetze": plaetze(osm_roh, rahmen),
         # Das Aussengelaende zwischen Halle 9 und Halle 10: zwei Ebenen und
         # eine Rampe, zusammen eine begehbare Oberflaeche.
-        "aussen9_10": aussen_neun_zehn(rahmen, hallenhoehen()),
+        "aussen9_10": aussen_neun_zehn(rahmen, hoehen),
         # Der abgesperrte Bereich hinter Halle 8 -- ein Dreieck an ihrer
         # Nordwand, drei Seiten vor Ort gemessen.
-        "aussenHalle8": aussen_halle_acht(gebaeude),
+        "aussenHalle8": aussen_halle_acht(gebaeude, halle8_boden),
         # Der Knick am Nordende -- dort geht es zum Eingang Nord weiter.
         "nordknoten": knick,
         # Die Zugaenge von den Hallen in den Gang. Abgeleitet, nicht gemessen
@@ -670,7 +701,7 @@ def main() -> int:
         "treppe": {
             "vonM": LAENGE_M,
             "bisM": round(naechste_hallen(gebaeude, station, laengs, quer), 1),
-            "untenM": 0.0,
+            "untenM": nord_boden,
             "obenM": (sued or {}).get("obenM"),
         } if sued else None,
         "hallen": {
@@ -786,7 +817,7 @@ def naechste_hallen(gebaeude: dict[str, Gebaeude], station, laengs, quer) -> flo
 
 def suedteil(gebaeude: dict[str, Gebaeude], ziel: dict[str, list[str]], station,
              laengs, quer, achse_q: float, registrations: dict,
-             rahmen: Rahmen) -> dict | None:
+             rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
     """Der Suedteil: wo sich der Gang weitet und die Ebene wechselt.
 
     Suedlich von Halle 6 und Halle 9 hoert die enge Gasse auf. Halle 5 steht
@@ -824,9 +855,15 @@ def suedteil(gebaeude: dict[str, Gebaeude], ziel: dict[str, list[str]], station,
     bis = min(max(station(s_west[0]), station(s_west[1])),
               max(station(s_ost[0]), station(s_ost[1])))
 
-    hoehen = hallenhoehen()
+    unten_key = SUED_OST.split(".")[0] + ".1"
     oben = hoehen.get(SUED_WEST)
-    unten = hoehen.get(SUED_OST.split(".")[0] + ".1", 0.0)
+    unten = hoehen.get(unten_key)
+    if oben is None or unten is None:
+        fehlend = [key for key, wert in ((SUED_WEST, oben), (unten_key, unten))
+                   if wert is None]
+        raise RuntimeError(
+            "Suedboulevard ohne registrierte Hallenhoehe: " + ", ".join(fehlend)
+        )
 
     kante = treppenstation(station, laengs, quer)
 
@@ -1114,9 +1151,14 @@ def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
     Beide Zahlen stehen in der Ausgabe; die Rampe faehrt die amtliche.
     """
     oben = hoehen.get("10.2")
-    unten = hoehen.get("9.1", 0.0)
-    if oben is None:
-        return None
+    unten = hoehen.get("9.1")
+    if oben is None or unten is None:
+        fehlend = [key for key, wert in (("10.2", oben), ("9.1", unten))
+                   if wert is None]
+        raise RuntimeError(
+            "Aussengelaende 9/10 ohne registrierte Hallenhoehe: "
+            + ", ".join(fehlend)
+        )
     u = AUSSEN_UEBERLAPP_M
 
     def flaeche(von: float, bis: float, west_q: float,
@@ -1302,7 +1344,9 @@ def nordwand(bau: Gebaeude) -> tuple[tuple[float, float], tuple[float, float]]:
     return (a, b) if a[0] <= b[0] else (b, a)
 
 
-def aussen_halle_acht(gebaeude: dict[str, Gebaeude]) -> dict | None:
+def aussen_halle_acht(
+    gebaeude: dict[str, Gebaeude], boden_m: float | None,
+) -> dict | None:
     """Der zur Messe abgesperrte Bereich hinter Halle 8.
 
     Gemessen sind die drei Seiten; verortet wird ueber die Nordwand von Halle 8,
@@ -1311,7 +1355,7 @@ def aussen_halle_acht(gebaeude: dict[str, Gebaeude]) -> dict | None:
     eine Setzung ist.
     """
     bau = next((b for b in gebaeude.values() if b.hall_key == HALLE8_FEATURE), None)
-    if bau is None:
+    if bau is None or boden_m is None:
         return None
     west, ost = nordwand(bau)
     wand = math.dist(west, ost)
@@ -1348,7 +1392,7 @@ def aussen_halle_acht(gebaeude: dict[str, Gebaeude]) -> dict | None:
         "ueberhangM": round(ueberhang, 2),
         "tiefeM": round(tiefe, 2),
         "flaecheSqm": round(flaeche),
-        "hoeheM": 0.0,
+        "hoeheM": round(boden_m, 3),
         "grundkante": [[round(a[0], 2), round(a[1], 2)],
                        [round(b[0], 2), round(b[1], 2)]],
         "spitze": [round(spitze[0], 2), round(spitze[1], 2)],
@@ -1412,7 +1456,13 @@ def plaetze(osm_plaetze: list, rahmen: Rahmen) -> list[dict]:
     return sorted(out, key=lambda p: p["vonM"])
 
 
-def nordknoten(gebaeude: dict[str, Gebaeude], rahmen: Rahmen) -> dict | None:
+def nordknoten(
+    gebaeude: dict[str, Gebaeude],
+    rahmen: Rahmen,
+    boden_m: float,
+    boden_hallen: list[str],
+    boden_werte: list[float],
+) -> dict | None:
     """Der Knick am Nordende, ueber den es zum Eingang Nord geht.
 
     Anders als beim Suedknoten wird hier nichts konstruiert: der Baukoerper
@@ -1449,9 +1499,13 @@ def nordknoten(gebaeude: dict[str, Gebaeude], rahmen: Rahmen) -> dict | None:
         # die Decke ist dieselbe Vorgabe wie im Gang -- der Baukoerper ist
         # aussen 19,4 m hoch, das ist aber die Dachkante und nicht die lichte
         # Hoehe darunter.
-        "bodenM": 0.0,
-        "deckeM": HOEHE_M,
-        "bodenHerkunft": "ebenerdig und stufenlos, beobachtet am Referenzfoto des Knicks",
+        "bodenM": boden_m,
+        "deckeM": round(boden_m + HOEHE_M, 3),
+        "bodenHerkunft": (
+            "stufenlos an den Nordboulevard angeschlossen; dessen Bezug ist "
+            f"der LoD2-Median {', '.join(boden_hallen)} "
+            f"({min(boden_werte):.2f}..{max(boden_werte):.2f} m)"
+        ),
         "deckeHerkunft": "Vorgabe wie im Gang; 19,4 m ist die amtliche Dachkante",
         "anschlussM": ([round(min(auf_der_wand), 2), round(max(auf_der_wand), 2)]
                        if auf_der_wand else None),
@@ -1461,10 +1515,10 @@ def nordknoten(gebaeude: dict[str, Gebaeude], rahmen: Rahmen) -> dict | None:
 
 
 def hallenhoehen() -> dict[str, float]:
-    """Fussbodenhoehen der Hallenebenen, aus der Standortdatei."""
+    """Registrierte Fussbodenhoehen der Hallenebenen, aus der Standortdatei."""
     pfad = ROOT / "app" / "public" / "data" / "registered-site.json"
     site = json.loads(pfad.read_text(encoding="utf-8"))
-    return {h["key"]: h["height"]["floorElevationRenderM"] for h in site["halls"]}
+    return {h["key"]: h["baseY"] for h in site["halls"]}
 
 
 def treppenstation(station, laengs, quer) -> float | None:

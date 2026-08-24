@@ -1,0 +1,182 @@
+{
+  "schema": "beuteltier.demo-corridor.v1",
+  "id": "gamescom-2026-station-south-10-1",
+  "title": "Koeln Messe/Deutz -> Eingang Sued -> Halle 10.1",
+  "startNodeId": "demo:osm:2019682768",
+  "goalNodeId": "a:10.1:1:49",
+  "start": {
+    "label": "Koeln Messe/Deutz, Ausgang Ottoplatz",
+    "osmNodeId": 2019682768
+  },
+  "target": {
+    "label": "Halle 10.1",
+    "hallKey": "10.1",
+    "registered": true,
+    "viaConnector": "p:PA:5.1:10.1"
+  },
+  "stages": [
+    {
+      "id": "station",
+      "label": "Koeln Messe/Deutz, Ausgang Ottoplatz",
+      "status": "source-recorded"
+    },
+    {
+      "id": "outside",
+      "label": "OSM-Fussweg",
+      "status": "source-derived"
+    },
+    {
+      "id": "south-entrance",
+      "label": "Eingang Sued",
+      "status": "source-recorded"
+    },
+    {
+      "id": "piazza",
+      "label": "Piazza / Messeboulevard",
+      "status": "observed-unconfirmed"
+    },
+    {
+      "id": "hall-10-1",
+      "label": "Halle 10.1",
+      "status": "registered-unconfirmed-access"
+    }
+  ],
+  "osm": {
+    "source": {
+      "title": "OpenStreetMap-Ausschnitt Koelnmesse",
+      "provider": "OpenStreetMap-Mitwirkende",
+      "url": "https://www.openstreetmap.org/copyright",
+      "retrieval": "2026-08-09T09:49:51Z",
+      "licence": "Open Data Commons Open Database License (ODbL) 1.0",
+      "query": "[out:json][timeout:120];(\nway[highway](50.932,6.965,50.954,7.005);node[amenity](50.932,6.965,50.954,7.005);node[entrance](50.932,6.965,50.954,7.005);\nnode[shop](50.932,6.965,50.954,7.005);node[tourism](50.932,6.965,50.954,7.005););out body;>;out skel qt;",
+      "flaechen": {
+        "datei": "flaechen.json",
+        "query": "[out:json][timeout:180];(\nway[building](50.9390,6.9730,50.9550,6.9960);\nway[highway][area=yes](50.9390,6.9730,50.9550,6.9960);\nway[highway=pedestrian](50.9390,6.9730,50.9550,6.9960);\nway[amenity=parking](50.9390,6.9730,50.9550,6.9960);\n);out body;>;out skel qt;",
+        "retrieval": "2026-06-14T08:48:07Z",
+        "zweck": "Plaetze und Verbindungsbauten -- beides fuehrt LoD2 nicht. Gebaeudegeometrie kommt weiterhin aus LoD2."
+      }
+    },
+    "distanceM": 479.3,
+    "nodeIds": [
+      2019682768,
+      28123306,
+      2019682767,
+      1349286566,
+      4323874017,
+      2620093315,
+      3793149502,
+      3793149500,
+      4773678167,
+      2620093313,
+      28123304,
+      12007540343,
+      3793149492,
+      2654870528,
+      75078609,
+      13305143498,
+      11993697558,
+      4745026491,
+      566743629,
+      566743630,
+      566743631,
+      4803781367,
+      566743634,
+      75078608,
+      497080224,
+      8838328571,
+      7179657268,
+      12873193239,
+      9462663274,
+      10293554738,
+      10293554739,
+      9462663282,
+      3063838345
+    ],
+    "ways": [
+      {
+        "id": 191383913,
+        "highway": "footway",
+        "name": null
+      },
+      {
+        "id": 995343653,
+        "highway": "service",
+        "name": "Ottoplatz"
+      },
+      {
+        "id": 4532206,
+        "highway": "path",
+        "name": null
+      },
+      {
+        "id": 9621680,
+        "highway": "footway",
+        "name": null
+      },
+      {
+        "id": 260033674,
+        "highway": "footway",
+        "name": null
+      },
+      {
+        "id": 486358127,
+        "highway": "footway",
+        "name": null
+      },
+      {
+        "id": 488000494,
+        "highway": "footway",
+        "name": null
+      },
+      {
+        "id": 147699583,
+        "highway": "footway",
+        "name": null
+      },
+      {
+        "id": 885165758,
+        "highway": "footway",
+        "name": null
+      },
+      {
+        "id": 954885238,
+        "highway": "footway",
+        "name": "Luise-Straus-Ernst-Straße"
+      },
+      {
+        "id": 1288251927,
+        "highway": "footway",
+        "name": "Johannes-Rau-Platz"
+      },
+      {
+        "id": 1009573278,
+        "highway": "footway",
+        "name": null
+      },
+      {
+        "id": 1125657622,
+        "highway": "footway",
+        "name": null
+      },
+      {
+        "id": 1125657623,
+        "highway": "footway",
+        "name": null
+      },
+      {
+        "id": 1125657621,
+        "highway": "footway",
+        "name": null
+      }
+    ]
+  },
+  "uncertainties": [
+    {
+      "from": "Eingang Sued",
+      "to": "Halle 10.1",
+      "state": "unbestaetigt",
+      "reason": "Der Verlauf Eingang Sued bis Piazza ist beobachtet, aber nicht als metrische Innenachse vermessen. Die Passage 5-10 ist amtlich benannt, ihre Laufzeitlage traegt 46,8 m Unsicherheit."
+    }
+  ],
+  "representation": "ROUTE_GRAPH_POLYLINE"
+}

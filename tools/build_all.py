@@ -21,9 +21,10 @@ TOOLS = Path(__file__).resolve().parent
 STEPS = ["build_world_origin.py",
          "build_site.py", "build_graph.py", "build_registry.py",
          "build_lod2_inventory.py",
-         "build_buildings.py", "build_terrain.py", "build_skyline.py",
+         "build_buildings.py", "build_terrain.py",
          "build_hall_registrations.py",
          "build_registered_layout.py",
+         "build_demo_corridor.py",
          "build_material_classes.py",
          "build_surface_analysis.py",
          "build_collision_surfaces.py",
@@ -51,6 +52,22 @@ EXPECTATIONS = {
     "standsLinked": 1027,
     "portals": 19,
 }
+
+# Produkte mit identischem Namen in Buildablage und App. Das historische
+# 5-m-Kernterrain bleibt nur in data/build/terrain.json; die mobile 7-x-3-km-
+# Welt wird separat gebaut und unter dem bestehenden Runtime-Namen ausgeliefert.
+APP_DATA_PRODUCTS = (
+    "world-origin.json", "lod2-inventory.json",
+    "official-world-diagnostic.json", "world-packages.json",
+    "surface-classification.json", "visibility-analysis.json",
+    "collision-surfaces.json", "registered-layout.json",
+    "registered-graph.json", "demo-corridor.json", "registered-site.json",
+    "hall-registrations.json", "site.json", "world-manifest.json",
+    "material-classes.json", "walkable-surfaces.json", "portals.json",
+    "graph.json", "registry.json", "buildings.json", "footprints.json",
+    "surroundings.json", "ortho.json",
+)
+APP_DATA_ALIASES = {"terrain-wide.json": "terrain.json"}
 
 # Die reine Knotenzahl taugt nicht als Untergrenze: als die Hallenumrisse von
 # der Bounding-Box auf die Huelle der Inhalte umgestellt wurden, fiel sie von
@@ -92,31 +109,20 @@ def main() -> int:
     app_data = ROOT / "app" / "public" / "data"
     if app_data.parent.exists():
         app_data.mkdir(parents=True, exist_ok=True)
-        for name in ("world-origin.json", "lod2-inventory.json",
-                     "official-world-diagnostic.json",
-                     "world-packages.json",
-                     "surface-classification.json", "visibility-analysis.json",
-                     "collision-surfaces.json",
-                     "registered-layout.json",
-                     "registered-graph.json",
-                     "registered-site.json",
-                     "hall-registrations.json", "site.json",
-                     "world-manifest.json",
-                     "material-classes.json",
-                     "walkable-surfaces.json", "portals.json",
-                      "graph.json", "registry.json", "buildings.json",
-                      "footprints.json", "surroundings.json", "ortho.json",
-                      "terrain.json", "skyline.json",
-                      "world-manifest.json"):
+        for name in APP_DATA_PRODUCTS:
             source = ROOT / "data" / "build" / name
             if source.exists():
                 shutil.copyfile(source, app_data / name)
+        for source_name, runtime_name in APP_DATA_ALIASES.items():
+            source = ROOT / "data" / "build" / source_name
+            if source.exists():
+                shutil.copyfile(source, app_data / runtime_name)
         print(f"\nDatenstand nach {app_data} kopiert")
 
     # Kopiere Modelle ins App-Public-Verzeichnis
     models_src = ROOT / "app" / "public" / "models"
     if models_src.exists():
-        for glb in ["terrain.glb", "distant/skyline.glb"]:
+        for glb in ["terrain.glb"]:
             src = models_src / glb
             if src.exists():
                 print(f"  Modell vorhanden: {glb} ({src.stat().st_size // 1024:,} KB)")

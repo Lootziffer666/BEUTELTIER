@@ -4,6 +4,7 @@ import { loadDataset, type Dataset } from './data/load';
 import { store } from './data/store';
 import { buildSearch, type SearchHit } from './features/search';
 import { MapPanel } from './ui/MapPanel';
+import { DemoCorridorCard } from './ui/DemoCorridorCard';
 import { SiteScene, type CameraPreset } from './scene/SiteScene';
 import { findRoute, planTour, type Route } from './routing/route';
 import type { EdgeState } from './routing/graph';
@@ -29,7 +30,8 @@ export default function App() {
   const [focusHallKey, setFocusHallKey] = useState<string | null>(null);
   const [stagingObjectCount, setStagingObjectCount] = useState(0);
   const [previewSafe, setPreviewSafe] = useState(true);
-  const [cel, setCel] = useState(true);
+  const [cel, setCel] = useState(false);
+  const [showStands, setShowStands] = useState(false);
   const [toolboxOpen, setToolboxOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(() =>
     typeof window === 'undefined' ? true : window.matchMedia('(min-width: 901px)').matches,
@@ -40,6 +42,7 @@ export default function App() {
   const [overrides, setOverrides] = useState<Map<string, EdgeState>>(new Map());
   const [avoidUnconfirmed, setAvoidUnconfirmed] = useState(false);
   const [stepFree, setStepFree] = useState(false);
+  const [demoActive, setDemoActive] = useState(false);
   const [layoutPatches] = useState<LayoutPatch[]>(() => loadLayoutPatches());
 
   useEffect(() => {
@@ -61,7 +64,7 @@ export default function App() {
     [overrides, avoidUnconfirmed, stepFree],
   );
 
-  const route: Route | null = useMemo(() => {
+  const standRoute: Route | null = useMemo(() => {
     if (!patchedData || !startStandId || !selectedStandId || startStandId === selectedStandId) return null;
     return findRoute(
       patchedData.graph,
@@ -70,6 +73,24 @@ export default function App() {
       routeOptions,
     );
   }, [patchedData, startStandId, selectedStandId, routeOptions]);
+
+  const demoRoute: Route | null = useMemo(() => {
+    if (!patchedData || !demoActive || !patchedData.demoCorridor) return null;
+    return findRoute(
+      patchedData.graph,
+      patchedData.demoCorridor.startNodeId,
+      patchedData.demoCorridor.goalNodeId,
+      {
+        stateOverrides: overrides,
+        // Der belegte Korridor enthaelt bewusst markierte Unsicherheit. Sie zu
+        // verstecken waere keine strengere Route, sondern eine leere Demo.
+        avoidUnconfirmed: false,
+        stepFree: false,
+      },
+    );
+  }, [patchedData, demoActive, overrides]);
+
+  const route = demoActive ? demoRoute : standRoute;
 
   const tour = useMemo(() => {
     if (!patchedData || !startStandId || tourStandIds.length === 0) return null;
@@ -92,11 +113,26 @@ export default function App() {
   }, []);
 
   const pickHit = useCallback((hit: SearchHit) => {
+    setDemoActive(false);
     if (hit.standIds.length > 0) setSelectedStandId(hit.standIds[0]);
     if (hit.hallKey) {
       setFocusHallKey(hit.hallKey);
       setPreset('halle');
     }
+  }, []);
+
+  const toggleDemo = useCallback(() => {
+    setDemoActive((active) => {
+      const next = !active;
+      if (next) {
+        setSelectedStandId(null);
+        setStartStandId(null);
+        setFocusHallKey(null);
+        setPreset('uebersicht');
+        setPanelOpen(true);
+      }
+      return next;
+    });
   }, []);
 
   if (error) {
@@ -139,15 +175,25 @@ export default function App() {
           route={route}
           preset={preset}
           focusHallKey={focusHallKey}
+          highlightHallKey={demoActive ? patchedData.demoCorridor?.target.hallKey ?? null : focusHallKey}
+          showStands={showStands}
+          routeOnTop={demoActive}
           previewSafe={previewSafe}
           cel={cel}
-          onSelectStand={setSelectedStandId}
+          onSelectStand={(standId) => {
+            setDemoActive(false);
+            setSelectedStandId(standId);
+            if (standId) {
+              setFocusHallKey(patchedData.standsById.get(standId)?.hallKey ?? null);
+            }
+          }}
           onLeaveEgo={() => setPreset('uebersicht')}
           onStagingObjectCount={setStagingObjectCount}
         />
 
         <ProceduralStagingNotice
           visible={
+            showStands &&
             Boolean(focusHallKey) &&
             (preset === 'halle' || preset === 'ego') &&
             stagingObjectCount > 0
@@ -206,7 +252,7 @@ export default function App() {
 
             <details>
               <summary>Darstellung</summary>
-              <div className="icon-grid icon-grid--two">
+              <div className="icon-grid icon-grid--three" role="group" aria-label="Darstellung">
                 <button
                   type="button"
                   className={`icon-choice ${cel ? 'is-active' : ''}`}
@@ -224,6 +270,16 @@ export default function App() {
                   aria-label="Glasmodus umschalten"
                 >
                   ◇
+                </button>
+                <button
+                  type="button"
+                  className={`icon-choice ${showStands ? 'is-active' : ''}`}
+                  onClick={() => setShowStands((value) => !value)}
+                  title={showStands ? 'Stände ausblenden' : 'Stände einblenden'}
+                  aria-label={showStands ? 'Stände ausblenden' : 'Stände einblenden'}
+                  aria-pressed={showStands}
+                >
+                  ▥
                 </button>
               </div>
             </details>
@@ -265,20 +321,35 @@ export default function App() {
           />
           <strong>BEUTELTIER</strong>
           <span className="compact-panel__status">
-            {selectedStandId ? 'Ziel gewählt' : 'Suche & Route'}
+            {demoActive ? 'Demokorridor aktiv' : selectedStandId ? 'Ziel gewählt' : 'Suche & Route'}
           </span>
         </header>
 
         {panelOpen && (
           <div className="panel__body compact-panel__body">
+            {patchedData.demoCorridor && (
+              <DemoCorridorCard
+                corridor={patchedData.demoCorridor}
+                active={demoActive}
+                route={demoRoute}
+                onToggle={toggleDemo}
+              />
+            )}
             <MapPanel
               data={patchedData}
               search={search}
               onPick={pickHit}
               selectedStandId={selectedStandId}
               startStandId={startStandId}
-              onSetStart={setStartStandId}
+              onSetStart={(standId) => {
+                setDemoActive(false);
+                setStartStandId(standId);
+              }}
               route={route}
+              routeContext={demoActive && patchedData.demoCorridor ? {
+                startLabel: patchedData.demoCorridor.start.label,
+                targetLabel: patchedData.demoCorridor.target.label,
+              } : null}
               tour={tour}
               tourStandIds={tourStandIds}
               onToggleTour={(standId) =>

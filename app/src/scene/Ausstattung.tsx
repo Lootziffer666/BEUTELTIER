@@ -132,11 +132,14 @@ export function Ausstattung({
   data,
   centre,
   drinnen,
+  hallKey,
 }: {
   data: Dataset;
   centre: [number, number];
   /** Decke und Fassadeninnenseite lohnen nur, wo man tatsächlich läuft. */
   drinnen: boolean;
+  /** Im Laufmodus darf nur die Halle um die Kamera Innenausstattung tragen. */
+  hallKey: string | null;
 }) {
   const bauteile = useMemo(() => {
     const decken: THREE.BufferGeometry[] = [];
@@ -146,6 +149,7 @@ export function Ausstattung({
     const baender: THREE.BufferGeometry[] = [];
 
     for (const halle of data.site.halls) {
+      if (drinnen && halle.key !== hallKey) continue;
       if (halle.outdoor) continue;
       const lage = hallenlage(halle.footprint);
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
@@ -233,9 +237,11 @@ export function Ausstattung({
       fensterband: zusammen(baender),
       zaun: zusammen(zaunGeometrien),
       lichtpunkte,
-      schilder: nummernschilder(data.site.halls as never),
+      schilder: nummernschilder((drinnen && hallKey
+        ? data.site.halls.filter((halle) => halle.key === hallKey)
+        : data.site.halls) as never),
     };
-  }, [data, centre]);
+  }, [data, centre, drinnen, hallKey]);
 
   const materialien = useMemo(() => ({
     decke: familienMaterial(FAMILIEN.M02),

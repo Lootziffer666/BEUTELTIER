@@ -236,10 +236,12 @@ function kachel(quelle: THREE.Texture | undefined) {
 export function Hallenhuelle({
   data,
   centre,
+  hallKey,
   visible,
 }: {
   data: Dataset;
   centre: [number, number];
+  hallKey: string | null;
   visible: boolean;
 }) {
   const flaechen = useMemo(() => {
@@ -250,6 +252,7 @@ export function Hallenhuelle({
     }[] = [];
 
     for (const hall of data.site.halls) {
+      if (hall.key !== hallKey) continue;
       if (hall.outdoor) continue;
       const lage = hallenlage(hall.footprint);
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
@@ -305,7 +308,7 @@ export function Hallenhuelle({
     }
 
     return out;
-  }, [data, centre]);
+  }, [data, centre, hallKey]);
 
   useEffect(
     () => () => {
@@ -449,10 +452,12 @@ export function hallenGrundriss(
 export function Hallenstuetzen({
   data,
   centre,
+  hallKey,
   visible,
 }: {
   data: Dataset;
   centre: [number, number];
+  hallKey: string | null;
   visible: boolean;
 }) {
   const aussparungen = useMemo(() => {
@@ -479,6 +484,7 @@ export function Hallenstuetzen({
     const dummy = new THREE.Object3D();
 
     for (const hall of data.site.halls) {
+      if (hall.key !== hallKey) continue;
       if (hall.outdoor) continue;
       const lage = hallenlage(hall.footprint);
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
@@ -522,7 +528,7 @@ export function Hallenstuetzen({
     }
 
     return { schaefte, sockel };
-  }, [data, centre, aussparungen]);
+  }, [data, centre, hallKey, aussparungen]);
 
   const material = useMemo(
     () => toonMaterial({ ...FAMILIEN.M02, grundton: '#3c4048', stufen: 3 }),
@@ -696,10 +702,12 @@ export function Hallenlicht({
 export function Deckenleuchten({
   data,
   centre,
+  hallKey,
   visible,
 }: {
   data: Dataset;
   centre: [number, number];
+  hallKey: string | null;
   visible: boolean;
 }) {
   const { strips, gehaeuse } = useMemo(() => {
@@ -708,6 +716,7 @@ export function Deckenleuchten({
     const dummy = new THREE.Object3D();
 
     for (const hall of data.site.halls) {
+      if (hall.key !== hallKey) continue;
       if (hall.outdoor) continue;
       const lage = hallenlage(hall.footprint);
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
@@ -746,7 +755,7 @@ export function Deckenleuchten({
     }
 
     return { strips, gehaeuse };
-  }, [data, centre]);
+  }, [data, centre, hallKey]);
 
   const gehaeuseMaterial = useMemo(() => toonMaterial(FAMILIEN.M02), []);
 
@@ -834,10 +843,12 @@ function scheinTextur(): THREE.CanvasTexture {
 export function Lichtspiegel({
   data,
   centre,
+  hallKey,
   visible,
 }: {
   data: Dataset;
   centre: [number, number];
+  hallKey: string | null;
   visible: boolean;
 }) {
   const flaechen = useMemo(() => {
@@ -849,6 +860,7 @@ export function Lichtspiegel({
     }[] = [];
 
     for (const hall of data.site.halls) {
+      if (hall.key !== hallKey) continue;
       if (hall.outdoor) continue;
       const lage = hallenlage(hall.footprint);
       if (!lage || lage.laenge < 20 || lage.breite < 20) continue;
@@ -866,7 +878,7 @@ export function Lichtspiegel({
     }
 
     return out;
-  }, [data, centre]);
+  }, [data, centre, hallKey]);
 
   const material = useMemo(
     () =>

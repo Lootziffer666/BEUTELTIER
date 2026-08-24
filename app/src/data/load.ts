@@ -23,21 +23,133 @@ const BASE = `${import.meta.env.BASE_URL}data`;
 
 /** Was das Luftbild abdeckt -- gebaut von tools/build_ortho.py. */
 export interface Ortho {
+  schema: 'beuteltier.ortho.v1';
   image: string;
   /** [x0, y0, x1, y1] in Geländemetern. */
   extent: [number, number, number, number];
   metresPerPixel: number;
+  /**
+   * Die vier Ecken nach der Ueberfuehrung in den amtlichen Szenenraum:
+   * x0/y0, x1/y0, x0/y1, x1/y1. Fehlt nur im Legacy-Modus.
+   */
+  corners?: [[number, number], [number, number], [number, number], [number, number]];
+  coordinatePlane?: 'legacy-site' | 'sceneX/sceneZ';
 }
 
 export interface Surroundings {
+  schema: 'beuteltier.surroundings.v1';
+  coordinatePlane?: 'legacy-site' | 'sceneX/sceneZ';
   attribution: string;
   roads: Array<{ id: number; kind: string; name: string | null; points: [number, number][] }>;
   markers: Array<{ id: number; kind: string; name: string | null; point: [number, number] }>;
 }
 
 export interface Footprints {
+  schema: 'beuteltier.footprints.v1';
+  coordinatePlane?: 'legacy-site' | 'sceneX/sceneZ';
   gapsWithoutLod2: number;
   footprints: Array<{ id: string; lod2Covered: boolean; footprint: [number, number][] }>;
+}
+
+export interface LegacySiteFit {
+  rotationDeg: number;
+  mirrored: boolean;
+  translation: [number, number];
+}
+
+interface BuildingsSnapshot {
+  schema: string;
+  fit: LegacySiteFit;
+}
+
+/**
+ * Alter Planraum -> amtlicher Szenenraum.
+ *
+ * `surroundings.v1`, `footprints.v1` und `ortho.v1` wurden mit der inversen
+ * LoD2-Passung in den alten Hallenplan geschrieben. Die registrierten Hallen
+ * liegen dagegen direkt relativ zu `world-origin.json`. Diese Funktion ist
+ * exakt die Rueckrichtung derselben Passung; sie schaetzt und registriert
+ * nichts neu.
+ */
+export function legacyPointToRegistered(
+  point: [number, number],
+  fit: LegacySiteFit,
+  worldOrigin: [number, number, number],
+): [number, number] {
+  const angle = fit.rotationDeg * Math.PI / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const planX = fit.mirrored ? -point[0] : point[0];
+  const worldX = cos * planX - sin * point[1] + fit.translation[0];
+  const worldY = sin * planX + cos * point[1] + fit.translation[1];
+  return [worldX - worldOrigin[0], -(worldY - worldOrigin[1])];
+}
+
+export function alignLegacyLayers(
+  ortho: Ortho | null,
+  surroundings: Surroundings | null,
+  footprints: Footprints | null,
+  fit: LegacySiteFit,
+  worldOrigin: [number, number, number],
+): { ortho: Ortho | null; surroundings: Surroundings | null; footprints: Footprints | null } {
+  const point = (value: [number, number]) => legacyPointToRegistered(value, fit, worldOrigin);
+
+  const registeredOrtho = ortho ? (() => {
+    if (ortho.coordinatePlane === 'sceneX/sceneZ') {
+      if (!ortho.corners) {
+        throw new Error('Registriertes Orthofoto besitzt keine belegten Szenenecken.');
+      }
+      return ortho;
+    }
+    const [x0, y0, x1, y1] = ortho.extent;
+    const corners: NonNullable<Ortho['corners']> = [
+      point([x0, y0]),
+      point([x1, y0]),
+      point([x0, y1]),
+      point([x1, y1]),
+    ];
+    return {
+      ...ortho,
+      coordinatePlane: 'sceneX/sceneZ' as const,
+      corners,
+    };
+  })() : null;
+
+  const registeredSurroundings = surroundings
+    ? surroundings.coordinatePlane === 'sceneX/sceneZ'
+      ? surroundings
+      : {
+          ...surroundings,
+          coordinatePlane: 'sceneX/sceneZ' as const,
+          roads: surroundings.roads.map((road) => ({
+            ...road,
+            points: road.points.map(point),
+          })),
+          markers: surroundings.markers.map((marker) => ({
+            ...marker,
+            point: point(marker.point),
+          })),
+        }
+    : null;
+
+  const registeredFootprints = footprints
+    ? footprints.coordinatePlane === 'sceneX/sceneZ'
+      ? footprints
+      : {
+          ...footprints,
+          coordinatePlane: 'sceneX/sceneZ' as const,
+          footprints: footprints.footprints.map((entry) => ({
+            ...entry,
+            footprint: entry.footprint.map(point),
+          })),
+        }
+    : null;
+
+  return {
+    ortho: registeredOrtho,
+    surroundings: registeredSurroundings,
+    footprints: registeredFootprints,
+  };
 }
 
 export interface WorldManifest {
@@ -158,6 +270,11 @@ export interface WorldDiagnostics {
   hallRegistrations: {
     registrations: Array<{
       hallKey: string;
+      targetFeatureIds: string[];
+      floorZ: number;
+      floorWorldZ: number;
+      floorSource: 'OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL' | 'UNCONFIRMED_GLOBAL_GROUND_REFERENCE';
+      lod2GroundOffsetM: number | null;
       status: 'draft' | 'constrained' | 'registered';
       source: string;
       residualM: number | null;
@@ -436,6 +553,11 @@ export interface BoulevardPlan {
   laengeM: number;
   breiteM: number;
   hoeheM: number;
+  /** Gemeinsamer registrierter LoD2-Bodenbezug des Nordboulevards. */
+  bodenM: number;
+  bodenHerkunft: string;
+  bodenHallKeys: string[];
+  bodenSpanneM: [number, number];
   /** Abstand der beiden Wandlinien von der Achse, quer gemessen. */
   seitenQ: { ost: number; west: number };
   /** Wie weit der Gang geometrisch reicht -- bis Halle 5 und Halle 10. */
@@ -511,6 +633,39 @@ export interface BoulevardPlan {
   } | null;
 }
 
+export interface DemoCorridor {
+  schema: 'beuteltier.demo-corridor.v1';
+  id: string;
+  title: string;
+  startNodeId: string;
+  goalNodeId: string;
+  start: { label: string; osmNodeId: number };
+  target: {
+    label: string;
+    hallKey: string;
+    registered: boolean;
+    viaConnector: string;
+  };
+  stages: Array<{
+    id: string;
+    label: string;
+    status: 'source-recorded' | 'source-derived' | 'observed-unconfirmed' | 'registered-unconfirmed-access';
+  }>;
+  osm: {
+    source: Record<string, unknown>;
+    distanceM: number;
+    nodeIds: number[];
+    ways: Array<{ id: number; highway: string | null; name: string | null }>;
+  };
+  uncertainties: Array<{
+    from: string;
+    to: string;
+    state: 'unbestaetigt';
+    reason: string;
+  }>;
+  representation: 'ROUTE_GRAPH_POLYLINE';
+}
+
 export interface Dataset {
   site: Site;
   registry: Registry;
@@ -525,6 +680,8 @@ export interface Dataset {
   world: WorldDiagnostics | null;
   /** Der Nordboulevard; fehlt in älteren Offline-Snapshots. */
   boulevard: BoulevardPlan | null;
+  /** Der belegte Mittwochskorridor; im registrierten Demo-Build verpflichtend. */
+  demoCorridor: DemoCorridor | null;
   /** registered = Halleninhalte und Routing liegen im lokalen amtlichen Raum. */
   spatialMode: 'legacy' | 'registered';
   standsById: Map<string, Site['stands'][number]>;
@@ -609,7 +766,13 @@ function aussenraum(plan: BoulevardPlan | null): SurfaceProvider {
     ...(plan.plaetze ?? []).map((platz) => ({
       id: platz.id,
       polygon: platz.polygon,
-      z: platz.hoeheM,
+      // Nur fuer die Piazza liegt ausser dem OSM-Umriss eine gemessene
+      // Plattformhoehe vor. Alle anderen Plaetze bleiben bei 0 und werden in
+      // der Laufkamera vom echten DGM ersetzt; eine gemeinsame erfundene
+      // Platzhoehe waere erneut nur ein plausibel aussehender Block.
+      z: platz.name === 'Piazza' && plan.knoten
+        ? plan.knoten.piazzaHoeheM
+        : platz.hoeheM,
       blocked: false,
     })),
   ]);
@@ -622,19 +785,23 @@ function aussenraum(plan: BoulevardPlan | null): SurfaceProvider {
 }
 
 export async function loadDataset(): Promise<Dataset> {
-  const [legacySite, registry, legacyCompact, registeredSite, registeredCompact] = await Promise.all([
+  const [legacySite, registry, legacyCompact, registeredSite, registeredCompact, buildings] = await Promise.all([
     fetchJson<Site>('site.json'),
     fetchJson<Registry>('registry.json'),
     fetchJson<CompactGraph>('graph.json'),
     fetchJson<Site>('registered-site.json').catch(() => null),
     fetchJson<CompactGraph>('registered-graph.json').catch(() => null),
+    // Die Passung ist im registrierten Build zwingende Geometriequelle.
+    // Ein HTTP-Fehler darf nicht zu einem spaeteren, irrefuehrenden
+    // "buildings.fit fehlt" umetikettiert werden.
+    fetchJson<BuildingsSnapshot>('buildings.json'),
   ]);
   const site = registeredSite ?? legacySite;
   const compact = registeredSite && registeredCompact ? registeredCompact : legacyCompact;
   const spatialMode = registeredSite && registeredCompact ? 'registered' : 'legacy';
 
   // Ohne Luftbild bleibt die Karte benutzbar -- sie ist dann nur grau.
-  const [ortho, surroundings, footprints, manifest, walkableSurfaces, portals, lod2Inventory, officialDiagnostic, worldPackages, visibilityAnalysis, surfaceClassification, collisionSurfaces, hallRegistrations, registeredLayout] = await Promise.all([
+  const [legacyOrtho, legacySurroundings, legacyFootprints, manifest, walkableSurfaces, portals, lod2Inventory, officialDiagnostic, worldPackages, visibilityAnalysis, surfaceClassification, collisionSurfaces, hallRegistrations, registeredLayout] = await Promise.all([
     fetchJson<Ortho>('ortho.json').catch(() => null),
     fetchJson<Surroundings>('surroundings.json').catch(() => null),
     fetchJson<Footprints>('footprints.json').catch(() => null),
@@ -650,7 +817,32 @@ export async function loadDataset(): Promise<Dataset> {
     fetchJson<WorldDiagnostics['hallRegistrations']>('hall-registrations.json').catch(() => null),
     fetchJson<WorldDiagnostics['registeredLayout']>('registered-layout.json').catch(() => null),
   ]);
-  const boulevard = await fetchJson<BoulevardPlan>('boulevard.json').catch(() => null);
+  const [boulevard, demoCorridor] = await Promise.all([
+    fetchJson<BoulevardPlan>('boulevard.json').catch(() => null),
+    fetchJson<DemoCorridor>('demo-corridor.json').catch(() => null),
+  ]);
+  if (spatialMode === 'registered' && !demoCorridor) {
+    throw new Error('Registrierter Demo-Korridor fehlt: demo-corridor.json konnte nicht geladen werden.');
+  }
+
+  let ortho = legacyOrtho;
+  let surroundings = legacySurroundings;
+  let footprints = legacyFootprints;
+  if (spatialMode === 'registered' && (ortho || surroundings || footprints)) {
+    const origin = registeredCompact?.origin;
+    if (!buildings?.fit || !origin) {
+      throw new Error(
+        'Registrierte Aussenwelt kann nicht ausgerichtet werden: buildings.fit oder Graph-Ursprung fehlt.',
+      );
+    }
+    ({ ortho, surroundings, footprints } = alignLegacyLayers(
+      ortho,
+      surroundings,
+      footprints,
+      buildings.fit,
+      origin,
+    ));
+  }
 
   return {
     site,
@@ -666,6 +858,7 @@ export async function loadDataset(): Promise<Dataset> {
       registeredLayout,
     } : null,
     boulevard,
+    demoCorridor,
     spatialMode,
     standsById: new Map(site.stands.map((stand) => [stand.id, stand])),
     hallsByKey: new Map(site.halls.map((hall) => [hall.key, hall])),

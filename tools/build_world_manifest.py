@@ -64,8 +64,7 @@ def build_product(origin: dict, registrations: dict) -> dict:
         "packages": [
             local_asset("models/messe.glb", "render-world"),
             local_asset("models/terrain.glb", "render-terrain", "local"),
-            local_asset("data/terrain_heightmap.json", "collision-heightmap", "local"),
-            local_asset("models/distant/skyline.glb", "render-distant", "local"),
+            local_asset("data/terrain_heightmap.bin", "collision-heightmap", "local"),
             diagnostic_asset(),
             *planned_world_packages(),
         ],
@@ -81,7 +80,7 @@ def build_product(origin: dict, registrations: dict) -> dict:
             "surfaceClassification": "data/surface-classification.json",
             "visibilityAnalysis": "data/visibility-analysis.json",
             "collisionSurfaces": "data/collision-surfaces.json",
-            "terrainHeightmap": "data/terrain_heightmap.json",
+            "terrainHeightmap": "data/terrain_heightmap.bin",
             "registeredLayout": "data/registered-layout.json",
             "registeredGraph": "data/registered-graph.json",
             "registeredSite": "data/registered-site.json",

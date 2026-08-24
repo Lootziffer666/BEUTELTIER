@@ -27,8 +27,10 @@
           -0.8762764089
         ]
       },
-      "floorZ": 0.49,
-      "floorWorldZ": 40.49,
+      "floorZ": 5.92,
+      "floorWorldZ": 45.92,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 5.43,
       "anchors": [],
       "residualM": 6.98,
       "maxResidualM": 6.98,
@@ -76,7 +78,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -99,8 +102,10 @@
           -0.8105142406
         ]
       },
-      "floorZ": 0.49,
-      "floorWorldZ": 40.49,
+      "floorZ": 6.3,
+      "floorWorldZ": 46.3,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 5.81,
       "anchors": [],
       "residualM": 0.34,
       "maxResidualM": 0.77,
@@ -150,7 +155,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -173,8 +179,10 @@
           -0.8105142406
         ]
       },
-      "floorZ": 7.94,
-      "floorWorldZ": 47.94,
+      "floorZ": 13.75,
+      "floorWorldZ": 53.75,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 5.81,
       "anchors": [],
       "residualM": 0.34,
       "maxResidualM": 0.77,
@@ -223,7 +231,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -246,8 +255,10 @@
           -0.7912121422
         ]
       },
-      "floorZ": 0.49,
-      "floorWorldZ": 40.49,
+      "floorZ": 4.45,
+      "floorWorldZ": 44.45,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 3.96,
       "anchors": [],
       "residualM": 0.18,
       "maxResidualM": 0.44,
@@ -296,7 +307,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -319,8 +331,10 @@
           -0.7912121422
         ]
       },
-      "floorZ": 8.24,
-      "floorWorldZ": 48.24,
+      "floorZ": 12.2,
+      "floorWorldZ": 52.2,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 3.96,
       "anchors": [],
       "residualM": 0.18,
       "maxResidualM": 0.44,
@@ -370,7 +384,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -393,8 +408,10 @@
           -0.8762764089
         ]
       },
-      "floorZ": 6.99,
-      "floorWorldZ": 46.99,
+      "floorZ": 12.43,
+      "floorWorldZ": 52.43,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 5.44,
       "anchors": [],
       "residualM": 6.98,
       "maxResidualM": 6.98,
@@ -442,7 +459,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -465,8 +483,10 @@
           -0.8610122795
         ]
       },
-      "floorZ": 0.49,
-      "floorWorldZ": 40.49,
+      "floorZ": 6.19,
+      "floorWorldZ": 46.19,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 5.7,
       "anchors": [],
       "residualM": 0.0,
       "maxResidualM": 0.0,
@@ -514,7 +534,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -537,8 +558,10 @@
           -0.8610122795
         ]
       },
-      "floorZ": 8.09,
-      "floorWorldZ": 48.09,
+      "floorZ": 13.79,
+      "floorWorldZ": 53.79,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 5.7,
       "anchors": [],
       "residualM": 0.0,
       "maxResidualM": 0.0,
@@ -587,7 +610,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -611,8 +635,10 @@
           -0.8762764089
         ]
       },
-      "floorZ": 0.49,
-      "floorWorldZ": 40.49,
+      "floorZ": 6.27,
+      "floorWorldZ": 46.27,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 5.78,
       "anchors": [],
       "residualM": 0.94,
       "maxResidualM": 1.46,
@@ -660,7 +686,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -684,8 +711,10 @@
           -0.8762764089
         ]
       },
-      "floorZ": 8.09,
-      "floorWorldZ": 48.09,
+      "floorZ": 13.87,
+      "floorWorldZ": 53.87,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 5.78,
       "anchors": [],
       "residualM": 0.94,
       "maxResidualM": 1.46,
@@ -734,7 +763,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -757,8 +787,10 @@
           -0.8762764089
         ]
       },
-      "floorZ": 0.49,
-      "floorWorldZ": 40.49,
+      "floorZ": 7.16,
+      "floorWorldZ": 47.16,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 6.67,
       "anchors": [],
       "residualM": 0.04,
       "maxResidualM": 0.05,
@@ -806,7 +838,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -829,8 +862,10 @@
           -0.8762764089
         ]
       },
-      "floorZ": 0.49,
-      "floorWorldZ": 40.49,
+      "floorZ": 7.12,
+      "floorWorldZ": 47.12,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 6.63,
       "anchors": [],
       "residualM": 0.0,
       "maxResidualM": 0.0,
@@ -878,7 +913,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -901,8 +937,10 @@
           -0.8762764089
         ]
       },
-      "floorZ": 0.49,
-      "floorWorldZ": 40.49,
+      "floorZ": 7.01,
+      "floorWorldZ": 47.01,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 6.52,
       "anchors": [],
       "residualM": 0.64,
       "maxResidualM": 1.06,
@@ -950,7 +988,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -973,8 +1012,10 @@
           -0.8762764089
         ]
       },
-      "floorZ": 0.49,
-      "floorWorldZ": 40.49,
+      "floorZ": 7.11,
+      "floorWorldZ": 47.11,
+      "floorSource": "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL",
+      "lod2GroundOffsetM": 6.62,
       "anchors": [],
       "residualM": 0.0,
       "maxResidualM": 0.0,
@@ -1022,7 +1063,8 @@
       "notes": [
         "Hallenweise gegen amtliche Zielfeature-Grundrisse gedreht und verschoben.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
       ]
     },
     {
@@ -1045,6 +1087,8 @@
       },
       "floorZ": 0.49,
       "floorWorldZ": 40.49,
+      "floorSource": "UNCONFIRMED_GLOBAL_GROUND_REFERENCE",
+      "lod2GroundOffsetM": null,
       "anchors": [],
       "residualM": 25.0,
       "maxResidualM": 25.0,
@@ -1093,7 +1137,8 @@
       "notes": [
         "Noch keine amtlichen Zielfeatures dieser Hallenebene -- nur die globale Winkelkorrektur angewandt.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Freiflaeche ohne LoD2-Gebaeude: globaler Bodenbezug ist unbestaetigt."
       ]
     },
     {
@@ -1116,6 +1161,8 @@
       },
       "floorZ": 0.49,
       "floorWorldZ": 40.49,
+      "floorSource": "UNCONFIRMED_GLOBAL_GROUND_REFERENCE",
+      "lod2GroundOffsetM": null,
       "anchors": [],
       "residualM": 25.0,
       "maxResidualM": 25.0,
@@ -1164,7 +1211,8 @@
       "notes": [
         "Noch keine amtlichen Zielfeatures dieser Hallenebene -- nur die globale Winkelkorrektur angewandt.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Freiflaeche ohne LoD2-Gebaeude: globaler Bodenbezug ist unbestaetigt."
       ]
     },
     {
@@ -1187,6 +1235,8 @@
       },
       "floorZ": 0.49,
       "floorWorldZ": 40.49,
+      "floorSource": "UNCONFIRMED_GLOBAL_GROUND_REFERENCE",
+      "lod2GroundOffsetM": null,
       "anchors": [],
       "residualM": 25.0,
       "maxResidualM": 25.0,
@@ -1235,7 +1285,8 @@
       "notes": [
         "Noch keine amtlichen Zielfeatures dieser Hallenebene -- nur die globale Winkelkorrektur angewandt.",
         "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
-        "Portale wurden nicht als Registrierungsanker verwendet."
+        "Portale wurden nicht als Registrierungsanker verwendet.",
+        "Freiflaeche ohne LoD2-Gebaeude: globaler Bodenbezug ist unbestaetigt."
       ]
     }
   ],

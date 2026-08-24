@@ -31,6 +31,17 @@
  "laengeM": 285.0,
  "breiteM": 14.91,
  "hoeheM": 11.0,
+ "bodenM": 7.12,
+ "bodenHerkunft": "Median der registrierten amtlichen LoD2-Unterkanten der direkt andockenden Hallen",
+ "bodenHallKeys": [
+  "6.1",
+  "7.1",
+  "9.1"
+ ],
+ "bodenSpanneM": [
+  7.11,
+  7.16
+ ],
  "seitenQ": {
   "ost": -7.456,
   "west": 7.456
@@ -49,18 +60,18 @@
   "riegel": {
    "vonM": 377.4,
    "bisM": 400.3,
-   "hoeheM": 4.3
+   "hoeheM": 10.58
   },
   "treppeM": 6.0,
   "qOstM": -12.1,
   "stufenOst": 26,
   "piazzaVonM": 485.0,
-  "piazzaHoeheM": 3.31
+  "piazzaHoeheM": 9.61
  },
  "piazza": {
-  "hoeheM": 3.31,
+  "hoeheM": 9.61,
   "stufen": 20,
-  "herkunft": "gezaehlt (Halle 11 -> Piazza), Halle 11 ebenerdig wie 10.1"
+  "herkunft": "gezaehlt (Halle 11 -> Piazza), Halle 11 ebenerdig wie 10.1; Bezug = registrierter Boden Halle 10.1"
  },
  "seiten": {
   "ost": [
@@ -1136,7 +1147,7 @@
    "bisM": 488.1,
    "qVonM": -194.56,
    "qBisM": -16.46,
-   "hoeheM": 7.45,
+   "hoeheM": 13.75,
    "polygon": [
     [
      -165.45,
@@ -1163,11 +1174,11 @@
    "bisM": 300.0,
    "qVonM": -194.56,
    "qBisM": -16.46,
-   "obenM": 7.45,
-   "untenM": 0.0,
+   "obenM": 13.75,
+   "untenM": 7.11,
    "laufM": 84.59,
    "hoeheGemessenM": 8.33,
-   "steigungProzent": 8.81,
+   "steigungProzent": 7.85,
    "polygon": [
     [
      -124.72,
@@ -1191,34 +1202,34 @@
      [
       -124.72,
       6.38,
-      0.0
+      7.11
      ],
      [
       -165.45,
       80.52,
-      7.45
+      13.75
      ],
      [
       -7.59,
       167.23,
-      7.45
+      13.75
      ]
     ],
     [
      [
       -124.72,
       6.38,
-      0.0
+      7.11
      ],
      [
       -7.59,
       167.23,
-      7.45
+      13.75
      ],
      [
       33.13,
       93.09,
-      0.0
+      7.11
      ]
     ]
    ],
@@ -1230,7 +1241,7 @@
    "bisM": 300.0,
    "qVonM": -220.46,
    "qBisM": -7.456,
-   "hoeheM": 0.0,
+   "hoeheM": 7.11,
    "polygon": [
     [
      -114.51,
@@ -1263,7 +1274,7 @@
   "ueberhangM": 13.43,
   "tiefeM": 68.08,
   "flaecheSqm": 5957,
-  "hoeheM": 0.0,
+  "hoeheM": 7.01,
   "grundkante": [
    [
     -96.1,
@@ -1304,9 +1315,9 @@
   "qVonM": -166.33,
   "qBisM": -7.46,
   "flaecheSqm": 4826,
-  "bodenM": 0.0,
-  "deckeM": 11.0,
-  "bodenHerkunft": "ebenerdig und stufenlos, beobachtet am Referenzfoto des Knicks",
+  "bodenM": 7.12,
+  "deckeM": 18.12,
+  "bodenHerkunft": "stufenlos an den Nordboulevard angeschlossen; dessen Bezug ist der LoD2-Median 6.1, 7.1, 9.1 (7.11..7.16 m)",
   "deckeHerkunft": "Vorgabe wie im Gang; 19,4 m ist die amtliche Dachkante",
   "anschlussM": [
    -0.02,
@@ -1688,8 +1699,8 @@
    "west": 8.803
   },
   "breiteM": 45.26,
-  "obenM": 7.6,
-  "untenM": 0.0,
+  "obenM": 13.87,
+  "untenM": 6.3,
   "kanteM": 311.2,
   "seiten": {
    "ost": [
@@ -1717,8 +1728,8 @@
  "treppe": {
   "vonM": 285.0,
   "bisM": 303.8,
-  "untenM": 0.0,
-  "obenM": 7.6
+  "untenM": 7.12,
+  "obenM": 13.87
  },
  "hallen": {
   "9.1": {

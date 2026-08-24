@@ -141,6 +141,16 @@ describe('WalkGrid', () => {
     expect(walk.footingAt(spot!.x, spot!.y).blocked).toBe(false);
   });
 
+  it('startet ohne Ziel auf der Eingangsebene statt in der groesseren oberen Halle', () => {
+    const stacked = build(
+      grid('10.1', 0, 1, ['...', '...', '...']),
+      grid('10.2', 7.45, 2, ['.....', '.....', '.....', '.....', '.....']),
+    );
+
+    expect(stacked.spawn()?.z).toBe(0);
+    expect(stacked.spawn('10.2')?.z).toBe(7.45);
+  });
+
   it('bleibt beim Ebenenwechsel auf der gewaehlten Etage', () => {
     const stacked = build(
       grid('10.1', 0, 1, HALLE),

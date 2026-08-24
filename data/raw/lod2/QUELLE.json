@@ -5,11 +5,34 @@
   "viewer": "https://dz.nrw.de -- Digitaler Zwilling NRW",
   "crs": "ETRS89 / UTM32N (EPSG:25832), Hoehen DHHN2016 NH",
   "licence": "Datenlizenz Deutschland Zero 2.0 (dl-de/zero-2-0)",
+  "extent": [
+    355000.0,
+    5644000.0,
+    362000.0,
+    5647000.0
+  ],
   "tiles": [
+    "LoD2_32_355_5644_1_NW.gml",
+    "LoD2_32_356_5644_1_NW.gml",
+    "LoD2_32_357_5644_1_NW.gml",
+    "LoD2_32_358_5644_1_NW.gml",
+    "LoD2_32_359_5644_1_NW.gml",
+    "LoD2_32_360_5644_1_NW.gml",
+    "LoD2_32_361_5644_1_NW.gml",
+    "LoD2_32_355_5645_1_NW.gml",
+    "LoD2_32_356_5645_1_NW.gml",
     "LoD2_32_357_5645_1_NW.gml",
-    "LoD2_32_357_5646_1_NW.gml",
     "LoD2_32_358_5645_1_NW.gml",
-    "LoD2_32_358_5646_1_NW.gml"
+    "LoD2_32_359_5645_1_NW.gml",
+    "LoD2_32_360_5645_1_NW.gml",
+    "LoD2_32_361_5645_1_NW.gml",
+    "LoD2_32_355_5646_1_NW.gml",
+    "LoD2_32_356_5646_1_NW.gml",
+    "LoD2_32_357_5646_1_NW.gml",
+    "LoD2_32_358_5646_1_NW.gml",
+    "LoD2_32_359_5646_1_NW.gml",
+    "LoD2_32_360_5646_1_NW.gml",
+    "LoD2_32_361_5646_1_NW.gml"
   ],
   "note": "Offene Geobasisdaten. Frei nutzbar, auch kommerziell, ohne Bedingungen. Die Quelle wird trotzdem genannt -- Leitprinzip 1."
 }

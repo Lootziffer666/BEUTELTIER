@@ -40,11 +40,14 @@ import { drehungNachZ } from './geometry';
 /**
  * Fussbodenhoehe.
  *
- * Knapp ueber null, wie das Gelaende ringsum. Seit `boulevardSurfaces.ts` die
- * Kollision aus demselben Plan baut, ist das nicht mehr nur die gezeichnete,
- * sondern auch die begangene Hoehe -- beide lesen diese Zahl.
+ * Kleiner Zeichenabstand ueber dem im Plan belegten Bodenbezug. Das ist keine
+ * Welt-Hoehe; die steht als `bodenM` in boulevard.json.
  */
 export const BODEN_Y = 0.02;
+
+export function boulevardBoden(plan: BoulevardPlan): number {
+  return plan.bodenM + BODEN_Y;
+}
 
 /** Breite des Oberlichtbands in der Mitte. */
 const OBERLICHT_BREITE_M = 6.4;
@@ -498,7 +501,12 @@ export function glasfelder(
   return felder;
 }
 
-export function treppenteile(achse: Achse, centre: [number, number], anfang: number): {
+export function treppenteile(
+  achse: Achse,
+  centre: [number, number],
+  anfang: number,
+  untenM: number,
+): {
   stufen: Bauteil[];
   rolltreppen: Bauteil[];
   drehung: number;
@@ -514,23 +522,23 @@ export function treppenteile(achse: Achse, centre: [number, number], anfang: num
   // Ende des Gangs und endet dort, wo Halle 5 und Halle 10 anfangen.
   const stufen: Bauteil[] = [];
   let s = anfang;
-  let h = BODEN_Y;
+  const boden = untenM + BODEN_Y;
+  let anstieg = 0;
   for (let lauf = 0; lauf < LAEUFE; lauf += 1) {
     for (let i = 0; i < STUFEN_JE_LAUF; i += 1) {
-      h += STEIGUNG_M;
-      // Jede Stufe steht als Block auf dem Boden -- von unten sieht man
-      // ohnehin nur die Vorderkante, und eine massive Treppe wirft den
-      // Schatten, den eine Folge schwebender Platten nicht wirft.
+      anstieg += STEIGUNG_M;
+      // Jede Stufe steht auf dem registrierten Boulevardboden. Der alte Code
+      // baute sie als sieben Meter hohen Block bis zur Welt-Null hinunter.
       stufen.push({
-        position: ort(s + AUFTRITT_M / 2, 0, h / 2),
-        groesse: [TREPPE_BREITE_M, h, AUFTRITT_M],
+        position: ort(s + AUFTRITT_M / 2, 0, boden + anstieg / 2),
+        groesse: [TREPPE_BREITE_M, anstieg, AUFTRITT_M],
       });
       s += AUFTRITT_M;
     }
     if (lauf < LAEUFE - 1) {
       stufen.push({
-        position: ort(s + PODEST_M / 2, 0, h / 2),
-        groesse: [TREPPE_BREITE_M, h, PODEST_M],
+        position: ort(s + PODEST_M / 2, 0, boden + anstieg / 2),
+        groesse: [TREPPE_BREITE_M, anstieg, PODEST_M],
       });
       s += PODEST_M;
     }
@@ -543,7 +551,7 @@ export function treppenteile(achse: Achse, centre: [number, number], anfang: num
     position: ort(
       anfang,
       seite * (TREPPE_BREITE_M / 2 + ROLLTREPPE_BREITE_M / 2 + 0.35),
-      BODEN_Y,
+      boden,
     ),
     groesse: [ROLLTREPPE_BREITE_M, 0, 0],
   }));
@@ -703,7 +711,7 @@ function suedknoten(
     // und faellt quer zur Achse ab, ueber sechsundzwanzig Stufen von 4,30 m
     // auf null. Als geneigte Flaeche gebaut, nicht als Stufenfolge.
     knotenTreppeOst: band(achse, centre,
-      () => [[knoten.qOstM - knoten.stufenOst * 0.30, 0], [knoten.qOstM, riegel.hoeheM]],
+      () => [[knoten.qOstM - knoten.stufenOst * 0.30, plan.sued!.untenM], [knoten.qOstM, riegel.hoeheM]],
       WELT_KACHEL_M.boden,
       [[(riegel.vonM + riegel.bisM) / 2 - 6, (riegel.vonM + riegel.bisM) / 2 + 6]]),
     // Die Passage nach Sueden faellt sanft zur Piazza ab.
@@ -795,7 +803,9 @@ export function Boulevard({
   const flaechen = useMemo(() => {
     if (!achse || !plan) return null;
     const laenge = plan.laengeM;
-    const hoehe = plan.hoeheM;
+    const boden = boulevardBoden(plan);
+    const torOben = plan.bodenM + TOR_HOEHE_M;
+    const hoehe = plan.bodenM + plan.hoeheM;
     const ganz: [number, number][] = [[0, laenge]];
     const lichtHalb = OBERLICHT_BREITE_M / 2;
     const ost = abschnitte(plan.seiten.ost);
@@ -808,7 +818,7 @@ export function Boulevard({
 
     return {
       boden: band(achse, centre,
-        () => [[qOst, BODEN_Y], [qWest, BODEN_Y]], WELT_KACHEL_M.boden, ganz),
+        () => [[qOst, boden], [qWest, boden]], WELT_KACHEL_M.boden, ganz),
       dach: band(achse, centre,
         () => [[qOst, hoehe], [qWest, hoehe]], WELT_KACHEL_M.decke, ganz),
       oberlicht: band(achse, centre,
@@ -819,24 +829,24 @@ export function Boulevard({
       // durch. Ohne die Teilung waere jeder Zugang ein Schlitz bis unter die
       // Decke -- ein Loch in der Wand ist kein Tor.
       wandOstMassiv: band(achse, centre,
-        () => [[qOst, TOR_HOEHE_M], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.massiv),
+        () => [[qOst, torOben], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.massiv),
       wandOstGlas: band(achse, centre,
-        () => [[qOst, TOR_HOEHE_M], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.glas),
+        () => [[qOst, torOben], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.glas),
       wandOstMassivUnten: band(achse, centre,
-        () => [[qOst, BODEN_Y], [qOst, TOR_HOEHE_M]], WELT_KACHEL_M.wand,
+        () => [[qOst, boden], [qOst, torOben]], WELT_KACHEL_M.wand,
         ohneDurchgaenge(ost.massiv, toreOst)),
       wandOstGlasUnten: band(achse, centre,
-        () => [[qOst, BODEN_Y], [qOst, TOR_HOEHE_M]], WELT_KACHEL_M.wand,
+        () => [[qOst, boden], [qOst, torOben]], WELT_KACHEL_M.wand,
         ohneDurchgaenge(ost.glas, toreOst)),
       wandWestMassiv: band(achse, centre,
-        () => [[qWest, hoehe], [qWest, TOR_HOEHE_M]], WELT_KACHEL_M.wand, west.massiv),
+        () => [[qWest, hoehe], [qWest, torOben]], WELT_KACHEL_M.wand, west.massiv),
       wandWestGlas: band(achse, centre,
-        () => [[qWest, hoehe], [qWest, TOR_HOEHE_M]], WELT_KACHEL_M.wand, west.glas),
+        () => [[qWest, hoehe], [qWest, torOben]], WELT_KACHEL_M.wand, west.glas),
       wandWestMassivUnten: band(achse, centre,
-        () => [[qWest, TOR_HOEHE_M], [qWest, BODEN_Y]], WELT_KACHEL_M.wand,
+        () => [[qWest, torOben], [qWest, boden]], WELT_KACHEL_M.wand,
         ohneDurchgaenge(west.massiv, toreWest)),
       wandWestGlasUnten: band(achse, centre,
-        () => [[qWest, TOR_HOEHE_M], [qWest, BODEN_Y]], WELT_KACHEL_M.wand,
+        () => [[qWest, torOben], [qWest, boden]], WELT_KACHEL_M.wand,
         ohneDurchgaenge(west.glas, toreWest)),
       ...suedteil(achse, centre, plan),
     };
@@ -916,7 +926,7 @@ export function Boulevard({
       const s = ((i + 0.5) / anzahl) * plan.laengeM;
       const x = achse.x0 + achse.laengs[0] * s;
       const y = achse.y0 + achse.laengs[1] * s;
-      out.push([x - centre[0], plan.hoeheM - 1.2, y - centre[1]]);
+      out.push([x - centre[0], plan.bodenM + plan.hoeheM - 1.2, y - centre[1]]);
     }
     return out;
   }, [achse, centre, plan]);
@@ -930,7 +940,7 @@ export function Boulevard({
       for (const q of [-4.2, 4.2]) {
         const x = achse.x0 + achse.laengs[0] * s + achse.quer[0] * q;
         const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * q;
-        out.push([x - centre[0], plan.hoeheM - 1.5, y - centre[1]]);
+        out.push([x - centre[0], plan.bodenM + plan.hoeheM - 1.5, y - centre[1]]);
       }
     }
     return out;
@@ -951,7 +961,7 @@ export function Boulevard({
         schild,
         position: [
           x - centre[0],
-          SCHILD_Y + SCHILD_HOEHE_M / 2,
+          plan.bodenM + SCHILD_Y + SCHILD_HOEHE_M / 2,
           y - centre[1],
         ] as [number, number, number],
         drehung,
@@ -1022,8 +1032,23 @@ export function Boulevard({
     aussen?.schraege.dispose();
   }, [aussen]);
 
+  /** OSM-Umriss der Piazza auf ihrer vor Ort belegten Plattformhoehe. */
+  const piazza = useMemo(() => {
+    const umriss = plan?.plaetze?.find((platz) => platz.name === 'Piazza');
+    const hoeheM = plan?.knoten?.piazzaHoeheM;
+    if (!umriss || hoeheM === undefined) return null;
+    return {
+      boden: knickflaeche(umriss.polygon, centre, WELT_KACHEL_M.boden),
+      hoeheM,
+    };
+  }, [centre, plan]);
+
+  useEffect(() => () => piazza?.boden.dispose(), [piazza]);
+
   const treppe = useMemo(
-    () => (achse && plan?.treppe ? treppenteile(achse, centre, plan.treppe.vonM) : null),
+    () => (achse && plan?.treppe
+      ? treppenteile(achse, centre, plan.treppe.vonM, plan.treppe.untenM)
+      : null),
     [achse, centre, plan],
   );
 
@@ -1055,7 +1080,7 @@ export function Boulevard({
     const qMitte = (plan.sued.seitenQ.ost + plan.sued.seitenQ.west) / 2;
     const x = achse.x0 + achse.laengs[0] * s + achse.quer[0] * qMitte;
     const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * qMitte;
-    const sockel = 7.45;
+    const sockel = plan.treppe.untenM;
     const boden = plan.sued.obenM;
     const breite = plan.sued.breiteM;
     // Die Tueren bleiben dort, wo die Treppe ankommt -- auf der Gangachse,
@@ -1109,22 +1134,35 @@ export function Boulevard({
     });
   }), [rolltreppen]);
 
-  if (!visible || !flaechen) return null;
+  if (!flaechen) return null;
 
   return (
     <group>
+      {/* Begehbare Aussen- und Gangflaechen bleiben auch in der Uebersicht
+          sichtbar. Nur die teuren Innenraumdetails folgen `visible`; sonst
+          erscheinen Piazza, Rampen und beide Boulevardebenen als flaches
+          Luftbild und ihre belegten Hoehen sind ausgerechnet dort unsichtbar,
+          wo man den Standort verstehen soll. */}
       <mesh geometry={flaechen.boden} material={material.boden} receiveShadow />
-      <mesh geometry={flaechen.dach} material={material.dach} />
-      <mesh geometry={flaechen.oberlicht} material={material.oberlicht} />
-      <mesh geometry={flaechen.wandWestMassiv} material={material.wandMassiv} receiveShadow />
-      <mesh geometry={flaechen.wandOstMassiv} material={material.wandMassiv} receiveShadow />
-      <mesh geometry={flaechen.wandWestGlas} material={material.wand} />
-      <mesh geometry={flaechen.wandOstGlas} material={material.wand} />
+      {visible && <mesh geometry={flaechen.dach} material={material.dach} />}
+      {visible && <mesh geometry={flaechen.oberlicht} material={material.oberlicht} />}
+      {visible && (
+        <mesh geometry={flaechen.wandWestMassiv} material={material.wandMassiv} receiveShadow />
+      )}
+      {visible && (
+        <mesh geometry={flaechen.wandOstMassiv} material={material.wandMassiv} receiveShadow />
+      )}
+      {visible && <mesh geometry={flaechen.wandWestGlas} material={material.wand} />}
+      {visible && <mesh geometry={flaechen.wandOstGlas} material={material.wand} />}
       {/* Unterhalb der Torhoehe -- hier fehlen die Durchgaenge. */}
-      <mesh geometry={flaechen.wandWestMassivUnten} material={material.wandMassiv} receiveShadow />
-      <mesh geometry={flaechen.wandOstMassivUnten} material={material.wandMassiv} receiveShadow />
-      <mesh geometry={flaechen.wandWestGlasUnten} material={material.wand} />
-      <mesh geometry={flaechen.wandOstGlasUnten} material={material.wand} />
+      {visible && (
+        <mesh geometry={flaechen.wandWestMassivUnten} material={material.wandMassiv} receiveShadow />
+      )}
+      {visible && (
+        <mesh geometry={flaechen.wandOstMassivUnten} material={material.wandMassiv} receiveShadow />
+      )}
+      {visible && <mesh geometry={flaechen.wandWestGlasUnten} material={material.wand} />}
+      {visible && <mesh geometry={flaechen.wandOstGlasUnten} material={material.wand} />}
       {/* Aussengelaende 9/10: Ebene 1, Schraege, Ebene 0 -- eine Oberflaeche. */}
       {aussen && (
         <group>
@@ -1145,6 +1183,15 @@ export function Boulevard({
           />
         </group>
       )}
+      {piazza && (
+        <mesh
+          geometry={piazza.boden}
+          material={material.boden}
+          position={[0, piazza.hoeheM, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          receiveShadow
+        />
+      )}
       {/* Der Knick am Nordende -- ebenerdig, stufenlos an den Gang anschliessend. */}
       {knick && (
         <group>
@@ -1155,32 +1202,36 @@ export function Boulevard({
             rotation={[-Math.PI / 2, 0, 0]}
             receiveShadow
           />
-          <mesh
-            geometry={knick.decke}
-            material={material.dach}
-            position={[0, knick.deckeY, 0]}
-            rotation={[-Math.PI / 2, 0, 0]}
-          />
+          {visible && (
+            <mesh
+              geometry={knick.decke}
+              material={material.dach}
+              position={[0, knick.deckeY, 0]}
+              rotation={[-Math.PI / 2, 0, 0]}
+            />
+          )}
         </group>
       )}
       {/* Der Suedteil, eine Ebene hoeher. */}
       {flaechen.suedBoden && (
         <mesh geometry={flaechen.suedBoden} material={material.boden} receiveShadow />
       )}
-      {flaechen.suedDach && <mesh geometry={flaechen.suedDach} material={material.dach} />}
-      {flaechen.suedStirn && (
+      {visible && flaechen.suedDach && (
+        <mesh geometry={flaechen.suedDach} material={material.dach} />
+      )}
+      {visible && flaechen.suedStirn && (
         <mesh geometry={flaechen.suedStirn} material={material.wandMassiv} />
       )}
-      {flaechen.suedWandOstMassiv && (
+      {visible && flaechen.suedWandOstMassiv && (
         <mesh geometry={flaechen.suedWandOstMassiv} material={material.wandMassiv} receiveShadow />
       )}
-      {flaechen.suedWandWestMassiv && (
+      {visible && flaechen.suedWandWestMassiv && (
         <mesh geometry={flaechen.suedWandWestMassiv} material={material.wandMassiv} receiveShadow />
       )}
-      {flaechen.suedWandOstGlas && (
+      {visible && flaechen.suedWandOstGlas && (
         <mesh geometry={flaechen.suedWandOstGlas} material={material.wand} />
       )}
-      {flaechen.suedWandWestGlas && (
+      {visible && flaechen.suedWandWestGlas && (
         <mesh geometry={flaechen.suedWandWestGlas} material={material.wand} />
       )}
       {/* Suedknoten: Treppe, Querriegel und Passage zur Piazza. */}
@@ -1190,14 +1241,16 @@ export function Boulevard({
       {flaechen.knotenBoden && (
         <mesh geometry={flaechen.knotenBoden} material={material.boden} receiveShadow />
       )}
-      {flaechen.knotenDach && <mesh geometry={flaechen.knotenDach} material={material.dach} />}
+      {visible && flaechen.knotenDach && (
+        <mesh geometry={flaechen.knotenDach} material={material.dach} />
+      )}
       {flaechen.knotenPassage && (
         <mesh geometry={flaechen.knotenPassage} material={material.boden} receiveShadow />
       )}
       {flaechen.knotenTreppeOst && (
         <mesh geometry={flaechen.knotenTreppeOst} material={material.boden} receiveShadow />
       )}
-      {pendel.map((position, index) => (
+      {visible && pendel.map((position, index) => (
         <mesh key={`p${index}`} position={position}>
           <cylinderGeometry args={[0.62, 0.34, 0.42, 12]} />
           <meshStandardMaterial
@@ -1208,7 +1261,7 @@ export function Boulevard({
           />
         </mesh>
       ))}
-      {schilder.map(({ schluessel, position, drehung, textur }) => (
+      {visible && schilder.map(({ schluessel, position, drehung, textur }) => (
         <mesh key={schluessel} position={position} rotation={[0, drehung, 0]}>
           <planeGeometry args={[SCHILD_BREITE_M, SCHILD_HOEHE_M]} />
           <meshStandardMaterial
@@ -1223,7 +1276,7 @@ export function Boulevard({
           />
         </mesh>
       ))}
-      {suedwand && (
+      {visible && suedwand && (
         <group position={suedwand.position} rotation={[0, suedwand.drehung, 0]}>
           {/* Unten massiv bis 7,45 m ... */}
           <mesh
@@ -1287,14 +1340,14 @@ export function Boulevard({
           {/* Stufenband, Glasbalustrade und Handlauf kommen aus dem
               vorhandenen ArchitectureGenerator -- dieselben Materialien wie
               der Rest des prozeduralen Messebaus. */}
-          {rolltreppen.map(({ position, gruppe }, index) => (
+          {visible && rolltreppen.map(({ position, gruppe }, index) => (
             <group key={`r${index}`} position={position} rotation={[0, treppe.drehung, 0]}>
               <primitive object={gruppe} />
             </group>
           ))}
         </group>
       )}
-      {lampen.map((position, index) => (
+      {visible && lampen.map((position, index) => (
         <pointLight
           key={index}
           position={position}

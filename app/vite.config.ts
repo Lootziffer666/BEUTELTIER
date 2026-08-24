@@ -27,10 +27,11 @@ const ultraDuploPlugin = {
   },
 };
 
-// Auf dem Messegelaende bricht das Netz genau dann zusammen, wenn alle es
-// brauchen. Die App muss deshalb vollstaendig aus dem Cache laufen -- Karte,
-// Wegenetz und Register liegen als Schnappschuss bei und werden mit
-// eingelagert.
+// Karte, Wegenetz und Register werden beim Installieren vorgeladen. Die
+// grossen, realen Weltassets werden beim ersten erfolgreichen Abruf separat
+// gecacht. Online gewinnt immer die aktuelle Deployment-Datei; nur bei einem
+// echten Netzfehler dient der letzte erfolgreiche Abruf als Offline-Rueckgriff.
+// Die v2-Namen isolieren die korrigierte Welt von den alten CacheFirst-Dateien.
 export default defineConfig({
   base: './',
   build: {
@@ -49,7 +50,28 @@ export default defineConfig({
       includeAssets: ['brand/*.png'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,json}'],
+        globIgnores: ['models/gelaende.jpg'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: /\/models\/(?:gelaende\.jpg|.*\.glb)$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'beuteltier-world-assets-v2',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 16, maxAgeSeconds: 30 * 24 * 60 * 60 },
+            },
+          },
+          {
+            urlPattern: /\/data\/terrain_heightmap\.bin$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'beuteltier-world-data-v2',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 4, maxAgeSeconds: 30 * 24 * 60 * 60 },
+            },
+          },
+        ],
       },
       manifest: {
         name: 'BEUTELTIER',
