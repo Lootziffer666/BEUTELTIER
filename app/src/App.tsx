@@ -240,7 +240,16 @@ export default function App() {
                     key={option}
                     type="button"
                     className={`icon-choice ${preset === option ? 'is-active' : ''}`}
-                    onClick={() => setPreset(option)}
+                    onClick={() => {
+                      setPreset(option);
+                      // Das Werkzeugfenster deckt auf einem Telefon fast die
+                      // halbe Bildhoehe ab und faengt dort Beruehrungen ab,
+                      // bevor sie den Canvas erreichen -- im Begehen-Modus
+                      // heisst das: kein Blick nach vorn, keine Bewegung.
+                      // Wer eine Ansicht waehlt, will sie sehen, nicht das
+                      // Menue davor.
+                      setToolboxOpen(false);
+                    }}
                     title={PRESET_META[option].label}
                     aria-label={PRESET_META[option].label}
                   >
