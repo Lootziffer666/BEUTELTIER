@@ -149,11 +149,18 @@ export function useProceduralSky(intensity = 1, hall = false): void {
 
   useEffect(() => {
     scene.environment = environment;
+    // Der Himmel stand bislang nur als Spiegelung im Environment-Map --
+    // sichtbar wurde er nie, denn `<color attach="background">` legt eine
+    // einfarbige Flaeche dahinter. Draussen ist genau diese Kugel (Verlauf,
+    // Sonnenscheibe) der Himmel, den es zu sehen gilt; drinnen bleibt die
+    // flache Farbe, eine Halle hat keinen Himmel ueber sich.
+    if (!hall) scene.background = environment;
     return () => {
       scene.environment = null;
+      if (scene.background === environment) scene.background = null;
       environment.dispose();
     };
-  }, [scene, environment]);
+  }, [scene, environment, hall]);
 }
 
 /**

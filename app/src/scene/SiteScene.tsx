@@ -675,6 +675,83 @@ function familieFuer(teil: 'roof' | 'ground' | 'wall'): Familie {
   return FAMILIEN.M01;
 }
 
+/**
+ * Bereits geladene oder gerade ladende Weltpakete, je URL einmal fuer die
+ * ganze Sitzung -- unabhaengig davon, wie oft `useRobustGltf` selbst neu
+ * montiert wird (Preset-Wechsel, Hallen-Fokus).
+ */
+const robustGltfCache = new Map<string, THREE.Group>();
+const robustGltfInflight = new Map<string, Promise<THREE.Group>>();
+const ROBUST_GLTF_VERSUCHE = 5;
+
+/**
+ * Laedt eine GLB-Datei mit Wiederholung, statt sich auf einen einzelnen
+ * Browser-Abruf zu verlassen.
+ *
+ * `useGLTF` (drei) haengt an einem einzigen `fetch`, der nie erneut versucht
+ * wird. Fuer die kleinen Kernpakete reicht das -- die Umgebungspakete sind
+ * mit bis zu 7,5 MB deutlich groesser, und genau diese brachen im
+ * Netzwerk-Log reproduzierbar mit `net::ERR_ABORTED` ab, obwohl derselbe
+ * Abruf per `curl` in Millisekunden vollstaendig durchlief: der Browser gibt
+ * den Abruf auf, die Datei selbst war nie das Problem. Auf einer sehr
+ * langsamen Verbindung -- wie sie auf dem Messegelaende vorkommt -- ist ein
+ * abgebrochener Download eines mehrere Megabyte grossen Pakets kein
+ * Einzelfall, sondern der Normalfall. Deshalb hier: bis zu fuenf Versuche
+ * mit steigender Wartezeit, bevor das Paket endgueltig fehlt.
+ */
+function useRobustGltf(url: string): THREE.Group | null {
+  const [scene, setScene] = useState<THREE.Group | null>(() => robustGltfCache.get(url) ?? null);
+
+  useEffect(() => {
+    const cached = robustGltfCache.get(url);
+    if (cached) {
+      setScene(cached);
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      let inflight = robustGltfInflight.get(url);
+      if (!inflight) {
+        inflight = (async () => {
+          const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+          const loader = new GLTFLoader();
+          let letzterFehler: unknown;
+          for (let versuch = 1; versuch <= ROBUST_GLTF_VERSUCHE; versuch += 1) {
+            try {
+              const gltf = await loader.loadAsync(url);
+              robustGltfCache.set(url, gltf.scene);
+              return gltf.scene;
+            } catch (fehler) {
+              letzterFehler = fehler;
+              if (versuch < ROBUST_GLTF_VERSUCHE) {
+                await new Promise((resolve) => setTimeout(resolve, 500 * versuch));
+              }
+            }
+          }
+          throw letzterFehler;
+        })();
+        robustGltfInflight.set(url, inflight);
+        inflight.finally(() => robustGltfInflight.delete(url));
+      }
+      try {
+        const loaded = await inflight;
+        if (!cancelled) setScene(loaded);
+      } catch (fehler) {
+        if (!cancelled) {
+          // eslint-disable-next-line no-console
+          console.error(`Weltpaket nicht ladbar nach ${ROBUST_GLTF_VERSUCHE} Versuchen: ${url}`, fehler);
+        }
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  return scene;
+}
+
 function OfficialPackage({
   uri,
   interior,
@@ -699,9 +776,10 @@ function OfficialPackage({
   /** Amtliche Feature-IDs der ausgewaehlten Halle. */
   highlightFeatureIds: readonly string[];
 }) {
-  const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
+  const scene = useRobustGltf(`${import.meta.env.BASE_URL}${uri}`);
 
   const model = useMemo(() => {
+    if (!scene) return null;
     // Umgebaut wird nur, was man von drinnen sieht -- von aussen bleibt das
     // Weltmodell inhaltlich, wie es geliefert wird.
     const umbauen = behandeln && !!surfaces && interior;
@@ -869,13 +947,14 @@ function OfficialPackage({
     highlightFeatureIds,
   ]);
 
+  if (!model) return null;
   return <primitive object={model} />;
 }
 
 function OfficialWorld({
   data,
   centre,
-  preset,
+  interior,
   cel,
   deckkraft,
   orthophoto,
@@ -883,13 +962,13 @@ function OfficialWorld({
 }: {
   data: Dataset;
   centre: [number, number];
-  preset: CameraPreset;
+  /** Steht man tatsaechlich in der fokussierten Kernhalle? */
+  interior: boolean;
   cel: boolean;
   deckkraft: { kern: number; umgebung: number };
   orthophoto: RegisteredOrthophoto | null;
   highlightHallKey: string | null;
 }) {
-  const interior = preset === 'ego';
   const surfaces = weltFlaechen(interior);
 
   const packages = data.world?.manifest.packages.filter(
@@ -1847,6 +1926,13 @@ export function SiteScene(props: SceneProps) {
   const lichtHallKey = preset === 'ego'
     ? (egoSnapshotSeen ? egoHallKey : (focusHallKey ?? defaultEgoHallKey))
     : focusHallKey;
+  // "Ego" heisst nur "zu Fuss unterwegs", nicht "in einer Halle": derselbe
+  // Modus fuehrt auch ueber Piazza und Boulevard im Freien. Bis hierher stand
+  // fuer Himmel, Hintergrundfarbe und Nebel ueberall `preset === 'ego'` --
+  // draussen bekam man deshalb den dunklen Hallenhimmel samt Hallennebel
+  // statt echten Himmel und Sonne. `lichtHallKey` kennt die echte Antwort
+  // schon: er ist genau dann null, wenn `footingAt` keine Halle meldet.
+  const imGebaeude = preset === 'ego' && lichtHallKey !== null;
 
   const viewBounds = useMemo(() => {
     const points = data.site.halls.flatMap((hall) => hall.footprint);
@@ -1905,16 +1991,16 @@ export function SiteScene(props: SceneProps) {
       }}
       onPointerMissed={() => props.onSelectStand(null)}
     >
-      <color attach="background" args={[preset === 'ego' ? '#1a1d24' : '#8fa8bf']} />
+      <color attach="background" args={[imGebaeude ? '#1a1d24' : '#8fa8bf']} />
       <fog
         attach="fog"
         args={[
-          preset === 'ego' ? '#20242c' : '#9fb4c8',
-          preset === 'ego' ? extent * 0.25 : extent * 1.1,
-          preset === 'ego' ? extent * 1.2 : extent * 3.2,
+          imGebaeude ? '#20242c' : '#9fb4c8',
+          imGebaeude ? extent * 0.25 : extent * 1.1,
+          imGebaeude ? extent * 1.2 : extent * 3.2,
         ]}
       />
-      <Beleuchtung extent={extent} interior={preset === 'ego'} />
+      <Beleuchtung extent={extent} interior={imGebaeude} />
 
       {registered && terrainHeightmap.error && (
         <Html position={[0, 12, 0]} center>
@@ -1964,7 +2050,12 @@ export function SiteScene(props: SceneProps) {
           <OfficialWorld
             data={data}
             centre={centre}
-            preset={preset}
+            // Nur "ego" heisst nicht "drinnen": derselbe Modus fuehrt auch
+            // ueber die Piazza im Freien. Und selbst drinnen zaehlt nur die
+            // Kernhalle, die man tatsaechlich betreten hat -- steht man in
+            // einer anderen Halle als der fokussierten, bleibt die fokussierte
+            // von aussen ein normales Gebaeude statt eines ausgehoehlten.
+            interior={imGebaeude && lichtHallKey === focusHallKey}
             cel={cel}
             deckkraft={presentation.deckkraft}
             orthophoto={registeredOrthophoto}
