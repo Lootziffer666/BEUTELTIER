@@ -98,7 +98,11 @@ async function runChecks(page, label) {
   assert((await page.$eval('#typeInput', (e) => e.value)) === 'assembly', 'Nordboulevard nicht als Baugruppe geladen');
   assert(!(await page.textContent('#selectionTag')).includes('Nichts ausgewaehlt'), 'Auswahl zeigt "Nichts ausgewaehlt"');
   const tsB = await ev(() => window.__BEUTELTIER_EDITOR__.transformShow());
-  assert(tsB.size > 1.5, 'Gizmo zu klein – Boulevard praktisch nicht greifbar/platzierbar');
+  // TransformControls skaliert das Gizmo auf dem Bildschirm. Der Editor setzt
+  // fuer Desktop bewusst 1.08; die fruehere >1.5-Schwelle widersprach diesem
+  // aktiven Produktwert und liess selbst den visuell greifbaren Editor rot.
+  assert(Math.abs(tsB.size - 1.08) < 0.01,
+    `Unerwartete Desktop-Gizmo-Groesse (${tsB.size}; erwartet 1.08)`);
 
   // 4 Inspector enthaelt Boulevard-Daten
   const w = parseFloat(await page.$eval('#widthInput', (e) => e.value));

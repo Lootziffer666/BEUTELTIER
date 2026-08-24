@@ -12,12 +12,13 @@ Autoritative Ausgangsstaende:
 
 ## NOW
 
-Der BEUTELTIER-Aussenraum wird auf einen gemeinsamen amtlichen Ausschnitt
-gebracht: 7 x 3 km von der Koelner Innenstadt westlich des Rheins ueber
-Bahnhof und Messe bis A3/Parkhaeuser. Das alte 1,13-km-Fotogelaende und das
-nord-sued-gespiegelte DGM sind ersetzt. Das DGM wird unter den tatsaechlich
-gerenderten LoD2-Grundflaechen ausgespart, damit es Hallen nicht mehr
-durchschneidet. Eine neue mobile WebGL-Sichtpruefung steht noch aus.
+PR #43 wird aus dem roten Zustand zurueckgeholt. Der alte Actions-Cache hatte
+nur vier Rohdatenkacheln und liess die neuen Fetcher trotzdem aus; die
+World-Builder-Akzeptanz verlangte zugleich eine Gizmo-Groesse, der der aktive
+Editor absichtlich widerspricht. Beide Vertraege sind lokal korrigiert. Der
+vollstaendige 21+21-Kachel-Bau, 146 Python-Tests, 303 Frontendtests,
+TypeScript und beide Produktionsbuilds sind gruen. Remote-Checks und ein
+WebGL-Sichttest des neuen Deployments stehen noch aus.
 
 ## PROVEN WORKING
 
@@ -39,7 +40,12 @@ durchschneidet. Eine neue mobile WebGL-Sichtpruefung steht noch aus.
 - Das erzeugte Terrain besitzt 403.996 gueltige Dreiecke. 8.002 Rasterzellen
   sind nur dort entfernt, wo 2.567 amtliche LoD2-`GroundSurface`-Flaechen des
   aktiven Messeausschnitts liegen. Quelle, Bounds, Verfahren und Anzahl stehen
-  in `terrain.json` und im GLB; der Browser erhaelt diese Maske unveraendert.
+  in `terrain-wide.json` und im GLB; der Browser erhaelt diese Maske unter dem
+  bestehenden Laufzeitnamen `data/terrain.json` unveraendert.
+- Das vorherige 5-m-Kernartefakt `data/build/terrain.json` ist bytegenau auf
+  `origin/main` zurueckgestellt. Es bleibt als historisches Buildprodukt
+  erhalten und wird nicht als aktive oder korrigierte Laufzeitquelle
+  ausgegeben. Der Weitbereichsbau kann es nicht mehr ueberschreiben.
 - Registrierte Orthofoto-, OSM- und ALKIS-Layer werden nicht ein zweites Mal
   transformiert. Registriertes Orthofoto ohne belegte Szenenecken bricht ab.
 - Die Fake-Skyline war ein unvollstaendiger hartcodierter Zylinder/Stub und
@@ -57,12 +63,13 @@ durchschneidet. Eine neue mobile WebGL-Sichtpruefung steht noch aus.
   Touch-Begehen besitzt getrennte Bewegungs- und Blickbereiche. Das ist durch
   Komponenten-/Logiktests, noch nicht durch den ausstehenden Mobilbildnachweis
   belegt.
-- 303 Frontend-Tests, 145 Python-Pipeline-Tests, TypeScript und beide
+- 303 Frontend-Tests, 146 Python-Pipeline-Tests, TypeScript und beide
   Produktionsbuilds bestehen. Die gebauten kritischen Assets antworten lokal
   mit HTTP 200 und exakt ihren erwarteten Dateigroessen.
-- Das 8,75-MB-Luftbild und GLBs blockieren die PWA-Installation nicht. Sie
-  werden nach dem ersten erfolgreichen Abruf gecacht; vorher wird keine
-  Offline-Verfuegbarkeit behauptet.
+- Das 8,75-MB-Luftbild und GLBs blockieren die PWA-Installation nicht. Der
+  erzeugte Service Worker nutzt fuer Weltassets `NetworkFirst` und neue
+  v2-Caches: online gewinnt das aktuelle Deployment, offline nur der letzte
+  erfolgreiche Abruf. Vorher wird keine Offline-Verfuegbarkeit behauptet.
 
 ### SHADED
 
@@ -96,9 +103,10 @@ durchschneidet. Eine neue mobile WebGL-Sichtpruefung steht noch aus.
 
 ## BROKEN / FAKE / DEAD
 
-- Die neue Szene hat noch keinen WebGL-Bild-PASS. In der Arbeitsumgebung ist
-  kein Browser vorhanden; der erlaubte Playwright-Download liefert 0-Byte-
-  Archive. Ein Build- oder HTTP-PASS wird nicht als Sichtnachweis ausgegeben.
+- Die neue Szene hat noch keinen WebGL-Bild-PASS. Der lokale Build ist gruen,
+  aber der externe Browser darf den lokalen HTTP-Port nicht oeffnen. Ein
+  Build-PASS wird nicht als Sichtnachweis ausgegeben; geprueft wird das neue
+  oeffentliche Preview nach dem Push.
 - Die bereits beschafften weiteren LoD2-Gebaeude westlich des Rheins und bis
   A3 sind noch nicht in die mobilen Runtimepakete uebernommen. Der aktive
   LoD2-Ausschnitt bleibt `[357700,5645200,358900,5646500]`.
@@ -114,15 +122,20 @@ durchschneidet. Eine neue mobile WebGL-Sichtpruefung steht noch aus.
   ehrlichen metrischen Rekonstruktions-, Registrierungs- oder Fusionspfad.
 - Der gemischte SHADED-Provider-/Benchmarkbestand enthaelt Simulationen,
   `would do` und falsche PASS-Logik; er bleibt ausserhalb des Produktpfads.
+- Der volle 21-Kachel-Diagnosebau sieht 5.892 LoD2-Features ohne semantische
+  Flaechen, die nicht raeumlich gefiltert werden koennen. Die dadurch auf
+  mehrere MB anwachsenden Sichtbarkeitsdiagnosen werden nicht in den
+  Mittwoch-PR gezogen und nicht als verortete Welt ausgegeben.
 
 ## WEDNESDAY PATH
 
-1. Neuen PR-Preview auf einem WebGL-faehigen Mobilgeraet pruefen: kein weisser
+1. PR #43 pushen und beide zuvor roten GitHub-Checks gruen belegen.
+2. Neuen PR-Preview auf einem WebGL-faehigen Browser pruefen: kein weisser
    Bildschirm; Luftbild bis Rhein/A3; Hallen nicht im/unter Terrain; keine
    Fake-Kontur; Kamera verschiebbar; Presets und Touch-Begehen reagieren.
-2. Nur beobachtete Restfehler korrigieren. Keine weitere Forschungs- oder
+3. Nur beobachtete Restfehler korrigieren. Keine weitere Forschungs- oder
    Providerarbeit beginnen.
-3. PR #43 bei gruenen Checks und bestandenem Sichttest mergen; danach nur den
+4. PR #43 bei gruenen Checks und bestandenem Sichttest mergen; danach nur den
    Bahnhof -> Eingang Sued -> Halle-10.1-Korridor demonstrieren.
 
 ## PARKED
