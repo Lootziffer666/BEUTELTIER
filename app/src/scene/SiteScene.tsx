@@ -35,7 +35,14 @@ import {
 } from './materials';
 import { fernsteuerungErlaubt, leerErlaubt } from './fernsteuerung';
 import { Beleuchtung } from './lighting';
-import { Deckenleuchten, Hallenhuelle, Hallenlicht, Hallenstuetzen, Lichtspiegel } from './interior';
+import {
+  Deckenleuchten,
+  Hallenhuelle,
+  Hallenlicht,
+  Hallenstuetzen,
+  Hallenwaende,
+  Lichtspiegel,
+} from './interior';
 import { Boulevard } from './boulevard';
 import { Markenstaende } from './Markenstaende';
 import { MARKEN_STAND_IDS } from './marken';
@@ -45,6 +52,7 @@ import { ProceduralStaging } from './ProceduralStaging';
 import {
   FAMILIEN,
   familienMaterial,
+  konturHuelle,
   konturStaerke,
   stufenTextur,
   toonMaterial,
@@ -731,6 +739,13 @@ function OfficialPackage({
       clone.traverse((node) => {
         if (node instanceof THREE.Mesh) meshes.push(node);
       });
+      // Konturhuellen fuer Waende: gesammelt und erst nach der Schleife
+      // angehaengt, aus demselben Grund wie oben -- sonst umrandet die
+      // Kontur sich selbst. Nur Waende, nicht Dach/Boden: die tragen bereits
+      // reale Struktur (Foto oder Familienzeichnung); eine Kontur um jede
+      // Dachflaeche waere bei einem 490-Flaechen-Modell ohne sichtbaren
+      // Gewinn ein zweiter Durchlauf durchs ganze Gebaeude.
+      const huellen: { parent: THREE.Object3D; huelle: THREE.Mesh }[] = [];
       for (const mesh of meshes) {
         const quelle = mesh.material as THREE.MeshStandardMaterial;
         let eigeneGeometrie = false;
@@ -788,7 +803,15 @@ function OfficialPackage({
         mesh.material = material;
         mesh.receiveShadow = true;
         mesh.castShadow = !interior && behandeln;
+        if (teil === 'wall' && deckkraft > 0.99 && mesh.parent) {
+          const huelle = konturHuelle(mesh, konturStaerke(familie.kontur));
+          if (huelle) huellen.push({ parent: mesh.parent, huelle });
+        }
       }
+      // Als Geschwister des Originalmeshs angehaengt, nicht an der Wurzel:
+      // die Geometrie liegt im lokalen Raum des Meshs, und nur sein eigener
+      // Elternknoten traegt die passende Transformation dorthin.
+      for (const { parent, huelle } of huellen) parent.add(huelle);
       weltCache.set(schluessel, clone);
       return clone;
     }
@@ -1387,8 +1410,11 @@ function WalkControls({
   onMark?: (snapshot: CameraSnapshot) => void;
   onCameraSnapshot?: (snapshot: CameraSnapshot) => void;
 }) {
-  const { camera, gl } = useThree();
+  const { camera, gl, scene } = useThree();
   const position = useRef({ x: 0, y: 0, z: 0 });
+  /** Siehe Startpunkt-Effekt unten: verhindert, dass eine spaet ladende
+   * Hoehenkarte die laufende Person zurueck zum Spawn teleportiert. */
+  const bewegt = useRef(false);
   const look = useRef({ yaw: 0, pitch: 0 });
   const keys = useRef(new Set<string>());
   const locked = useRef(false);
@@ -1437,8 +1463,21 @@ function WalkControls({
   });
 
   // Startpunkt: die fokussierte Halle, sonst der erste begehbare Punkt.
+  //
+  // Diese Abhaengigkeit auf `terrainReady`/`terrainHeight` war ein Fehler:
+  // die Hoehenkarte laedt asynchron nach, und wenn sie erst *waehrend* des
+  // Laufens fertig wird, feuerte dieser Effekt erneut -- mitten in der
+  // Bewegung sprang die Kamera zurueck zum Ausgangspunkt und der Blick auf
+  // Gieren/Nicken null, ohne jede sichtbare Ursache. Genau das Bild von
+  // "die Ego-Ansicht friert ein" oder "die Kamera springt zurueck". `bewegt`
+  // haelt fest, ob der Mensch schon selbst gesteuert hat; ab dann ist dieser
+  // Effekt nur noch fuer den naechsten Ego-Eintritt zustaendig.
   useEffect(() => {
-    if (!active) return;
+    if (!active) {
+      bewegt.current = false;
+      return;
+    }
+    if (bewegt.current) return;
     const site = start
       ? { x: start.x + centre[0], y: start.z + centre[1], z: start.y }
       : null;
@@ -1644,11 +1683,85 @@ function WalkControls({
       position.current = { x: px, y: py, z: pz };
       look.current.yaw = yaw;
       look.current.pitch = pitch;
+      // Ein manuelles Setzen ist ebenfalls eine bewusste Positionierung --
+      // der Startpunkt-Effekt darf sie nicht spaeter ueberschreiben.
+      bewegt.current = true;
     };
     return () => {
       delete global.__SETZEN;
     };
   }, [active]);
+
+  /**
+   * Diagnose-Haken fuer die Bildpruefer: Kamerapose, Rendererstatistik und
+   * ein Raycast entlang der Blickrichtung.
+   *
+   * Ohne diesen haette jede Behauptung "die Wand blockiert jetzt den Blick"
+   * nur am Bild geprüft werden können -- richtig, aber ohne zu sagen, *was*
+   * den Blick blockiert (welches Mesh, welche Distanz, welches Material).
+   * Wie `__SETZEN` nur hinter `?setzen` und nie im ausgelieferten Verhalten
+   * fuer Besucher sichtbar.
+   */
+  useEffect(() => {
+    if (!active || !SETZEN_ERLAUBT) return;
+    const global = globalThis as { __DIAGNOSE?: unknown };
+    const strahl = new THREE.Raycaster();
+    global.__DIAGNOSE = () => {
+      strahl.far = Infinity;
+      strahl.set(camera.position.clone(), camera.getWorldDirection(new THREE.Vector3()));
+      const treffer = strahl.intersectObjects(scene.children, true)
+        .filter((hit) => hit.object.visible && !hit.object.userData?.kontur);
+      const erster = treffer[0] ?? null;
+      const material = erster && 'material' in erster.object
+        ? (erster.object as THREE.Mesh).material
+        : null;
+      const materialInfo = Array.isArray(material)
+        ? material.map((m) => ({
+            name: m.name,
+            transparent: m.transparent,
+            opacity: m.opacity,
+            depthWrite: m.depthWrite,
+          }))
+        : material
+          ? {
+              name: material.name,
+              transparent: material.transparent,
+              opacity: material.opacity,
+              depthWrite: material.depthWrite,
+            }
+          : null;
+      const alleTreffer = treffer.slice(0, 8).map((hit) => ({
+        name: hit.object.name,
+        type: hit.object.type,
+        distance: hit.distance,
+        point: [hit.point.x, hit.point.y, hit.point.z],
+        parentName: hit.object.parent?.name ?? null,
+      }));
+      return {
+        hallKey: data.walk.footingAt(position.current.x, position.current.y, position.current.z).hallKey,
+        position: { x: position.current.x, y: position.current.y, z: position.current.z },
+        camera: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+        yaw: look.current.yaw,
+        pitch: look.current.pitch,
+        fov: (camera as THREE.PerspectiveCamera).fov,
+        near: (camera as THREE.PerspectiveCamera).near,
+        far: (camera as THREE.PerspectiveCamera).far,
+        raycast: erster
+          ? { name: erster.object.name, distance: erster.distance, material: materialInfo }
+          : null,
+        raycastAll: alleTreffer,
+        rendererInfo: {
+          calls: gl.info.render.calls,
+          triangles: gl.info.render.triangles,
+          geometries: gl.info.memory.geometries,
+          textures: gl.info.memory.textures,
+        },
+      };
+    };
+    return () => {
+      delete global.__DIAGNOSE;
+    };
+  }, [active, camera, gl, scene]);
 
   useFrame((state, delta) => {
     if (!active) return;
@@ -1664,6 +1777,7 @@ function WalkControls({
       const climb = (pressed.has(' ') ? 1 : 0) - (pressed.has('control') ? 1 : 0);
 
       if (forward || strafe) {
+        bewegt.current = true;
         const speed = (pressed.has('shift') ? RUN_SPEED_M_PER_S : WALK_SPEED_M_PER_S) * delta;
         const { yaw } = look.current;
         const dx = (-Math.sin(yaw) * forward + Math.cos(yaw) * strafe) * speed;
@@ -1725,6 +1839,48 @@ function WalkControls({
       </div>
     </Html>
   );
+}
+
+/**
+ * Haelt Sichtfeld und Clipping-Ebenen der Kamera synchron zum Preset.
+ *
+ * `<Canvas camera={{...}}>` sieht nach einer reaktiven Prop aus, ist es aber
+ * nicht: `@react-three/fiber` legt die Kamera beim ersten Aufbau der Szene an
+ * und uebernimmt diese Angaben genau einmal -- "Create default camera, don't
+ * overwrite any user-set state" steht im Quelltext der Bibliothek, und der
+ * Vergleich, der eine spaetere Aktualisierung ausloesen wuerde, vergleicht
+ * eine THREE.Camera-Instanz mit einem Props-Objekt und ist deshalb nie
+ * gleich. Ergebnis: die Szene startet in der Uebersicht mit 42 Grad
+ * Sichtfeld, und dieses Sichtfeld blieb *fuer die gesamte Sitzung* stehen --
+ * auch nach dem Wechsel in den Ego-Modus, der eigentlich 70 Grad will. Wer
+ * das ausprobiert, sieht eine Halle wie durch ein Teleobjektiv: schmal, ohne
+ * das Gefuehl von Bewegung, obwohl Kollision und Blickrichtung laengst
+ * korrekt arbeiten -- genau das Bild von "Kameraeinstellungen tun nichts".
+ * Bestaetigt mit einem Raycast-Diagnosehaken (`__DIAGNOSE`) gegen den
+ * gebauten Stand: `fov` blieb 42 in allen vier Blickrichtungen des
+ * Ego-Modus. Dieser Baustein setzt die Werte deshalb selbst, jedes Mal, wenn
+ * sich das Preset oder die Gelaendeausdehnung aendert.
+ */
+function KameraOptik({ preset, extent }: { preset: CameraPreset; extent: number }) {
+  const { camera } = useThree();
+  useEffect(() => {
+    const persp = camera as THREE.PerspectiveCamera;
+    if (typeof persp.fov !== 'number') return;
+    const fov = preset === 'ego' ? 70 : 42;
+    const near = 0.15;
+    // Draussen braucht die Fernebene das ganze Gelaende (Uebersicht sieht bis
+    // zum Horizont). Drinnen ist das Vielfache zu viel: Nebel schneidet den
+    // Ego-Blick ohnehin bei extent * 1.2 ab (siehe unten), und eine
+    // Fernebene von mehreren Kilometern verschenkt nur Tiefenschaerfe genau
+    // dort, wo sie zaehlt -- an der naechsten Wand, ein paar Meter entfernt.
+    const far = preset === 'ego' ? Math.min(extent * 1.5, 900) : Math.max(extent * 6, 200);
+    if (persp.fov === fov && persp.near === near && persp.far === far) return;
+    persp.fov = fov;
+    persp.near = near;
+    persp.far = far;
+    persp.updateProjectionMatrix();
+  }, [camera, preset, extent]);
+  return null;
 }
 
 function CameraRig({
@@ -1914,6 +2070,7 @@ export function SiteScene(props: SceneProps) {
           preset === 'ego' ? extent * 1.2 : extent * 3.2,
         ]}
       />
+      <KameraOptik preset={preset} extent={extent} />
       <Beleuchtung extent={extent} interior={preset === 'ego'} />
 
       {registered && terrainHeightmap.error && (
@@ -2004,6 +2161,16 @@ export function SiteScene(props: SceneProps) {
         <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
       )}
       <Hallenhuelle
+        data={data}
+        centre={centre}
+        hallKey={lichtHallKey}
+        visible={preset === 'ego'}
+      />
+      {/* Sicherheitsnetz gegen amtliche Luecken in der Aussenwand -- siehe
+          die Begruendung an `Hallenwaende` selbst. Steht knapp ausserhalb
+          der echten Kante und wird von einer vorhandenen amtlichen Wand
+          immer verdeckt; sichtbar wird sie nur dort, wo keine steht. */}
+      <Hallenwaende
         data={data}
         centre={centre}
         hallKey={lichtHallKey}

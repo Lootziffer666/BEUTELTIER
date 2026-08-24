@@ -16,6 +16,7 @@ import { drehungNachX } from './geometry';
 import { FAMILIEN, familienMaterial, toonMaterial } from './stil';
 import {
   disposeSurface,
+  facadeSurface,
   hallenbodenSurface,
   hallendeckeSurface,
   WELT_KACHEL_M,
@@ -370,6 +371,148 @@ export function Hallenhuelle({
         );
       })}
     </group>
+  );
+}
+
+/**
+ * Sicherheitsnetz-Wand: eine zweite, aus dem Hallenumriss gebaute Hülle,
+ * knapp ausserhalb der amtlichen Aussenkante.
+ *
+ * Anlass: ein Raycast von der Hallenmitte aus traf in einer gemessenen
+ * Blickrichtung nichts -- 1669 m weit, bis zum fernen Gelaende. Die
+ * amtlichen LoD2-Pakete (`OfficialWorld`) sind fuer diese Halle auf dieser
+ * Seite unvollstaendig: keine Wandflaeche, kein Tor, nichts. Dieselbe Halle
+ * hatte auf einer anderen Seite eine korrekt sitzende Wand (Treffer bei
+ * exakt der erwarteten Entfernung) -- das Problem ist also nicht das
+ * Tiefenmodell oder ein transparentes Material, sondern eine Lücke im
+ * amtlichen Datensatz selbst, Seite für Seite unterschiedlich.
+ *
+ * Diese Wand deckt genau das ab, ohne etwas wegzunehmen: sie steht ein paar
+ * Zentimeter ausserhalb der Gebäudekante. Wo die amtliche Wand existiert,
+ * liegt sie naeher an der Kamera und gewinnt den Tiefentest -- diese Hülle
+ * bleibt unsichtbar dahinter. Nur dort, wo die amtliche Geometrie fehlt,
+ * trifft der Blick stattdessen auf sie. Kein Verstecken von Welt, nur ein
+ * zweiter Boden unter dem Seiltänzer.
+ */
+function hallenwaendeGeometrie(footprint: Placement2D[], baseY: number, hoehe: number) {
+  if (footprint.length < 3) return null;
+
+  let cx = 0;
+  let cy = 0;
+  for (const [x, y] of footprint) {
+    cx += x;
+    cy += y;
+  }
+  cx /= footprint.length;
+  cy /= footprint.length;
+
+  const EPS_M = 0.1;
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const normals: number[] = [];
+  let laenge = 0;
+
+  for (let i = 0; i < footprint.length; i += 1) {
+    const [ax, ay] = footprint[i];
+    const [bx, by] = footprint[(i + 1) % footprint.length];
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len = Math.hypot(dx, dy);
+    if (len < 0.5) continue;
+
+    // Beide moeglichen Normalen einer Kante -- die vom Schwerpunkt weg
+    // zeigende ist aussen, unabhaengig vom Umlaufsinn des Polygons.
+    let nx = -dy / len;
+    let ny = dx / len;
+    const midX = (ax + bx) / 2;
+    const midY = (ay + by) / 2;
+    if ((midX - cx) * nx + (midY - cy) * ny < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+
+    const a: [number, number] = [ax + nx * EPS_M, ay + ny * EPS_M];
+    const b: [number, number] = [bx + nx * EPS_M, by + ny * EPS_M];
+    const u0 = laenge;
+    const u1 = laenge + len;
+    laenge += len;
+
+    // Zwei Dreiecke, Aussenseite nach aussen (Normale = (nx, 0, ny)).
+    const quad: [number, number, number, number][] = [
+      [a[0], baseY, a[1], u0],
+      [b[0], baseY, b[1], u1],
+      [b[0], baseY + hoehe, b[1], u1],
+      [a[0], baseY + hoehe, a[1], u0],
+    ];
+    const reihenfolge = [0, 1, 2, 0, 2, 3];
+    for (const index of reihenfolge) {
+      const [px2, py2, pz2, u] = quad[index];
+      positions.push(px2, py2, pz2);
+      uvs.push(u / WELT_KACHEL_M.wand, py2 / WELT_KACHEL_M.wand);
+      normals.push(nx, 0, ny);
+    }
+  }
+
+  if (positions.length === 0) return null;
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  return geometry;
+}
+
+export function Hallenwaende({
+  data,
+  centre,
+  hallKey,
+  visible,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  hallKey: string | null;
+  visible: boolean;
+}) {
+  const geometry = useMemo(() => {
+    const hall = hallKey ? data.hallsByKey.get(hallKey) : null;
+    if (!hall || hall.outdoor) return null;
+    const hoehe = hall.height?.clearHeightM ?? 8;
+    const local = hallenwaendeGeometrie(hall.footprint, hall.baseY, hoehe);
+    if (!local) return null;
+    // In Szenenkoordinaten verschieben: dieselbe Mitte wie der Rest der Szene.
+    const position = local.getAttribute('position');
+    for (let i = 0; i < position.count; i += 1) {
+      position.setX(i, position.getX(i) - centre[0]);
+      position.setZ(i, position.getZ(i) - centre[1]);
+    }
+    return local;
+  }, [data, centre, hallKey]);
+
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+
+  const surface = useMemo(() => facadeSurface(true), []);
+  useEffect(() => () => disposeSurface(surface), [surface]);
+
+  if (!visible || !geometry) return null;
+
+  return (
+    <mesh geometry={geometry} receiveShadow>
+      <meshStandardMaterial
+        map={surface.map}
+        normalMap={surface.normalMap}
+        roughnessMap={surface.roughnessMap}
+        color="#eceae3"
+        metalness={0.12}
+        roughness={0.85}
+        // DoubleSide und nicht FrontSide: die Aussennormale einer Kante
+        // eines nicht-konvexen Hallenumrisses laesst sich aus dem
+        // Flaechenschwerpunkt allein nicht immer zuverlaessig bestimmen --
+        // bei einer verwinkelten Kontur kann die Naeherung genau
+        // umgekehrt liegen. Als reine Sicherheitswand zaehlt, dass sie
+        // *ueberhaupt* blockiert, unabhaengig davon, von welcher Seite der
+        // Blick kommt.
+        side={THREE.DoubleSide}
+      />
+    </mesh>
   );
 }
 
