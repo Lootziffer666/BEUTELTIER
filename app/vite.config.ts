@@ -29,8 +29,9 @@ const ultraDuploPlugin = {
 
 // Karte, Wegenetz und Register werden beim Installieren vorgeladen. Die
 // grossen, realen Weltassets werden beim ersten erfolgreichen Abruf separat
-// gecacht. Damit blockiert ein 9-MB-Luftbild nicht die PWA-Installation;
-// offline verfuegbar ist es ehrlich erst, nachdem es einmal geladen wurde.
+// gecacht. Online gewinnt immer die aktuelle Deployment-Datei; nur bei einem
+// echten Netzfehler dient der letzte erfolgreiche Abruf als Offline-Rueckgriff.
+// Die v2-Namen isolieren die korrigierte Welt von den alten CacheFirst-Dateien.
 export default defineConfig({
   base: './',
   build: {
@@ -54,18 +55,18 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: /\/models\/(?:gelaende\.jpg|.*\.glb)$/,
-            handler: 'CacheFirst',
+            handler: 'NetworkFirst',
             options: {
-              cacheName: 'beuteltier-world-assets-v1',
+              cacheName: 'beuteltier-world-assets-v2',
               cacheableResponse: { statuses: [0, 200] },
               expiration: { maxEntries: 16, maxAgeSeconds: 30 * 24 * 60 * 60 },
             },
           },
           {
             urlPattern: /\/data\/terrain_heightmap\.bin$/,
-            handler: 'CacheFirst',
+            handler: 'NetworkFirst',
             options: {
-              cacheName: 'beuteltier-world-data-v1',
+              cacheName: 'beuteltier-world-data-v2',
               cacheableResponse: { statuses: [0, 200] },
               expiration: { maxEntries: 4, maxAgeSeconds: 30 * 24 * 60 * 60 },
             },

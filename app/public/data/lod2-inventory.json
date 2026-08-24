@@ -3,6 +3,203 @@
   "sourceCrs": "ETRS89/UTM32 + DHHN2016 NH",
   "files": [
     {
+      "file": "LoD2_32_355_5644_1_NW.gml",
+      "features": {
+        "Building": 3075,
+        "BuildingPart": 2105
+      },
+      "featureIds": 5180,
+      "surfaces": {
+        "ClosureSurface": 5028,
+        "GroundSurface": 4448,
+        "RoofSurface": 9902,
+        "WallSurface": 35661
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 6267,
+        "GroundSurface": 4609,
+        "RoofSurface": 10063,
+        "WallSurface": 36153
+      },
+      "trianglesEstimated": 376804,
+      "zRange": [
+        44.549,
+        97.858
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 732
+      }
+    },
+    {
+      "file": "LoD2_32_355_5645_1_NW.gml",
+      "features": {
+        "Building": 2516,
+        "BuildingPart": 1989
+      },
+      "featureIds": 4505,
+      "surfaces": {
+        "ClosureSurface": 4419,
+        "GroundSurface": 3815,
+        "RoofSurface": 8909,
+        "WallSurface": 33371
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 5383,
+        "GroundSurface": 3826,
+        "RoofSurface": 8920,
+        "WallSurface": 33621
+      },
+      "trianglesEstimated": 344584,
+      "zRange": [
+        45.111,
+        112.526
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 690
+      }
+    },
+    {
+      "file": "LoD2_32_355_5646_1_NW.gml",
+      "features": {
+        "Building": 241,
+        "BuildingPart": 227
+      },
+      "featureIds": 468,
+      "surfaces": {
+        "ClosureSurface": 1192,
+        "GroundSurface": 408,
+        "RoofSurface": 797,
+        "WallSurface": 3611
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 1397,
+        "GroundSurface": 1045,
+        "RoofSurface": 1434,
+        "WallSurface": 4517
+      },
+      "trianglesEstimated": 56967,
+      "zRange": [
+        40.932,
+        198.488
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 60
+      }
+    },
+    {
+      "file": "LoD2_32_356_5644_1_NW.gml",
+      "features": {
+        "Building": 1669,
+        "BuildingPart": 1282
+      },
+      "featureIds": 2951,
+      "surfaces": {
+        "ClosureSurface": 3461,
+        "GroundSurface": 2525,
+        "RoofSurface": 5875,
+        "WallSurface": 23607
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 4278,
+        "GroundSurface": 2703,
+        "RoofSurface": 6053,
+        "WallSurface": 24012
+      },
+      "trianglesEstimated": 246860,
+      "zRange": [
+        4.838,
+        128.697
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 426
+      }
+    },
+    {
+      "file": "LoD2_32_356_5645_1_NW.gml",
+      "features": {
+        "Building": 1594,
+        "BuildingPart": 1908
+      },
+      "featureIds": 3502,
+      "surfaces": {
+        "ClosureSurface": 4897,
+        "GroundSurface": 3019,
+        "RoofSurface": 6602,
+        "WallSurface": 26118
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 6034,
+        "GroundSurface": 3164,
+        "RoofSurface": 6747,
+        "WallSurface": 26608
+      },
+      "trianglesEstimated": 288299,
+      "zRange": [
+        40.694,
+        210.512
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 483
+      }
+    },
+    {
+      "file": "LoD2_32_356_5646_1_NW.gml",
+      "features": {
+        "Building": 2293,
+        "BuildingPart": 2374
+      },
+      "featureIds": 4667,
+      "surfaces": {
+        "ClosureSurface": 4723,
+        "GroundSurface": 3859,
+        "RoofSurface": 9168,
+        "WallSurface": 30098
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 5821,
+        "GroundSurface": 3990,
+        "RoofSurface": 9299,
+        "WallSurface": 30644
+      },
+      "trianglesEstimated": 321483,
+      "zRange": [
+        44.504,
+        130.779
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 808
+      }
+    },
+    {
+      "file": "LoD2_32_357_5644_1_NW.gml",
+      "features": {
+        "Building": 1481,
+        "BuildingPart": 807
+      },
+      "featureIds": 2288,
+      "surfaces": {
+        "ClosureSurface": 1400,
+        "GroundSurface": 1965,
+        "RoofSurface": 4828,
+        "WallSurface": 14743
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 1753,
+        "GroundSurface": 2543,
+        "RoofSurface": 5406,
+        "WallSurface": 15691
+      },
+      "trianglesEstimated": 128916,
+      "zRange": [
+        40.295,
+        137.775
+      ],
+      "diagnosticReasons": {
+        "no-ground-surface": 1,
+        "no-semantic-surfaces": 322
+      }
+    },
+    {
       "file": "LoD2_32_357_5645_1_NW.gml",
       "features": {
         "Building": 135,
@@ -56,6 +253,34 @@
       ],
       "diagnosticReasons": {
         "no-semantic-surfaces": 145
+      }
+    },
+    {
+      "file": "LoD2_32_358_5644_1_NW.gml",
+      "features": {
+        "Building": 647,
+        "BuildingPart": 491
+      },
+      "featureIds": 1138,
+      "surfaces": {
+        "ClosureSurface": 1086,
+        "GroundSurface": 1005,
+        "RoofSurface": 2034,
+        "WallSurface": 8216
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 1283,
+        "GroundSurface": 1259,
+        "RoofSurface": 2288,
+        "WallSurface": 8657
+      },
+      "trianglesEstimated": 103096,
+      "zRange": [
+        42.436,
+        121.47
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 133
       }
     },
     {
@@ -113,36 +338,289 @@
       "diagnosticReasons": {
         "no-semantic-surfaces": 73
       }
+    },
+    {
+      "file": "LoD2_32_359_5644_1_NW.gml",
+      "features": {
+        "Building": 1515,
+        "BuildingPart": 1085
+      },
+      "featureIds": 2600,
+      "surfaces": {
+        "ClosureSurface": 1951,
+        "GroundSurface": 2200,
+        "RoofSurface": 4993,
+        "WallSurface": 16550
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 2361,
+        "GroundSurface": 2364,
+        "RoofSurface": 5157,
+        "WallSurface": 16975
+      },
+      "trianglesEstimated": 185628,
+      "zRange": [
+        40.536,
+        91.911
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 400
+      }
+    },
+    {
+      "file": "LoD2_32_359_5645_1_NW.gml",
+      "features": {
+        "Building": 1238,
+        "BuildingPart": 819
+      },
+      "featureIds": 2057,
+      "surfaces": {
+        "ClosureSurface": 1582,
+        "GroundSurface": 1736,
+        "RoofSurface": 3949,
+        "WallSurface": 13389
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 2049,
+        "GroundSurface": 2317,
+        "RoofSurface": 4530,
+        "WallSurface": 14359
+      },
+      "trianglesEstimated": 147551,
+      "zRange": [
+        41.183,
+        106.064
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 321
+      }
+    },
+    {
+      "file": "LoD2_32_359_5646_1_NW.gml",
+      "features": {
+        "Building": 770,
+        "BuildingPart": 455
+      },
+      "featureIds": 1225,
+      "surfaces": {
+        "ClosureSurface": 870,
+        "GroundSurface": 1074,
+        "RoofSurface": 2324,
+        "WallSurface": 8023
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 1054,
+        "GroundSurface": 1434,
+        "RoofSurface": 2684,
+        "WallSurface": 8638
+      },
+      "trianglesEstimated": 99116,
+      "zRange": [
+        41.982,
+        84.705
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 151
+      }
+    },
+    {
+      "file": "LoD2_32_360_5644_1_NW.gml",
+      "features": {
+        "Building": 1021,
+        "BuildingPart": 713
+      },
+      "featureIds": 1734,
+      "surfaces": {
+        "ClosureSurface": 1522,
+        "GroundSurface": 1503,
+        "RoofSurface": 3520,
+        "WallSurface": 11357
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 1878,
+        "GroundSurface": 1524,
+        "RoofSurface": 3541,
+        "WallSurface": 11498
+      },
+      "trianglesEstimated": 139616,
+      "zRange": [
+        42.523,
+        77.225
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 231
+      }
+    },
+    {
+      "file": "LoD2_32_360_5645_1_NW.gml",
+      "features": {
+        "Building": 1232,
+        "BuildingPart": 523
+      },
+      "featureIds": 1755,
+      "surfaces": {
+        "ClosureSurface": 1162,
+        "GroundSurface": 1552,
+        "RoofSurface": 3988,
+        "WallSurface": 11472
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 1401,
+        "GroundSurface": 1606,
+        "RoofSurface": 4042,
+        "WallSurface": 11652
+      },
+      "trianglesEstimated": 120053,
+      "zRange": [
+        43.988,
+        96.912
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 203
+      }
+    },
+    {
+      "file": "LoD2_32_360_5646_1_NW.gml",
+      "features": {
+        "Building": 1227,
+        "BuildingPart": 696
+      },
+      "featureIds": 1923,
+      "surfaces": {
+        "ClosureSurface": 1291,
+        "GroundSurface": 1664,
+        "RoofSurface": 3838,
+        "WallSurface": 12333
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 1524,
+        "GroundSurface": 1820,
+        "RoofSurface": 3994,
+        "WallSurface": 12666
+      },
+      "trianglesEstimated": 138274,
+      "zRange": [
+        41.514,
+        89.57
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 259
+      }
+    },
+    {
+      "file": "LoD2_32_361_5644_1_NW.gml",
+      "features": {
+        "Building": 889,
+        "BuildingPart": 476
+      },
+      "featureIds": 1365,
+      "surfaces": {
+        "ClosureSurface": 927,
+        "GroundSurface": 1190,
+        "RoofSurface": 2443,
+        "WallSurface": 9013
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 1118,
+        "GroundSurface": 1235,
+        "RoofSurface": 2488,
+        "WallSurface": 9136
+      },
+      "trianglesEstimated": 99796,
+      "zRange": [
+        41.83,
+        94.71
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 175
+      }
+    },
+    {
+      "file": "LoD2_32_361_5645_1_NW.gml",
+      "features": {
+        "Building": 776,
+        "BuildingPart": 375
+      },
+      "featureIds": 1151,
+      "surfaces": {
+        "ClosureSurface": 590,
+        "GroundSurface": 1000,
+        "RoofSurface": 2248,
+        "WallSurface": 7822
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 719,
+        "GroundSurface": 1021,
+        "RoofSurface": 2269,
+        "WallSurface": 7904
+      },
+      "trianglesEstimated": 79263,
+      "zRange": [
+        43.231,
+        80.19
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 151
+      }
+    },
+    {
+      "file": "LoD2_32_361_5646_1_NW.gml",
+      "features": {
+        "Building": 410,
+        "BuildingPart": 70
+      },
+      "featureIds": 480,
+      "surfaces": {
+        "ClosureSurface": 116,
+        "GroundSurface": 452,
+        "RoofSurface": 978,
+        "WallSurface": 3042
+      },
+      "polygonsBySurface": {
+        "ClosureSurface": 138,
+        "GroundSurface": 583,
+        "RoofSurface": 1109,
+        "WallSurface": 3236
+      },
+      "trianglesEstimated": 30962,
+      "zRange": [
+        42.134,
+        77.179
+      ],
+      "diagnosticReasons": {
+        "no-semantic-surfaces": 28
+      }
     }
   ],
   "totals": {
     "features": {
-      "Building": 1129,
-      "BuildingPart": 1135
+      "Building": 23723,
+      "BuildingPart": 17530
     },
     "surfaces": {
-      "ClosureSurface": 2950,
-      "GroundSurface": 1945,
-      "RoofSurface": 3968,
-      "WallSurface": 17206
+      "ClosureSurface": 39167,
+      "GroundSurface": 35360,
+      "RoofSurface": 80364,
+      "WallSurface": 285632
     },
     "polygonsBySurface": {
-      "ClosureSurface": 3489,
-      "GroundSurface": 4329,
-      "RoofSurface": 6352,
-      "WallSurface": 20855
+      "ClosureSurface": 47947,
+      "GroundSurface": 41372,
+      "RoofSurface": 86376,
+      "WallSurface": 296822
     },
-    "trianglesEstimated": 252553,
+    "trianglesEstimated": 3159821,
     "diagnosticReasons": {
-      "no-semantic-surfaces": 319
+      "no-ground-surface": 1,
+      "no-semantic-surfaces": 5892
     }
   },
   "problemFeatures": [
     {
-      "file": "LoD2_32_357_5645_1_NW.gml",
-      "featureId": "DENW37AL100063aJ",
+      "file": "LoD2_32_355_5644_1_NW.gml",
+      "featureId": "DENW37AL1000zSne",
       "featureClass": "Building",
-      "function": "31001_1100",
+      "function": "31001_2000",
       "zMin": null,
       "zMax": null,
       "surfaces": {},
@@ -153,8 +631,8 @@
       ]
     },
     {
-      "file": "LoD2_32_357_5645_1_NW.gml",
-      "featureId": "DENW37AL100064z9",
+      "file": "LoD2_32_355_5644_1_NW.gml",
+      "featureId": "DENW37AL1000qqRO",
       "featureClass": "Building",
       "function": "31001_1000",
       "zMin": null,
@@ -167,10 +645,10 @@
       ]
     },
     {
-      "file": "LoD2_32_357_5645_1_NW.gml",
-      "featureId": "DENW37AL100074Ip",
+      "file": "LoD2_32_355_5644_1_NW.gml",
+      "featureId": "DENW37AL1000yAu7",
       "featureClass": "Building",
-      "function": "51009_1610",
+      "function": "31001_1100",
       "zMin": null,
       "zMax": null,
       "surfaces": {},
@@ -181,10 +659,10 @@
       ]
     },
     {
-      "file": "LoD2_32_357_5645_1_NW.gml",
-      "featureId": "DENW37AL100074is",
+      "file": "LoD2_32_355_5644_1_NW.gml",
+      "featureId": "DENW37AL1000qsP8",
       "featureClass": "Building",
-      "function": "51009_1610",
+      "function": "31001_1100",
       "zMin": null,
       "zMax": null,
       "surfaces": {},
@@ -195,10 +673,10 @@
       ]
     },
     {
-      "file": "LoD2_32_357_5645_1_NW.gml",
-      "featureId": "DENW37AL100065RJ",
+      "file": "LoD2_32_355_5644_1_NW.gml",
+      "featureId": "DENW37AL1000yDeZ",
       "featureClass": "Building",
-      "function": "31001_2000",
+      "function": "31001_1000",
       "zMin": null,
       "zMax": null,
       "surfaces": {},
