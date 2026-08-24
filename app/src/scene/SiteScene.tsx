@@ -2022,6 +2022,13 @@ export function SiteScene(props: SceneProps) {
     ? (egoSnapshotSeen ? egoHallKey : (focusHallKey ?? defaultEgoHallKey))
     : focusHallKey;
 
+  useEffect(() => {
+    if (!SETZEN_ERLAUBT) return;
+    (globalThis as { __LICHT_HALL_KEY?: unknown }).__LICHT_HALL_KEY = {
+      lichtHallKey, egoHallKey, egoSnapshotSeen, focusHallKey, defaultEgoHallKey, preset,
+    };
+  }, [lichtHallKey, egoHallKey, egoSnapshotSeen, focusHallKey, defaultEgoHallKey, preset]);
+
   const viewBounds = useMemo(() => {
     const points = data.site.halls.flatMap((hall) => hall.footprint);
     for (const nodeId of route?.nodeIds ?? []) {

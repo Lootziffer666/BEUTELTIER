@@ -311,6 +311,19 @@ export function Hallenhuelle({
     return out;
   }, [data, centre, hallKey]);
 
+  useEffect(() => {
+    const hall = hallKey ? data.site.halls.find((h) => h.key === hallKey) : undefined;
+    (globalThis as { __HALLENHUELLE_DEBUG?: unknown }).__HALLENHUELLE_DEBUG = {
+      hallKey,
+      flaechenCount: flaechen.length,
+      hallFound: Boolean(hall),
+      hallOutdoor: hall?.outdoor,
+      hallBaseY: hall?.baseY,
+      lage: hall ? hallenlage(hall.footprint) : null,
+      matchingHallCount: data.site.halls.filter((h) => h.key === hallKey).length,
+    };
+  }, [data, hallKey, flaechen]);
+
   useEffect(
     () => () => {
       flaechen.forEach((f) => f.geometry.dispose());
@@ -330,7 +343,10 @@ export function Hallenhuelle({
     [surfaces],
   );
 
-  const boden = useMemo(() => familienMaterial(FAMILIEN.M03), []);
+  const boden = useMemo(
+    () => familienMaterial(FAMILIEN.M03, undefined, { side: THREE.DoubleSide }),
+    [],
+  );
   useEffect(
     () => () => {
       boden.map?.dispose();
@@ -833,7 +849,13 @@ export function Hallenlicht({
           key={index}
           position={position}
           color="#fff3dc"
-          intensity={38}
+          // War 38: ein Wert aus einer Zeit vor physikalisch korrekter
+          // Beleuchtung. Seit three.js r155 ist `intensity` bei Punkt-/
+          // Spotlichtern Candela, nicht mehr ein freier Multiplikator --
+          // derselbe Code wurde damit um Grössenordnungen dunkler, ohne dass
+          // sich eine Zeile daran geändert hätte. Bestätigt am gebauten
+          // Stand: der Boden blieb schwarz, auch direkt unter einer Leuchte.
+          intensity={1200}
           distance={0}
           decay={2}
         />
