@@ -14,13 +14,15 @@ Autoritative Ausgangsstaende:
 
 ## NOW
 
-PR #43 erhaelt die kleinste sichtbare Korrektur aus der mobilen Sichtpruefung:
-Die doppelte Nord-/Sued-Spiegelung des Orthofotos ist entfernt, jede Halle
-verwendet ihren eigenen amtlichen LoD2-Bodenbezug, und die sichtbare Luecke
-zwischen LoD2-Unterkante und DGM wird als `DERIVED_DGM_LOD2_CONNECTION`
-geschlossen. Dauerlabels sind entfernt; die Hallenauswahl bleibt als
-Geometrie-Highlight erhalten. Aussenwaende ohne belegtes Fassadenbild zeigen
-eine saubere Materialklasse statt einer vorgetaeuschten Fototextur. Offen ist
+PR #43 erhaelt die kleinste Korrektur aus der mobilen Sichtpruefung: Im
+registrierten Modus bleibt nur das echte DGM-Terrain aktiv; die falsch
+registrierte flache Fotoflaeche ist entfernt. OSM-Linien werden auf belegte
+DGM-Hoehen gelegt und auf den vorhandenen Orthofoto-Ausschnitt begrenzt. Die
+Kamera-Presets setzen die Kamera nun wirklich neu, die Kartenkamera kann frei
+verschoben werden und bleibt oberhalb ihres Ziels; fuer `Begehen` gibt es eine
+echte Touch-Steuerung. Der Boulevard und die bekannten Aussenflaechen erhalten
+denselben registrierten Hoehenbezug wie ihre Anschluss-Hallen. Die schwarze
+Invert-Hull-Kontur und der Cel-Look als Standard sind deaktiviert. Offen ist
 die mobile WebGL-Sichtpruefung des neuen PR-Deployments; ein fehlender
 Bildnachweis wird nicht als bestanden ausgegeben.
 
@@ -28,8 +30,8 @@ Bildnachweis wird nicht als bestanden ausgegeben.
 
 ### BEUTELTIER
 
-- 140 Python-Pipeline-Tests bestehen in einer frischen Umgebung.
-- 299 Frontend-Tests bestehen; App- und World-Builder-Produktionsbuild
+- 142 Python-Pipeline-Tests bestehen in einer frischen Umgebung.
+- 300 Frontend-Tests bestehen; App- und World-Builder-Produktionsbuild
   entstehen.
 - Der aktive registrierte Modus fuehrt Hallen, Graph, Orthofoto, OSM-Wege und
   ALKIS-Luecken jetzt im selben `sceneX/sceneZ`-Raum. Der eingecheckte Marker
@@ -65,11 +67,17 @@ Bildnachweis wird nicht als bestanden ausgegeben.
   Treppen uebernehmen denselben Bezug. Nur F2, F8 und FB besitzen kein
   LoD2-Gebaeude und sind sichtbar als `UNCONFIRMED_GLOBAL_GROUND_REFERENCE`
   gekennzeichnet.
-- Die reale Kern-GLB plus lokale DGM-Heightmap erzeugen 722 Dreiecke fuer die
-  sichtbare Sockelverbindung. Ihre Oberkante bleibt die amtliche
-  LoD2-Wandunterkante, ihre Unterkante der DGM-Messwert; ohne DGM-Wert wird
-  keine Verbindung erfunden. Ein einziger zusammengefuehrter Draw-Call
-  vermeidet hunderte neue Mobil-Objekte.
+- LoD2 und DGM bleiben als zwei belegte Quellen getrennt. Die zuvor sichtbare
+  abgeleitete Sockelfassade ist deaktiviert: Sie schloss zwar rechnerisch die
+  Luecke, sah aber wie eine echte Wand aus, obwohl diese Flaeche nicht vermessen
+  ist.
+- Nordboulevard, Suedteil, Treppe, Piazza, Aussenflaeche 9/10 und der Bereich
+  hinter Halle 8 lesen jetzt die registrierten Hallenboeden. Fehlt einer dieser
+  Bezuege, bricht der Generator ab; es gibt keinen stillen Nullmeter-Ersatz.
+- Kartenkamera: freie Verschiebung statt reinem Kreisen um die Mitte; ein- und
+  zweifingerige Gesten sind getrennt. `Begehen` hat auf Touchgeraeten links
+  Bewegung und rechts Blicksteuerung. Die vier Preset-Schalter loesen wieder
+  eine echte Kamerafahrt aus.
 - Aussenwaende bleiben ohne Fotobehauptung: Die unzutreffende gekachelte
   Familienzeichnung ist dort entfernt. Die vorhandenen sogenannten
   Fassadenbilder sind weiterhin keine belastbaren Hallenfassaden.
@@ -121,7 +129,7 @@ Bildnachweis wird nicht als bestanden ausgegeben.
 | BEUTELTIER Bahnhof -> Eingang Sued | REAL + ACTIVE auf Recovery-Branch | Dijkstra aus eingechecktem OSM-Snapshot |
 | BEUTELTIER Eingang Sued -> Halle 10.1 | PARTIAL | durchgaengiger Graph, aber Venue-Abschnitt sichtbar `unbestaetigt` |
 | BEUTELTIER DGM1 + Orthofoto | REAL + ACTIVE auf Recovery-Branch | gemessene Hoehen; gueltig repariertes Raster; korrigierte registrierte Bildprojektion auf Terrain/Daecher |
-| BEUTELTIER LoD2-Hallenboden | REAL + ACTIVE auf Recovery-Branch | hallenbezogener DHHN2016-Bezug; DGM-Anschluss explizit `DERIVED` |
+| BEUTELTIER LoD2-Hallenboden | REAL + ACTIVE auf Recovery-Branch | hallenbezogener DHHN2016-Bezug; kein als echt ausgegebener DGM-Anschluss |
 | BEUTELTIER angebliche Fassadenfotos | BROKEN + UNUSED | vorhandene JPGs zeigen nicht belastbar die bezeichneten Hallen und bleiben isoliert |
 | BEUTELTIER Browserdarstellung | UNKNOWN | Builds/Komponententests bestanden; Chromium in Arbeitsumgebung nicht verfuegbar |
 
@@ -152,9 +160,19 @@ Bildnachweis wird nicht als bestanden ausgegeben.
 - `app/public/models/facades/*.jpg` und die entsprechenden Texturatlanten sind
   keine belastbaren Bilder der so bezeichneten Hallen. Sie bleiben unbenutzt;
   echte Fassadentexturierung ist damit noch nicht belegt.
-- Der OSM-Aussenkorridor besitzt keine belegte Hoehenquelle und bleibt im
-  Graph explizit `elevation: unknown-render-plane`. Erst Piazza und Hallenweg
-  fuehren wieder belegte beziehungsweise benannt abgeleitete Hoehen.
+- Der OSM-Aussenkorridor besitzt im Routengraph weiterhin keine belegte
+  Hoehenquelle (`elevation: unknown-render-plane`). Sichtbare OSM-Linien liegen
+  im vorhandenen DGM-/Orthofoto-Ausschnitt auf dem DGM; Piazza, Boulevard und
+  benannte Messe-Aussenflaechen verwenden ihre dokumentierten Hallenbezuege.
+- Der eingecheckte Orthofoto-Ausschnitt ist nur rund 1,13 x 1,13 km gross,
+  waehrend der OSM-Snapshot rund 3,8 x 3,2 km umfasst. Weder BEUTELTIER noch
+  der gepruefte SHADED-Import enthaelt die groesseren Bildkacheln. Das Bild
+  wird deshalb nicht gestreckt; ausserhalb seiner belegten Abdeckung wird auch
+  kein Fotogelände behauptet.
+- LoD2-Unterkanten und DGM weichen an mehreren Hallen sichtbar voneinander ab.
+  Beide Quellen bleiben unveraendert; die fruehere abgeleitete Wand dazwischen
+  ist nicht mehr aktiv. Eine physisch richtige Verbindung ist mit den
+  eingecheckten Quellen noch nicht belegt.
 - Die oeffentliche Vercel-Seite laedt im Cloud-Browser, dessen sandboxed Chrome
   kann jedoch keinen WebGL-Kontext erzeugen. Die PR-Vorschau ist zusaetzlich
   durch Vercel-Login geschuetzt. Deshalb existiert hier kein Bild-PASS.
@@ -162,9 +180,9 @@ Bildnachweis wird nicht als bestanden ausgegeben.
 ## WEDNESDAY PATH
 
 1. Den neuen Build von PR #43 in einem WebGL-faehigen Browser oeffnen und
-   pruefen: Hall-10-Dach statt Gruenflaeche, keine schwebenden Hallenwaende,
-   keine Dauerlabels, ausgewaehlte Halle gelb markiert, Stände weiterhin
-   zuschaltbar und Demokorridor lesbar.
+   pruefen: nur ein registriertes Fotogelände, Strassen auf dem DGM, freie
+   Kartenbewegung, funktionierende Presets und Touch-Begehen, keine schwarze
+   Kontur, Boulevard/Aussenflaechen an ihren Anschluss-Hoehen.
 2. PR #43 und PR #73 reviewen; nur bei weiterhin gruenen Checks und nach der
    Sichtpruefung mergen.
 3. Genau diesen Korridor zeigen. Keine weitere Halle und keinen neuen

@@ -30,6 +30,7 @@ import type { BoulevardPlan } from '../data/load';
 import {
   type Achse,
   BODEN_Y,
+  boulevardBoden,
   TREPPE_BREITE_M,
   TUER_OEFFNUNG_HALB_M,
   TUER_VERSATZ_M,
@@ -95,7 +96,7 @@ export function abschnitteAusPlan(plan: BoulevardPlan): Abschnitt[] {
     bisM: plan.laengeM,
     qOst: qOstNord,
     qWest: qWestNord,
-    hoehe: () => BODEN_Y,
+    hoehe: () => boulevardBoden(plan),
   });
 
   const sued = plan.sued;
@@ -194,9 +195,8 @@ export function aussenAusPlan(plan: BoulevardPlan): Abschnitt[] {
     bisM: flaeche.bisM,
     qOst: Math.min(flaeche.qVonM, flaeche.qBisM),
     qWest: Math.max(flaeche.qVonM, flaeche.qBisM),
-    // Gelaendehoehe. Draussen fuehrt das Projekt bislang keine Hoehen; null
-    // ist dasselbe, was der alte Aussenraum liefert, und damit kein Bruch.
-    hoehe: () => 0,
+    // Diese Hoefe schliessen unmittelbar an denselben gebauten Gangboden an.
+    hoehe: () => boulevardBoden(plan),
   }));
 }
 

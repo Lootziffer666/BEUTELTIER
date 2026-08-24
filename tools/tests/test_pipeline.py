@@ -1166,15 +1166,40 @@ class TestNordboulevard:
         assert tor["abschnittVonM"] == pytest.approx(knoten["anschlussM"][0], abs=0.01)
         assert tor["abschnittBisM"] == pytest.approx(knoten["anschlussM"][1], abs=0.01)
 
-    def test_nordknoten_trennt_gemessenes_vom_beobachteten(self, boulevard):
-        """Der Umriss ist amtlich, die Ebene ist ein Foto -- beides benannt."""
+    def test_nordknoten_trennt_umriss_und_bodenbezug(self, boulevard):
+        """Umriss und Bodenbezug nennen ihre jeweils amtliche Ableitung."""
         knoten = boulevard.get("nordknoten")
         if not knoten:
             pytest.skip("kein Nordknoten in dieser Fassung")
         assert len(knoten["polygon"]) > 20, "die gerundete Fassade muss erhalten bleiben"
         assert "LoD2" in knoten["quelle"]
-        assert "beobachtet" in knoten["bodenHerkunft"]
+        assert "LoD2-Median" in knoten["bodenHerkunft"]
+        assert knoten["bodenM"] == pytest.approx(boulevard["bodenM"], abs=1e-6)
+        assert knoten["deckeM"] == pytest.approx(
+            boulevard["bodenM"] + boulevard["hoeheM"], abs=1e-6,
+        )
         assert "Vorgabe" in knoten["deckeHerkunft"]
+
+    def test_boulevardboden_kommt_aus_den_registrierten_hallen(self, boulevard):
+        site = json.loads(
+            (ROOT / "app/public/data/registered-site.json").read_text(encoding="utf-8")
+        )
+        floors = {hall["key"]: hall["baseY"] for hall in site["halls"]}
+        keys = boulevard["bodenHallKeys"]
+        values = sorted(floors[key] for key in keys)
+        expected = values[len(values) // 2]
+        assert boulevard["bodenM"] == pytest.approx(expected, abs=1e-6)
+        assert boulevard["bodenSpanneM"] == pytest.approx([min(values), max(values)])
+        assert max(values) - min(values) <= 0.05 + 1e-9
+
+    def test_architekturflaechen_nutzen_registrierte_hallenboeden(self, boulevard):
+        site = json.loads(
+            (ROOT / "app/public/data/registered-site.json").read_text(encoding="utf-8")
+        )
+        floors = {hall["key"]: hall["baseY"] for hall in site["halls"]}
+        assert boulevard["aussen9_10"]["ebene1"]["hoeheM"] == pytest.approx(floors["10.2"])
+        assert boulevard["aussen9_10"]["ebene0"]["hoeheM"] == pytest.approx(floors["9.1"])
+        assert boulevard["aussenHalle8"]["hoeheM"] == pytest.approx(floors["8.1"])
 
     def test_gekappte_flaechen_sind_als_vorgabe_ausgewiesen(self, boulevard):
         """Eine Kante aus einer Vorgabe darf nicht wie eine Messung aussehen."""

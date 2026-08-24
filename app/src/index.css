@@ -860,3 +860,20 @@ kbd {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+.walk-touch-guide {
+  position: absolute;
+  inset: auto 20px 108px;
+  display: flex;
+  justify-content: space-between;
+  color: rgb(255 255 255 / 68%);
+  font: 600 11px/1 system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 80%);
+}
+
+@media (pointer: fine) {
+  .walk-touch-guide {
+    display: none;
+  }
+}

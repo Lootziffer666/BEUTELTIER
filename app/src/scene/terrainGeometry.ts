@@ -284,6 +284,50 @@ function insideImage([u, v]: [number, number], margin = 0): boolean {
   return u >= -margin && u <= 1 + margin && v >= -margin && v <= 1 + margin;
 }
 
+/** Ob eine registrierte Weltkoordinate vom belegten Luftbild abgedeckt ist. */
+export function registeredOrthoContains(
+  x: number,
+  z: number,
+  corners: RegisteredCorners,
+  margin = 0,
+): boolean {
+  return insideImage(registeredOrthoUv(x, z, corners), margin);
+}
+
+/**
+ * Legt reale Linienpunkte auf das DGM. Ein Segment wird nur ausgegeben, wenn
+ * fuer beide Enden eine gemessene Hoehe existiert und es innerhalb des
+ * belegten Luftbildausschnitts liegt. Es gibt keinen flachen Ersatz ausserhalb
+ * der Datenabdeckung.
+ */
+export function terrainDrapedSegments(
+  lines: readonly (readonly (readonly [number, number])[])[],
+  terrainHeight: (x: number, z: number) => number | null,
+  corners: RegisteredCorners | null,
+  liftM = 0.08,
+): number[] {
+  const positions: number[] = [];
+  for (const line of lines) {
+    for (let index = 1; index < line.length; index += 1) {
+      const first = line[index - 1];
+      const second = line[index];
+      if (
+        corners &&
+        (!registeredOrthoContains(first[0], first[1], corners) ||
+          !registeredOrthoContains(second[0], second[1], corners))
+      ) continue;
+      const firstHeight = terrainHeight(first[0], first[1]);
+      const secondHeight = terrainHeight(second[0], second[1]);
+      if (firstHeight === null || secondHeight === null) continue;
+      positions.push(
+        first[0], firstHeight + liftM, first[1],
+        second[0], secondHeight + liftM, second[1],
+      );
+    }
+  }
+  return positions;
+}
+
 /**
  * Projiziert das reale Orthofoto auf eine einzelne amtliche Dachflaeche.
  * Liegt deren Mittelpunkt ausserhalb des belegten Bildausschnitts, bleibt die

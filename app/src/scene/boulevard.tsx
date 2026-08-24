@@ -40,11 +40,14 @@ import { drehungNachZ } from './geometry';
 /**
  * Fussbodenhoehe.
  *
- * Knapp ueber null, wie das Gelaende ringsum. Seit `boulevardSurfaces.ts` die
- * Kollision aus demselben Plan baut, ist das nicht mehr nur die gezeichnete,
- * sondern auch die begangene Hoehe -- beide lesen diese Zahl.
+ * Kleiner Zeichenabstand ueber dem im Plan belegten Bodenbezug. Das ist keine
+ * Welt-Hoehe; die steht als `bodenM` in boulevard.json.
  */
 export const BODEN_Y = 0.02;
+
+export function boulevardBoden(plan: BoulevardPlan): number {
+  return plan.bodenM + BODEN_Y;
+}
 
 /** Breite des Oberlichtbands in der Mitte. */
 const OBERLICHT_BREITE_M = 6.4;
@@ -498,7 +501,12 @@ export function glasfelder(
   return felder;
 }
 
-export function treppenteile(achse: Achse, centre: [number, number], anfang: number): {
+export function treppenteile(
+  achse: Achse,
+  centre: [number, number],
+  anfang: number,
+  untenM: number,
+): {
   stufen: Bauteil[];
   rolltreppen: Bauteil[];
   drehung: number;
@@ -514,23 +522,23 @@ export function treppenteile(achse: Achse, centre: [number, number], anfang: num
   // Ende des Gangs und endet dort, wo Halle 5 und Halle 10 anfangen.
   const stufen: Bauteil[] = [];
   let s = anfang;
-  let h = BODEN_Y;
+  const boden = untenM + BODEN_Y;
+  let anstieg = 0;
   for (let lauf = 0; lauf < LAEUFE; lauf += 1) {
     for (let i = 0; i < STUFEN_JE_LAUF; i += 1) {
-      h += STEIGUNG_M;
-      // Jede Stufe steht als Block auf dem Boden -- von unten sieht man
-      // ohnehin nur die Vorderkante, und eine massive Treppe wirft den
-      // Schatten, den eine Folge schwebender Platten nicht wirft.
+      anstieg += STEIGUNG_M;
+      // Jede Stufe steht auf dem registrierten Boulevardboden. Der alte Code
+      // baute sie als sieben Meter hohen Block bis zur Welt-Null hinunter.
       stufen.push({
-        position: ort(s + AUFTRITT_M / 2, 0, h / 2),
-        groesse: [TREPPE_BREITE_M, h, AUFTRITT_M],
+        position: ort(s + AUFTRITT_M / 2, 0, boden + anstieg / 2),
+        groesse: [TREPPE_BREITE_M, anstieg, AUFTRITT_M],
       });
       s += AUFTRITT_M;
     }
     if (lauf < LAEUFE - 1) {
       stufen.push({
-        position: ort(s + PODEST_M / 2, 0, h / 2),
-        groesse: [TREPPE_BREITE_M, h, PODEST_M],
+        position: ort(s + PODEST_M / 2, 0, boden + anstieg / 2),
+        groesse: [TREPPE_BREITE_M, anstieg, PODEST_M],
       });
       s += PODEST_M;
     }
@@ -543,7 +551,7 @@ export function treppenteile(achse: Achse, centre: [number, number], anfang: num
     position: ort(
       anfang,
       seite * (TREPPE_BREITE_M / 2 + ROLLTREPPE_BREITE_M / 2 + 0.35),
-      BODEN_Y,
+      boden,
     ),
     groesse: [ROLLTREPPE_BREITE_M, 0, 0],
   }));
@@ -703,7 +711,7 @@ function suedknoten(
     // und faellt quer zur Achse ab, ueber sechsundzwanzig Stufen von 4,30 m
     // auf null. Als geneigte Flaeche gebaut, nicht als Stufenfolge.
     knotenTreppeOst: band(achse, centre,
-      () => [[knoten.qOstM - knoten.stufenOst * 0.30, 0], [knoten.qOstM, riegel.hoeheM]],
+      () => [[knoten.qOstM - knoten.stufenOst * 0.30, plan.sued!.untenM], [knoten.qOstM, riegel.hoeheM]],
       WELT_KACHEL_M.boden,
       [[(riegel.vonM + riegel.bisM) / 2 - 6, (riegel.vonM + riegel.bisM) / 2 + 6]]),
     // Die Passage nach Sueden faellt sanft zur Piazza ab.
@@ -795,7 +803,9 @@ export function Boulevard({
   const flaechen = useMemo(() => {
     if (!achse || !plan) return null;
     const laenge = plan.laengeM;
-    const hoehe = plan.hoeheM;
+    const boden = boulevardBoden(plan);
+    const torOben = plan.bodenM + TOR_HOEHE_M;
+    const hoehe = plan.bodenM + plan.hoeheM;
     const ganz: [number, number][] = [[0, laenge]];
     const lichtHalb = OBERLICHT_BREITE_M / 2;
     const ost = abschnitte(plan.seiten.ost);
@@ -808,7 +818,7 @@ export function Boulevard({
 
     return {
       boden: band(achse, centre,
-        () => [[qOst, BODEN_Y], [qWest, BODEN_Y]], WELT_KACHEL_M.boden, ganz),
+        () => [[qOst, boden], [qWest, boden]], WELT_KACHEL_M.boden, ganz),
       dach: band(achse, centre,
         () => [[qOst, hoehe], [qWest, hoehe]], WELT_KACHEL_M.decke, ganz),
       oberlicht: band(achse, centre,
@@ -819,24 +829,24 @@ export function Boulevard({
       // durch. Ohne die Teilung waere jeder Zugang ein Schlitz bis unter die
       // Decke -- ein Loch in der Wand ist kein Tor.
       wandOstMassiv: band(achse, centre,
-        () => [[qOst, TOR_HOEHE_M], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.massiv),
+        () => [[qOst, torOben], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.massiv),
       wandOstGlas: band(achse, centre,
-        () => [[qOst, TOR_HOEHE_M], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.glas),
+        () => [[qOst, torOben], [qOst, hoehe]], WELT_KACHEL_M.wand, ost.glas),
       wandOstMassivUnten: band(achse, centre,
-        () => [[qOst, BODEN_Y], [qOst, TOR_HOEHE_M]], WELT_KACHEL_M.wand,
+        () => [[qOst, boden], [qOst, torOben]], WELT_KACHEL_M.wand,
         ohneDurchgaenge(ost.massiv, toreOst)),
       wandOstGlasUnten: band(achse, centre,
-        () => [[qOst, BODEN_Y], [qOst, TOR_HOEHE_M]], WELT_KACHEL_M.wand,
+        () => [[qOst, boden], [qOst, torOben]], WELT_KACHEL_M.wand,
         ohneDurchgaenge(ost.glas, toreOst)),
       wandWestMassiv: band(achse, centre,
-        () => [[qWest, hoehe], [qWest, TOR_HOEHE_M]], WELT_KACHEL_M.wand, west.massiv),
+        () => [[qWest, hoehe], [qWest, torOben]], WELT_KACHEL_M.wand, west.massiv),
       wandWestGlas: band(achse, centre,
-        () => [[qWest, hoehe], [qWest, TOR_HOEHE_M]], WELT_KACHEL_M.wand, west.glas),
+        () => [[qWest, hoehe], [qWest, torOben]], WELT_KACHEL_M.wand, west.glas),
       wandWestMassivUnten: band(achse, centre,
-        () => [[qWest, TOR_HOEHE_M], [qWest, BODEN_Y]], WELT_KACHEL_M.wand,
+        () => [[qWest, torOben], [qWest, boden]], WELT_KACHEL_M.wand,
         ohneDurchgaenge(west.massiv, toreWest)),
       wandWestGlasUnten: band(achse, centre,
-        () => [[qWest, TOR_HOEHE_M], [qWest, BODEN_Y]], WELT_KACHEL_M.wand,
+        () => [[qWest, torOben], [qWest, boden]], WELT_KACHEL_M.wand,
         ohneDurchgaenge(west.glas, toreWest)),
       ...suedteil(achse, centre, plan),
     };
@@ -916,7 +926,7 @@ export function Boulevard({
       const s = ((i + 0.5) / anzahl) * plan.laengeM;
       const x = achse.x0 + achse.laengs[0] * s;
       const y = achse.y0 + achse.laengs[1] * s;
-      out.push([x - centre[0], plan.hoeheM - 1.2, y - centre[1]]);
+      out.push([x - centre[0], plan.bodenM + plan.hoeheM - 1.2, y - centre[1]]);
     }
     return out;
   }, [achse, centre, plan]);
@@ -930,7 +940,7 @@ export function Boulevard({
       for (const q of [-4.2, 4.2]) {
         const x = achse.x0 + achse.laengs[0] * s + achse.quer[0] * q;
         const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * q;
-        out.push([x - centre[0], plan.hoeheM - 1.5, y - centre[1]]);
+        out.push([x - centre[0], plan.bodenM + plan.hoeheM - 1.5, y - centre[1]]);
       }
     }
     return out;
@@ -951,7 +961,7 @@ export function Boulevard({
         schild,
         position: [
           x - centre[0],
-          SCHILD_Y + SCHILD_HOEHE_M / 2,
+          plan.bodenM + SCHILD_Y + SCHILD_HOEHE_M / 2,
           y - centre[1],
         ] as [number, number, number],
         drehung,
@@ -1023,7 +1033,9 @@ export function Boulevard({
   }, [aussen]);
 
   const treppe = useMemo(
-    () => (achse && plan?.treppe ? treppenteile(achse, centre, plan.treppe.vonM) : null),
+    () => (achse && plan?.treppe
+      ? treppenteile(achse, centre, plan.treppe.vonM, plan.treppe.untenM)
+      : null),
     [achse, centre, plan],
   );
 
@@ -1055,7 +1067,7 @@ export function Boulevard({
     const qMitte = (plan.sued.seitenQ.ost + plan.sued.seitenQ.west) / 2;
     const x = achse.x0 + achse.laengs[0] * s + achse.quer[0] * qMitte;
     const y = achse.y0 + achse.laengs[1] * s + achse.quer[1] * qMitte;
-    const sockel = 7.45;
+    const sockel = plan.treppe.untenM;
     const boden = plan.sued.obenM;
     const breite = plan.sued.breiteM;
     // Die Tueren bleiben dort, wo die Treppe ankommt -- auf der Gangachse,

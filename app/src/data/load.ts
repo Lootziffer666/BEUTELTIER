@@ -539,6 +539,11 @@ export interface BoulevardPlan {
   laengeM: number;
   breiteM: number;
   hoeheM: number;
+  /** Gemeinsamer registrierter LoD2-Bodenbezug des Nordboulevards. */
+  bodenM: number;
+  bodenHerkunft: string;
+  bodenHallKeys: string[];
+  bodenSpanneM: [number, number];
   /** Abstand der beiden Wandlinien von der Achse, quer gemessen. */
   seitenQ: { ost: number; west: number };
   /** Wie weit der Gang geometrisch reicht -- bis Halle 5 und Halle 10. */

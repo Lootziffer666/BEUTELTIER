@@ -6,9 +6,11 @@ import {
   lod2TerrainConnectionGeometry,
   orthophotoTerrainGeometry,
   parseTerrainHeightmap,
+  registeredOrthoContains,
   registeredOrthoUv,
   repairTerrainGrid,
   sampleRegisteredTerrainHeight,
+  terrainDrapedSegments,
   type RegisteredCorners,
 } from './terrainGeometry';
 
@@ -79,6 +81,16 @@ describe('DGM1 terrain geometry', () => {
     expect(applyRegisteredOrthoUv(inside, corners)).toBe(true);
     expect(inside.getAttribute('uv').count).toBe(inside.getAttribute('position').count);
     expect(applyRegisteredOrthoUv(outside, corners)).toBe(false);
+  });
+
+  it('drapes roads only where both DGM and orthophoto have evidence', () => {
+    const lines = [
+      [[1, 9], [5, 7], [11, 7]],
+    ] as const;
+    const positions = terrainDrapedSegments(lines, (x, z) => x + z, corners);
+    expect(positions).toEqual([1, 10.08, 9, 5, 12.08, 7]);
+    expect(registeredOrthoContains(5, 7, corners)).toBe(true);
+    expect(registeredOrthoContains(11, 7, corners)).toBe(false);
   });
 
   it('reads heights after the complete 48-byte header and samples registered coordinates', () => {

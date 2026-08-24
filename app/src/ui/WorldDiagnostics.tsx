@@ -83,8 +83,8 @@ export function WorldDiagnostics({ world, spatialMode }: { world: Diagnostics | 
           {collisionSurfaces?.policy.rawLod2Walkable ? 'begehbar' : 'gesperrt'}
         </p>
         <p className="notice">
-          Sichtbarer Sockel: DERIVED_DGM_LOD2_CONNECTION. Oberkante aus LoD2,
-          Unterkante aus DGM; keine vermessene Fassadenfläche.
+          LoD2-Unterkante und DGM werden getrennt gezeigt. Die zuvor abgeleitete
+          Sockelfassade ist deaktiviert; eine unbekannte Verbindung wird nicht als Wand dargestellt.
         </p>
       </div>
 
