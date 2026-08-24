@@ -61,6 +61,12 @@ export function WorldDiagnostics({ world, spatialMode }: { world: Diagnostics | 
                   <span>Verschiebung {entry.constraint.shiftM.toFixed(2)} m · {entry.constraint.samples} Prüfproben</span>
                 </>
               ) : <span>Keine amtlichen Zielfeatures für eine Grundrissbindung</span>}
+              <span>
+                Boden {entry.floorWorldZ.toFixed(2)} m NHN ·{' '}
+                {entry.floorSource === 'OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL'
+                  ? 'LoD2-Unterkante + Planebene'
+                  : 'globaler Bezug unbestätigt'}
+              </span>
             </li>
           ))}
         </ul>
@@ -75,6 +81,10 @@ export function WorldDiagnostics({ world, spatialMode }: { world: Diagnostics | 
         <p className="muted">
           Höhenbereich: {collisionSurfaces?.heightRange?.join(' bis ') ?? '–'} m · rohe LoD2-Flächen{' '}
           {collisionSurfaces?.policy.rawLod2Walkable ? 'begehbar' : 'gesperrt'}
+        </p>
+        <p className="notice">
+          Sichtbarer Sockel: DERIVED_DGM_LOD2_CONNECTION. Oberkante aus LoD2,
+          Unterkante aus DGM; keine vermessene Fassadenfläche.
         </p>
       </div>
 

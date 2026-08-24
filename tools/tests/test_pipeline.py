@@ -241,8 +241,13 @@ class TestHallRegistrations:
 
     def test_floorz_ist_nhn_offset_und_keine_null_fallbackhoehe(self, registrierungsprodukt):
         levels = {item["hallKey"]: item for item in registrierungsprodukt["registrations"]}
-        assert levels["10.1"]["floorZ"] == pytest.approx(0.49)
-        assert levels["10.2"]["floorZ"] == pytest.approx(7.94)
+        assert levels["10.1"]["floorZ"] == pytest.approx(6.30)
+        assert levels["10.2"]["floorZ"] == pytest.approx(13.75)
+        assert levels["10.1"]["floorWorldZ"] == pytest.approx(46.30)
+        assert levels["10.1"]["floorSource"] == "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL"
+        assert levels["10.1"]["lod2GroundOffsetM"] == pytest.approx(5.81)
+        assert levels["F2"]["floorSource"] == "UNCONFIRMED_GLOBAL_GROUND_REFERENCE"
+        assert levels["F2"]["lod2GroundOffsetM"] is None
 
 
 class TestWorldManifest:

@@ -15,12 +15,13 @@ Autoritative Ausgangsstaende:
 ## NOW
 
 PR #43 erhaelt die kleinste sichtbare Korrektur aus der mobilen Sichtpruefung:
-Die registrierten Weltpakete sind in jeder Ansicht massiv, Standkoerper sind
-standardmaessig aus und zuschaltbar, die Auswahl markiert das zugeordnete
-amtliche Gebaeudefeature. Das reale DGM1 wird in seiner belegten Hoehe
-gerendert; das registrierte Orthofoto liegt auf dem Terrain und auf den
-amtlichen Dachflaechen im Bildausschnitt. Die Vercel-Vorschau des PR-Branches
-ist `Ready`; offen ist die mobile WebGL-Sichtpruefung. Ein fehlender
+Die doppelte Nord-/Sued-Spiegelung des Orthofotos ist entfernt, jede Halle
+verwendet ihren eigenen amtlichen LoD2-Bodenbezug, und die sichtbare Luecke
+zwischen LoD2-Unterkante und DGM wird als `DERIVED_DGM_LOD2_CONNECTION`
+geschlossen. Dauerlabels sind entfernt; die Hallenauswahl bleibt als
+Geometrie-Highlight erhalten. Aussenwaende ohne belegtes Fassadenbild zeigen
+eine saubere Materialklasse statt einer vorgetaeuschten Fototextur. Offen ist
+die mobile WebGL-Sichtpruefung des neuen PR-Deployments; ein fehlender
 Bildnachweis wird nicht als bestanden ausgegeben.
 
 ## PROVEN WORKING
@@ -28,7 +29,7 @@ Bildnachweis wird nicht als bestanden ausgegeben.
 ### BEUTELTIER
 
 - 140 Python-Pipeline-Tests bestehen in einer frischen Umgebung.
-- 297 Frontend-Tests bestehen; App- und World-Builder-Produktionsbuild
+- 299 Frontend-Tests bestehen; App- und World-Builder-Produktionsbuild
   entstehen.
 - Der aktive registrierte Modus fuehrt Hallen, Graph, Orthofoto, OSM-Wege und
   ALKIS-Luecken jetzt im selben `sceneX/sceneZ`-Raum. Der eingecheckte Marker
@@ -55,9 +56,23 @@ Bildnachweis wird nicht als bestanden ausgegeben.
 - Das reale Geobasis-NRW-Orthofoto wird affine in denselben registrierten
   Szenenraum projiziert. Der Asset-Nachweis ergibt 104.716 ueberdeckte
   Terrain-Dreiecke; Daecher innerhalb desselben Ausschnitts erhalten dieselbe
-  reale Bildquelle. Die Wandmaterialien bleiben ehrlich prozedural, weil die
-  vorhandenen sogenannten Fassadenbilder keine belastbaren Hallenfassaden
-  zeigen.
+  reale Bildquelle. Ein ausgefuehrter Hall-10-Abgleich zeigte, dass die alte
+  V-Achse den begruenten Gegenbereich auf das Dach legte; die korrigierte
+  Achse trifft den Hall-10-Dachbereich.
+- Der alte Hallengenerator verwendete fuer alle Gebaeude pauschal den
+  niedrigsten LoD2-Bodenwert des Ausschnitts. Neu erzeugt liegen Halle 10.1
+  bei 46,30 m NHN und 10.2 bei 53,75 m NHN; Stände, Wegegitter, Portale und
+  Treppen uebernehmen denselben Bezug. Nur F2, F8 und FB besitzen kein
+  LoD2-Gebaeude und sind sichtbar als `UNCONFIRMED_GLOBAL_GROUND_REFERENCE`
+  gekennzeichnet.
+- Die reale Kern-GLB plus lokale DGM-Heightmap erzeugen 722 Dreiecke fuer die
+  sichtbare Sockelverbindung. Ihre Oberkante bleibt die amtliche
+  LoD2-Wandunterkante, ihre Unterkante der DGM-Messwert; ohne DGM-Wert wird
+  keine Verbindung erfunden. Ein einziger zusammengefuehrter Draw-Call
+  vermeidet hunderte neue Mobil-Objekte.
+- Aussenwaende bleiben ohne Fotobehauptung: Die unzutreffende gekachelte
+  Familienzeichnung ist dort entfernt. Die vorhandenen sogenannten
+  Fassadenbilder sind weiterhin keine belastbaren Hallenfassaden.
 - Die binaere Hoehenabfrage liest den belegten 48-Byte-Header und denselben
   DGM-Raster wie das GLB. Lade- und Formatfehler werden sichtbar gemeldet,
   nicht mehr auf eine behauptete flache Hoehe reduziert.
@@ -105,7 +120,8 @@ Bildnachweis wird nicht als bestanden ausgegeben.
 | BEUTELTIER Standrouting | REAL + ACTIVE | bestehender `RouteGraph` und `findRoute()` |
 | BEUTELTIER Bahnhof -> Eingang Sued | REAL + ACTIVE auf Recovery-Branch | Dijkstra aus eingechecktem OSM-Snapshot |
 | BEUTELTIER Eingang Sued -> Halle 10.1 | PARTIAL | durchgaengiger Graph, aber Venue-Abschnitt sichtbar `unbestaetigt` |
-| BEUTELTIER DGM1 + Orthofoto | REAL + ACTIVE auf Recovery-Branch | gemessene Hoehen; gueltig repariertes Raster; registrierte Bildprojektion auf Terrain/Daecher |
+| BEUTELTIER DGM1 + Orthofoto | REAL + ACTIVE auf Recovery-Branch | gemessene Hoehen; gueltig repariertes Raster; korrigierte registrierte Bildprojektion auf Terrain/Daecher |
+| BEUTELTIER LoD2-Hallenboden | REAL + ACTIVE auf Recovery-Branch | hallenbezogener DHHN2016-Bezug; DGM-Anschluss explizit `DERIVED` |
 | BEUTELTIER angebliche Fassadenfotos | BROKEN + UNUSED | vorhandene JPGs zeigen nicht belastbar die bezeichneten Hallen und bleiben isoliert |
 | BEUTELTIER Browserdarstellung | UNKNOWN | Builds/Komponententests bestanden; Chromium in Arbeitsumgebung nicht verfuegbar |
 
@@ -136,6 +152,9 @@ Bildnachweis wird nicht als bestanden ausgegeben.
 - `app/public/models/facades/*.jpg` und die entsprechenden Texturatlanten sind
   keine belastbaren Bilder der so bezeichneten Hallen. Sie bleiben unbenutzt;
   echte Fassadentexturierung ist damit noch nicht belegt.
+- Der OSM-Aussenkorridor besitzt keine belegte Hoehenquelle und bleibt im
+  Graph explizit `elevation: unknown-render-plane`. Erst Piazza und Hallenweg
+  fuehren wieder belegte beziehungsweise benannt abgeleitete Hoehen.
 - Die oeffentliche Vercel-Seite laedt im Cloud-Browser, dessen sandboxed Chrome
   kann jedoch keinen WebGL-Kontext erzeugen. Die PR-Vorschau ist zusaetzlich
   durch Vercel-Login geschuetzt. Deshalb existiert hier kein Bild-PASS.
@@ -143,9 +162,9 @@ Bildnachweis wird nicht als bestanden ausgegeben.
 ## WEDNESDAY PATH
 
 1. Den neuen Build von PR #43 in einem WebGL-faehigen Browser oeffnen und
-   pruefen: massive Welt bereits beim Start, Stände aus und zuschaltbar,
-   sichtbares Orthofoto auf reliefiertem Terrain und Daechern, ausgewaehlte
-   Halle gelb markiert, Demokorridor weiterhin lesbar.
+   pruefen: Hall-10-Dach statt Gruenflaeche, keine schwebenden Hallenwaende,
+   keine Dauerlabels, ausgewaehlte Halle gelb markiert, Stände weiterhin
+   zuschaltbar und Demokorridor lesbar.
 2. PR #43 und PR #73 reviewen; nur bei weiterhin gruenen Checks und nach der
    Sichtpruefung mergen.
 3. Genau diesen Korridor zeigen. Keine weitere Halle und keinen neuen

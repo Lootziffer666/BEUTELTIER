@@ -187,9 +187,97 @@ export function registeredOrthoUv(
   const dz = z - p00[1];
   const u = (dx * vz - dz * vx) / determinant;
   const alongV = (ux * dz - uz * dx) / determinant;
-  // Das entzerrte JPEG beginnt oben; dieselbe Orientierung nutzte bereits
-  // der belegte alte Luftbildpfad (p00 -> 0/1, p01 -> 0/0).
-  return [u, 1 - alongV];
+  // `corners` beginnt bei der suedlichen Bildkante (y0). TextureLoader
+  // spiegelt das JPEG beim Upload bereits in die WebGL-Orientierung; ein
+  // zweites `1 - v` vertauschte Nord und Sued. Dadurch landete bei Halle 10
+  // der begruente Innenhof auf dem Dach. p00 ist deshalb v=0, p01 v=1.
+  return [u, Math.abs(alongV) < 1e-12 ? 0 : alongV];
+}
+
+/**
+ * Schliesst die sichtbare Luecke zwischen amtlicher LoD2-Wandunterkante und
+ * dem gemessenen DGM. Das ist keine rekonstruierte Fassade: Die obere Kante
+ * kommt unveraendert aus LoD2, die untere wird ausschliesslich aus der
+ * uebergebenen DGM-Hoehenabfrage berechnet. Fehlt dort ein Messwert, entsteht
+ * fuer diese Kante keine Geometrie.
+ */
+export function lod2TerrainConnectionGeometry(
+  walls: readonly THREE.BufferGeometry[],
+  terrainHeight: (x: number, z: number) => number | null,
+): THREE.BufferGeometry | null {
+  const positions: number[] = [];
+
+  for (const wall of walls) {
+    const source = wall.getAttribute('position');
+    if (!(source instanceof THREE.BufferAttribute) || source.itemSize !== 3 || source.count < 3) {
+      continue;
+    }
+
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (let index = 0; index < source.count; index += 1) {
+      minY = Math.min(minY, source.getY(index));
+      maxY = Math.max(maxY, source.getY(index));
+    }
+    if (!Number.isFinite(minY) || maxY - minY < 0.2) continue;
+
+    // Der GLB-Export dupliziert Eckpunkte je Dreieck. Fuer echte Randkanten
+    // werden sie deshalb millimetergenau ueber ihre Position vereinigt und
+    // Dreieckskanten gezaehlt. Nur eine einmal vorkommende Kante ist Rand.
+    type Point = [number, number, number];
+    type Edge = { a: Point; b: Point; count: number };
+    const point = (index: number): Point => [
+      source.getX(index), source.getY(index), source.getZ(index),
+    ];
+    const pointKey = ([x, y, z]: Point) => [x, y, z]
+      .map((value) => Math.round(value * 1000))
+      .join(':');
+    const edges = new Map<string, Edge>();
+    const index = wall.getIndex();
+    const vertexAt = (offset: number) => index ? index.getX(offset) : offset;
+    const triangleCount = Math.floor((index?.count ?? source.count) / 3);
+
+    for (let triangle = 0; triangle < triangleCount; triangle += 1) {
+      const vertices = [0, 1, 2].map((corner) => point(vertexAt(triangle * 3 + corner)));
+      for (const [first, second] of [[0, 1], [1, 2], [2, 0]] as const) {
+        const a = vertices[first];
+        const b = vertices[second];
+        const keys = [pointKey(a), pointKey(b)].sort();
+        const key = `${keys[0]}|${keys[1]}`;
+        const known = edges.get(key);
+        if (known) known.count += 1;
+        else edges.set(key, { a, b, count: 1 });
+      }
+    }
+
+    // LoD2-Sockelkanten sind normalerweise waagerecht; 1 m Toleranz laesst
+    // reale Gefaelle zu, ohne die vertikalen Seitenkanten einer Wand als
+    // Sockel zu missdeuten.
+    const lowerBand = minY + Math.min(1, (maxY - minY) * 0.15);
+    for (const edge of edges.values()) {
+      if (edge.count !== 1 || edge.a[1] > lowerBand || edge.b[1] > lowerBand) continue;
+      if (Math.hypot(edge.b[0] - edge.a[0], edge.b[2] - edge.a[2]) < 0.05) continue;
+
+      const measuredA = terrainHeight(edge.a[0], edge.a[2]);
+      const measuredB = terrainHeight(edge.b[0], edge.b[2]);
+      if (measuredA === null || measuredB === null) continue;
+      const bottomA = Math.min(measuredA, edge.a[1]);
+      const bottomB = Math.min(measuredB, edge.b[1]);
+      if (edge.a[1] - bottomA < 0.05 && edge.b[1] - bottomB < 0.05) continue;
+
+      const downA: Point = [edge.a[0], bottomA, edge.a[2]];
+      const downB: Point = [edge.b[0], bottomB, edge.b[2]];
+      positions.push(...edge.a, ...downA, ...edge.b, ...edge.b, ...downA, ...downB);
+    }
+  }
+
+  if (positions.length === 0) return null;
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  return geometry;
 }
 
 function insideImage([u, v]: [number, number], margin = 0): boolean {

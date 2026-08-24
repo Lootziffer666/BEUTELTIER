@@ -57,6 +57,7 @@ import { Ausstattung } from './Ausstattung';
 import { worldPresentation, type WorldPreset } from './worldPresentation';
 import {
   applyRegisteredOrthoUv,
+  lod2TerrainConnectionGeometry,
   orthophotoTerrainGeometry,
   parseTerrainHeightmap,
   repairTerrainGrid,
@@ -509,6 +510,43 @@ function featureId(name: string): string | null {
   return id && (featureClass === 'Building' || featureClass === 'BuildingPart') ? id : null;
 }
 
+function geometryMinY(geometry: THREE.BufferGeometry): number | null {
+  const position = geometry.getAttribute('position');
+  if (!(position instanceof THREE.BufferAttribute) || position.count === 0) return null;
+  let minimum = Infinity;
+  for (let index = 0; index < position.count; index += 1) {
+    minimum = Math.min(minimum, position.getY(index));
+  }
+  return Number.isFinite(minimum) ? minimum : null;
+}
+
+/**
+ * Nur Waende, deren Unterkante zur GroundSurface desselben LoD2-Features
+ * gehoert. Technikwand oder Dachaufbau beginnen ebenfalls an einer unteren
+ * Kante, duerfen aber keinesfalls bis zum DGM heruntergezogen werden.
+ */
+function groundedWallGeometries(meshes: readonly THREE.Mesh[]): THREE.BufferGeometry[] {
+  const grounds = new Map<string, number>();
+  for (const mesh of meshes) {
+    const materialName = (mesh.material as THREE.Material).name;
+    if (bauteil(materialName) !== 'ground') continue;
+    const id = featureId(materialName);
+    const y = geometryMinY(mesh.geometry);
+    if (!id || y === null) continue;
+    grounds.set(id, Math.min(grounds.get(id) ?? Infinity, y));
+  }
+  return meshes.flatMap((mesh) => {
+    const materialName = (mesh.material as THREE.Material).name;
+    if (bauteil(materialName) !== 'wall') return [];
+    const id = featureId(materialName);
+    const wallY = geometryMinY(mesh.geometry);
+    const groundY = id ? grounds.get(id) : undefined;
+    return wallY !== null && groundY !== undefined && Math.abs(wallY - groundY) <= 1
+      ? [mesh.geometry]
+      : [];
+  });
+}
+
 interface RegisteredOrthophoto {
   map: THREE.Texture;
   corners: RegisteredCorners;
@@ -596,6 +634,8 @@ function OfficialPackage({
   cel,
   orthophoto,
   highlightFeatureIds,
+  terrainHeight,
+  terrainReady,
 }: {
   uri: string;
   interior: boolean;
@@ -610,6 +650,10 @@ function OfficialPackage({
   orthophoto: RegisteredOrthophoto | null;
   /** Amtliche Feature-IDs der ausgewaehlten Halle. */
   highlightFeatureIds: readonly string[];
+  /** Gemessene DGM-Hoehe im amtlichen Szenenraum. */
+  terrainHeight: (x: number, z: number) => number | null;
+  /** Erst true, wenn die lokale Heightmap wirklich gelesen wurde. */
+  terrainReady: boolean;
 }) {
   const { scene } = useGLTF(`${import.meta.env.BASE_URL}${uri}`);
 
@@ -620,7 +664,10 @@ function OfficialPackage({
     const highlightKey = [...highlightFeatureIds].sort().join(',');
     // Ohne Umbau, Schleier, Luftbild, Highlight und Cel-Look gibt es nichts
     // zu tun; dann ist die gelieferte Szene das Ergebnis und wird nicht geklont.
-    if (!umbauen && deckkraft > 0.99 && !cel && !orthophoto && !highlightKey) return scene;
+    if (
+      !umbauen && deckkraft > 0.99 && !cel && !orthophoto && !highlightKey &&
+      !(behandeln && !interior && terrainReady)
+    ) return scene;
 
     const schluessel = [
       uri,
@@ -628,6 +675,7 @@ function OfficialPackage({
       deckkraft.toFixed(2),
       cel,
       orthophoto ? 'ortho' : 'ohne-ortho',
+      behandeln && !interior && terrainReady ? 'dgm-verbunden' : 'ohne-dgm-verbindung',
       highlightKey,
     ].join('|');
     const fertig = weltCache.get(schluessel);
@@ -641,6 +689,9 @@ function OfficialPackage({
       clone.traverse((node) => {
         if (node instanceof THREE.Mesh) meshes.push(node);
       });
+      const wallGeometries = behandeln && !interior && terrainReady
+        ? groundedWallGeometries(meshes)
+        : [];
       for (const mesh of meshes) {
         const quelle = mesh.material as THREE.MeshStandardMaterial;
         const teil = bauteil(quelle.name) ?? 'wall';
@@ -652,12 +703,10 @@ function OfficialPackage({
           continue;
         }
         if (umbauen && surfaces) projiziereUV(mesh.geometry, WELT_KACHEL_M.wand);
-        // Der Punkt, an dem der Look bisher verlorenging: die amtlichen
-        // GLB-Pakete sind aus Gebäudeumringen gerechnet und bringen **keine**
-        // Textur mit. `quelle.map` ist dort schlicht `null`, und was blieb,
-        // war eine gestufte Beleuchtung auf einer leeren Farbfläche -- eine
-        // Pappschachtel. Wo keine Karte mitkommt, zeichnet jetzt die Familie
-        // selbst, projiziert in Metern statt über die Fläche gestreckt.
+        // Die amtlichen GLB-Pakete bringen fuer Waende kein Foto mit. Aussen
+        // bleibt die Wand deshalb bewusst eine saubere Materialklasse statt
+        // einer erfundenen Fassadentextur. Nur Innenwaende erhalten die aus
+        // Referenzbildern abgeleitete Familienzeichnung.
         const eigeneKarte = umbauen && surfaces ? surfaces.wand : null;
         const realesDach = teil === 'roof' && orthophoto
           ? applyRegisteredOrthoUv(mesh.geometry, orthophoto.corners)
@@ -674,6 +723,8 @@ function OfficialPackage({
           material = toonMaterial(familie, {
             map: quelle.map, normalMap: quelle.normalMap,
           }, { side: THREE.DoubleSide });
+        } else if (teil === 'wall' && !interior) {
+          material = toonMaterial(familie, {}, { side: THREE.DoubleSide });
         } else {
           projiziereUV(mesh.geometry, KACHEL_M[familie.id] ?? 6);
           material = familienMaterial(familie, undefined, { side: THREE.DoubleSide });
@@ -691,9 +742,32 @@ function OfficialPackage({
         const huelle = konturHuelle(mesh, konturStaerke(familie.kontur));
         if (huelle) mesh.add(huelle);
       }
+      const connection = lod2TerrainConnectionGeometry(wallGeometries, terrainHeight);
+      if (connection) {
+        const material = toonMaterial(FAMILIEN.M05, {}, { side: THREE.DoubleSide });
+        material.name = 'DERIVED_DGM_LOD2_CONNECTION';
+        const mesh = new THREE.Mesh(connection, material);
+        mesh.name = 'DERIVED_DGM_LOD2_CONNECTION';
+        mesh.userData = {
+          representation: 'DERIVED_DGM_LOD2_CONNECTION',
+          upperBoundary: 'OFFICIAL_LOD2_WALL_BASE',
+          lowerBoundary: 'MEASURED_DGM_HEIGHTMAP',
+          measuredSurface: false,
+        };
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        clone.add(mesh);
+      }
       weltCache.set(schluessel, clone);
       return clone;
     }
+    const sourceMeshes: THREE.Mesh[] = [];
+    clone.traverse((node) => {
+      if (node instanceof THREE.Mesh) sourceMeshes.push(node);
+    });
+    const wallGeometries = behandeln && !interior && terrainReady
+      ? groundedWallGeometries(sourceMeshes)
+      : [];
     clone.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       const quelle = node.material as THREE.MeshStandardMaterial;
@@ -749,6 +823,27 @@ function OfficialPackage({
       node.castShadow = false;
     });
 
+    const connection = lod2TerrainConnectionGeometry(wallGeometries, terrainHeight);
+    if (connection) {
+      const material = new THREE.MeshStandardMaterial({
+        color: FAMILIEN.M05.grundton,
+        roughness: 0.94,
+        side: THREE.DoubleSide,
+      });
+      material.name = 'DERIVED_DGM_LOD2_CONNECTION';
+      const mesh = new THREE.Mesh(connection, material);
+      mesh.name = 'DERIVED_DGM_LOD2_CONNECTION';
+      mesh.userData = {
+        representation: 'DERIVED_DGM_LOD2_CONNECTION',
+        upperBoundary: 'OFFICIAL_LOD2_WALL_BASE',
+        lowerBoundary: 'MEASURED_DGM_HEIGHTMAP',
+        measuredSurface: false,
+      };
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      clone.add(mesh);
+    }
+
     weltCache.set(schluessel, clone);
     return clone;
   }, [
@@ -761,6 +856,8 @@ function OfficialPackage({
     cel,
     orthophoto,
     highlightFeatureIds,
+    terrainHeight,
+    terrainReady,
   ]);
 
   return <primitive object={model} />;
@@ -774,6 +871,8 @@ function OfficialWorld({
   deckkraft,
   orthophoto,
   highlightHallKey,
+  terrainHeight,
+  terrainReady,
 }: {
   data: Dataset;
   centre: [number, number];
@@ -782,6 +881,8 @@ function OfficialWorld({
   deckkraft: { kern: number; umgebung: number };
   orthophoto: RegisteredOrthophoto | null;
   highlightHallKey: string | null;
+  terrainHeight: (x: number, z: number) => number | null;
+  terrainReady: boolean;
 }) {
   const interior = preset === 'ego';
   const surfaces = weltFlaechen(interior);
@@ -821,6 +922,8 @@ function OfficialWorld({
             cel={cel}
             orthophoto={orthophoto}
             highlightFeatureIds={highlightFeatureIds}
+            terrainHeight={terrainHeight}
+            terrainReady={terrainReady}
           />
         );
       })}
@@ -1168,48 +1271,6 @@ function RouteRibbon({
   );
 }
 
-function HallLabels({
-  data,
-  centre,
-  upperOpacity,
-}: {
-  data: Dataset;
-  centre: [number, number];
-  upperOpacity: number;
-}) {
-  return (
-    <group>
-      {data.site.halls.map((hall) => {
-        const [cx, cy] = polygonCentre(hall.footprint);
-        const estimated = hall.placement.source === 'geschaetzt';
-        const dim = hall.level > 1 && upperOpacity < 0.2;
-        if (dim) return null;
-        return (
-          <Html
-            key={hall.key}
-            position={toScene(cx, cy, hall.baseY + hall.wallHeightM + 6, centre)}
-            center
-            distanceFactor={340}
-            occlude={false}
-          >
-            <div className={`hall-label${estimated ? ' hall-label--estimated' : ''}`}>
-              {hall.outdoor ? hall.name : hall.key}
-              {estimated && (
-                <span
-                  className="hall-label__badge"
-                  title={`Lage geschätzt, rund ${Math.round(hall.placement.residualM ?? 0)} m genau`}
-                >
-                  ±{Math.round(hall.placement.residualM ?? 0)} m
-                </span>
-              )}
-            </div>
-          </Html>
-        );
-      })}
-    </group>
-  );
-}
-
 /**
  * Ego-Perspektive: durch die Halle laufen statt auf sie zu schauen.
  *
@@ -1238,8 +1299,10 @@ const FLY_SPEED_M_PER_S = 2.4;
 function useTerrainHeightmap(worldOrigin: [number, number, number] | null): {
   sample: (x: number, y: number) => number | null;
   error: string | null;
+  ready: boolean;
 } {
   const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const cache = useRef<{
     worldOrigin: [number, number, number];
     map: TerrainHeightmap;
@@ -1248,10 +1311,13 @@ function useTerrainHeightmap(worldOrigin: [number, number, number] | null): {
   // Lazy-load: Binary-Heightmap beim ersten Render
   useEffect(() => {
     const abort = new AbortController();
+    cache.current = null;
+    setReady(false);
     if (!worldOrigin) {
       setError('Amtlicher Szenenursprung fehlt.');
       return () => abort.abort();
     }
+    setError(null);
     fetch(`${import.meta.env.BASE_URL}data/terrain_heightmap.bin`)
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -1264,10 +1330,12 @@ function useTerrainHeightmap(worldOrigin: [number, number, number] | null): {
           map: parseTerrainHeightmap(buf),
         };
         setError(null);
+        setReady(true);
       })
       .catch((cause: unknown) => {
         if (abort.signal.aborted) return;
         cache.current = null;
+        setReady(false);
         setError(cause instanceof Error ? cause.message : String(cause));
       });
     return () => abort.abort();
@@ -1280,7 +1348,7 @@ function useTerrainHeightmap(worldOrigin: [number, number, number] | null): {
       : null;
   }, []);
 
-  return { sample, error };
+  return { sample, error, ready };
 }
 
 function WalkControls({
@@ -1781,6 +1849,8 @@ export function SiteScene(props: SceneProps) {
             deckkraft={presentation.deckkraft}
             orthophoto={registeredOrthophoto}
             highlightHallKey={props.highlightHallKey ?? focusHallKey}
+            terrainHeight={terrainHeight}
+            terrainReady={terrainHeightmap.ready}
           />
         </Suspense>
       )}
@@ -1842,9 +1912,6 @@ export function SiteScene(props: SceneProps) {
         centre={centre}
         onTop={props.routeOnTop ?? false}
       />
-      {preset !== 'ego' && (
-        <HallLabels data={data} centre={centre} upperOpacity={upperOpacity} />
-      )}
       {preset === 'ego' ? (
         <WalkControls
           data={data}

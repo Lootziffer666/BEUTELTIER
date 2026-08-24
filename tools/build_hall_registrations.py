@@ -1029,13 +1029,29 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
             hall_transform = shifted_transform(transform, constraint)
         else:
             hall_transform = shifted_transform(transform, constraint)
-        floor_world = ground_reference + hall["baseY"]
+        # `baseY` ist nur der Ebenenabstand innerhalb des alten Hallenplans.
+        # Der bisherige Code addierte ihn fuer *jede* Halle zum niedrigsten
+        # LoD2-Bodenwert des gesamten Ausschnitts. Damit lagen Halle 10 und
+        # ihre Treppe 5,81 m unter der amtlichen Gebaeudeunterkante. Fuer eine
+        # zugeordnete Halle ist ihr eigener LoD2-Boden die belegte Referenz.
+        target_ground = targets.get(hall["key"], {}).get("groundM")
+        if target_ground is None:
+            # Nur die drei Freiflaechen haben kein Gebaeude und damit keinen
+            # LoD2-Boden. Der globale Wert bleibt dort als explizit benannte,
+            # unbestaetigte Referenz erhalten; er ist kein stiller Ersatz.
+            floor_world = ground_reference + hall["baseY"]
+            floor_source = "UNCONFIRMED_GLOBAL_GROUND_REFERENCE"
+        else:
+            floor_world = ground_reference + target_ground + hall["baseY"]
+            floor_source = "OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL"
         registrations.append({
             "hallKey": hall["key"],
             "targetFeatureIds": target_ids,
             "transform": hall_transform,
             "floorZ": round(floor_world - origin[2], 3),
             "floorWorldZ": round(floor_world, 3),
+            "floorSource": floor_source,
+            "lod2GroundOffsetM": target_ground,
             "anchors": [],
             "residualM": placement.get("residualM"),
             "maxResidualM": placement.get("maxResidualM"),
@@ -1052,6 +1068,9 @@ def build_product(site: dict, buildings: dict, world_origin: dict) -> dict:
                  "nur die globale Winkelkorrektur angewandt."),
                 "Containment ist eine geometrische Nebenbedingung, kein vermessener Anker.",
                 "Portale wurden nicht als Registrierungsanker verwendet.",
+                ("Bodenbezug aus der amtlichen LoD2-Gebaeudeunterkante plus Planebene."
+                 if target_ground is not None else
+                 "Freiflaeche ohne LoD2-Gebaeude: globaler Bodenbezug ist unbestaetigt."),
             ],
         })
     # Nachbarschaften: gemessen nach der Registrierung, nicht davor.

@@ -523,29 +523,6 @@ textarea {
   margin-left: auto;
 }
 
-.hall-label {
-  font: 600 13px/1 system-ui, sans-serif;
-  color: #dfe6f2;
-  background: rgba(10, 12, 18, 0.72);
-  border: 1px solid rgba(120, 135, 165, 0.35);
-  border-radius: 5px;
-  padding: 3px 7px;
-  white-space: nowrap;
-  pointer-events: none;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.hall-label--estimated {
-  border-style: dashed;
-  border-color: rgba(240, 200, 90, 0.5);
-}
-.hall-label__badge {
-  font-size: 10px;
-  font-weight: 400;
-  color: var(--warn);
-}
-
 .boot {
   height: 100%;
   display: flex;

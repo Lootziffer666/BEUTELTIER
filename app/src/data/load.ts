@@ -257,6 +257,10 @@ export interface WorldDiagnostics {
     registrations: Array<{
       hallKey: string;
       targetFeatureIds: string[];
+      floorZ: number;
+      floorWorldZ: number;
+      floorSource: 'OFFICIAL_LOD2_GROUND_PLUS_PLAN_LEVEL' | 'UNCONFIRMED_GLOBAL_GROUND_REFERENCE';
+      lod2GroundOffsetM: number | null;
       status: 'draft' | 'constrained' | 'registered';
       source: string;
       residualM: number | null;

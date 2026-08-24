@@ -3,6 +3,7 @@ import * as THREE from 'three';
 
 import {
   applyRegisteredOrthoUv,
+  lod2TerrainConnectionGeometry,
   orthophotoTerrainGeometry,
   parseTerrainHeightmap,
   registeredOrthoUv,
@@ -52,12 +53,12 @@ describe('DGM1 terrain geometry', () => {
     expect(repaired.geometry.getAttribute('normal').getY(0)).toBeGreaterThan(0);
   });
 
-  it('keeps the established orthophoto orientation', () => {
-    expect(registeredOrthoUv(0, 10, corners)).toEqual([0, 1]);
-    expect(registeredOrthoUv(10, 10, corners)).toEqual([1, 1]);
+  it('maps the southern image edge to v=0 without a second vertical flip', () => {
+    expect(registeredOrthoUv(0, 10, corners)).toEqual([0, 0]);
+    expect(registeredOrthoUv(10, 10, corners)).toEqual([1, 0]);
     const lowerLeft = registeredOrthoUv(0, 5, corners);
     expect(lowerLeft[0]).toBeCloseTo(0);
-    expect(lowerLeft[1]).toBeCloseTo(0);
+    expect(lowerLeft[1]).toBeCloseTo(1);
   });
 
   it('drapes exactly the registered image footprint over the repaired terrain', () => {
@@ -69,7 +70,7 @@ describe('DGM1 terrain geometry', () => {
       corners,
     );
     expect(drape.getIndex()!.count).toBe(12);
-    expect(Array.from(drape.getAttribute('uv').array.slice(0, 6))).toEqual([0, 1, 0.5, 1, 1, 1]);
+    expect(Array.from(drape.getAttribute('uv').array.slice(0, 6))).toEqual([0, 0, 0.5, 0, 1, 0]);
   });
 
   it('only applies roof UVs inside the registered image', () => {
@@ -91,5 +92,23 @@ describe('DGM1 terrain geometry', () => {
     expect(() => parseTerrainHeightmap(twoByTwoHeightmap().slice(0, -4))).toThrow(
       'Binaerraster inkonsistent',
     );
+  });
+
+  it('derives a wall-to-terrain connection only from measured endpoint heights', () => {
+    const wall = new THREE.BufferGeometry();
+    wall.setAttribute('position', new THREE.Float32BufferAttribute([
+      1, 5, 2, 9, 5, 2, 9, 15, 2,
+      1, 5, 2, 9, 15, 2, 1, 15, 2,
+    ], 3));
+    const connection = lod2TerrainConnectionGeometry([wall], (x) => (x < 5 ? 2 : 3));
+    expect(connection).not.toBeNull();
+    expect(connection!.getAttribute('position').count).toBe(6);
+    expect(connection!.boundingBox!.min.y).toBeCloseTo(2);
+    expect(connection!.boundingBox!.max.y).toBeCloseTo(5);
+  });
+
+  it('does not invent a connection when the DGM has no value', () => {
+    const wall = new THREE.PlaneGeometry(8, 10).translate(5, 5, 0);
+    expect(lod2TerrainConnectionGeometry([wall], () => null)).toBeNull();
   });
 });

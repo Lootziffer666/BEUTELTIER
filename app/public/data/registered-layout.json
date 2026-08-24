@@ -19,7 +19,7 @@
       "targetFeatureIds": [
         "DENW37AL2hU0008y"
       ],
-      "floorZ": 0.49,
+      "floorZ": 5.92,
       "footprint": [
         [
           -508.085,
@@ -101,7 +101,7 @@
         "cols": 24,
         "rows": 49,
         "walkable": "AAAADBAgBBBgBBAgBBAgCBAgCBDgCBDgCBAgCBAgDBDg/P//DBDgCBAgEBAgEBAgEBAgEBAgEBAgEBAgGBDg+P//EBDgIBAgIBAgIBAgIBAgIBAgIBAgMBAgMBDg8P//QBDgQBAgQBAgQBAgQBAgQBAgQBAgYBDg4P//4BDggBAggBAggBAggBAggBAggBBggBAg",
-        "floorZ": 0.49
+        "floorZ": 5.92
       },
       "facilities": [
         {
@@ -160,7 +160,7 @@
       "targetFeatureIds": [
         "DENW37AL100064Zs"
       ],
-      "floorZ": 0.49,
+      "floorZ": 6.3,
       "footprint": [
         [
           -124.939,
@@ -4278,7 +4278,7 @@
         "cols": 44,
         "rows": 58,
         "walkable": "AAAAAAAA4Ic/fkAefvjjB+Thhz/+//7/////5/////9//v/////HAcdgwGAecAwGDO4Bx2DA4Bxw/AcMxgHHf8BgHHD8BwzGAcd/wGAccPwHDMb///////z/////xwHHf8BgHHD8BwzGAcd/wGAccPwHDMYBx3/AYB5w/AcM7v//4P///P8P/v/HAcdgwGAccPwHDMYBx3/AYBxw/AcM5v///////v/////PAcdgwOAecAwGDO4Bx2DA4Bxw/P//xwH///9/HPD/BwzGAcd/wGAccPwHDMYBx3/A4Pz//wcMzv//////HHD8///vAcd/wGAecPwHDOYBx3/AYB5w/AcM7gHHYMDg/v//Bwzm//9/wGAccAwGDMYBx2DAYBxwDAYMxgHHYMBg/P/////v/////38A8P//BwQA//9/AA==",
-        "floorZ": 0.49
+        "floorZ": 6.3
       },
       "facilities": [
         {
@@ -4321,7 +4321,7 @@
       "targetFeatureIds": [
         "DENW37AL100064Zs"
       ],
-      "floorZ": 7.94,
+      "floorZ": 13.75,
       "footprint": [
         [
           -157.866,
@@ -6408,7 +6408,7 @@
         "cols": 53,
         "rows": 63,
         "walkable": "AAAAAAAAAACADz74AQDA/8EHPwAABD744AcAwMAH8/+AAPj/////H4D//////wHw/////z8A/38Y/v8H8AMMwwDDAH6AYRhgOOAPMAwDDAfcAYZ/gGEAO8DwD/APYAcY/gH+gewAwz/AMJAdYPgHGAazAwz/AMNgdoDhH2BYzA4w/AMMy9kBhn+AYTg7wPAPMIxn////AYbx7P//P8Cw/B9g+P//n/8DDP8Aw/N3gGEYYBjeDjAMAwzD2wGGYYBheDvAMAwwDG8HGP4BhvX9/////7++///////HP///wwDD+H+AYRhgeP8PMAwDDO+fAYZ/gGF8MsDwDzCMTwYY/gGG4ckAwz/AMDz5//8HGIY////////wZwzg//9f/owB/AMMy/8xgH+AYfg/BvAPMAz/xwD+AYbB/xjAP8Aw+P8DGAYYHv9/AMMAw+N/DGAYYBj8jwEMAwyD/zGAYYBh8DMGMAwwDH7GAIYBhgXMGMAwwLCA+f////8HMP//////AGaA//8PGMAM8P//AQP//////w+A////AwAAAH8AAAAAAA==",
-        "floorZ": 7.94
+        "floorZ": 13.75
       },
       "facilities": [
         {
@@ -6451,7 +6451,7 @@
       "targetFeatureIds": [
         "DENW37AL100064wf"
       ],
-      "floorZ": 0.49,
+      "floorZ": 4.45,
       "footprint": [
         [
           -459.161,
@@ -8229,7 +8229,7 @@
         "cols": 28,
         "rows": 42,
         "walkable": "AAAAAMB/QAD8BwT+/08gIIAEAgJIICCABAICSDwggMcDAnj8///HAwL4PCCAzwMC+D4ggO8DAvj+///vAwIIPiCA4AMCCD4ggOD//w8+IP7gAwL4PiCA7wMC+C4ggO8DAvggIIAPAgL44D+ADwIC+CAggA8CAgggIIAAAwIIMCCAAAMCCP7//8////+EfwAD+Acw",
-        "floorZ": 0.49
+        "floorZ": 4.45
       },
       "facilities": [
         {
@@ -8264,7 +8264,7 @@
       "targetFeatureIds": [
         "DENW37AL100064wf"
       ],
-      "floorZ": 8.24,
+      "floorZ": 12.2,
       "footprint": [
         [
           -466.064,
@@ -10256,7 +10256,7 @@
         "cols": 28,
         "rows": 42,
         "walkable": "AAAAAIA/QADwAQQAHkAAIAEEABJAACABBAASQBwgAcf//3/8///Hg2D4PAiGz4Ng+D4Ihu+DYPg+CIbgg2AIPgiG4P//Dz4IhuCDYAg+CIbgg2AIPgj+74Pg/z4Ihu+DIPgwCIIP/yD4MAiCD4Pg/zAM/g/DIAgwDIIAwyAIMAyCAMMgCD4MguD//z8E/wMD8D8w",
-        "floorZ": 8.24
+        "floorZ": 12.2
       },
       "facilities": [
         {
@@ -10275,7 +10275,7 @@
       "targetFeatureIds": [
         "DENW37AL100064yw"
       ],
-      "floorZ": 6.99,
+      "floorZ": 12.43,
       "footprint": [
         [
           -377.993,
@@ -12457,7 +12457,7 @@
         "cols": 24,
         "rows": 40,
         "walkable": "+P8f+P8fCGASCGASCGASD2ASD2ASD2Dy//8fD2ASCWASCWASCWASCWAS+f8fD2DyD2ASC2ASC2ASC2ASC2ASC+AfC2ASD2ASD2DyD2DyD2Dy////////z2TyyGTyyGTyzmTyzmTyyGQSyGQSyGQSyGQSyGQS+P8f",
-        "floorZ": 6.99
+        "floorZ": 12.43
       },
       "facilities": []
     },
@@ -12467,7 +12467,7 @@
       "targetFeatureIds": [
         "DENW37AL10006612"
       ],
-      "floorZ": 0.49,
+      "floorZ": 6.19,
       "footprint": [
         [
           -405.926,
@@ -13732,7 +13732,7 @@
         "cols": 60,
         "rows": 28,
         "walkable": "gD+A/z/4B0DwAfj/A38ABB+A/z/wB0DwAfj/A38ADB+A/z/wB+z//////////v///////+9AQCAYBBjwCAQEgkGAAY9AQCAYBBjwCAQEgkGAAY9AQCAY/B/wDgQEgkGAAe9AQCAYBBjwDgQEgkGAAe9AQCAYBBjw/v//////Ae9AQCAYCBjwCAQEgoGAAY9AQCAYCBjwDwQEgoGAAf9AQCAYCBjw/////////z/4H4gY8B/ggP+BiAH/AQ74H4gY8B8AgP+B/wH/AQD4H/gf8B8A",
-        "floorZ": 0.49
+        "floorZ": 6.19
       },
       "facilities": [
         {
@@ -13775,7 +13775,7 @@
       "targetFeatureIds": [
         "DENW37AL10006612"
       ],
-      "floorZ": 8.09,
+      "floorZ": 13.79,
       "footprint": [
         [
           -407.548,
@@ -14511,7 +14511,7 @@
         "cols": 60,
         "rows": 28,
         "walkable": "AD8A/x/4AwDwA/D/AT8AAD8A/x/wAwDwAfD/AR8A/v///////+//////////DgSAAIFAAOxAAAgQCATADgSAAIFAAOxAAAgQCATADgSAAIFAAOxAAAgQCATA/v///////+9AAAIYAATADgQggAFAAOxAAAIYAATADAQggAFAAMxAAAIYAATADgQggAFAAMxAAAIYAATADgQggAFAAOxAAAIYAATADgQggAFAAOz/////////gH8AoAH8AQD4BwAawB8AgH+A/wH8AQD4B/gfwB8A",
-        "floorZ": 8.09
+        "floorZ": 13.79
       },
       "facilities": [
         {
@@ -14531,7 +14531,7 @@
         "DENW37AL100065RJ",
         "DENW37AL1000644Q"
       ],
-      "floorZ": 0.49,
+      "floorZ": 6.27,
       "footprint": [
         [
           -377.845,
@@ -17565,7 +17565,7 @@
         "cols": 59,
         "rows": 24,
         "walkable": "AAAAAAAAAGD8/////wcA4/////8/ABj/kAHH+QDA+IcM+P8HAP7////////x////B4D/jwEDGDAADPAOGMCAAWCAd8AABgwAA7wDBjBgABjgHTCAAQPAAO+AAQwYAAZ4B/z//////zvg///////fAQMYMAAM8AwYwMABYIDh//////8PjP///////3/8fwAmA/j/D/IDMBnAHwCQH4D5AP4AgPwAzAfwBwDkB2A+gD8A",
-        "floorZ": 0.49
+        "floorZ": 6.27
       },
       "facilities": [
         {
@@ -17601,7 +17601,7 @@
         "DENW37AL100065RJ",
         "DENW37AL1000644Q"
       ],
-      "floorZ": 8.09,
+      "floorZ": 13.87,
       "footprint": [
         [
           -377.864,
@@ -19619,7 +19619,7 @@
         "cols": 59,
         "rows": 28,
         "walkable": "AAAAAAAAAAD8/wf8/wcA4P8/4P8/AAA/+AGD/wCA////////H/z///////9gMMAABoEBBoMBBjAIDDAeDDCAQWCA92CAAQwCA7z//////////f///////+/BAAMYAAZ4DwYYwAAwwPv///8HgAHe////PwAM8BgMMMABYIDHYIABDgADvP/////////9////////7/ADMB/AHwCHH4D5AP4AMPwAzAfwB4D/B34+nz8PwP///////wPA/x8AMAwOAID/AIDhMAAAAAcAHAcA",
-        "floorZ": 8.09
+        "floorZ": 13.87
       },
       "facilities": [
         {
@@ -19646,7 +19646,7 @@
       "targetFeatureIds": [
         "DENW37AL100064lq"
       ],
-      "floorZ": 0.49,
+      "floorZ": 7.16,
       "footprint": [
         [
           -350.619,
@@ -20430,7 +20430,7 @@
         "cols": 74,
         "rows": 28,
         "walkable": "AAAAAAAAAAAAwAADDDDAAAMMAAMMMMAAAwwwAAwwwAADDDDAADDAAAMMMMAAA8AAAwwwwAADDAADDDDAAAMMMAAMMMAAAwwwwAAwwAADDDDAAAPAAAMMMMAAAwwAAwwwwAADDDAADPD/////////MMD/////////wwD/////////DwP8////////PwwwwAADDDDAgDDAAAMMMMAAA8IAAwwwwAADDAgDDDDAAAMMMCAMMMAAAwwwwIAwwAADDDDAAAPCAAMMMMAAAwwIAwwwwAADDDAgDDDAAAMMMMCAMMAAAwwwwAAD+v//////////7///////////Pw444IADDjjgAA==",
-        "floorZ": 0.49
+        "floorZ": 7.16
       },
       "facilities": []
     },
@@ -20440,7 +20440,7 @@
       "targetFeatureIds": [
         "DENW37AL1000660R"
       ],
-      "floorZ": 0.49,
+      "floorZ": 7.12,
       "footprint": [
         [
           -249.57,
@@ -20988,7 +20988,7 @@
         "cols": 59,
         "rows": 28,
         "walkable": "AAMMMMAABgAYYIABBjAAwAADDDCAAQAGGGCAAQwAMMAAAwxgAIABBhhgAAMADDDAAAMYAGCAAQYYwAAAAwwwwAAGABhggAEGMADAAAP8////AAYY4P///wcwwAD///8/gAEG+P///wEMMMAAAxgQYIABBhjAgAADDDDAAAYEGGCAAQYwIMAAAwwwgAEBBhhggAEMCDDAAAMMYECAAQYYYAADAgwwwAADGBBggAEGGMCA/////////////////////////////wEOOOOAAw4A",
-        "floorZ": 0.49
+        "floorZ": 7.12
       },
       "facilities": []
     },
@@ -20998,7 +20998,7 @@
       "targetFeatureIds": [
         "DENW37AL100063oN"
       ],
-      "floorZ": 0.49,
+      "floorZ": 7.01,
       "footprint": [
         [
           -133.152,
@@ -21761,7 +21761,7 @@
         "cols": 59,
         "rows": 28,
         "walkable": "AAAAAAAAAAAYYIABBjAAwAADDDCAAQAGGGCAAQwAMMAAAwxgAIABBhhgAAMADDDAAAMYAGCAAQYYwAAAAwwwwAAGABBggAEGMACAAAMMMIABAPz//////wfg//////8/AP///////wH4////HxgAwIABBhjAAAAGDDDAAAYAMGCAAQYwAIABAwwwgAEADBhggAEMAGCAAAMMYAAAAwQYYAADABggwAADGADAAAMGGMCAAAYYMP////f///////+//////////wEOOOCAAw4A",
-        "floorZ": 0.49
+        "floorZ": 7.01
       },
       "facilities": []
     },
@@ -21771,7 +21771,7 @@
       "targetFeatureIds": [
         "DENW37AL100065KW"
       ],
-      "floorZ": 0.49,
+      "floorZ": 7.11,
       "footprint": [
         [
           -98.528,
@@ -22257,7 +22257,7 @@
         "cols": 56,
         "rows": 23,
         "walkable": "AAMMMIABAwADDDCAAQMAAwwwgAEDAAMMMIABAwADDDCAAQMAAwwwgAEDAAMMMIABAwADDDCAAQP+//////8D/v//////A/7//////wP+//////8DAAMMMIABAwADDDCAAQMAAwwwgAEDAAMMMIABAwADDDCAAQMAAwwwgAEDAAMMMIABA/7////////+/////////v///////wAHHHDAAQc=",
-        "floorZ": 0.49
+        "floorZ": 7.11
       },
       "facilities": []
     },
@@ -23386,7 +23386,7 @@
             -385.379,
             -14.134
           ],
-          "floorZ": 0.49
+          "floorZ": 5.92
         },
         {
           "hallKey": "4.1",
@@ -23394,7 +23394,7 @@
             -371.694,
             83.085
           ],
-          "floorZ": 0.49
+          "floorZ": 6.19
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23409,7 +23409,7 @@
             -385.379,
             -14.134
           ],
-          "floorZ": 0.49
+          "floorZ": 5.92
         },
         {
           "hallKey": "4.2",
@@ -23417,7 +23417,7 @@
             -371.367,
             83.27
           ],
-          "floorZ": 8.09
+          "floorZ": 13.79
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23432,7 +23432,7 @@
             -385.379,
             -14.134
           ],
-          "floorZ": 0.49
+          "floorZ": 5.92
         },
         {
           "hallKey": "5.1",
@@ -23440,7 +23440,7 @@
             -329.699,
             -2.582
           ],
-          "floorZ": 0.49
+          "floorZ": 6.27
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23455,7 +23455,7 @@
             -385.379,
             -14.134
           ],
-          "floorZ": 0.49
+          "floorZ": 5.92
         },
         {
           "hallKey": "5.2",
@@ -23463,7 +23463,7 @@
             -311.064,
             0.863
           ],
-          "floorZ": 8.09
+          "floorZ": 13.87
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23478,7 +23478,7 @@
             -385.379,
             -14.134
           ],
-          "floorZ": 0.49
+          "floorZ": 5.92
         },
         {
           "hallKey": "6.1",
@@ -23486,7 +23486,7 @@
             -310.993,
             -69.05
           ],
-          "floorZ": 0.49
+          "floorZ": 7.16
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23501,7 +23501,7 @@
             -249.753,
             -124.391
           ],
-          "floorZ": 0.49
+          "floorZ": 7.16
         },
         {
           "hallKey": "7.1",
@@ -23509,7 +23509,7 @@
             -226.502,
             -164.481
           ],
-          "floorZ": 0.49
+          "floorZ": 7.12
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23524,7 +23524,7 @@
             -108.611,
             -192.097
           ],
-          "floorZ": 0.49
+          "floorZ": 7.12
         },
         {
           "hallKey": "8.1",
@@ -23532,7 +23532,7 @@
             -106.242,
             -235.347
           ],
-          "floorZ": 0.49
+          "floorZ": 7.01
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23547,7 +23547,7 @@
             -307.118,
             119.626
           ],
-          "floorZ": 0.49
+          "floorZ": 6.19
         },
         {
           "hallKey": "5.1",
@@ -23555,7 +23555,7 @@
             -283.555,
             87.838
           ],
-          "floorZ": 0.49
+          "floorZ": 6.27
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23570,7 +23570,7 @@
             -306.791,
             119.811
           ],
-          "floorZ": 8.09
+          "floorZ": 13.79
         },
         {
           "hallKey": "5.2",
@@ -23578,7 +23578,7 @@
             -283.583,
             87.868
           ],
-          "floorZ": 8.09
+          "floorZ": 13.87
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23593,7 +23593,7 @@
             -201.935,
             95.056
           ],
-          "floorZ": 0.49
+          "floorZ": 6.27
         },
         {
           "hallKey": "10.1",
@@ -23601,7 +23601,7 @@
             -154.027,
             125.238
           ],
-          "floorZ": 0.49
+          "floorZ": 6.3
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23616,7 +23616,7 @@
             -200.518,
             92.458
           ],
-          "floorZ": 8.09
+          "floorZ": 13.87
         },
         {
           "hallKey": "10.2",
@@ -23624,7 +23624,7 @@
             -155.56,
             121.086
           ],
-          "floorZ": 7.94
+          "floorZ": 13.75
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23639,7 +23639,7 @@
             -67.597,
             148.612
           ],
-          "floorZ": 0.49
+          "floorZ": 6.3
         },
         {
           "hallKey": "9.1",
@@ -23647,7 +23647,7 @@
             -24.802,
             97.229
           ],
-          "floorZ": 0.49
+          "floorZ": 7.11
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23662,7 +23662,7 @@
             -66.698,
             145.842
           ],
-          "floorZ": 7.94
+          "floorZ": 13.75
         },
         {
           "hallKey": "9.1",
@@ -23670,7 +23670,7 @@
             -24.802,
             97.229
           ],
-          "floorZ": 0.49
+          "floorZ": 7.11
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23685,7 +23685,7 @@
             -355.073,
             269.167
           ],
-          "floorZ": 6.99
+          "floorZ": 12.43
         },
         {
           "hallKey": "4.1",
@@ -23693,7 +23693,7 @@
             -318.168,
             205.446
           ],
-          "floorZ": 0.49
+          "floorZ": 6.19
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23708,7 +23708,7 @@
             -355.073,
             269.167
           ],
-          "floorZ": 6.99
+          "floorZ": 12.43
         },
         {
           "hallKey": "4.2",
@@ -23716,7 +23716,7 @@
             -317.841,
             205.631
           ],
-          "floorZ": 8.09
+          "floorZ": 13.79
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23731,7 +23731,7 @@
             -411.666,
             269.865
           ],
-          "floorZ": 0.49
+          "floorZ": 4.45
         },
         {
           "hallKey": "3.2",
@@ -23739,7 +23739,7 @@
             -395.816,
             281.001
           ],
-          "floorZ": 6.99
+          "floorZ": 12.43
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23754,7 +23754,7 @@
             -418.501,
             259.733
           ],
-          "floorZ": 8.24
+          "floorZ": 12.2
         },
         {
           "hallKey": "3.2",
@@ -23762,7 +23762,7 @@
             -395.816,
             281.001
           ],
-          "floorZ": 6.99
+          "floorZ": 12.43
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23777,7 +23777,7 @@
             -439.881,
             225.576
           ],
-          "floorZ": 0.49
+          "floorZ": 4.45
         },
         {
           "hallKey": "4.1",
@@ -23785,7 +23785,7 @@
             -404.53,
             153.168
           ],
-          "floorZ": 0.49
+          "floorZ": 6.19
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23800,7 +23800,7 @@
             -437.221,
             220.839
           ],
-          "floorZ": 8.24
+          "floorZ": 12.2
         },
         {
           "hallKey": "4.2",
@@ -23808,7 +23808,7 @@
             -404.203,
             153.353
           ],
-          "floorZ": 8.09
+          "floorZ": 13.79
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23831,7 +23831,7 @@
             -197.176,
             -95.482
           ],
-          "floorZ": 0.49
+          "floorZ": 7.16
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23854,7 +23854,7 @@
             -16.084,
             -274.788
           ],
-          "floorZ": 0.49
+          "floorZ": 7.01
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23877,7 +23877,7 @@
             -258.721,
             36.445
           ],
-          "floorZ": 0.49
+          "floorZ": 6.27
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23892,7 +23892,7 @@
             -502.996,
             309.031
           ],
-          "floorZ": 0.49
+          "floorZ": 4.45
         },
         {
           "hallKey": "2.2",
@@ -23900,7 +23900,7 @@
             -498.286,
             311.738
           ],
-          "floorZ": 8.24
+          "floorZ": 12.2
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23915,7 +23915,7 @@
             -498.249,
             311.728
           ],
-          "floorZ": 0.49
+          "floorZ": 4.45
         },
         {
           "hallKey": "2.2",
@@ -23923,7 +23923,7 @@
             -498.286,
             311.738
           ],
-          "floorZ": 8.24
+          "floorZ": 12.2
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23938,7 +23938,7 @@
             -493.825,
             320.521
           ],
-          "floorZ": 0.49
+          "floorZ": 4.45
         },
         {
           "hallKey": "2.2",
@@ -23946,7 +23946,7 @@
             -493.539,
             314.435
           ],
-          "floorZ": 8.24
+          "floorZ": 12.2
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23961,7 +23961,7 @@
             -491.451,
             321.87
           ],
-          "floorZ": 0.49
+          "floorZ": 4.45
         },
         {
           "hallKey": "2.2",
@@ -23969,7 +23969,7 @@
             -488.791,
             317.133
           ],
-          "floorZ": 8.24
+          "floorZ": 12.2
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -23984,7 +23984,7 @@
             -409.116,
             113.061
           ],
-          "floorZ": 0.49
+          "floorZ": 6.19
         },
         {
           "hallKey": "4.2",
@@ -23992,7 +23992,7 @@
             -411.713,
             118.412
           ],
-          "floorZ": 8.09
+          "floorZ": 13.79
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -24007,7 +24007,7 @@
             -406.874,
             121.15
           ],
-          "floorZ": 0.49
+          "floorZ": 6.19
         },
         {
           "hallKey": "4.2",
@@ -24015,7 +24015,7 @@
             -406.546,
             121.336
           ],
-          "floorZ": 8.09
+          "floorZ": 13.79
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -24030,7 +24030,7 @@
             -406.874,
             121.15
           ],
-          "floorZ": 0.49
+          "floorZ": 6.19
         },
         {
           "hallKey": "4.2",
@@ -24038,7 +24038,7 @@
             -395.874,
             120.554
           ],
-          "floorZ": 8.09
+          "floorZ": 13.79
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -24053,7 +24053,7 @@
             -388.792,
             131.382
           ],
-          "floorZ": 0.49
+          "floorZ": 6.19
         },
         {
           "hallKey": "4.2",
@@ -24061,7 +24061,7 @@
             -388.465,
             131.567
           ],
-          "floorZ": 8.09
+          "floorZ": 13.79
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -24076,7 +24076,7 @@
             -361.896,
             31.069
           ],
-          "floorZ": 0.49
+          "floorZ": 6.27
         },
         {
           "hallKey": "5.2",
@@ -24084,7 +24084,7 @@
             -361.924,
             31.099
           ],
-          "floorZ": 8.09
+          "floorZ": 13.87
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -24099,7 +24099,7 @@
             -358.084,
             36.589
           ],
-          "floorZ": 0.49
+          "floorZ": 6.27
         },
         {
           "hallKey": "5.2",
@@ -24107,7 +24107,7 @@
             -355.483,
             38.064
           ],
-          "floorZ": 8.09
+          "floorZ": 13.87
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -24122,7 +24122,7 @@
             -351.643,
             43.554
           ],
-          "floorZ": 0.49
+          "floorZ": 6.27
         },
         {
           "hallKey": "5.2",
@@ -24130,7 +24130,7 @@
             -355.483,
             38.064
           ],
-          "floorZ": 8.09
+          "floorZ": 13.87
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -24145,7 +24145,7 @@
             -346.385,
             46.445
           ],
-          "floorZ": 0.49
+          "floorZ": 6.27
         },
         {
           "hallKey": "5.2",
@@ -24153,7 +24153,7 @@
             -339.71,
             46.737
           ],
-          "floorZ": 8.09
+          "floorZ": 13.87
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -24168,7 +24168,7 @@
             -123.3,
             207.025
           ],
-          "floorZ": 0.49
+          "floorZ": 6.3
         },
         {
           "hallKey": "10.2",
@@ -24176,7 +24176,7 @@
             -121.351,
             208.068
           ],
-          "floorZ": 7.94
+          "floorZ": 13.75
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -24191,7 +24191,7 @@
             -143.306,
             112.03
           ],
-          "floorZ": 0.49
+          "floorZ": 6.3
         },
         {
           "hallKey": "10.2",
@@ -24199,7 +24199,7 @@
             -136.882,
             99.534
           ],
-          "floorZ": 7.94
+          "floorZ": 13.75
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -24214,7 +24214,7 @@
             -138.443,
             114.793
           ],
-          "floorZ": 0.49
+          "floorZ": 6.3
         },
         {
           "hallKey": "10.2",
@@ -24222,7 +24222,7 @@
             -132.018,
             102.297
           ],
-          "floorZ": 7.94
+          "floorZ": 13.75
         }
       ],
       "usedAsRegistrationAnchor": false
@@ -24237,7 +24237,7 @@
             -133.58,
             117.556
           ],
-          "floorZ": 0.49
+          "floorZ": 6.3
         },
         {
           "hallKey": "10.2",
@@ -24245,7 +24245,7 @@
             -127.155,
             105.06
           ],
-          "floorZ": 7.94
+          "floorZ": 13.75
         }
       ],
       "usedAsRegistrationAnchor": false
