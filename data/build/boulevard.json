@@ -1135,7 +1135,7 @@
     "streifenZumBoulevardM": 20.0
    },
    "ebene0": {
-    "traegt": "9.1",
+    "traegt": "10.1",
     "offenNach": "west",
     "streifenZumBoulevardM": 0.0
    }
@@ -1175,10 +1175,10 @@
    "qVonM": -194.56,
    "qBisM": -16.46,
    "obenM": 13.75,
-   "untenM": 7.11,
+   "untenM": 6.3,
    "laufM": 84.59,
    "hoeheGemessenM": 8.33,
-   "steigungProzent": 7.85,
+   "steigungProzent": 8.81,
    "polygon": [
     [
      -124.72,
@@ -1202,7 +1202,7 @@
      [
       -124.72,
       6.38,
-      7.11
+      6.3
      ],
      [
       -165.45,
@@ -1219,7 +1219,7 @@
      [
       -124.72,
       6.38,
-      7.11
+      6.3
      ],
      [
       -7.59,
@@ -1229,7 +1229,7 @@
      [
       33.13,
       93.09,
-      7.11
+      6.3
      ]
     ]
    ],
@@ -1241,7 +1241,7 @@
    "bisM": 300.0,
    "qVonM": -220.46,
    "qBisM": -7.456,
-   "hoeheM": 7.11,
+   "hoeheM": 6.3,
    "polygon": [
     [
      -114.51,
@@ -1260,7 +1260,7 @@
      72.59
     ]
    ],
-   "herkunft": "213,00 x 120,18 m gemessen; Hoehe = Fussboden Halle 9.1"
+   "herkunft": "213,00 x 120,18 m gemessen; Hoehe = Fussboden Halle 10.1"
   }
  },
  "aussenHalle8": {

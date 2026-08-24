@@ -521,8 +521,11 @@ describe('Aussengelaende 9/10', () => {
   });
 
   it('legt die untere Ebene auf Hallenniveau', () => {
-    expect(aussen.ebene0.hoeheM).toBeCloseTo(hallenboden('9.1'), 6);
-    expect(auf(195, -180).z).toBeCloseTo(hallenboden('9.1'), 6);
+    // Die Flaeche liegt an Halle 9, ihr Fussboden folgt aber Halle 10.1 --
+    // derselbe Bezug wie im Suedteil des Boulevards. Nur damit ergibt die
+    // Rampe die amtlichen 7,45 m, die ihre eigene Herkunftsangabe verspricht.
+    expect(aussen.ebene0.hoeheM).toBeCloseTo(hallenboden('10.1'), 6);
+    expect(auf(195, -180).z).toBeCloseTo(hallenboden('10.1'), 6);
   });
 
   it('behaelt die vor Ort gemessene Hoehe als Zahl, auch wenn sie nicht gilt', () => {
@@ -530,9 +533,10 @@ describe('Aussengelaende 9/10', () => {
     // Abweichung darf nicht stillschweigend verschwinden.
     expect(aussen.schraege.hoeheGemessenM).toBeCloseTo(8.33, 2);
     expect(aussen.schraege.obenM - aussen.schraege.untenM).toBeCloseTo(
-      hallenboden('10.2') - hallenboden('9.1'),
+      hallenboden('10.2') - hallenboden('10.1'),
       2,
     );
+    expect(aussen.schraege.obenM - aussen.schraege.untenM).toBeCloseTo(7.45, 2);
   });
 
   it('faellt ueber die Schraege gleichmaessig ab', () => {

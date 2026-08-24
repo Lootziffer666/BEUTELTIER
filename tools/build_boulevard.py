@@ -1151,9 +1151,15 @@ def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
     Beide Zahlen stehen in der Ausgabe; die Rampe faehrt die amtliche.
     """
     oben = hoehen.get("10.2")
-    unten = hoehen.get("9.1")
+    # Die untere Ebene liegt an Halle 9 an, ihr Fussboden folgt aber Halle
+    # 10.1: dieselbe Bodenplatte, die auch der Suedteil des Boulevards als
+    # unteren Bezug fuehrt (siehe suedteil(), unten_key). Mit Halle 9.1
+    # (7,11 m) statt Halle 10.1 (6,30 m) kam die Rampe nur auf 6,64 m --
+    # das Dokument darueber verspricht 7,45 m, und das war schlicht der
+    # falsche Schluessel.
+    unten = hoehen.get("10.1")
     if oben is None or unten is None:
-        fehlend = [key for key, wert in (("10.2", oben), ("9.1", unten))
+        fehlend = [key for key, wert in (("10.2", oben), ("10.1", unten))
                    if wert is None]
         raise RuntimeError(
             "Aussengelaende 9/10 ohne registrierte Hallenhoehe: "
@@ -1194,7 +1200,7 @@ def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
         "form": {
             "ebene1": {"traegt": "10.2", "offenNach": "sued",
                        "streifenZumBoulevardM": AUSSEN_STREIFEN_E1_M},
-            "ebene0": {"traegt": "9.1", "offenNach": "west",
+            "ebene0": {"traegt": "10.1", "offenNach": "west",
                        "streifenZumBoulevardM": 0.0},
         },
         "ueberlappM": u,
@@ -1240,7 +1246,7 @@ def aussen_neun_zehn(rahmen: Rahmen, hoehen: dict[str, float]) -> dict | None:
             "hoeheM": round(unten, 2),
             "polygon": flaeche(AUSSEN_E0["nordM"] - u, grenze,
                                AUSSEN_WEST_E0_Q, AUSSEN_E0["breiteQ"]),
-            "herkunft": "213,00 x 120,18 m gemessen; Hoehe = Fussboden Halle 9.1",
+            "herkunft": "213,00 x 120,18 m gemessen; Hoehe = Fussboden Halle 10.1",
         },
     }
 

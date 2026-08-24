@@ -1198,7 +1198,15 @@ class TestNordboulevard:
         )
         floors = {hall["key"]: hall["baseY"] for hall in site["halls"]}
         assert boulevard["aussen9_10"]["ebene1"]["hoeheM"] == pytest.approx(floors["10.2"])
-        assert boulevard["aussen9_10"]["ebene0"]["hoeheM"] == pytest.approx(floors["9.1"])
+        # Ebene 0 liegt an Halle 9, ihr Fussboden folgt aber Halle 10.1 --
+        # derselbe Bezug wie im Suedteil des Boulevards (sued.untenM). Nur
+        # damit ergibt die Rampe die amtlichen 7,45 m Hoehenunterschied, die
+        # ihre eigene Herkunftsangabe verspricht.
+        assert boulevard["aussen9_10"]["ebene0"]["hoeheM"] == pytest.approx(floors["10.1"])
+        assert (
+            boulevard["aussen9_10"]["ebene1"]["hoeheM"]
+            - boulevard["aussen9_10"]["ebene0"]["hoeheM"]
+        ) == pytest.approx(7.45, abs=0.01)
         assert boulevard["aussenHalle8"]["hoeheM"] == pytest.approx(floors["8.1"])
 
     def test_gekappte_flaechen_sind_als_vorgabe_ausgewiesen(self, boulevard):
