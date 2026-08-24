@@ -766,7 +766,13 @@ function aussenraum(plan: BoulevardPlan | null): SurfaceProvider {
     ...(plan.plaetze ?? []).map((platz) => ({
       id: platz.id,
       polygon: platz.polygon,
-      z: platz.hoeheM,
+      // Nur fuer die Piazza liegt ausser dem OSM-Umriss eine gemessene
+      // Plattformhoehe vor. Alle anderen Plaetze bleiben bei 0 und werden in
+      // der Laufkamera vom echten DGM ersetzt; eine gemeinsame erfundene
+      // Platzhoehe waere erneut nur ein plausibel aussehender Block.
+      z: platz.name === 'Piazza' && plan.knoten
+        ? plan.knoten.piazzaHoeheM
+        : platz.hoeheM,
       blocked: false,
     })),
   ]);

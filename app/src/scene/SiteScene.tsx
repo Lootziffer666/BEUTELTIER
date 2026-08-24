@@ -1331,6 +1331,7 @@ function WalkControls({
   frozen = false,
   viewfinderOpen = false,
   terrainHeight,
+  terrainReady,
   onToggleNoClip,
   onToggleFreeze,
   onToggleViewfinder,
@@ -1346,6 +1347,7 @@ function WalkControls({
   frozen?: boolean;
   viewfinderOpen?: boolean;
   terrainHeight: (x: number, y: number) => number | null;
+  terrainReady: boolean;
   onToggleNoClip?: () => void;
   onToggleFreeze?: () => void;
   onToggleViewfinder?: () => void;
@@ -1447,9 +1449,19 @@ function WalkControls({
       }
     }
     if (!footing) footing = data.walk.spawn();
-    if (footing) position.current = footing;
+    if (footing) {
+      const surface = data.walk.footingAt(footing.x, footing.y, footing.z);
+      const piazzaId = data.boulevard?.plaetze?.find((platz) => platz.name === 'Piazza')?.id;
+      const terrainZ = !surface.hallKey && (
+        surface.surfaceId === 'legacy-open-outside' ||
+        (surface.surfaceId?.startsWith('platz-') && surface.surfaceId !== piazzaId)
+      )
+        ? terrainHeight(footing.x, footing.y)
+        : null;
+      position.current = terrainZ === null ? footing : { ...footing, z: terrainZ };
+    }
     look.current = { yaw: 0, pitch: 0 };
-  }, [active, start, data, centre]);
+  }, [active, start, data, centre, terrainHeight, terrainReady]);
 
   useEffect(() => {
     if (!active) return;
@@ -1633,8 +1645,11 @@ function WalkControls({
             // offen. Nur dort ersetzt das echte DGM1 diese Arbeitsebene;
             // Hallen, Rampen und belegte Boulevardflaechen behalten ihre
             // jeweils autoritative Hoehe.
+            const piazzaId = data.boulevard?.plaetze
+              ?.find((platz) => platz.name === 'Piazza')?.id;
             const terrainZ = !footing.hallKey && (
-              footing.surfaceId === 'legacy-open-outside' || footing.surfaceId?.startsWith('platz-')
+              footing.surfaceId === 'legacy-open-outside' ||
+              (footing.surfaceId?.startsWith('platz-') && footing.surfaceId !== piazzaId)
             )
               ? terrainHeight(moved.x, moved.y)
               : null;
@@ -1827,6 +1842,7 @@ export function SiteScene(props: SceneProps) {
       dpr={[1, 1.8]}
       shadows="soft"
       gl={{ antialias: true, alpha: false }}
+      style={{ touchAction: 'none' }}
       onCreated={({ gl }) => {
         // Ohne Tone Mapping kippt alles Helle nach Weiß, und genau das ließ
         // die Szene wie ein eingefärbtes Drahtgitter aussehen.
@@ -1977,6 +1993,7 @@ export function SiteScene(props: SceneProps) {
           frozen={props.frozen}
           viewfinderOpen={props.viewfinderOpen}
           terrainHeight={terrainHeight}
+          terrainReady={terrainHeightmap.ready}
           onToggleNoClip={props.onToggleNoClip}
           onToggleFreeze={props.onToggleFreeze}
           onToggleViewfinder={props.onToggleViewfinder}

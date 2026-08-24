@@ -299,12 +299,17 @@ export class WalkGrid {
    *
    * Mitten in der Halle, nicht in der ersten Ecke: wer am Geländerand
    * aufwacht und erst einmal zweihundert Meter laufen muss, hält die Ansicht
-   * für kaputt. Ohne Hallenangabe wird die größte genommen.
+   * für kaputt. Ohne Hallenangabe wird die groesste Halle auf der
+   * Eingangsebene genommen. Eine groessere Obergeschosshalle ist kein
+   * sinnvoller Standardstart: dort kann die Kamera unter einer Decke landen,
+   * bevor der Besucher ueberhaupt ein Ziel gewaehlt hat.
    */
   spawn(hallKey?: string): { x: number; y: number; z: number } | null {
+    const groundLayers = this.layers.filter((layer) => layer.level <= 1);
     const layers = hallKey
       ? this.layers.filter((layer) => layer.key === hallKey)
-      : [...this.layers].sort((a, b) => b.cols * b.rows - a.cols * a.rows);
+      : [...(groundLayers.length > 0 ? groundLayers : this.layers)]
+        .sort((a, b) => b.cols * b.rows - a.cols * a.rows);
 
     for (const layer of layers) {
       const midX = (layer.cols - 1) / 2;
