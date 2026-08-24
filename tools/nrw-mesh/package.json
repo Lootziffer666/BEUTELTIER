@@ -1,0 +1,13 @@
+{
+  "name": "beuteltier-nrw-mesh-extract",
+  "private": true,
+  "type": "module",
+  "description": "Reproducible downloader/converter for the official NRW 3D-Mesh (I3S) around Koelnmesse. See roi-manifest.json for source, ROI and licensing.",
+  "scripts": {
+    "traverse": "node traverse.mjs leaves.json",
+    "build": "node build.mjs leaves.json koelnmesse-nrw-mesh.glb"
+  },
+  "dependencies": {
+    "@gltf-transform/core": "^4.4.2"
+  }
+}

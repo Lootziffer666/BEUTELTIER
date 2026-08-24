@@ -1,0 +1,44 @@
+{
+  "schema": "beuteltier.nrw-mesh-extract.v1",
+  "source": {
+    "title": "3D-Mesh NRW (Geobasis NRW)",
+    "sceneServer": "https://www.gis.nrw.de/geobasis/3D_mesh/SceneServer",
+    "layer": "layers/0",
+    "openDataDownload": "https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/3dmesh/",
+    "format": "I3S (Indexed 3D Scene Layer), service version 1.7, meshpyramids/node-switching LOD",
+    "crs": "EPSG:25832 (horizontal), EPSG:7837 (vertical, gravity-related height)",
+    "textureFormat": "JPEG",
+    "geometryEncoding": "uncompressed (geometries/0) used; draco (geometries/1) also available but not needed",
+    "license": "Datenlizenz Deutschland - Zero - Version 2.0 (dl-de/zero-2-0)",
+    "copyrightText": "NONE",
+    "producedSince": 2023,
+    "note": "Same coordinate system BEUTELTIER already uses; no reprojection needed."
+  },
+  "roi": {
+    "crs": "EPSG:25832",
+    "xmin": 357800.0,
+    "xmax": 358550.0,
+    "ymin": 5645650.0,
+    "ymax": 5646450.0,
+    "describes": "Halle 9, Halle 10, Boulevard, Piazza / Eingang Sued approach",
+    "sceneOrigin": [
+      358300.0,
+      5645800.0,
+      40.0
+    ]
+  },
+  "extraction": {
+    "nodesVisitedTotal": 569,
+    "nodesPickedInRoi": 379,
+    "nodesKeptAfterCoarseFilter": 375,
+    "coarseFilterMaxHalfSizeM": 700,
+    "totalVertices": 9846456,
+    "localArtifact": {
+      "path": "<local build output, not committed>",
+      "format": "GLB (glTF 2.0 binary), one mesh+material+JPEG texture per source node",
+      "sizeBytes": 249300000,
+      "reproduceWith": "node tools/nrw-mesh/traverse.mjs /tmp/leaves.json && node tools/nrw-mesh/build.mjs /tmp/leaves.json /tmp/koelnmesse-nrw-mesh.glb"
+    }
+  },
+  "knownLimitation": "The ROI-overlap test on the I3S node tree is deliberately conservative (bounding-sphere, not exact OBB) to avoid false negatives after an axis-aligned test silently dropped whole branches with rotated OBBs. That conservatism, combined with the mesh-pyramid tree not always subdividing a parent footprint contiguously among its children, means the extracted set is not one seamless surface -- it is real photogrammetric geometry+texture from the official service, but with gaps between the picked nodes rather than full contiguous coverage. Tightening the ROI test to exact OBB-vs-AABB intersection would close most of those gaps; not done in this pass."
+}
