@@ -138,8 +138,6 @@ const STAND_HEIGHT_M = 2.6;
 const MODEL_URL = `${import.meta.env.BASE_URL}models/messe.glb`;
 /** Das DGM1-Terrain, gebaut von tools/build_terrain.py. */
 const TERRAIN_URL = `${import.meta.env.BASE_URL}models/terrain.glb`;
-/** Die Skyline der weiteren Umgebung, gebaut von tools/build_skyline.py. */
-const SKYLINE_URL = `${import.meta.env.BASE_URL}models/distant/skyline.glb`;
 /** Das entzerrte Senkrechtluftbild, gebaut von tools/build_ortho.py. */
 const ORTHO_URL = `${import.meta.env.BASE_URL}models/gelaende.jpg`;
 /**
@@ -417,12 +415,6 @@ function Terrain({
       )}
     </group>
   );
-}
-
-/** Die Skyline der weiteren Umgebung (Dom, KölnTriangle, Messeturm, Hbf). */
-function Skyline({ centre }: { centre: [number, number] }) {
-  const { scene } = useGLTF(SKYLINE_URL);
-  return <primitive object={scene} position={[-centre[0], 0, -centre[1]]} />;
 }
 
 function Gelaende({
@@ -713,6 +705,16 @@ function OfficialPackage({
       });
       for (const mesh of meshes) {
         const quelle = mesh.material as THREE.MeshStandardMaterial;
+        let eigeneGeometrie = false;
+        const editierbareGeometrie = () => {
+          if (!eigeneGeometrie) {
+            // scene.clone(true) teilt die Geometrie mit dem useGLTF-Cache.
+            // UV-Projektion darf deshalb nie die geladene Vorlage veraendern.
+            mesh.geometry = mesh.geometry.clone();
+            eigeneGeometrie = true;
+          }
+          return mesh.geometry;
+        };
         const teil = bauteil(quelle.name) ?? 'wall';
         const highlighted = highlightFeatureIds.includes(featureId(quelle.name) ?? '');
         const familie = familieFuer(teil, behandeln);
@@ -721,14 +723,14 @@ function OfficialPackage({
           mesh.visible = false;
           continue;
         }
-        if (umbauen && surfaces) projiziereUV(mesh.geometry, WELT_KACHEL_M.wand);
+        if (umbauen && surfaces) projiziereUV(editierbareGeometrie(), WELT_KACHEL_M.wand);
         // Die amtlichen GLB-Pakete bringen fuer Waende kein Foto mit. Aussen
         // bleibt die Wand deshalb bewusst eine saubere Materialklasse statt
         // einer erfundenen Fassadentextur. Nur Innenwaende erhalten die aus
         // Referenzbildern abgeleitete Familienzeichnung.
         const eigeneKarte = umbauen && surfaces ? surfaces.wand : null;
         const realesDach = teil === 'roof' && orthophoto
-          ? applyRegisteredOrthoUv(mesh.geometry, orthophoto.corners)
+          ? applyRegisteredOrthoUv(editierbareGeometrie(), orthophoto.corners)
           : false;
         let material: THREE.MeshToonMaterial;
         if (eigeneKarte) {
@@ -745,7 +747,7 @@ function OfficialPackage({
         } else if (teil === 'wall' && !interior) {
           material = toonMaterial(familie, {}, { side: THREE.DoubleSide });
         } else {
-          projiziereUV(mesh.geometry, KACHEL_M[familie.id] ?? 6);
+          projiziereUV(editierbareGeometrie(), KACHEL_M[familie.id] ?? 6);
           material = familienMaterial(familie, undefined, { side: THREE.DoubleSide });
         }
         if (highlighted) hallenHighlight(material);
@@ -760,10 +762,18 @@ function OfficialPackage({
     clone.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       const quelle = node.material as THREE.MeshStandardMaterial;
+      let eigeneGeometrie = false;
+      const editierbareGeometrie = () => {
+        if (!eigeneGeometrie) {
+          node.geometry = node.geometry.clone();
+          eigeneGeometrie = true;
+        }
+        return node.geometry;
+      };
       const teil = bauteil(quelle.name);
       const highlighted = highlightFeatureIds.includes(featureId(quelle.name) ?? '');
       const realesDach = teil === 'roof' && orthophoto
-        ? applyRegisteredOrthoUv(node.geometry, orthophoto.corners)
+        ? applyRegisteredOrthoUv(editierbareGeometrie(), orthophoto.corners)
         : false;
       if (!umbauen || !teil || !surfaces) {
         // Schleier, reales Dachbild und Highlight brauchen eine eigene Kopie:
@@ -797,7 +807,7 @@ function OfficialPackage({
         node.visible = false;
         return;
       }
-      projiziereUV(node.geometry, WELT_KACHEL_M.wand);
+      projiziereUV(editierbareGeometrie(), WELT_KACHEL_M.wand);
       material.map = surfaces.wand.map;
       material.normalMap = surfaces.wand.normalMap;
       material.roughnessMap = surfaces.wand.roughnessMap;
@@ -1842,7 +1852,7 @@ export function SiteScene(props: SceneProps) {
       />
       <Beleuchtung extent={extent} interior={preset === 'ego'} />
 
-      {terrainHeightmap.error && (
+      {registered && terrainHeightmap.error && (
         <Html position={[0, 12, 0]} center>
           <div className="scene-data-error">
             Gelände-Höhenabfrage nicht verfügbar: {terrainHeightmap.error}
@@ -1856,11 +1866,6 @@ export function SiteScene(props: SceneProps) {
           <Terrain centre={centre} ortho={data.ortho} map={orthoMap} />
         </Suspense>
       )}
-      {/* Die Skyline der weiteren Umgebung im Hintergrund. */}
-      <Suspense fallback={null}>
-        <Skyline centre={centre} />
-      </Suspense>
-
       {/* Im registrierten Modus liegt das Luftbild auf dem DGM1 oben. Die
           flache Variante bleibt nur fuer den alten Planraum erhalten. */}
       {!registered && (

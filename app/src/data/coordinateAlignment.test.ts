@@ -62,4 +62,48 @@ describe('legacy exterior alignment', () => {
     const [a, b] = aligned.surroundings!.roads[0].points;
     expect(Math.hypot(b[0] - a[0], b[1] - a[1])).toBeCloseTo(5, 8);
   });
+
+  it('does not transform layers that already carry registered coordinates', () => {
+    const registeredOrtho: Ortho = {
+      schema: 'beuteltier.ortho.v1',
+      image: 'wide.jpg',
+      extent: [-30, -10, 40, 20],
+      metresPerPixel: 1,
+      coordinatePlane: 'sceneX/sceneZ',
+      corners: [[-30, 20], [40, 20], [-30, -10], [40, -10]],
+    };
+    const registeredRoads: Surroundings = {
+      schema: 'beuteltier.surroundings.v1',
+      coordinatePlane: 'sceneX/sceneZ',
+      attribution: 'source',
+      roads: [{ id: 1, kind: 'path', name: null, points: [[1, 2], [3, 4]] }],
+      markers: [],
+    };
+    const aligned = alignLegacyLayers(
+      registeredOrtho,
+      registeredRoads,
+      null,
+      { rotationDeg: 90, mirrored: true, translation: [999, 999] },
+      [100, 200, 40],
+    );
+    expect(aligned.ortho).toBe(registeredOrtho);
+    expect(aligned.surroundings).toBe(registeredRoads);
+  });
+
+  it('rejects a registered ortho without explicit corners', () => {
+    const broken: Ortho = {
+      schema: 'beuteltier.ortho.v1',
+      image: 'broken.jpg',
+      extent: [0, 0, 1, 1],
+      metresPerPixel: 1,
+      coordinatePlane: 'sceneX/sceneZ',
+    };
+    expect(() => alignLegacyLayers(
+      broken,
+      null,
+      null,
+      { rotationDeg: 0, mirrored: false, translation: [0, 0] },
+      [0, 0, 0],
+    )).toThrow('keine belegten Szenenecken');
+  });
 });

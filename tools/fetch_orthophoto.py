@@ -8,13 +8,17 @@ abgegriffen werden. Berechtigt -- und die Antwort ist zweigeteilt:
   was der Digitale Zwilling zeigt. Es wird aber in Teilgebieten von 26 bis
   147 **Gigabyte** ausgeliefert, ohne Einzelkacheln. Das ist fuer eine App,
   die offline auf einem Messegelaende laufen soll, keine Option.
-* Die **Orthophotos** gibt es kachelweise: 10 cm Bodenaufloesung, vier
-  Quadratkilometer decken das Gelaende ab, rund 20 MB je Kachel. Das ist
-  ein echtes Luftbild des Messegelaendes -- Boden und Daecher, fotografiert,
+* Die **Orthophotos** gibt es kachelweise: 10 cm Bodenaufloesung. Der
+  vereinbarte 7-x-3-km-Ausschnitt umfasst 21 Kacheln. Das ist ein echtes
+  Luftbild von Innenstadt/Rhein bis A3 -- Boden und Daecher, fotografiert,
   nicht erfunden.
 
 Waende zeigt ein Senkrechtluftbild nicht. Die bleiben prozedural, und das
 steht auch dran.
+
+Die grossen JP2-Quelldateien sind ein lokaler, reproduzierbarer Build-Cache
+und bleiben aus normalen Code-PRs. Eingecheckt werden Fetcher,
+Quellenmetadaten und das fuer Mobilgeraete abgeleitete Webprodukt.
 
 Aufruf:
     python3 tools/fetch_orthophoto.py
@@ -28,16 +32,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "data" / "raw" / "dop"
+sys.path.insert(0, str(ROOT / "tools"))
+
+from beuteltier.world_extent import DOP_VINTAGE, WORLD_BOUNDS, kilometre_tiles
 
 BASE = ("https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/"
         "dop_jp2_f10/")
 
-# Dieselben vier 1-km-Kacheln wie beim Gebaeudemodell, damit sich Bild und
-# Geometrie ohne Umrechnung decken.
-TILES = ("dop10rgbi_32_357_5645_1_nw_2025.jp2",
-         "dop10rgbi_32_357_5646_1_nw_2025.jp2",
-         "dop10rgbi_32_358_5645_1_nw_2025.jp2",
-         "dop10rgbi_32_358_5646_1_nw_2025.jp2")
+# Volle Produktabdeckung: Innenstadt/Rhein bis A3/Parkhaeuser. Die Namen
+# werden aus derselben Grenze wie DGM und LoD2 gebildet; eine manuelle
+# Vierer-Liste hatte die App auf den Messekern abgeschnitten.
+TILES = tuple(
+    f"dop10rgbi_32_{x}_{y}_1_nw_{DOP_VINTAGE}.jp2"
+    for x, y in kilometre_tiles()
+)
 
 USER_AGENT = "BEUTELTIER/1.0 (gamescom-Begleitapp; Datenaufbereitung)"
 
@@ -73,8 +81,9 @@ def main() -> int:
         "portal": BASE,
         "resolutionM": 0.1,
         "crs": "ETRS89 / UTM32N (EPSG:25832)",
-        "vintage": "2025",
+        "vintage": DOP_VINTAGE,
         "licence": "Datenlizenz Deutschland Zero 2.0 (dl-de/zero-2-0)",
+        "extent": list(WORLD_BOUNDS),
         "tiles": list(TILES),
         "note": ("Senkrechtluftbild. Zeigt Boden und Daecher, keine Waende -- "
                  "die bleiben prozedural und sind als solche gekennzeichnet."),

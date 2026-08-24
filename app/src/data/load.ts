@@ -95,6 +95,12 @@ export function alignLegacyLayers(
   const point = (value: [number, number]) => legacyPointToRegistered(value, fit, worldOrigin);
 
   const registeredOrtho = ortho ? (() => {
+    if (ortho.coordinatePlane === 'sceneX/sceneZ') {
+      if (!ortho.corners) {
+        throw new Error('Registriertes Orthofoto besitzt keine belegten Szenenecken.');
+      }
+      return ortho;
+    }
     const [x0, y0, x1, y1] = ortho.extent;
     const corners: NonNullable<Ortho['corners']> = [
       point([x0, y0]),
@@ -109,27 +115,35 @@ export function alignLegacyLayers(
     };
   })() : null;
 
-  const registeredSurroundings = surroundings ? {
-    ...surroundings,
-    coordinatePlane: 'sceneX/sceneZ' as const,
-    roads: surroundings.roads.map((road) => ({
-      ...road,
-      points: road.points.map(point),
-    })),
-    markers: surroundings.markers.map((marker) => ({
-      ...marker,
-      point: point(marker.point),
-    })),
-  } : null;
+  const registeredSurroundings = surroundings
+    ? surroundings.coordinatePlane === 'sceneX/sceneZ'
+      ? surroundings
+      : {
+          ...surroundings,
+          coordinatePlane: 'sceneX/sceneZ' as const,
+          roads: surroundings.roads.map((road) => ({
+            ...road,
+            points: road.points.map(point),
+          })),
+          markers: surroundings.markers.map((marker) => ({
+            ...marker,
+            point: point(marker.point),
+          })),
+        }
+    : null;
 
-  const registeredFootprints = footprints ? {
-    ...footprints,
-    coordinatePlane: 'sceneX/sceneZ' as const,
-    footprints: footprints.footprints.map((entry) => ({
-      ...entry,
-      footprint: entry.footprint.map(point),
-    })),
-  } : null;
+  const registeredFootprints = footprints
+    ? footprints.coordinatePlane === 'sceneX/sceneZ'
+      ? footprints
+      : {
+          ...footprints,
+          coordinatePlane: 'sceneX/sceneZ' as const,
+          footprints: footprints.footprints.map((entry) => ({
+            ...entry,
+            footprint: entry.footprint.map(point),
+          })),
+        }
+    : null;
 
   return {
     ortho: registeredOrtho,

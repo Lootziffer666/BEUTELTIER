@@ -55,6 +55,21 @@ describe('DGM1 terrain geometry', () => {
     expect(repaired.geometry.getAttribute('normal').getY(0)).toBeGreaterThan(0);
   });
 
+  it('preserves a valid terrain mask instead of filling building cells again', () => {
+    const source = twoByThreeGrid();
+    source.setIndex([1, 2, 4, 2, 5, 4]);
+    const repaired = repairTerrainGrid(source);
+    expect(Array.from(repaired.geometry.getIndex()!.array)).toEqual([1, 2, 4, 2, 5, 4]);
+
+    const drape = orthophotoTerrainGeometry(
+      repaired.geometry,
+      repaired.cols,
+      repaired.rows,
+      corners,
+    );
+    expect(Array.from(drape.getIndex()!.array)).toEqual([1, 2, 4, 2, 5, 4]);
+  });
+
   it('maps the southern image edge to v=0 without a second vertical flip', () => {
     expect(registeredOrthoUv(0, 10, corners)).toEqual([0, 0]);
     expect(registeredOrthoUv(10, 10, corners)).toEqual([1, 0]);

@@ -30,6 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from beuteltier import gltf, lod2  # noqa: E402
+from beuteltier.world_extent import ACTIVE_LOD2_BOUNDS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 LOD2_DIR = ROOT / "data" / "raw" / "lod2"
@@ -40,7 +41,7 @@ ORTHO_META = ROOT / "data" / "build" / "ortho.json"
 
 # Ausschnitt des Messegelaendes in UTM32. Grosszuegig genug fuer die Umgebung,
 # eng genug, um nicht halb Deutz mitzunehmen.
-BOUNDS = (357700.0, 5645200.0, 358900.0, 5646500.0)
+BOUNDS = ACTIVE_LOD2_BOUNDS
 
 # Ab welcher Grundflaeche ein Gebaeude als Halle in Frage kommt.
 HALL_AREA_SQM = 2500.0

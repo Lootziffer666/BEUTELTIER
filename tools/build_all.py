@@ -21,7 +21,7 @@ TOOLS = Path(__file__).resolve().parent
 STEPS = ["build_world_origin.py",
          "build_site.py", "build_graph.py", "build_registry.py",
          "build_lod2_inventory.py",
-         "build_buildings.py", "build_terrain.py", "build_skyline.py",
+         "build_buildings.py", "build_terrain.py",
          "build_hall_registrations.py",
          "build_registered_layout.py",
          "build_demo_corridor.py",
@@ -108,7 +108,7 @@ def main() -> int:
                      "walkable-surfaces.json", "portals.json",
                       "graph.json", "registry.json", "buildings.json",
                       "footprints.json", "surroundings.json", "ortho.json",
-                      "terrain.json", "skyline.json",
+                      "terrain.json",
                       "world-manifest.json"):
             source = ROOT / "data" / "build" / name
             if source.exists():
@@ -118,7 +118,7 @@ def main() -> int:
     # Kopiere Modelle ins App-Public-Verzeichnis
     models_src = ROOT / "app" / "public" / "models"
     if models_src.exists():
-        for glb in ["terrain.glb", "distant/skyline.glb"]:
+        for glb in ["terrain.glb"]:
             src = models_src / glb
             if src.exists():
                 print(f"  Modell vorhanden: {glb} ({src.stat().st_size // 1024:,} KB)")

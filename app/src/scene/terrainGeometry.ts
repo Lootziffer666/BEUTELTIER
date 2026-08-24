@@ -84,11 +84,10 @@ export function sampleRegisteredTerrainHeight(
 }
 
 /**
- * Das eingecheckte Terrain-GLB enthaelt echte DGM1-Hoehen, aber sein alter
- * Generator hat jede Zelle um eine Zeile versetzt indiziert. Die letzten
- * 1.203 Indizes zeigen deshalb sogar hinter das Vertex-Array. Diese Funktion
- * rekonstruiert ausschliesslich die regelmaessige Raster-Topologie aus den
- * vorhandenen, gemessenen Vertexpositionen; sie erfindet keine Hoehen.
+ * Alte Terrain-GLBs hatten Indizes ausserhalb ihres Vertex-Arrays. Nur dann
+ * wird die regelmaessige Raster-Topologie aus den vorhandenen, gemessenen
+ * Positionen rekonstruiert. Ein gueltiger neuer Index bleibt unveraendert:
+ * er enthaelt die nach realen LoD2-Grundflaechen ausgesparten Gebaeudezellen.
  */
 export function repairTerrainGrid(source: THREE.BufferGeometry): {
   geometry: THREE.BufferGeometry;
@@ -133,27 +132,33 @@ export function repairTerrainGrid(source: THREE.BufferGeometry): {
     }
   }
 
-  const indices = new Uint32Array((cols - 1) * (rows - 1) * 6);
-  let cursor = 0;
-  for (let row = 0; row < rows - 1; row += 1) {
-    for (let col = 0; col < cols - 1; col += 1) {
-      const a = row * cols + col;
-      const b = a + 1;
-      const c = a + cols;
-      const d = c + 1;
-      // Raster-Z nimmt im Asset von Zeile zu Zeile ab. Diese Reihenfolge
-      // zeigt deshalb nach +Y und bleibt von oben sichtbar.
-      indices[cursor++] = a;
-      indices[cursor++] = b;
-      indices[cursor++] = c;
-      indices[cursor++] = b;
-      indices[cursor++] = d;
-      indices[cursor++] = c;
-    }
-  }
-
   const geometry = source.clone();
-  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+  const sourceIndex = source.getIndex();
+  const sourceIndexValid = sourceIndex !== null &&
+    sourceIndex.count > 0 &&
+    sourceIndex.count % 3 === 0 &&
+    Array.from(sourceIndex.array).every((value) => value < position.count);
+  if (!sourceIndexValid) {
+    const indices = new Uint32Array((cols - 1) * (rows - 1) * 6);
+    let cursor = 0;
+    for (let row = 0; row < rows - 1; row += 1) {
+      for (let col = 0; col < cols - 1; col += 1) {
+        const a = row * cols + col;
+        const b = a + 1;
+        const c = a + cols;
+        const d = c + 1;
+        // Raster-Z nimmt im Asset von Zeile zu Zeile ab. Diese Reihenfolge
+        // zeigt deshalb nach +Y und bleibt von oben sichtbar.
+        indices[cursor++] = a;
+        indices[cursor++] = b;
+        indices[cursor++] = c;
+        indices[cursor++] = b;
+        indices[cursor++] = d;
+        indices[cursor++] = c;
+      }
+    }
+    geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+  }
   geometry.computeVertexNormals();
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
@@ -378,6 +383,10 @@ export function orthophotoTerrainGeometry(
     throw new Error('Repariertes Terrain besitzt keine Positionen oder Normalen.');
   }
   if (position.count !== cols * rows) throw new Error('Terrain-Rastermasse widersprechen der Geometrie.');
+  const terrainIndex = terrain.getIndex();
+  if (!terrainIndex || terrainIndex.count === 0 || terrainIndex.count % 3 !== 0) {
+    throw new Error('Repariertes Terrain besitzt keinen gueltigen Dreiecksindex.');
+  }
 
   const uv = new Float32Array(position.count * 2);
   for (let index = 0; index < position.count; index += 1) {
@@ -387,17 +396,14 @@ export function orthophotoTerrainGeometry(
   }
 
   const indices: number[] = [];
-  for (let row = 0; row < rows - 1; row += 1) {
-    for (let col = 0; col < cols - 1; col += 1) {
-      const a = row * cols + col;
-      const b = a + 1;
-      const c = a + cols;
-      const d = c + 1;
-      const centreX = (position.getX(a) + position.getX(d)) / 2;
-      const centreZ = (position.getZ(a) + position.getZ(d)) / 2;
-      if (!insideImage(registeredOrthoUv(centreX, centreZ, corners), 0.005)) continue;
-      indices.push(a, b, c, b, d, c);
-    }
+  for (let offset = 0; offset < terrainIndex.count; offset += 3) {
+    const a = terrainIndex.getX(offset);
+    const b = terrainIndex.getX(offset + 1);
+    const c = terrainIndex.getX(offset + 2);
+    const centreX = (position.getX(a) + position.getX(b) + position.getX(c)) / 3;
+    const centreZ = (position.getZ(a) + position.getZ(b) + position.getZ(c)) / 3;
+    if (!insideImage(registeredOrthoUv(centreX, centreZ, corners), 0.005)) continue;
+    indices.push(a, b, c);
   }
   if (indices.length === 0) throw new Error('Orthofoto und Terrain ueberlappen sich nicht.');
 

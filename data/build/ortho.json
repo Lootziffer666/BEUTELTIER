@@ -4,16 +4,45 @@
   "title": "Digitale Orthophotos, 10 cm",
   "provider": "Geobasis NRW",
   "licence": "Datenlizenz Deutschland Zero 2.0",
-  "vintage": "2025"
+  "vintage": "2025",
+  "extent": [
+   355000.0,
+   5644000.0,
+   362000.0,
+   5647000.0
+  ],
+  "tiles": 21
  },
  "image": "gelaende.jpg",
+ "coordinatePlane": "sceneX/sceneZ",
  "extent": [
-  423.74,
-  137.77,
-  1556.54,
-  1270.57
+  -3300.0,
+  -1200.0,
+  3700.0,
+  1800.0
  ],
- "sizePx": 4096,
- "metresPerPixel": 0.277,
- "note": "Senkrechtluftbild in Gelaendekoordinaten. Zeigt Boden und Daecher. Waende zeigt es nicht -- die sind prozedural."
+ "corners": [
+  [
+   -3300.0,
+   1800.0
+  ],
+  [
+   3700.0,
+   1800.0
+  ],
+  [
+   -3300.0,
+   -1200.0
+  ],
+  [
+   3700.0,
+   -1200.0
+  ]
+ ],
+ "sizePx": [
+  8192,
+  3511
+ ],
+ "metresPerPixel": 0.854,
+ "note": "Nordgerichtetes Senkrechtluftbild auf belegten amtlichen Szenenecken. Zeigt Boden und Daecher, keine Waende."
 }

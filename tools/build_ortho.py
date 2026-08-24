@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Macht aus den Orthophotos eine Textur im BEUTELTIER-Koordinatensystem.
+"""Macht aus den Orthophotos eine registrierte Textur der Aussenwelt.
 
-Die Luftbilder stehen in UTM32 und nordgerichtet, das Gelaendemodell steht um
-31 Grad gedreht in eigenen Metern. Statt das zur Laufzeit auszugleichen -- und
-damit jede Kamera und jedes Mesh mit der Drehung zu belasten -- wird das Bild
-hier einmal entzerrt. Danach ist es achsparallel zum Gelaende, und die App
-legt es ohne Rechnerei auf den Boden.
+Die Luftbilder stehen bereits im amtlichen UTM32-System. Der aktive
+BEUTELTIER-Weltraum benutzt dasselbe System relativ zu ``world-origin.json``.
+Darum wird das Bild nicht mehr in den gedrehten historischen Hallenplan
+zurueckgerechnet: Es bleibt nordgerichtet und bekommt vier belegte Szenenecken.
 
 Ein Senkrechtluftbild zeigt Boden und Daecher. Waende zeigt es nicht; die
 bleiben prozedural und sind in der App als solche gekennzeichnet.
@@ -16,16 +15,22 @@ Aufruf:
 from __future__ import annotations
 
 import json
-import math
 import sys
 from pathlib import Path
 
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tools"))
+
+from beuteltier.world_extent import (  # noqa: E402
+    DOP_VINTAGE,
+    WORLD_BOUNDS,
+    kilometre_tiles,
+)
+
 DOP_DIR = ROOT / "data" / "raw" / "dop"
-BUILDINGS = ROOT / "data" / "build" / "buildings.json"
-SITE = ROOT / "data" / "build" / "site.json"
+WORLD_ORIGIN = ROOT / "data" / "build" / "world-origin.json"
 OUT_IMAGE = ROOT / "app" / "public" / "models" / "gelaende.jpg"
 OUT_META = ROOT / "data" / "build" / "ortho.json"
 
@@ -33,15 +38,15 @@ OUT_META = ROOT / "data" / "build" / "ortho.json"
 TILE_M = 1000.0
 NATIVE_RES_M = 0.1
 # Beim Dekodieren wird geviertelt: 40 cm je Bildpunkt reichen fuer eine
-# Bodentextur und passen in den Speicher. Voll aufgeloest waeren die vier
-# Kacheln zusammen 400 Megapixel.
+# Bodentextur und passen in den Speicher. Voll aufgeloest waeren die 21
+# Kacheln zusammen 2,1 Gigapixel.
 DECODE_REDUCE = 2
 
-# Kantenlaenge der Ausgabe. 5120 auf gut 1300 m sind rund 25 cm je Bildpunkt.
-# Das nutzt mehr von den 10-cm-Quelldaten als die bisherige 4096er-Ausgabe,
-# bleibt als progressive JPEG aber deutlich kleiner als eine native Textur.
-OUT_SIZE = 5120
-MARGIN_M = 120.0
+# 8192 Pixel sind auf gaengigen mobilen GPUs noch eine einzelne Textur. Das
+# Seitenverhaeltnis bleibt metrisch: 7 km × 3 km werden nicht quadratisch
+# gestreckt. Die resultierenden rund 85 cm/Pixel sind fuer den weiten Kontext
+# ehrlich benannt; die 10-cm-Quelle wird nicht als 10-cm-Webtextur ausgegeben.
+OUT_WIDTH = 8192
 JPEG_QUALITY = 82
 
 Image.MAX_IMAGE_PIXELS = None
@@ -55,9 +60,16 @@ def tile_origin(name: str) -> tuple[float, float]:
 
 def load_mosaic() -> tuple[Image.Image, tuple[float, float], float]:
     """Setzt die Kacheln zu einem Bild zusammen. Gibt Bild, Ursprung, Aufloesung."""
-    tiles = sorted(DOP_DIR.glob("*.jp2"))
-    if not tiles:
-        raise FileNotFoundError("keine Orthophotos -- erst tools/fetch_orthophoto.py")
+    names = tuple(
+        f"dop10rgbi_32_{x}_{y}_1_nw_{DOP_VINTAGE}.jp2"
+        for x, y in kilometre_tiles()
+    )
+    tiles = [DOP_DIR / name for name in names]
+    missing = [path.name for path in tiles if not path.exists() or path.stat().st_size == 0]
+    if missing:
+        raise FileNotFoundError(
+            f"{len(missing)} Orthofoto-Kacheln fehlen: {', '.join(missing[:4])}"
+        )
 
     origins = [tile_origin(path.name) for path in tiles]
     min_x = min(origin[0] for origin in origins)
@@ -85,78 +97,68 @@ def load_mosaic() -> tuple[Image.Image, tuple[float, float], float]:
 
 
 def main() -> int:
-    if not BUILDINGS.exists() or not SITE.exists():
-        print("buildings.json oder site.json fehlt -- erst tools/build_buildings.py",
+    if not WORLD_ORIGIN.exists():
+        print("world-origin.json fehlt -- erst tools/build_world_origin.py",
               file=sys.stderr)
         return 1
 
-    fit = json.loads(BUILDINGS.read_text(encoding="utf-8"))["fit"]
-    site = json.loads(SITE.read_text(encoding="utf-8"))
-
-    rotation = math.radians(fit["rotationDeg"])
-    cos_r, sin_r = math.cos(rotation), math.sin(rotation)
-    tx, ty = fit["translation"]
-    mirror = fit["mirrored"]
-
-    points = [point for hall in site["halls"] for point in hall["footprint"]]
-    xs = [point[0] for point in points]
-    ys = [point[1] for point in points]
-    x0, x1 = min(xs) - MARGIN_M, max(xs) + MARGIN_M
-    y0, y1 = min(ys) - MARGIN_M, max(ys) + MARGIN_M
-    span = max(x1 - x0, y1 - y0)
-    # Quadratisch, damit die Textur nicht verzerrt und die UVs trivial bleiben.
-    x1, y1 = x0 + span, y0 + span
-
     print("Orthophotos zusammensetzen ...")
     mosaic, (mosaic_x, mosaic_y), resolution = load_mosaic()
+    min_x, min_y, max_x, max_y = WORLD_BOUNDS
+    source_bounds = (
+        mosaic_x,
+        mosaic_y - mosaic.height * resolution,
+        mosaic_x + mosaic.width * resolution,
+        mosaic_y,
+    )
+    if any(abs(one - two) > resolution for one, two in zip(source_bounds, WORLD_BOUNDS)):
+        raise ValueError(
+            f"Orthofoto-Mosaik {source_bounds} deckt Weltausschnitt {WORLD_BOUNDS} nicht exakt"
+        )
 
-    # Ausgabepixel (u, v) -> Gelaende -> UTM -> Quellpixel. Die ganze Kette ist
-    # affin, deshalb reicht eine einzige Transformation statt einer Schleife
-    # ueber 16 Millionen Bildpunkte.
-    step = span / OUT_SIZE
-
-    def to_source(site_x: float, site_y: float) -> tuple[float, float]:
-        sx = -site_x if mirror else site_x
-        utm_x = cos_r * sx - sin_r * site_y + tx
-        utm_y = sin_r * sx + cos_r * site_y + ty
-        return ((utm_x - mosaic_x) / resolution, (mosaic_y - utm_y) / resolution)
-
-    origin = to_source(x0, y1)
-    along_u = to_source(x0 + step, y1)
-    along_v = to_source(x0, y1 - step)
-    matrix = (along_u[0] - origin[0], along_v[0] - origin[0], origin[0],
-              along_u[1] - origin[1], along_v[1] - origin[1], origin[1])
-
-    print(f"  entzerren auf {OUT_SIZE}x{OUT_SIZE} "
-          f"({span:.0f} m, {100 * span / OUT_SIZE:.0f} cm je Bildpunkt) ...")
-    warped = mosaic.transform((OUT_SIZE, OUT_SIZE), Image.AFFINE, matrix,
-                              resample=Image.BICUBIC)
+    width_m = max_x - min_x
+    height_m = max_y - min_y
+    out_height = round(OUT_WIDTH * height_m / width_m)
+    print(f"  verkleinern auf {OUT_WIDTH}x{out_height} "
+          f"({width_m:.0f}x{height_m:.0f} m, "
+          f"{100 * width_m / OUT_WIDTH:.0f} cm je Bildpunkt) ...")
+    warped = mosaic.resize((OUT_WIDTH, out_height), Image.Resampling.LANCZOS)
 
     OUT_IMAGE.parent.mkdir(parents=True, exist_ok=True)
     warped.save(OUT_IMAGE, "JPEG", quality=JPEG_QUALITY, optimize=True,
                 progressive=True)
 
+    world_origin = json.loads(WORLD_ORIGIN.read_text(encoding="utf-8"))["origin"]
+    west = min_x - world_origin[0]
+    east = max_x - world_origin[0]
+    south = -(min_y - world_origin[1])
+    north = -(max_y - world_origin[1])
+    corners = [[west, south], [east, south], [west, north], [east, north]]
     meta = {
         "schema": "beuteltier.ortho.v1",
         "source": {
             "title": "Digitale Orthophotos, 10 cm",
             "provider": "Geobasis NRW",
             "licence": "Datenlizenz Deutschland Zero 2.0",
-            "vintage": "2025",
+            "vintage": DOP_VINTAGE,
+            "extent": list(WORLD_BOUNDS),
+            "tiles": len(kilometre_tiles()),
         },
         "image": OUT_IMAGE.name,
-        "extent": [round(x0, 2), round(y0, 2), round(x1, 2), round(y1, 2)],
-        "sizePx": OUT_SIZE,
-        "metresPerPixel": round(span / OUT_SIZE, 3),
-        "note": ("Senkrechtluftbild in Gelaendekoordinaten. Zeigt Boden und "
-                 "Daecher. Waende zeigt es nicht -- die sind prozedural."),
+        "coordinatePlane": "sceneX/sceneZ",
+        "extent": [round(west, 2), round(north, 2), round(east, 2), round(south, 2)],
+        "corners": corners,
+        "sizePx": [OUT_WIDTH, out_height],
+        "metresPerPixel": round(max(width_m / OUT_WIDTH, height_m / out_height), 3),
+        "note": ("Nordgerichtetes Senkrechtluftbild auf belegten amtlichen "
+                 "Szenenecken. Zeigt Boden und Daecher, keine Waende."),
     }
     OUT_META.write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n",
                         encoding="utf-8")
 
     size_mb = OUT_IMAGE.stat().st_size / 1e6
-    print(f"\n{OUT_SIZE}x{OUT_SIZE}, {size_mb:.1f} MB -> {OUT_IMAGE}")
-    print(f"Ausdehnung {x0:.0f}..{x1:.0f} x {y0:.0f}..{y1:.0f} -> {OUT_META}")
+    print(f"\n{OUT_WIDTH}x{out_height}, {size_mb:.1f} MB -> {OUT_IMAGE}")
+    print(f"UTM-Ausdehnung {WORLD_BOUNDS} -> {OUT_META}")
     return 0
 
 

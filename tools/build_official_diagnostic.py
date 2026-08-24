@@ -16,13 +16,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from beuteltier import gltf, lod2  # noqa: E402
+from beuteltier.world_extent import ACTIVE_LOD2_BOUNDS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 LOD2 = ROOT / "data/raw/lod2"
 ORIGIN = ROOT / "data/build/world-origin.json"
 DEFAULT_OUT = ROOT / "data/build/official-world-diagnostic.glb"
 DEFAULT_REPORT = ROOT / "data/build/official-world-diagnostic.json"
-BOUNDS = (357700.0, 5645200.0, 358900.0, 5646500.0)
+BOUNDS = ACTIVE_LOD2_BOUNDS
 COLOURS = {
     "ground": (0.25, 0.72, 0.42, 1.0),
     "wall": (0.58, 0.66, 0.76, 1.0),

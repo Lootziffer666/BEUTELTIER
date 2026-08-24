@@ -6,203 +6,135 @@ Autoritative Ausgangsstaende:
 
 - SHADED `origin/main`: `732c24b98e304f3278b76e82dd164467497e60c3`
 - BEUTELTIER `origin/main`: `963251a004090450055c27454c175d744f58547b`
-- SHADED Recovery-Branch: `recovery/honest-spatial-path`, Remote-Commit
-  `e4062a1`, PR [SHADED #73](https://github.com/Lootziffer666/SHADED/pull/73)
-  (lokal inhaltlich gleicher Tree: `ec3235a`)
-- BEUTELTIER Recovery-Branch: `recovery/wednesday-corridor`, PR
-  [BEUTELTIER #43](https://github.com/Lootziffer666/BEUTELTIER/pull/43)
+- SHADED Recovery: PR [#73](https://github.com/Lootziffer666/SHADED/pull/73)
+- BEUTELTIER Recovery: Branch `recovery/wednesday-corridor`, PR
+  [#43](https://github.com/Lootziffer666/BEUTELTIER/pull/43)
 
 ## NOW
 
-PR #43 erhaelt die kleinste Korrektur aus der mobilen Sichtpruefung: Im
-registrierten Modus bleibt nur das echte DGM-Terrain aktiv; die falsch
-registrierte flache Fotoflaeche ist entfernt. OSM-Linien werden auf belegte
-DGM-Hoehen gelegt und auf den vorhandenen Orthofoto-Ausschnitt begrenzt. Die
-Kamera-Presets setzen die Kamera nun wirklich neu, die Kartenkamera kann frei
-verschoben werden und bleibt oberhalb ihres Ziels; fuer `Begehen` gibt es eine
-echte Touch-Steuerung. Der Boulevard und die bekannten Aussenflaechen erhalten
-denselben registrierten Hoehenbezug wie ihre Anschluss-Hallen. Die schwarze
-Invert-Hull-Kontur und der Cel-Look als Standard sind deaktiviert. Offen ist
-die mobile WebGL-Sichtpruefung des neuen PR-Deployments; ein fehlender
-Bildnachweis wird nicht als bestanden ausgegeben.
+Der BEUTELTIER-Aussenraum wird auf einen gemeinsamen amtlichen Ausschnitt
+gebracht: 7 x 3 km von der Koelner Innenstadt westlich des Rheins ueber
+Bahnhof und Messe bis A3/Parkhaeuser. Das alte 1,13-km-Fotogelaende und das
+nord-sued-gespiegelte DGM sind ersetzt. Das DGM wird unter den tatsaechlich
+gerenderten LoD2-Grundflaechen ausgespart, damit es Hallen nicht mehr
+durchschneidet. Eine neue mobile WebGL-Sichtpruefung steht noch aus.
 
 ## PROVEN WORKING
 
 ### BEUTELTIER
 
-- 142 Python-Pipeline-Tests bestehen in einer frischen Umgebung.
-- 300 Frontend-Tests bestehen; App- und World-Builder-Produktionsbuild
-  entstehen.
-- Der aktive registrierte Modus fuehrt Hallen, Graph, Orthofoto, OSM-Wege und
-  ALKIS-Luecken jetzt im selben `sceneX/sceneZ`-Raum. Der eingecheckte Marker
-  `Eingang Sued` landet bei `(-377,35 / 449,48)`; die Transformation bewahrt
-  metrische Abstaende. Fehlt die belegende Passung, bricht der Ladevorgang ab.
-- Der Aussenweg wird bei jedem Build per Dijkstra aus dem eingecheckten
-  OSM-Snapshot gebaut: Bahnhofsausgang Ottoplatz (`node 2019682768`) bis
-  Eingang Sued (`node 3063838345`), 33 Knoten, 479,3 m.
-- Derselbe bestehende `RouteGraph` enthaelt danach 12.181 Knoten und 19.009
-  Kanten. Ein ausgefuehrter Routentest erreicht von dort die Zielzelle in
-  Halle 10.1 und durchlaeuft sowohl `outdoor`- als auch `portal`-Kanten.
-- Die Oberfläche zeigt Start, Ziel, fuenf Etappen, OSM-Quellenmass,
-  Darstellungsart `ROUTE_GRAPH_POLYLINE` und die Unsicherheit gleichzeitig.
-  Wird eine benoetigte Verbindung gesperrt, meldet sie `FAILED` statt Erfolg.
-- Registrierte amtliche Render-GLBs stehen in allen Presets bei 100 %
-  Deckkraft; transparente Legacy-Hallen werden dort nie gerendert. Stände
-  beginnen ausgeschaltet und koennen als eigene Ebene zugeschaltet werden.
-  Nur der demonstrative Korridor darf als Kartenband vor Geometrie liegen.
-- Das eingecheckte `terrain.glb` enthaelt 329.221 reale DGM1-Messpunkte mit
-  relativen Hoehen von -1,28 bis 10,54 m. Sein alter Index enthielt 1.203
-  ungueltige Referenzen; der aktive Renderer baut daraus nun deterministisch
-  1.968.000 gueltige Indizes bis maximal 329.220. Der Generator ist ebenfalls
-  korrigiert und bricht ohne DGM1 ab, statt ein Flachraster vorzutäuschen.
-- Das reale Geobasis-NRW-Orthofoto wird affine in denselben registrierten
-  Szenenraum projiziert. Der Asset-Nachweis ergibt 104.716 ueberdeckte
-  Terrain-Dreiecke; Daecher innerhalb desselben Ausschnitts erhalten dieselbe
-  reale Bildquelle. Ein ausgefuehrter Hall-10-Abgleich zeigte, dass die alte
-  V-Achse den begruenten Gegenbereich auf das Dach legte; die korrigierte
-  Achse trifft den Hall-10-Dachbereich.
-- Der alte Hallengenerator verwendete fuer alle Gebaeude pauschal den
-  niedrigsten LoD2-Bodenwert des Ausschnitts. Neu erzeugt liegen Halle 10.1
-  bei 46,30 m NHN und 10.2 bei 53,75 m NHN; Stände, Wegegitter, Portale und
-  Treppen uebernehmen denselben Bezug. Nur F2, F8 und FB besitzen kein
-  LoD2-Gebaeude und sind sichtbar als `UNCONFIRMED_GLOBAL_GROUND_REFERENCE`
-  gekennzeichnet.
-- LoD2 und DGM bleiben als zwei belegte Quellen getrennt. Die zuvor sichtbare
-  abgeleitete Sockelfassade ist deaktiviert: Sie schloss zwar rechnerisch die
-  Luecke, sah aber wie eine echte Wand aus, obwohl diese Flaeche nicht vermessen
-  ist.
-- Nordboulevard, Suedteil, Treppe, Piazza, Aussenflaeche 9/10 und der Bereich
-  hinter Halle 8 lesen jetzt die registrierten Hallenboeden. Fehlt einer dieser
-  Bezuege, bricht der Generator ab; es gibt keinen stillen Nullmeter-Ersatz.
-- Kartenkamera: freie Verschiebung statt reinem Kreisen um die Mitte; ein- und
-  zweifingerige Gesten sind getrennt. `Begehen` hat auf Touchgeraeten links
-  Bewegung und rechts Blicksteuerung. Die vier Preset-Schalter loesen wieder
-  eine echte Kamerafahrt aus.
-- Aussenwaende bleiben ohne Fotobehauptung: Die unzutreffende gekachelte
-  Familienzeichnung ist dort entfernt. Die vorhandenen sogenannten
-  Fassadenbilder sind weiterhin keine belastbaren Hallenfassaden.
-- Die binaere Hoehenabfrage liest den belegten 48-Byte-Header und denselben
-  DGM-Raster wie das GLB. Lade- und Formatfehler werden sichtbar gemeldet,
-  nicht mehr auf eine behauptete flache Hoehe reduziert.
-- LoD2, DGM1-Terrain, OSM-Snapshot, Hallenplaene, registrierte Halle 10.1,
-  Fassadenreferenzen und amtliche Weltpakete bleiben unveraendert erhalten.
+- `origin/main` wurde vor der Schreibphase erneut geprueft und steht weiterhin
+  auf `963251a004090450055c27454c175d744f58547b`.
+- 21 amtliche DOP-Kacheln (2025), 21 amtliche LoD2-Kacheln und DGM1 fuer
+  `EPSG:25832`-Bounds `[355000,5644000,362000,5647000]` wurden real geladen.
+  Rohdaten bleiben wegen zusammen ueber 1 GB ausserhalb normaler Code-PRs;
+  Fetcher, Quellenmetadaten und Webprodukte sind reproduzierbar im Branch.
+- Das nordgerichtete Orthofoto ist 8192 x 3511 px, 8.747.765 Byte und deckt
+  7 x 3 km ohne quadratische Streckung ab (0,854 m/px Webprodukt). Sichtpruefung
+  des Bildes belegt Rhein, Innenstadt, Bahnhof/Deutz, Messe und A3 im selben
+  Mosaik.
+- Das Terrain enthaelt 211.001 reale DGM-Samples im 10-m-Mobilraster
+  (amtliche 1-m-Quelle), 40,92 bis 81,58 m NHN. Der WCS liefert Nord zuerst;
+  der Generator dreht die Zeilen jetzt genau einmal auf einen Suedwest-Ursprung.
+- Das erzeugte Terrain besitzt 403.996 gueltige Dreiecke. 8.002 Rasterzellen
+  sind nur dort entfernt, wo 2.567 amtliche LoD2-`GroundSurface`-Flaechen des
+  aktiven Messeausschnitts liegen. Quelle, Bounds, Verfahren und Anzahl stehen
+  in `terrain.json` und im GLB; der Browser erhaelt diese Maske unveraendert.
+- Registrierte Orthofoto-, OSM- und ALKIS-Layer werden nicht ein zweites Mal
+  transformiert. Registriertes Orthofoto ohne belegte Szenenecken bricht ab.
+- Die Fake-Skyline war ein unvollstaendiger hartcodierter Zylinder/Stub und
+  ist aus Runtime, Manifest und Build entfernt. Es wird keine Fernkulisse als
+  vermessen ausgegeben.
+- Der bestehende reale Korridor Bahnhofsausgang Ottoplatz -> Eingang Sued
+  besteht aus dem eingecheckten OSM-Snapshot (33 Knoten, 479,3 m). Der weitere
+  Graph erreicht Halle 10.1; unbestaetigte Venue-Verbindungen bleiben gelb
+  und als unbestaetigt bezeichnet.
+- Registrierte Weltpakete sind undurchsichtig; Staende starten ausgeschaltet
+  und sind zuschaltbar. Eine gewaehlte Halle kann ueber ihre amtlichen
+  Feature-IDs hervorgehoben werden. Der Standard-Cel-Look und seine schwarze
+  Invert-Hull-Kontur sind deaktiviert.
+- Kartenkamera kann verschoben werden; Presets setzen Kamera und Ziel neu.
+  Touch-Begehen besitzt getrennte Bewegungs- und Blickbereiche. Das ist durch
+  Komponenten-/Logiktests, noch nicht durch den ausstehenden Mobilbildnachweis
+  belegt.
+- 303 Frontend-Tests, 145 Python-Pipeline-Tests, TypeScript und beide
+  Produktionsbuilds bestehen. Die gebauten kritischen Assets antworten lokal
+  mit HTTP 200 und exakt ihren erwarteten Dateigroessen.
+- Das 8,75-MB-Luftbild und GLBs blockieren die PWA-Installation nicht. Sie
+  werden nach dem ersten erfolgreichen Abruf gecacht; vorher wird keine
+  Offline-Verfuegbarkeit behauptet.
 
 ### SHADED
 
-- Der aktive Bildoperator ist jetzt separat ausgefuehrt getestet:
-  `RGB + bereitgestellte relative 8-Bit-Tiefe -> POINTS`.
-- Quell-RGB erreicht die Punkte unveraendert. Tiefengeometrie traegt
-  `INFERRED`, Farbe `OBSERVED_SOURCE_RGB`.
-- Der Operator gibt sichtbar und maschinenlesbar aus: relative/nichtmetrische
-  Skala, unbekannte Zuverlaessigkeit, angenommene 60-Grad-Kamera (wenn keine
-  FOV angegeben ist), `registration.performed:false` und
-  `fusion.performed:false`.
-- Fehlende Tiefenkonfidenz bleibt `null/UNKNOWN`; sie wird nicht mehr aus dem
-  Tiefenwert oder aus Konstanten erzeugt. Dasselbe gilt fuer generierte
-  Spiegelhuelle, Weltpunkte und prozedurale Begrenzung.
-- Provider-Importe ohne XYZ+RGB brechen ab. Es gibt keine grauen
-  Platzhalterfarben mehr im sichtbaren Import; ein vorhandener
-  Konfidenzkanal wird verwendet, ein fehlender bleibt unbekannt.
-- Die aktive Ansicht kennzeichnet `VIEW POINTS · STATE VOXELS`; die API nennt
-  `meshRendered:false`. `npm run check` einschliesslich aktivem Operator-,
-  Rekonstruktions-, Voxel-, Weltgesetz-, PWA- und Provider-Vertragstest
-  besteht.
+- Der belegte aktive Pfad bleibt: bereitgestelltes RGB plus relative
+  8-Bit-Companion-Tiefe -> `POINTS`; Quell-RGB erreicht die Punkte.
+- Tiefe bleibt relativ/nichtmetrisch, Kamera bleibt angegeben oder sichtbar
+  angenommen, Zuverlaessigkeit bleibt `UNKNOWN`, wenn die Quelle keine liefert.
+- Registrierung und Fusion melden `performed:false`; es gibt keinen falschen
+  Erfolg. Die aktive Darstellung nennt `VIEW POINTS · STATE VOXELS`.
 - Regen, Naesse, Pfuetzen, Wind, Feuer, Schnee, Vegetation und persistenter
   Weltzustand bleiben in ihren aktiven Aufruf-/Shaderpfaden erhalten.
 
 ## CAPABILITY MAP
 
-| Projekt / Faehigkeit | Status | Autoritativer Pfad / Beleg |
+| Faehigkeit | Status | Autoritativer Beleg |
 |---|---|---|
 | SHADED Bild + Weltgesetze | REAL + ACTIVE | `index.html -> runtime/shaded-engine.mjs` |
-| SHADED RGB + Companion-Tiefe -> Punkte | PARTIAL | `runtime/spatial-point-cloud.mjs`; echte RGB-Ausgabe, aber kein Provider-/Metriknachweis |
-| SHADED Kamera | PARTIAL | FOV vom Aufrufer oder sichtbar angenommene 60 Grad; Intrinsics unbekannt |
-| SHADED Registrierung / Fusion im Hauptweg | DEAD | `performed:false`; kein aktiver Aufruf |
-| SHADED Voxelzustand / Navigation | REAL + ACTIVE | `spatial-viewer.js -> spatial-navigation.mjs -> sparse-voxel-world.mjs` |
-| SHADED Mesh-Extraktion | REAL + UNUSED | `extractSurfaceMesh()` ist getestet; der aktive Viewer zeichnet keine Dreiecke |
-| SHADED Solid-Mesh-Overlay | DEAD | `spatial-solid-runtime.js` ist nicht von `index.html` geladen |
-| SHADED Providerkatalog | REAL + UNUSED / SIMULATION / STUB gemischt | nicht an den Hauptweg angeschlossen |
-| SHADED Photo-First-Generation | BROKEN | 20 von 25 Alt-Tests scheitern; nicht Hauptproduktpfad |
-| SHADED Benchmark-Floor | TEST-ONLY / STUB | Testhistorie erhalten, kein Rekonstruktionsbenchmark |
-| BEUTELTIER registrierte Hallenwelt | REAL + ACTIVE | `registered-site.json` + `registered-graph.json` |
-| BEUTELTIER Standrouting | REAL + ACTIVE | bestehender `RouteGraph` und `findRoute()` |
-| BEUTELTIER Bahnhof -> Eingang Sued | REAL + ACTIVE auf Recovery-Branch | Dijkstra aus eingechecktem OSM-Snapshot |
-| BEUTELTIER Eingang Sued -> Halle 10.1 | PARTIAL | durchgaengiger Graph, aber Venue-Abschnitt sichtbar `unbestaetigt` |
-| BEUTELTIER DGM1 + Orthofoto | REAL + ACTIVE auf Recovery-Branch | gemessene Hoehen; gueltig repariertes Raster; korrigierte registrierte Bildprojektion auf Terrain/Daecher |
-| BEUTELTIER LoD2-Hallenboden | REAL + ACTIVE auf Recovery-Branch | hallenbezogener DHHN2016-Bezug; kein als echt ausgegebener DGM-Anschluss |
-| BEUTELTIER angebliche Fassadenfotos | BROKEN + UNUSED | vorhandene JPGs zeigen nicht belastbar die bezeichneten Hallen und bleiben isoliert |
-| BEUTELTIER Browserdarstellung | UNKNOWN | Builds/Komponententests bestanden; Chromium in Arbeitsumgebung nicht verfuegbar |
+| SHADED RGB + Companion-Tiefe -> Punkte | PARTIAL | echte RGB-Punkte; keine metrische Tiefe/Provider-Kalibrierung |
+| SHADED Registrierung / Fusion | DEAD | im Hauptweg `performed:false` |
+| SHADED Voxelzustand | REAL + ACTIVE | `spatial-navigation.mjs -> sparse-voxel-world.mjs` |
+| SHADED Mesh-Extraktion | REAL + UNUSED | getestet, aktiver Viewer zeichnet keine Dreiecke |
+| SHADED Providerkatalog | REAL + UNUSED / SIMULATION / STUB gemischt | Bibliothek, nicht Mittwoch-Backlog |
+| BEUTELTIER registrierte Hallenwelt | REAL + ACTIVE | `registered-site.json`, amtliche Weltpakete |
+| Bahnhof -> Eingang Sued | REAL + ACTIVE | Dijkstra aus OSM-Snapshot |
+| Eingang Sued -> Halle 10.1 | PARTIAL | durchgaengiger Graph; Venue-Abschnitt unbestaetigt |
+| DOP-Aussenwelt 7 x 3 km | REAL + ACTIVE auf Recovery-Branch | 21 DOP-Kacheln, registriertes 8192-x-3511-Webprodukt |
+| DGM-Aussenwelt 7 x 3 km | REAL + ACTIVE auf Recovery-Branch | 211.001 Samples, reale LoD2-Gebaeudemaske |
+| LoD2-Daten 7 x 3 km | REAL + UNUSED ausserhalb Kern | 21 Kacheln beschafft; Runtimepakete noch Kernbereich |
+| Fassadenbilder | BROKEN + UNUSED | vorhandene Dateien sind nicht belastbar den Hallen zugeordnet |
+| Browserdarstellung dieses Builds | UNKNOWN | Build/HTTP gruen; lokaler Chromium-Download blockiert |
 
 ## BROKEN / FAKE / DEAD
 
-- SHADED besitzt keinen im Haupt-UI ausfuehrbaren Tiefenprovider. Die
-  Companion-Datei hat keinen belegten Provider, keine Kamerakalibrierung und
-  keine metrische Skala. Hier endet der ehrliche Rekonstruktionsnachweis.
-- Der aktive SHADED-Viewer zeichnet WebGL-`POINTS`. Eine Mesh-API und ein
-  nicht eingebundenes Solid-Overlay existieren, sind aber kein sichtbarer
-  Produktnachweis.
-- Depth Anything 2/3, VGGT und COLMAP sind in der geprueften Umgebung nicht
-  ausfuehrbar. Der Software-Tiefenweg ist eine Heuristik.
-- `tools/gpu-providers.all.json` plus `tools/shaded-provider.py` ist eine
-  gemischte Simulations-/Proxy-Sammlung. `tools/test-all-providers.mjs`
-  meldet selbst fehlende Skripte und gescheiterte Doctors als PASS. Diese
-  Zahl ist kein Faehigkeitsnachweis.
-- Mehrere alte Spatial-Integratoren enthalten `would do`, Platzhalterfarben
-  oder pauschalen Erfolg. Sie sind im Haupt-UI nicht erreichbar und werden
-  nicht als Produktpfad gezaehlt.
-- BEUTELTIERs Abschnitt Eingang Sued -> Piazza/Boulevard ist beobachtet, aber
-  nicht als metrische Innenachse vermessen. Die vorhandene Passage 5-10 traegt
-  46,8 m Lageunsicherheit und bleibt `unbestaetigt`.
-- Das eingecheckte alte `terrain.glb` hat einen kaputten Index. Der aktive
-  Branch repariert ihn beim Laden aus der belegten Rasterordnung; ein spaeter
-  neu gebautes Asset kommt aus dem korrigierten Generator. Das binaere Asset
-  selbst wird nicht heimlich als generierte PR-Beilage ersetzt.
-- `app/public/models/facades/*.jpg` und die entsprechenden Texturatlanten sind
-  keine belastbaren Bilder der so bezeichneten Hallen. Sie bleiben unbenutzt;
-  echte Fassadentexturierung ist damit noch nicht belegt.
-- Der OSM-Aussenkorridor besitzt im Routengraph weiterhin keine belegte
-  Hoehenquelle (`elevation: unknown-render-plane`). Sichtbare OSM-Linien liegen
-  im vorhandenen DGM-/Orthofoto-Ausschnitt auf dem DGM; Piazza, Boulevard und
-  benannte Messe-Aussenflaechen verwenden ihre dokumentierten Hallenbezuege.
-- Der eingecheckte Orthofoto-Ausschnitt ist nur rund 1,13 x 1,13 km gross,
-  waehrend der OSM-Snapshot rund 3,8 x 3,2 km umfasst. Weder BEUTELTIER noch
-  der gepruefte SHADED-Import enthaelt die groesseren Bildkacheln. Das Bild
-  wird deshalb nicht gestreckt; ausserhalb seiner belegten Abdeckung wird auch
-  kein Fotogelände behauptet.
-- LoD2-Unterkanten und DGM weichen an mehreren Hallen sichtbar voneinander ab.
-  Beide Quellen bleiben unveraendert; die fruehere abgeleitete Wand dazwischen
-  ist nicht mehr aktiv. Eine physisch richtige Verbindung ist mit den
-  eingecheckten Quellen noch nicht belegt.
-- Die oeffentliche Vercel-Seite laedt im Cloud-Browser, dessen sandboxed Chrome
-  kann jedoch keinen WebGL-Kontext erzeugen. Die PR-Vorschau ist zusaetzlich
-  durch Vercel-Login geschuetzt. Deshalb existiert hier kein Bild-PASS.
+- Die neue Szene hat noch keinen WebGL-Bild-PASS. In der Arbeitsumgebung ist
+  kein Browser vorhanden; der erlaubte Playwright-Download liefert 0-Byte-
+  Archive. Ein Build- oder HTTP-PASS wird nicht als Sichtnachweis ausgegeben.
+- Die bereits beschafften weiteren LoD2-Gebaeude westlich des Rheins und bis
+  A3 sind noch nicht in die mobilen Runtimepakete uebernommen. Der aktive
+  LoD2-Ausschnitt bleibt `[357700,5645200,358900,5646500]`.
+- Reale DGM-Hoehe und LoD2-Gebaeudeunterkante widersprechen sich lokal, z. B.
+  bei Halle 10 um rund 7,5 m. Deshalb wird DGM dort nicht gerendert; es wird
+  keine erfundene Sockelfassade zwischen den Quellen erzeugt.
+- Boulevard, bekannte Aussenflaechen und Ego-Steuerung wurden korrigiert, sind
+  nach den letzten Nutzerbildern aber bis zur neuen Mobilpruefung weiterhin
+  `UNKNOWN`, nicht `PROVEN WORKING`.
+- Waende besitzen keine belastbaren Fototexturen. Daecher und Terrain duerfen
+  das reale Senkrechtluftbild tragen; eine Wandtextur daraus waere falsch.
+- SHADED besitzt im Haupt-UI keinen ausfuehrbaren Tiefenprovider und keinen
+  ehrlichen metrischen Rekonstruktions-, Registrierungs- oder Fusionspfad.
+- Der gemischte SHADED-Provider-/Benchmarkbestand enthaelt Simulationen,
+  `would do` und falsche PASS-Logik; er bleibt ausserhalb des Produktpfads.
 
 ## WEDNESDAY PATH
 
-1. Den neuen Build von PR #43 in einem WebGL-faehigen Browser oeffnen und
-   pruefen: nur ein registriertes Fotogelände, Strassen auf dem DGM, freie
-   Kartenbewegung, funktionierende Presets und Touch-Begehen, keine schwarze
-   Kontur, Boulevard/Aussenflaechen an ihren Anschluss-Hoehen.
-2. PR #43 und PR #73 reviewen; nur bei weiterhin gruenen Checks und nach der
-   Sichtpruefung mergen.
-3. Genau diesen Korridor zeigen. Keine weitere Halle und keinen neuen
-   SHADED-Provider vor Mittwoch einbauen.
+1. Neuen PR-Preview auf einem WebGL-faehigen Mobilgeraet pruefen: kein weisser
+   Bildschirm; Luftbild bis Rhein/A3; Hallen nicht im/unter Terrain; keine
+   Fake-Kontur; Kamera verschiebbar; Presets und Touch-Begehen reagieren.
+2. Nur beobachtete Restfehler korrigieren. Keine weitere Forschungs- oder
+   Providerarbeit beginnen.
+3. PR #43 bei gruenen Checks und bestandenem Sichttest mergen; danach nur den
+   Bahnhof -> Eingang Sued -> Halle-10.1-Korridor demonstrieren.
 
 ## PARKED
 
-- Integration und Operator-Zerlegung des grossen SHADED-Provider-/Paper-Katalogs.
-- Neue Rekonstruktionsprovider oder Modellinstallationen.
-- Vollstaendige Koelnmesse-Rekonstruktion jenseits des Demo-Korridors.
-- Erweiterung der Welt von Bahnhof bis A3/Parkhaeuser sowie ostwaerts und
-  westwaerts ueber den Rhein einschliesslich vollstaendiger Skyline.
+- Vollstaendige mobile Paketierung aller 21 beschafften LoD2-Kacheln und echte
+  Fassaden-/Skyline-Rekonstruktion.
+- Integration des SHADED-Provider-/Paper-Katalogs und neue Provider.
 - Ausbau von `Can THEY Run It?`; vorhandene Benchmarkdaten bleiben erhalten.
-- Aktivierung/Pruefung eines Mesh-Renderers fuer SHADED.
-- Ausbau der SHADED-Weltgesetze. Nach Gamescom kehrt die Arbeit zu World,
-  Operatoren und belastbaren Benchmarks zurueck.
-- Aufraeumen aller toten SHADED-Spatial-Generationen.
+- SHADED-Mesh-Viewer, weitere Weltgesetze und Aufraeumen toter Spatial-Pfade.
 
 ## DECISIONS NEEDED
 
-Keine fuer den Mittwochskorridor. Fuer 2027 ist zu entscheiden, ob der
-Abschnitt Eingang Sued -> Piazza vor Ort vermessen oder dauerhaft nur als
+Keine fuer den aktuellen Korridor. Fuer 2027 muss entschieden werden, ob der
+Abschnitt Eingang Sued -> Piazza vor Ort vermessen oder dauerhaft als
 beobachteter, unbestaetigter Korridor gefuehrt wird.
