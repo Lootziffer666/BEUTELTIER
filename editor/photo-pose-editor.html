@@ -102,7 +102,7 @@ function doRedo(){if(!redo.length)return;undo.push(snapshot());restore(redo.pop(
 function updateUndo(){$('undoBtn').disabled=!undo.length;$('redoBtn').disabled=!redo.length}
 function updatePoseStatus(){$('poseStatus').textContent=`${poses.size} Posen`}
 
-async function imageMeta(file){const url=URL.createObjectURL(file);knownObjectUrls.add(url);const img=new Image();await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url});return{id:crypto.randomUUID(),url,name:file.name,width:img.naturalWidth,height:img.naturalHeight,group:'Ungruppiert',visible:true,placed:false,poseName:file.name.replace(/\.[^.]+$/,'')}}
+async function imageMeta(file){const url=URL.createObjectURL(file);knownObjectUrls.add(url);const img=new Image();await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url});const id=crypto.randomUUID?crypto.randomUUID():(`p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);return{id,url,name:file.name,width:img.naturalWidth,height:img.naturalHeight,group:'Ungruppiert',visible:true,placed:false,poseName:file.name.replace(/\.[^.]+$/,'')}}
 function fitStage(){const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 function fitModel(){if(!modelBounds)return;const c=modelBounds.getCenter(new THREE.Vector3()),s=modelBounds.getSize(new THREE.Vector3()),m=Math.max(s.x,s.y,s.z,1);camera.position.set(c.x,c.y+Math.max(1.6,s.y*.2),c.z+m*.9);controls.target.copy(c);controls.update()}
 function matrixRows(m){const e=m.elements;return[[e[0],e[4],e[8],e[12]],[e[1],e[5],e[9],e[13]],[e[2],e[6],e[10],e[14]],[e[3],e[7],e[11],e[15]]]}
