@@ -31,6 +31,37 @@ body {
   overscroll-behavior: none;
 }
 
+.root-fallback {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 24px;
+}
+
+.root-fallback img {
+  opacity: 0.85;
+}
+
+.root-fallback p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.root-fallback button {
+  background: var(--accent);
+  color: #1a1204;
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 20px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .app {
   display: grid;
   grid-template-columns: 1fr minmax(340px, 30vw);

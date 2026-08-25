@@ -52,6 +52,17 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,json}'],
         globIgnores: ['models/gelaende.jpg'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        // Ohne diese drei kann ein Tab, der schon offen war, als naechstes
+        // einen Mix aus altem `index.html` und neu benannten JS-Chunks (oder
+        // umgekehrt) laden -- ein Chunk, den der alte Service Worker nicht
+        // kennt und der Server nicht mehr ausliefert, weil das Deployment
+        // inzwischen weiter ist. `skipWaiting`+`clientsClaim` sorgen dafuer,
+        // dass ein neuer Worker sofort uebernimmt statt auf den naechsten
+        // Tab-Neustart zu warten; `cleanupOutdatedCaches` raeumt die alten
+        // Precache-Eintraege weg, damit nichts Veraltetes haengen bleibt.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /\/models\/(?:gelaende\.jpg|.*\.glb)$/,

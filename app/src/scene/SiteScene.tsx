@@ -1737,6 +1737,22 @@ function WalkControls({
         point: [hit.point.x, hit.point.y, hit.point.z],
         parentName: hit.object.parent?.name ?? null,
       }));
+      const nahebei: { name: string; type: string; y: number; dist: number; parentName: string | null }[] = [];
+      scene.traverse((obj) => {
+        if (!(obj instanceof THREE.Mesh)) return;
+        const world = new THREE.Vector3();
+        obj.getWorldPosition(world);
+        const dist = Math.hypot(world.x - camera.position.x, world.z - camera.position.z);
+        if (dist < 60) {
+          nahebei.push({
+            name: obj.name,
+            type: obj.geometry?.type ?? '?',
+            y: world.y,
+            dist,
+            parentName: obj.parent?.name ?? null,
+          });
+        }
+      });
       return {
         hallKey: data.walk.footingAt(position.current.x, position.current.y, position.current.z).hallKey,
         position: { x: position.current.x, y: position.current.y, z: position.current.z },
@@ -1750,6 +1766,8 @@ function WalkControls({
           ? { name: erster.object.name, distance: erster.distance, material: materialInfo }
           : null,
         raycastAll: alleTreffer,
+        nahebeiCount: nahebei.length,
+        nahebei: nahebei.sort((a, b) => a.dist - b.dist).slice(0, 40),
         rendererInfo: {
           calls: gl.info.render.calls,
           triangles: gl.info.render.triangles,
@@ -2003,6 +2021,13 @@ export function SiteScene(props: SceneProps) {
   const lichtHallKey = preset === 'ego'
     ? (egoSnapshotSeen ? egoHallKey : (focusHallKey ?? defaultEgoHallKey))
     : focusHallKey;
+
+  useEffect(() => {
+    if (!SETZEN_ERLAUBT) return;
+    (globalThis as { __LICHT_HALL_KEY?: unknown }).__LICHT_HALL_KEY = {
+      lichtHallKey, egoHallKey, egoSnapshotSeen, focusHallKey, defaultEgoHallKey, preset,
+    };
+  }, [lichtHallKey, egoHallKey, egoSnapshotSeen, focusHallKey, defaultEgoHallKey, preset]);
 
   const viewBounds = useMemo(() => {
     const points = data.site.halls.flatMap((hall) => hall.footprint);

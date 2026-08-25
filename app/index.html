@@ -8,7 +8,32 @@
     <title>BEUTELTIER — Finde Beute. Finde den Weg.</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Statischer Platzhalter, ersetzt sobald React montiert. Schlaegt das
+           Modul-Skript fehl (404 auf einen veralteten Chunk-Hash nach einem
+           frischen Deploy, Netzfehler, Ausnahme vor dem ersten Render), blieb
+           hier bisher nichts als eine leere Seite auf dunklem Hintergrund --
+           nicht von einem echten Absturz zu unterscheiden. Das Wachhund-Skript
+           unten tauscht das nach ein paar Sekunden gegen einen Neu-laden-Knopf,
+           falls React es nicht laengst selbst ersetzt hat. -->
+      <div id="root-fallback" class="root-fallback">
+        <img src="./brand/lootzy-head.png" alt="" width="72" height="72" />
+        <p>BEUTELTIER lädt …</p>
+      </div>
+    </div>
+    <script>
+      // Kein Framework-Code: laeuft, auch wenn das Hauptmodul selbst nie
+      // ausgefuehrt wird. Acht Sekunden sind grosszuegig fuer den ersten
+      // Datenabruf auf mobilem Netz, aber kurz genug, dass ein echter Fehler
+      // nicht wie ein haengendes Ladefenster aussieht.
+      window.setTimeout(function () {
+        var fallback = document.getElementById('root-fallback');
+        if (!fallback || !fallback.isConnected) return;
+        fallback.innerHTML =
+          '<p>Laden hat zu lange gedauert.</p>' +
+          '<button type="button" onclick="location.reload()">Neu laden</button>';
+      }, 8000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
