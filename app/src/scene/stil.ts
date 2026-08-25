@@ -470,4 +470,36 @@ export function stilAufraeumen(): void {
   stufenCache.clear();
   konturCache.forEach((material) => material.dispose());
   konturCache.clear();
+  flachCache.forEach((material) => material.dispose());
+  flachCache.clear();
+}
+
+/**
+ * Rohbau-Phase: erst die Grundformen (Boden, Decke, Wände, Stützen) als
+ * einfarbige Flächen pruefen -- keine Deckeninstallation, keine Leuchten,
+ * keine Texturen --, bevor Details (Deckentaster, Lüfter) draufkommen.
+ * `hallendecke` (die Trägerinstallation), `Deckenleuchten` und die
+ * Lichtpunkte aus `Ausstattung` sind in dieser Phase ausgeschaltet; Boden,
+ * Decke, Wände und Stützen tragen `flachMaterial()` statt Textur/Bänderung.
+ * Ein einzelner Schalter zum Zurückdrehen, sobald die Grundformen sitzen.
+ */
+export const ROHBAU_PHASE = true;
+
+const flachCache = new Map<string, THREE.MeshBasicMaterial>();
+
+/** Eine einzelne flache Farbe, unbeleuchtet -- fuer die Rohbau-Phase. */
+export function flachMaterial(farbe: string): THREE.MeshBasicMaterial {
+  const fertig = flachCache.get(farbe);
+  if (fertig) return fertig;
+  // DoubleSide: in der Rohbau-Phase geht es um die Grundform, nicht um
+  // korrekte Aussennormalen -- eine Flaeche, die von der falschen Seite
+  // unsichtbar wird, waere in dieser Phase schwerer zu verifizieren als
+  // die etwas hoehere Fuellrate wert ist.
+  const material = new THREE.MeshBasicMaterial({
+    color: new THREE.Color(farbe),
+    side: THREE.DoubleSide,
+  });
+  material.name = `flach|${farbe}`;
+  flachCache.set(farbe, material);
+  return material;
 }

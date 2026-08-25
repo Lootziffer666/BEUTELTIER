@@ -28,7 +28,7 @@ import {
   type Tafel,
 } from './ausstattung';
 import { hallenlage } from './interior';
-import { FAMILIEN, familienMaterial, konturHuelle, konturStaerke } from './stil';
+import { FAMILIEN, familienMaterial, konturHuelle, konturStaerke, ROHBAU_PHASE } from './stil';
 import { KACHEL_M } from './textur';
 import { projiziereUV } from './geometry';
 
@@ -301,10 +301,10 @@ export function Ausstattung({
 
   return (
     <group>
-      {drinnen && bauteile.decke && (
+      {drinnen && !ROHBAU_PHASE && bauteile.decke && (
         <mesh name="hallendecke" geometry={bauteile.decke} material={materialien.decke} castShadow receiveShadow />
       )}
-      {drinnen && bauteile.licht && (
+      {drinnen && !ROHBAU_PHASE && bauteile.licht && (
         <mesh geometry={bauteile.licht} material={materialien.licht} />
       )}
       {/* Ein emissives Band leuchtet **für die Kamera**, beleuchtet aber

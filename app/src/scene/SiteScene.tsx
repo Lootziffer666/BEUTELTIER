@@ -55,6 +55,7 @@ import {
   familienMaterial,
   konturHuelle,
   konturStaerke,
+  ROHBAU_PHASE,
   stufenTextur,
   toonMaterial,
   type Familie,
@@ -2354,7 +2355,7 @@ export function SiteScene(props: SceneProps) {
         data={data}
         centre={centre}
         hallKey={lichtHallKey}
-        visible={preset === 'ego'}
+        visible={preset === 'ego' && !ROHBAU_PHASE}
       />
       {/* Die A-Stufen der Detailhierarchie: Deckenraster, Fassadengliederung,
           Hallennummern, Zaun. Ohne sie bleiben M02, M07, M08 und M10 Familien
