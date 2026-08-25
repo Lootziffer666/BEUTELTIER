@@ -1,0 +1,324 @@
+/**
+ * Neo-Brutalismus-Oberflaeche nach OpenHome3D (MIT-Lizenz, github.com/yuyou-dev/OpenHome3D)
+ * als UI-Vorbild -- Struktur und Designsprache uebernommen, nicht das Branding:
+ * cremefarbenes Papier, 2px Tintenkanten, harte 4px-Schatten, Candy-Akzente,
+ * keine Rundungen ausser Pillen/Chips, kleine fette Grossbuchstaben-Labels.
+ *
+ * Bewusst als eigene, spaet geladene Datei statt Umschreiben von index.css/
+ * compact-shell.css: die meisten dortigen Regeln lesen schon var(--line),
+ * var(--muted), var(--radius) usw. -- die Token-Neudefinition unten deckt
+ * den Grossteil der Flaeche automatisch ab. Was Farben fest verdrahtet
+ * (Buttons, Inputs, die dunklen Glas-Panels), wird hier gezielt ueberschrieben.
+ */
+
+:root {
+  --bg: #fbf3e4;
+  --panel: #fff9ee;
+  --panel-2: #fff9ee;
+  --line: #1a1a1a;
+  --text: #1a1a1a;
+  --muted: #8a7f6d;
+  --accent: #ffc93c;
+  --ok: #3f8a52;
+  --warn: #b8860b;
+  --danger: #c0392b;
+  --radius: 0px;
+  --select: #2f6bff;
+  --shadow: 4px 4px 0 var(--ink, #1a1a1a);
+  color-scheme: light;
+}
+
+body {
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* -------------------------------- Layout ---------------------------------
+ * OpenHome3D: feste linke Seitenleiste, Canvas fuellt den Rest. BEUTELTIER
+ * hatte das Panel rechts -- Seite tauschen reicht per CSS, ohne App.tsx
+ * anzufassen: Grid-Spalten umkehren + Reihenfolge der Kinder umdrehen.
+ */
+.app.compact-shell {
+  grid-template-columns: minmax(320px, 360px) 1fr;
+}
+.app.compact-shell.panel-closed {
+  grid-template-columns: 52px 1fr;
+}
+.app.compact-shell .stage {
+  order: 2;
+}
+.app.compact-shell .panel.compact-panel {
+  order: 1;
+  border-left: none;
+  border-right: 2px solid var(--line);
+}
+
+/* --------------------------------- Karten/Buttons -------------------------- */
+
+button,
+.button {
+  background: #fff;
+  color: var(--text);
+  border: 2px solid var(--line);
+  border-radius: 0;
+  padding: 6px 10px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  box-shadow: 3px 3px 0 var(--line);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+button:hover:not(:disabled),
+.button:hover {
+  background: #fff;
+  border-color: var(--line);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--line);
+}
+button:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--line);
+}
+button.is-active {
+  background: var(--accent);
+  border-color: var(--line);
+  color: var(--text);
+}
+button.ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--muted);
+}
+button.ghost:hover {
+  box-shadow: none;
+  transform: none;
+  color: var(--text);
+}
+
+.icon-button,
+.icon-choice {
+  border-radius: 0;
+  background: #fff;
+  border: 2px solid var(--line);
+  box-shadow: 3px 3px 0 var(--line);
+}
+.icon-button:hover,
+.icon-choice:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--line);
+}
+.icon-button.is-active,
+.icon-choice.is-active {
+  background: var(--accent);
+}
+.panel-grab {
+  border-radius: 999px;
+}
+
+input[type='text'],
+input[type='search'],
+textarea {
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+}
+input[type='text']:focus,
+input[type='search']:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: 2px 2px 0 var(--select);
+}
+
+.card {
+  background: #fff;
+  border: 2px solid var(--line);
+  box-shadow: 3px 3px 0 var(--line);
+}
+.card--quiet {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.hits,
+.state,
+.badge,
+.kind {
+  border: 2px solid var(--line);
+  border-radius: 0;
+}
+.hits {
+  background: #fff;
+}
+.hits li + li {
+  border-top: 2px solid var(--line);
+}
+.hits button {
+  border: none;
+  box-shadow: none;
+}
+.hits button:hover {
+  transform: none;
+  background: #f5ecd8;
+}
+
+.report,
+.epix__item {
+  border: 2px solid var(--line);
+  border-radius: 0;
+}
+
+.demo-corridor {
+  background: #fff;
+  border: 2px solid var(--line);
+  box-shadow: 3px 3px 0 var(--line);
+}
+.demo-corridor.is-active {
+  border-color: var(--line);
+  background: #fff8e0;
+}
+
+/* ------------------------------- Chips / Pillen ---------------------------- */
+
+.kind,
+.badge,
+.state {
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.badge--warn {
+  border-color: var(--line);
+  background: var(--accent);
+  color: var(--text);
+}
+.state--geschlossen {
+  border-color: var(--line);
+  background: #ffd9d0;
+  color: var(--danger);
+}
+.state--unbestaetigt {
+  border-color: var(--line);
+  background: var(--accent);
+  color: var(--text);
+}
+.state--offen {
+  border-color: var(--line);
+  background: #cdeed6;
+  color: var(--ok);
+}
+
+/* ---------------------------- Kartenwerkzeuge (Topbar) --------------------- */
+
+.map-toolbar,
+.map-toolbox {
+  background: #fff9ee;
+  border: 2px solid var(--line);
+  border-radius: 0;
+  box-shadow: var(--shadow);
+  backdrop-filter: none;
+}
+.map-toolbox details {
+  background: transparent;
+  border: 2px solid var(--line);
+  border-radius: 0;
+}
+.map-toolbox summary {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* --------------------------------- Panelkopf -------------------------------- */
+
+.compact-panel__bar {
+  border-bottom: 2px solid var(--line);
+  background: var(--panel);
+}
+.compact-panel__bar strong {
+  color: var(--text);
+}
+.compact-panel__status {
+  color: var(--muted);
+}
+
+.map-accordion {
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 0;
+}
+.map-accordion__head:hover {
+  background: #f5ecd8;
+}
+.map-accordion__icon {
+  border: 2px solid var(--line);
+  border-radius: 0;
+  color: var(--text);
+}
+.map-accordion__body {
+  border-top: 2px solid var(--line);
+}
+
+/* ------------------------------- Mobile Drawer ------------------------------ */
+
+@media (max-width: 900px) {
+  .compact-shell .compact-panel {
+    border: 2px solid var(--line);
+    border-radius: 0;
+    background: #fff9ee;
+    box-shadow: 6px 6px 0 var(--line);
+    backdrop-filter: none;
+  }
+}
+
+/* ----------------------------------- Boot ----------------------------------
+ * LoadingVeil-Prinzip von OpenHome3D: Papierhintergrund, gerahmtes Logo,
+ * kleines fettes Gross-Label -- statt eines nackten Ladetexts auf Schwarz.
+ */
+.boot {
+  background: var(--bg);
+  color: var(--text);
+}
+.boot img {
+  padding: 10px;
+  background: #fff;
+  border: 2px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.boot h1 {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+.boot p.muted {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.boot--error {
+  color: var(--danger);
+}
+.boot code {
+  background: #fff;
+  border: 2px solid var(--line);
+  color: var(--text);
+}
+
+.survey {
+  background: #fff9ee;
+  border: 2px solid var(--line);
+  border-radius: 0;
+  box-shadow: var(--shadow);
+  backdrop-filter: none;
+}
+
+.world-builder-icon,
+.world-builder-launch {
+  background: var(--lavender, #c9a7eb);
+  border-color: var(--line);
+  color: var(--text);
+}
