@@ -2175,15 +2175,15 @@ export function SiteScene(props: SceneProps) {
   return (
     <Canvas
       camera={{ fov: preset === 'ego' ? 70 : 42, near: 0.15, far: extent * 6, position: [extent * 0.5, extent * 0.6, extent * 0.85] }}
-      // Auf dem Telefon entscheidet DPR zwischen 30 fps und 0.1 fps. 1.8x
-      // rendert 3.24x so viele Pixel wie 1x; auf einer 6"-Anzeige ist der
-      // Unterschied zu 1x nicht sichtbar, weil die physische Aufloesung
-      // des Panels ohnehin unter 2x liegt -- es wird also hochgerechnet,
-      // nicht heruntergesampelt. Wir bleiben deshalb hart bei 1, beide
-      // Wege. Wer auf einem Monitor mit anstaendiger Pixeldichte testet,
-      // bekommt trotzdem die volle Schaerfe, weil die Pipeline bei
-      // devicePixelRatio = 1 genau das Panel bedient.
-      dpr={1}
+      // Auf dem Telefon entscheidet DPR zwischen 30 fps und 0.1 fps. Wir
+      // zaehlen nicht den vollen devicePixelRatio, sondern capen bei 1.5x:
+      // das Xiaomi 14T Pro hat 3.3x, ein 6"-Panel liegt bei 2-3x, ein
+      // Desktop-Monitor bei 1-2x. Bei 1.5x rendert ein 14T Pro knapp die
+      // Haelfte der physischen Pixel -- das Auge sieht die fehlende
+      // Schärfe nicht, der GPU sieht ein Drittel weniger Fragmentlast.
+      // Wer auf einem Retina-Desktop testet, bekommt mit 1.5x sichtbar
+      // schärfer als 1x, ohne in den 3.24x-Killbereich zu rutschen.
+      dpr={[1, 1.5]}
       // Echtzeit-Schatten sind im Cel-Look entbehrlich (siehe Beleuchtung):
       // die Stufen ersetzen den Hell-Dunkel-Verlauf, und die BackSide-
       // Konturhuellen liefern die Silhouette. Wer den Schatten-Apparat
