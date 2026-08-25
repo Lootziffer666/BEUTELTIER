@@ -1838,6 +1838,20 @@ function WalkControls({
 
     const KEIN_ROHBAU = new Set(['hallendecke']);
 
+    const wiederherstellen = () => {
+      gesicherteMaterialien.forEach((material, mesh) => {
+        mesh.material = material;
+        if (KEIN_ROHBAU.has(mesh.name)) mesh.visible = true;
+      });
+      gesicherteMaterialien.clear();
+      gesicherteLichter.forEach((sichtbar, licht) => { licht.visible = sichtbar; });
+      gesicherteLichter.clear();
+      if (zusatzlicht) {
+        scene.remove(zusatzlicht);
+        zusatzlicht = null;
+      }
+    };
+
     global.__ROHBAU = (an: boolean) => {
       if (an) {
         if (zusatzlicht) return 'bereits an';
@@ -1859,20 +1873,16 @@ function WalkControls({
         scene.add(zusatzlicht);
         return 'rohbau an';
       }
-      gesicherteMaterialien.forEach((material, mesh) => {
-        mesh.material = material;
-        if (KEIN_ROHBAU.has(mesh.name)) mesh.visible = true;
-      });
-      gesicherteMaterialien.clear();
-      gesicherteLichter.forEach((sichtbar, licht) => { licht.visible = sichtbar; });
-      gesicherteLichter.clear();
-      if (zusatzlicht) {
-        scene.remove(zusatzlicht);
-        zusatzlicht = null;
-      }
+      wiederherstellen();
       return 'rohbau aus';
     };
     return () => {
+      // Sonst blieb die Szene grau/lichtlos zurueck, wenn der Effekt mit
+      // eingeschaltetem Rohbau neu lief (z.B. `active` wechselt) -- die
+      // einzige Rueckholfunktion war schon geloescht, bevor sie je aufraeumen
+      // konnte.
+      wiederherstellen();
+      rohbauMaterial.dispose();
       delete global.__ROHBAU;
     };
   }, [active, scene]);
