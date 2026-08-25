@@ -39,12 +39,17 @@ const ultraDuploPlugin = {
 export default defineConfig({
   base: './',
   resolve: {
-    // Vite 8 verbietet JS-Imports aus public/. interior.tsx benutzt noch den
-    // alten Pfad; bis der Import selbst bereinigt wird, landet er eindeutig
-    // auf derselben Datei unter src/ und der App-Start bleibt gruen.
-    alias: {
-      '../../public/data/hallen-konstruktion.json': hallConstructionSource,
-    },
+    // Vite 8 verbietet JS-Imports aus public/. Die Hallenkonstruktion liegt
+    // deshalb auch unter src/data. Solange interior.tsx noch den historischen
+    // public-Pfad nennt, fangen wir ihn pfadunabhaengig per RegExp ab: die
+    // Loesung haengt damit nicht von der relativen Verzeichnistiefe ab.
+    // Ziel bleibt, den Import in interior.tsx direkt auf ../data umzuziehen.
+    alias: [
+      {
+        find: /(?:^|\/)public\/data\/hallen-konstruktion\.json$/,
+        replacement: hallConstructionSource,
+      },
+    ],
   },
   build: {
     rolldownOptions: {
