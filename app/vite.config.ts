@@ -46,7 +46,7 @@ export default defineConfig({
     // Ziel bleibt, den Import in interior.tsx direkt auf ../data umzuziehen.
     alias: [
       {
-        find: /(?:^|\/)public\/data\/hallen-konstruktion\.json$/,
+        find: /.*public\/data\/hallen-konstruktion\.json$/,
         replacement: hallConstructionSource,
       },
     ],
