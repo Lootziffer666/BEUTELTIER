@@ -263,15 +263,18 @@ export interface Karten {
 function beuteltierZellenLicht(material: THREE.MeshToonMaterial, stufen: Stufen): void {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uZellenStufen = { value: stufen };
-    // Archer/Cel-Look: warmes Streiflicht, das an den Silhouetten einen
-    // leuchtenden Saum zieht. Drei Kanaele leben in der Konstante: die
-    // Farbe (helles Bernstein, nicht Weiss), die Staerke (massiv genug, um
-    // auf einer 12-Megapixel-Szene sichtbar zu sein) und die Schwelle
-    // (frueh genug, dass die Kontur schon an der Vorderkante einsetzt, nicht
-    // erst dahinter).
-    shader.uniforms.uRandFarbe = { value: new THREE.Color('#ffe2a8') };
-    shader.uniforms.uRandStaerke = { value: 0.55 };
-    shader.uniforms.uRandSchwelle = { value: 0.45 };
+    // Archer/Cel-Look: ein leichter, kühler Saum an der Silhouette. Der
+    // Vorgänger war warmes Bernstein (#ffe2a8) mit Stärke 0.55 -- das Ergebnis
+    // auf der Uebersicht war ein gleichmaessiger Gelbschimmer ueber jede
+    // Fassade, weil die meisten Wände der amtlichen `messe.glb` jetzt durch
+    // `beuteltierZellenLicht` laufen, und eine Wand, deren Normale quer zur
+    // Blickrichtung steht, hat `bRandDot ~ 1` und damit immer das volle
+    // Rim-Light aufaddiert. Bei 0.55 war das praktisch ein globaler
+    // Farbfilter. Kühler und schwächer zeichnet nur noch die echte Kante
+    // und lässt die Wand dazwischen in der Familie stehen.
+    shader.uniforms.uRandFarbe = { value: new THREE.Color('#d8d2c4') };
+    shader.uniforms.uRandStaerke = { value: 0.18 };
+    shader.uniforms.uRandSchwelle = { value: 0.55 };
     // Die Helligkeit, ab der das Material als "hell" gilt. Alles darunter
     // faellt in den Schatten-Band, alles darueber in den Licht-Band. Der
     // Wert wird NACH dem Banding in den Framebuffer geschrieben, das Band
