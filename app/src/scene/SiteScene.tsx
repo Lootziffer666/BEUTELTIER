@@ -44,6 +44,7 @@ import {
   Lichtspiegel,
 } from './interior';
 import { Boulevard } from './boulevard';
+import { KleineStaende } from './KleineStaende';
 import { Markenstaende } from './Markenstaende';
 import { MARKEN_STAND_IDS } from './marken';
 import { Vertikalverbindungen } from './vertical';
@@ -2184,6 +2185,14 @@ export function SiteScene(props: SceneProps) {
       )}
       {props.showStands && !LEER_ERLAUBT && (
         <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
+      )}
+      {/* Waende fuer die gewoehnlichen Staende -- vorerst abgeschaltet.
+          Erst muss die LEERE Halle (Stuetzen, Deckeninstallation, Boden)
+          optisch stimmen; die Staende kommen danach dazu, und der erste
+          reale Stand wird aus einer gelieferten GLB gebaut, nicht laenger
+          prozedural. Datei bleibt bestehen, nur das Rendern ist aus. */}
+      {false && props.showStands && !LEER_ERLAUBT && (preset === 'halle' || preset === 'ego') && focusHallKey && (
+        <KleineStaende data={data} centre={centre} hallKey={focusHallKey} />
       )}
       <Hallenhuelle
         data={data}

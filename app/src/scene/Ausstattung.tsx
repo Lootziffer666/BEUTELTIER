@@ -304,7 +304,11 @@ export function Ausstattung({
           key={`pool-${i}`}
           position={punkt}
           color="#ffe9c4"
-          intensity={26}
+          // Wie bei Hallenlicht: seit dem physically-correct-lighting-
+          // Umstieg (three.js r155) ist intensity Candela, kein freier
+          // Multiplikator mehr. Der alte Wert (26) stammt von davor und war
+          // um denselben Faktor zu dunkel wie die dortige Deckenleuchte.
+          intensity={820}
           distance={26}
           decay={1.7}
         />
