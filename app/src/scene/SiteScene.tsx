@@ -809,14 +809,25 @@ function OfficialPackage({
         const realesDach = teil === 'roof' && orthophoto
           ? applyRegisteredOrthoUv(editierbareGeometrie(), orthophoto.corners)
           : false;
+        // Dächer im Cel-Look: niemals die gezeichnete Plattenstruktur der
+        // Familie aufbringen -- die ist senkrecht an Wänden lesbar, von oben
+        // produziert sie nur ein gleichmäßiges Flimmern, das nichts mit dem
+        // amtlichen Bauwerk zu tun hat. Mit Orthophoto: das echte Luftbild
+        // (oder eine Karte) liegt drauf. Ohne: die Familiengrundfarbe als
+        // flacher Toon, ohne Karten, ohne Kachelung, ohne Normalmap. Eine
+        // einzelne flache Farbe ist hier ehrlicher als eine erfundene Zeichnung.
         let material: THREE.MeshToonMaterial;
-        if (eigeneKarte) {
+        if (teil === 'roof') {
+          if (orthophoto) {
+            material = toonMaterial(familie, { map: orthophoto.map }, { side: THREE.DoubleSide });
+            material.color.set('#ffffff');
+          } else {
+            material = toonMaterial(familie, {}, { side: THREE.DoubleSide });
+          }
+        } else if (eigeneKarte) {
           material = toonMaterial(familie, {
             map: eigeneKarte.map, normalMap: eigeneKarte.normalMap,
           }, { side: THREE.DoubleSide });
-        } else if (realesDach && orthophoto) {
-          material = toonMaterial(familie, { map: orthophoto.map }, { side: THREE.DoubleSide });
-          material.color.set('#ffffff');
         } else if (quelle.map) {
           material = toonMaterial(familie, {
             map: quelle.map, normalMap: quelle.normalMap,
