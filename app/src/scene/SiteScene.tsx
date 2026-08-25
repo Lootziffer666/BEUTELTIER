@@ -1789,7 +1789,14 @@ function WalkControls({
           programs: gl.info.programs?.length ?? null,
         },
         lights: (() => {
-          const out: { type: string; distance?: number; castShadow?: boolean; shadowMapSize?: number }[] = [];
+          const out: {
+            type: string;
+            distance?: number;
+            castShadow?: boolean;
+            shadowMapSize?: number;
+            pos: number[];
+            parentName: string | null;
+          }[] = [];
           scene.traverse((obj) => {
             if (obj instanceof THREE.PointLight || obj instanceof THREE.DirectionalLight || obj instanceof THREE.SpotLight) {
               const world = new THREE.Vector3();
