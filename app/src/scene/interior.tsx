@@ -9,11 +9,13 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import type { Dataset } from '../data/load';
 import type { Placement2D } from '../data/types';
 import { drehungNachX } from './geometry';
-import { FAMILIEN, familienMaterial, toonMaterial } from './stil';
+import { FAMILIEN, familienMaterial, konturStaerke, toonMaterial } from './stil';
+import { Kontur } from './Kontur';
 import {
   disposeSurface,
   facadeSurface,
@@ -637,9 +639,10 @@ export function Hallenstuetzen({
     };
   }, [data, aussparungen]);
 
-  const { schaefte, sockel } = useMemo(() => {
+  const { schaefte, sockel, huelleGeometrie } = useMemo(() => {
     const schaefte: THREE.Matrix4[] = [];
     const sockel: THREE.Matrix4[] = [];
+    const huellenTeile: THREE.BufferGeometry[] = [];
     const dummy = new THREE.Object3D();
 
     for (const hall of data.site.halls) {
@@ -672,6 +675,11 @@ export function Hallenstuetzen({
         );
         dummy.updateMatrix();
         schaefte.push(dummy.matrix.clone());
+        // Fuer die Kontur: dieselbe Box, direkt in Weltkoordinaten gebacken
+        // (statt per Instanzmatrix skaliert) -- `Kontur` blaest sie im
+        // Vertex-Shader entlang ihrer eigenen Normalen auf, und das braucht
+        // eine einzelne zusammenhaengende Geometrie, keine Instanzen.
+        huellenTeile.push(new THREE.BoxGeometry(1, 1, 1).applyMatrix4(dummy.matrix));
 
         for (const [von, bis] of [aufbau.sockelUnten, aufbau.sockelOben]) {
           dummy.position.set(sx, (von + bis) / 2, sz);
@@ -682,17 +690,28 @@ export function Hallenstuetzen({
           );
           dummy.updateMatrix();
           sockel.push(dummy.matrix.clone());
+          huellenTeile.push(new THREE.BoxGeometry(1, 1, 1).applyMatrix4(dummy.matrix));
         }
       }
     }
 
-    return { schaefte, sockel };
+    let huelleGeometrie: THREE.BufferGeometry | null = null;
+    if (huellenTeile.length) {
+      huelleGeometrie = mergeGeometries(huellenTeile, false);
+      huellenTeile.forEach((teil) => teil.dispose());
+    }
+
+    return { schaefte, sockel, huelleGeometrie };
   }, [data, centre, hallKey, aussparungen]);
 
   const material = useMemo(
     () => toonMaterial({ ...FAMILIEN.M02, grundton: '#3c4048', stufen: 3 }),
     [],
   );
+
+  useEffect(() => () => {
+    huelleGeometrie?.dispose();
+  }, [huelleGeometrie]);
 
   const setzeMatrizen = (
     mesh: THREE.InstancedMesh | null,
@@ -728,6 +747,9 @@ export function Hallenstuetzen({
       >
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
+      {huelleGeometrie && (
+        <Kontur geometry={huelleGeometrie} staerke={konturStaerke(FAMILIEN.M02.kontur)} />
+      )}
     </group>
   );
 }
