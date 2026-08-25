@@ -1,0 +1,15 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ args: ['--no-sandbox', '--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
+const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+await page.goto('http://127.0.0.1:4174/', { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('canvas', { timeout: 20000 });
+await page.waitForTimeout(2000);
+await page.locator('input.search').fill('Halle 10.1');
+await page.waitForTimeout(400);
+await page.locator('.hits li button', { hasText: 'Halle 10.1' }).first().evaluate(el => el.click());
+await page.waitForTimeout(1500);
+await page.getByRole('button', { name: 'Werkzeuge' }).click();
+await page.waitForTimeout(500);
+const buttons = await page.$$eval('button.icon-choice', els => els.map(e => ({ aria: e.getAttribute('aria-label'), title: e.getAttribute('title'), text: (e.textContent||'').trim() })));
+console.log(JSON.stringify(buttons, null, 2));
+await browser.close();

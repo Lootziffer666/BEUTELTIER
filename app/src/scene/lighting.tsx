@@ -169,36 +169,30 @@ export function Beleuchtung({ extent, interior }: { extent: number; interior: bo
   const span = extent * 0.62;
 
   if (interior) {
-    // Drinnen keine Sonne: sie stünde durch die Wand und legte einen
+    // Drinnen keine Sonne: sie stuende durch die Wand und legte einen
     // Schlagschatten quer durch die Halle, den es dort nicht gibt. Das Licht
     // kommt von oben aus den Leuchtenreihen -- der Rest aus der Umgebung.
+    //
+    // Die Intensitaeten sind bewusst NIEDRIG gewaehlt: ein Cel-Look lebt
+    // vom Kontrast zwischen Licht und Schatten, und bei einer starken
+    // Halbkugel lichtet der Schatten so weit auf, dass die Stufen im
+    // Schatten-Band praktisch mit dem Licht-Band verschmelzen. 0.35 statt
+    // 0.5 heisst: Stuetzen und Waende tragen sichtbar ihre Schattenseite.
     return (
       <>
-        {/* Grundhelligkeit, nicht Beleuchtung: was den Raum formt, sind die
-            Leuchtenreihen und die Punktlichter darunter, dazu jetzt die
-            Stützen, die echten Schlagschatten werfen. Eine starke Halbkugel
-            würde all das wieder einebnen -- auf den Referenzfotos ist der
-            Raum dunkel, mit klaren hellen Inseln, nicht gleichmässig grau. */}
-        {/* Wieder herauf. Ich hatte beides gedämpft, weil der Boden zu hell
-            wirkte -- der Fehler lag aber an der Bodentextur, nicht an der
-            Helligkeit. Zu wenig Grundlicht heisst: senkrechte Flächen bekommen
-            gar nichts ab, Stützen werden schwarze Silhouetten ohne
-            Flächenunterschied, und ihr Kopf verschwindet vor der ebenfalls
-            schwarzen Decke. Genau das sah nach "reicht nicht bis zur Decke"
-            aus, obwohl beide auf derselben Höhe liegen. */}
-        <hemisphereLight args={['#fff3dd', '#33353b', 0.5]} position={[0, extent, 0]} />
-        <ambientLight intensity={0.14} color="#cfd7e2" />
+        <hemisphereLight args={['#fff3dd', '#33353b', 0.35]} position={[0, extent, 0]} />
+        <ambientLight intensity={0.08} color="#cfd7e2" />
       </>
     );
   }
 
   return (
     <>
-      <hemisphereLight args={['#cfe0f2', '#4a4740', 0.9]} position={[0, extent, 0]} />
+      <hemisphereLight args={['#cfe0f2', '#4a4740', 0.65]} position={[0, extent, 0]} />
       <directionalLight
         castShadow
         position={[SUN.x * extent, SUN.y * extent, SUN.z * extent]}
-        intensity={2.6}
+        intensity={1.6}
         color="#fff4e2"
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0006}
@@ -211,10 +205,13 @@ export function Beleuchtung({ extent, interior }: { extent: number; interior: bo
         shadow-camera-far={extent * 3}
       />
       {/* Gegenlicht aus dem Norden: ohne das werden abgewandte Fassaden
-          schwarz, und schwarze Flächen lesen sich als Loch. */}
+          schwarz, und schwarze Flächen lesen sich als Loch. Reduziert auf
+          0.3, damit die Schattenseite nicht zu hell wird -- im Cel-Look
+          soll sie deutlich dunkler sein als die Sonnenseite, sonst ist
+          der Banding-Effekt nicht sichtbar. */}
       <directionalLight
         position={[-extent * 0.5, extent * 0.35, -extent * 0.45]}
-        intensity={0.5}
+        intensity={0.3}
         color="#b9cde2"
       />
     </>

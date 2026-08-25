@@ -62,6 +62,12 @@ export type Kontur = keyof typeof KONTUR_M;
  * `glanz` ist bewusst eine Zahl von 0 bis 1 und keine Rauheit: Toon-Materialien
  * kennen kein PBR. Sie steuert, wie hell die Glanzstufe ausfällt, und 0 heisst
  * matt.
+ *
+ * Die Grundtoene sind nach einem Cel-/Archer-Vorbild gewaehlt: gesaettigt
+ * genug, dass die Stufen spaeter sichtbar werden, aber gedeckt genug, dass
+ * der Hallencharakter nicht verloren geht. Wer hier z.B. reine Weiss-Toene
+ * eintraegt, kippt die Szene in eine High-Key-Aquarell-Optik -- die Schatten
+ * haetten dann keinen Hue mehr, sich vom Licht abzuheben.
  */
 export interface Familie {
   /** Kennung aus der Stilbibel, M01 bis M10. */
@@ -85,79 +91,79 @@ export const FAMILIEN: Record<string, Familie> = {
   M01: {
     id: 'M01',
     name: 'WALL_LIGHT',
-    grundton: '#c9c5bd',
+    grundton: '#d8c8a8',
     stufen: 3,
     kontur: 'mittel',
-    glanz: 0.05,
+    glanz: 0.0,
     einsatz: 'Helle Hallen- und Foyerwände, Boulevard, Innenwände',
   },
   M02: {
     id: 'M02',
     name: 'STRUCTURE_DARK',
-    grundton: '#2b2e33',
+    grundton: '#3a3f4a',
     stufen: 2,
     kontur: 'stark',
-    glanz: 0.12,
+    glanz: 0.0,
     einsatz: 'Stützen, Deckenträger, dunkle Hallenstruktur, technische Rahmen',
   },
   M03: {
     id: 'M03',
     name: 'FLOOR_DARK',
-    grundton: '#3a3d42',
+    grundton: '#46505d',
     stufen: 3,
     kontur: 'schwach',
-    glanz: 0.35,
+    glanz: 0.15,
     einsatz: 'Dunkle Messehallenböden',
   },
   M04: {
     id: 'M04',
     name: 'FLOOR_LIGHT',
-    grundton: '#cfc7b6',
+    grundton: '#c8b48a',
     stufen: 3,
     kontur: 'schwach',
-    glanz: 0.22,
+    glanz: 0.05,
     einsatz: 'Foyer- und Boulevardböden, helle Innenzonen',
   },
   M05: {
     id: 'M05',
     name: 'OUTDOOR_CONCRETE',
-    grundton: '#d5d1c7',
+    grundton: '#b0a78f',
     stufen: 2,
     kontur: 'schwach',
-    glanz: 0.04,
+    glanz: 0.0,
     einsatz: 'Plätze, Vorflächen, Aussengelände',
   },
   M06: {
     id: 'M06',
     name: 'WOOD_DECK',
-    grundton: '#9a6b3f',
+    grundton: '#8b5a2b',
     stufen: 3,
     kontur: 'mittel',
-    glanz: 0.1,
+    glanz: 0.0,
     einsatz: 'Terrassen, Aufenthaltsdecks, Einfassung von Pflanzinseln',
   },
   M07: {
     id: 'M07',
     name: 'GLASS_COOL',
-    grundton: '#8fa9bd',
+    grundton: '#7a9fb8',
     stufen: 2,
     kontur: 'mittel',
-    glanz: 0.55,
+    glanz: 0.0,
     einsatz: 'Fassaden, Glasgeländer, Rolltreppenseiten',
   },
   M08: {
     id: 'M08',
     name: 'METAL',
-    grundton: '#a8adb4',
+    grundton: '#8a8e96',
     stufen: 2,
     kontur: 'stark',
-    glanz: 0.6,
+    glanz: 0.3,
     einsatz: 'Handläufe, Geländer, Rolltreppenkanten',
   },
   M09: {
     id: 'M09',
     name: 'VEGETATION',
-    grundton: '#5f8043',
+    grundton: '#3f6b2c',
     stufen: 3,
     kontur: 'stark',
     glanz: 0.0,
@@ -166,7 +172,7 @@ export const FAMILIEN: Record<string, Familie> = {
   M10: {
     id: 'M10',
     name: 'SIGNAGE',
-    grundton: '#2f7d4f',
+    grundton: '#1f8a4c',
     stufen: 2,
     kontur: 'stark',
     glanz: 0.0,
@@ -191,10 +197,16 @@ const stufenCache = new Map<Stufen, THREE.DataTexture>();
 export function stufenTextur(stufen: Stufen): THREE.DataTexture {
   const fertig = stufenCache.get(stufen);
   if (fertig) return fertig;
-  // Die Stufen liegen nicht gleichmässig: der Sprung von Schatten zu Licht
-  // soll früh kommen, damit beschienene Flächen zusammenhängend hell bleiben
-  // und nicht in der Mitte auseinanderfallen.
-  const werte = stufen === 2 ? [90, 255] : [70, 168, 255];
+  // Eine lineare Identitaet (0..1) als Stufentextur -- die eigentliche
+  // Banderung passiert in `beuteltierZellenLicht` auf der finalen
+  // `outgoingLight` mit einem festen Drei-Stufen-Ramp. Hier nur linear
+  // durchreichen, damit der Standard-MeshToonMaterial-Pfad, den Three.js
+  // fuer jedes Licht einsammelt, nichts Unerwartetes tut. Eine zweistufige
+  // oder dreistufige gradientMap an dieser Stelle wuerde die Werte
+  // VERDOPPELT bandeln -- einmal hier pro Licht, einmal am Ende -- und
+  // genau das hat vorher fuer die weichen Verlaeufe statt der harten
+  // Archer-Stufen gesorgt.
+  const werte = stufen === 2 ? [0, 255] : [0, 128, 255];
   const daten = new Uint8Array(werte.length * 4);
   werte.forEach((wert, index) => {
     daten[index * 4] = wert;
@@ -251,18 +263,21 @@ export interface Karten {
 function beuteltierZellenLicht(material: THREE.MeshToonMaterial, stufen: Stufen): void {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uZellenStufen = { value: stufen };
-    shader.uniforms.uRandFarbe = { value: new THREE.Color('#fff6e0') };
-    // Auf einer Kugel wandert die Normale stetig, der Rand wirkt wie eine
-    // duenne Linie entlang der Silhouette. Auf einer Box ist die Normale
-    // pro Flaeche KONSTANT -- derselbe Rand-Wert gilt fuer die ganze
-    // Flaeche, nicht nur ihren Silhouetten-Saum. Bei BEUTELTIERs fast
-    // durchweg kantiger Geometrie (Waende, Stuetzen, Hallenkoerper) haette
-    // die urspruengliche Staerke ganze Flaechen aufblitzen lassen statt
-    // einer Kante. Deutlich schwaecher und mit weicherem Uebergang, bis es
-    // eher ein Streiflicht-Schimmer als ein Rand ist -- ehrlicher fuer eine
-    // Welt, die fast nur aus flachen Flaechen besteht.
-    shader.uniforms.uRandStaerke = { value: 0.12 };
-    shader.uniforms.uRandSchwelle = { value: 0.72 };
+    // Archer/Cel-Look: warmes Streiflicht, das an den Silhouetten einen
+    // leuchtenden Saum zieht. Drei Kanaele leben in der Konstante: die
+    // Farbe (helles Bernstein, nicht Weiss), die Staerke (massiv genug, um
+    // auf einer 12-Megapixel-Szene sichtbar zu sein) und die Schwelle
+    // (frueh genug, dass die Kontur schon an der Vorderkante einsetzt, nicht
+    // erst dahinter).
+    shader.uniforms.uRandFarbe = { value: new THREE.Color('#ffe2a8') };
+    shader.uniforms.uRandStaerke = { value: 0.55 };
+    shader.uniforms.uRandSchwelle = { value: 0.45 };
+    // Die Helligkeit, ab der das Material als "hell" gilt. Alles darunter
+    // faellt in den Schatten-Band, alles darueber in den Licht-Band. Der
+    // Wert wird NACH dem Banding in den Framebuffer geschrieben, das Band
+    // wird also in echten Helligkeitseinheiten gebildet -- nicht in
+    // 0..1-Anteilen, in denen Emissive und Mehrfachlicht dafuer sorgen,
+    // dass die hellste Stufe sofort anfaengt.
     const uniformStelle = 'uniform vec3 diffuse;';
     const lichtStelle =
       'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;';
@@ -278,25 +293,38 @@ function beuteltierZellenLicht(material: THREE.MeshToonMaterial, stufen: Stufen)
       lichtStelle,
       `${lichtStelle}
        // Bänderung nach LEUCHTDICHTE, nicht pro RGB-Kanal: round(x*N)/N auf
-       // R, G und B einzeln lässt jeden Kanal unabhängig zur naechsten Stufe
-       // runden -- an einer Bandgrenze kann R aufrunden, waehrend G abrundet,
-       // und die Mischfarbe kippt in einen Farbstich, der im Ausgangsbild gar
-       // nicht da war (genau das machte den Boden khakifarben statt dunkel
-       // blaugrau). Hier wird stattdessen nur die Helligkeit gebändert und
-       // die ORIGINALE Farbrichtung (Hue + Saettigung) beibehalten.
+       // R, G und B einzeln lässt jeden Kanal unabhängig zur naechsten
+       // Stufe runden -- an einer Bandgrenze kann R aufrunden, waehrend G
+       // abrundet, und die Mischfarbe kippt in einen Farbstich, der im
+       // Ausgangsbild gar nicht da war. Hier wird stattdessen die Helligkeit
+       // gebändert und die ORIGINALE Farbrichtung (Hue + Saettigung)
+       // beibehalten.
        float bLeuchtdichte = dot(outgoingLight, vec3(0.2126, 0.7152, 0.0722));
-       float bStufe = round(clamp(bLeuchtdichte, 0.0, 1.0) * uZellenStufen) / uZellenStufen;
-       // Untergrenze auf der gebänderten Helligkeit selbst, nicht auf der
-       // (oft schon dunklen) Grundfarbe: sonst blieb z.B. ein dunkelgraues
-       // Bauteil im Schatten bei 32% von "schon dunkel" praktisch schwarz.
-       // Ein Bauteil im tiefsten Schatten zeigt jetzt immer mindestens 28%
-       // seiner eigenen Helligkeit -- fuer JEDES Material gleich hell, nicht
-       // proportional zu dessen Grundton.
-       bStufe = max(bStufe, 0.28);
+       // Schwellen in tatsaechlicher Leuchtdichte, nicht in 0..1: ein
+       // Glasband das 1.8 emittiert, ein weisses Wandstueck das 1.2
+       // empfaengt, sollen im selben Band landen -- nicht getrennt nach
+       // "alles ueber 1 ist hell". Die Schwellen sind die 1/N- und
+       // (N-1)/N-Marken der Familie, gewichtet auf 1.0 als Soll-Helligkeit
+       // eines mittelhellen Bauteils.
+       float bSchwelleMax = 1.0;
+       float bSchwelleMin = 0.5;
+       float bStufe;
+       if (uZellenStufen < 2.5) {
+         bStufe = bLeuchtdichte > bSchwelleMin ? 1.0 : 0.5;
+       } else {
+         bStufe = bLeuchtdichte > 0.85 ? 1.0
+                : bLeuchtdichte > 0.5  ? 0.72
+                :                        0.45;
+       }
        vec3 bFarbrichtung = bLeuchtdichte > 0.0005 ? outgoingLight / bLeuchtdichte : diffuse;
        outgoingLight = bFarbrichtung * bStufe;
+       // Streiflicht am Saum: dort, wo die Flaechennormale senkrecht zur
+       // Blickrichtung steht, ist die Materialflaeche "abgewandt" und es
+       // wird kuenstlich ein warmes Licht daruebergelegt. Das macht die
+       // Silhouette erst lesbar -- vorher war alles, was nicht direkt
+       // beleuchtet war, eine dunkle Flaeche ohne Kontur.
        float bRandDot = 1.0 - max(dot(normalize(vViewPosition), normal), 0.0);
-       float bRandStufe = smoothstep(uRandSchwelle - 0.2, uRandSchwelle + 0.2, bRandDot);
+       float bRandStufe = smoothstep(uRandSchwelle - 0.18, uRandSchwelle + 0.18, bRandDot);
        outgoingLight += bRandStufe * uRandStaerke * uRandFarbe;`,
     );
     // Beide `.replace()`-Treffer sind exakte three.js-Quelltextzeilen (Version
