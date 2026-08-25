@@ -17,47 +17,17 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { Document, NodeIO } from '@gltf-transform/core';
+import { parseGeometry, transformPositions, flipV, fetchWithRetry, geometryExceedsDeclaredObb } from './i3s-transform.mjs';
 
 const BASE = 'https://www.gis.nrw.de/geobasis/3D_mesh/SceneServer/layers/0';
-const ORIGIN = [358300.0, 5645800.0, 40.0];
 // Knoten, deren eigene OBB in X oder Y groesser als das hier ist, sind grobe
 // Hintergrund-Kacheln, die das ROI nur am Rand streifen -- fuers ROI selbst
 // ohne Nutzen, aber gross im Download. Verwerfen.
 const MAX_HALFSIZE_M = 700;
 
-function rotateByQuat([x, y, z], [qx, qy, qz, qw]) {
-  const ix = qw * x + qy * z - qz * y;
-  const iy = qw * y + qz * x - qx * z;
-  const iz = qw * z + qx * y - qy * x;
-  const iw = -qx * x - qy * y - qz * z;
-  return [
-    ix * qw + iw * -qx + iy * -qz - iz * -qy,
-    iy * qw + iw * -qy + iz * -qx - ix * -qz,
-    iz * qw + iw * -qz + ix * -qy - iy * -qx,
-  ];
-}
-
 async function fetchBuffer(url) {
-  const res = await fetch(url, { headers: { 'Accept-Encoding': 'gzip' } });
-  if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}`);
+  const res = await fetchWithRetry(url, { headers: { 'Accept-Encoding': 'gzip' } });
   return Buffer.from(await res.arrayBuffer());
-}
-
-function parseGeometry(buf) {
-  const vertexCount = buf.readUInt32LE(0);
-  const featureCount = buf.readUInt32LE(4);
-  let off = 8;
-  const positions = new Float32Array(vertexCount * 3);
-  for (let i = 0; i < vertexCount * 3; i++) {
-    positions[i] = buf.readFloatLE(off);
-    off += 4;
-  }
-  const uvs = new Float32Array(vertexCount * 2);
-  for (let i = 0; i < vertexCount * 2; i++) {
-    uvs[i] = buf.readFloatLE(off);
-    off += 4;
-  }
-  return { vertexCount, featureCount, positions, uvs };
 }
 
 async function mapConcurrent(items, limit, fn) {
@@ -114,30 +84,14 @@ async function main() {
     try {
       const { vertexCount, positions, uvs } = parseGeometry(geomBuf);
       if (vertexCount === 0) { failed++; continue; }
+      if (geometryExceedsDeclaredObb(positions, node.obb.halfSize)) {
+        failed++;
+        console.error(`node ${node.index}: REJECTED - geometry extent inconsistent with its own declared OBB (bad source data for this node)`);
+        continue;
+      }
 
-      const scenePositions = new Float32Array(vertexCount * 3);
-      const [cx, cy, cz] = node.obb.center;
-      const quat = node.obb.quaternion;
-      const identity = quat[0] === 0 && quat[1] === 0 && quat[2] === 0 && quat[3] === 1;
-      for (let v = 0; v < vertexCount; v++) {
-        let lx = positions[v * 3];
-        let ly = positions[v * 3 + 1];
-        let lz = positions[v * 3 + 2];
-        if (!identity) [lx, ly, lz] = rotateByQuat([lx, ly, lz], quat);
-        const wx = cx + lx;
-        const wy = cy + ly;
-        const wz = cz + lz;
-        // three.js ist Y-up: Weltelevation -> glTF Y, Welt-Y (BEUTELTIERs
-        // "y"/Szenen-Z) -> glTF Z.
-        scenePositions[v * 3] = wx - ORIGIN[0];
-        scenePositions[v * 3 + 1] = wz - ORIGIN[2];
-        scenePositions[v * 3 + 2] = wy - ORIGIN[1];
-      }
-      const flippedUvs = new Float32Array(vertexCount * 2);
-      for (let v = 0; v < vertexCount; v++) {
-        flippedUvs[v * 2] = uvs[v * 2];
-        flippedUvs[v * 2 + 1] = 1 - uvs[v * 2 + 1];
-      }
+      const scenePositions = transformPositions(positions, node.obb);
+      const flippedUvs = flipV(uvs);
 
       const posAccessor = doc.createAccessor().setType('VEC3').setArray(scenePositions).setBuffer(buffer);
       const uvAccessor = doc.createAccessor().setType('VEC2').setArray(flippedUvs).setBuffer(buffer);

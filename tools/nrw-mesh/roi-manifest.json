@@ -28,19 +28,41 @@
     ]
   },
   "extraction": {
-    "nodesVisitedTotal": 569,
-    "nodesPickedInRoi": 379,
-    "nodesKeptAfterCoarseFilter": 375,
+    "pipelineVersion": 2,
+    "changesFromV1": [
+      "traverse.mjs: ROI-overlap test replaced bounding-sphere (over-inclusive in all directions by the OBB diagonal length) with a rotation-aware axis-aligned XY footprint test (xyFootprint() in i3s-transform.mjs, projects all 8 rotated OBB corners) -- still conservative for rotated boxes, but far tighter. The sphere test let large, elongated background nodes graze into the ROI from up to ~900m away and pulled in their entire real-world footprint.",
+      "traverse.mjs: added real gap detection (coversFootprint(), a 48x48 raster over each node's ROI-clipped footprint) -- when a node's matching children do not fully cover the node's own ROI-clipped area, the node itself is also kept (not just descended into), closing genuine local coverage holes instead of leaving them undetected.",
+      "traverse.mjs: gap-fill and the plain 'no matching children -> keep node' rule are both gated by eligibleForPick() (i3s-transform.mjs) -- a node above local-tile scale (halfSize x/y > 100m) is only kept if a real majority (>=30%) of its OWN footprint actually lies in the ROI. A node is a complete standalone mesh over its ENTIRE OBB, not just the ROI-overlapping sliver, so keeping a large node that only grazes the ROI edge was pulling in hundreds of meters of irrelevant background.",
+      "build.mjs: added geometryExceedsDeclaredObb() (i3s-transform.mjs) -- rejects a node if its actual parsed local vertex extent exceeds its own declared obb.halfSize by more than 3x on any axis. Found and confirmed on real data: some nodes' geometry buffer does not match their own OBB metadata (example: node 20371600, declared halfSize.y=40.0m, actual local Y vertex extent ~912m) -- a source data inconsistency, not a transform bug (independently confirmed by rendering a known-good identity-quaternion leaf node, whose GLTFLoader-computed bounding box matched the independently-computed expected box exactly). 76/473 picked nodes (16%) failed this check for this ROI and were excluded rather than importing corrupted geometry.",
+      "New tools/nrw-mesh/i3s-transform.mjs: shared transform/parsing/geometry-validation module, imported by traverse.mjs, build.mjs and the new verify-single-node.mjs, so the single-node proof and the batch build are guaranteed to run identical logic.",
+      "New tools/nrw-mesh/verify-single-node.mjs: automated, reproducible single-leaf-node proof (geometry/UV/texture presence + independently cross-checked EPSG:25832->scene transform bounds), plus a standalone three.js/Playwright GLB viewer (tools external to the repo, see reproduceWith) with an automated non-blank-pixel check."
+    ],
+    "nodesVisitedTotal": 535,
+    "nodesPickedInRoi": 473,
+    "nodesKeptAfterCoarseFilter": 473,
+    "nodesRejectedForObbGeometryMismatch": 76,
+    "nodesInFinalGlb": 397,
     "coarseFilterMaxHalfSizeM": 700,
-    "totalVertices": 9846456,
+    "totalVertices": 12254790,
+    "singleLeafNodeProof": {
+      "nodeIndex": 20366270,
+      "vertexCount": 22812,
+      "allAutomatedChecksPassed": true,
+      "renderedBoundingBoxMatchesIndependentlyComputedExpectation": true
+    },
     "localArtifact": {
       "path": "<local build output, not committed>",
       "format": "GLB (glTF 2.0 binary), one mesh+material+JPEG texture per source node",
-      "sizeBytes": 249300000,
+      "sizeBytes": 305200000,
+      "sha256": "c404c0cf2c6b5d3654e560631e898a9e17fda3bb4ba2fd8eb0909bf835a90a38",
       "reproduceWith": "node tools/nrw-mesh/traverse.mjs /tmp/leaves.json && node tools/nrw-mesh/build.mjs /tmp/leaves.json /tmp/koelnmesse-nrw-mesh.glb"
+    },
+    "archivedNodeList": {
+      "path": "tools/nrw-mesh/leaves.json",
+      "note": "Committed (218KB, plain node metadata JSON, not a binary asset) so the exact 473-node ROI pick is reproducible without re-traversing the SceneServer -- pass it directly to build.mjs."
     }
   },
-  "knownLimitation": "The ROI-overlap test on the I3S node tree is deliberately conservative (bounding-sphere, not exact OBB) to avoid false negatives after an axis-aligned test silently dropped whole branches with rotated OBBs. That conservatism, combined with the mesh-pyramid tree not always subdividing a parent footprint contiguously among its children, means the extracted set is not one seamless surface -- it is real photogrammetric geometry+texture from the official service, but with gaps between the picked nodes rather than full contiguous coverage. Tightening the ROI test to exact OBB-vs-AABB intersection would close most of those gaps; not done in this pass.",
+  "knownLimitation": "Small residual local gaps can still remain at the very finest LOD where even a gap-filled node's own footprint doesn't fully cover its ROI-clipped area at leaf scale, and 76 nodes were deliberately excluded for failing the OBB/geometry consistency check (see nodesRejectedForObbGeometryMismatch) rather than importing corrupted geometry -- both are visible as small dark gaps in the rendered screenshot. The systemic issues from pipeline v1 (sphere over-inclusion pulling in far-away background, and undetected coverage holes) are fixed; see changesFromV1.",
   "toolingEvaluation": {
     "evaluatedPerUserRequest": [
       {
