@@ -372,7 +372,9 @@ export function Hallenhuelle({
     [boden],
   );
   // Rohbau-Phase: eine einzelne Deckenfarbe statt der texturierten Fassung.
-  const decke = useMemo(() => flachMaterial('#c9c4b8'), []);
+  // War hellbeige (#c9c4b8) -- auf den Referenzfotos ist die Decke selbst
+  // fast schwarz, das Gitter kaum dunkler als die Flaeche dahinter.
+  const decke = useMemo(() => flachMaterial('#111214'), []);
 
   if (!visible || !flaechen.length) return null;
 
@@ -729,7 +731,9 @@ export function Hallenstuetzen({
 
   const material = useMemo(
     () => (ROHBAU_PHASE
-      ? flachMaterial('#3c4048')
+      // Halle 10 zeigt auf den Referenzfotos helle, nicht dunkle Stuetzen --
+      // M01 (WALL_LIGHT) statt der dunklen M02-Grundfarbe.
+      ? flachMaterial(FAMILIEN.M01.grundton)
       : toonMaterial({ ...FAMILIEN.M02, grundton: '#3c4048', stufen: 3 })),
     [],
   );
