@@ -41,6 +41,7 @@ import {
   Hallenlicht,
   Hallenstuetzen,
   Hallenwaende,
+  Hallenwandtechnik,
   Lichtspiegel,
 } from './interior';
 import { Boulevard } from './boulevard';
@@ -2328,6 +2329,12 @@ export function SiteScene(props: SceneProps) {
           der echten Kante und wird von einer vorhandenen amtlichen Wand
           immer verdeckt; sichtbar wird sie nur dort, wo keine steht. */}
       <Hallenwaende
+        data={data}
+        centre={centre}
+        hallKey={lichtHallKey}
+        visible={preset === 'ego'}
+      />
+      <Hallenwandtechnik
         data={data}
         centre={centre}
         hallKey={lichtHallKey}

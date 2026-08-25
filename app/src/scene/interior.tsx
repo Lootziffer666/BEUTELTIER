@@ -31,6 +31,7 @@ import {
   WELT_KACHEL_M,
 } from './materials';
 import { planErlaubt } from './fernsteuerung';
+import { WANDTECHNIK_DEFAULT, wandtechnik, type WandtechnikSpec } from './wandtechnik';
 import konstruktion from '../../public/data/hallen-konstruktion.json';
 
 const PLAN_ANSICHT =
@@ -433,9 +434,30 @@ export function Hallenhuelle({
  * trifft der Blick stattdessen auf sie. Kein Verstecken von Welt, nur ein
  * zweiter Boden unter dem Seiltänzer.
  */
-function hallenwaendeGeometrie(footprint: Placement2D[], baseY: number, hoehe: number) {
-  if (footprint.length < 3) return null;
+/** Wie weit die Wandflaeche (und alles, was auf ihr sitzt) vor die amtliche Kante tritt. */
+const WAND_EPS_M = 0.1;
 
+interface Hallenkante {
+  ax: number; ay: number; bx: number; by: number;
+  len: number;
+  nx: number; ny: number;
+  dirX: number; dirY: number;
+  /** Rotation um Y, mit der eine Box ihre lokale X-Achse auf die Kantenrichtung legt. */
+  drehung: number;
+}
+
+/**
+ * Die Aussenkanten eines Hallenumrisses, je mit Laenge, nach aussen
+ * zeigender Normale und der Y-Rotation, die eine Box entlang der Kante
+ * ausrichtet.
+ *
+ * Gemeinsame Grundlage für `hallenwaendeGeometrie` (die Wandflaeche selbst)
+ * und `hallenwandtechnikGeometrie` (die Panel-/Kabelschicht davor) --
+ * dieselbe Kante darf nur einmal berechnet werden, sonst laufen beide
+ * Schichten irgendwann auseinander.
+ */
+function hallenkanten(footprint: Placement2D[]): Hallenkante[] {
+  if (footprint.length < 3) return [];
   let cx = 0;
   let cy = 0;
   for (const [x, y] of footprint) {
@@ -445,12 +467,7 @@ function hallenwaendeGeometrie(footprint: Placement2D[], baseY: number, hoehe: n
   cx /= footprint.length;
   cy /= footprint.length;
 
-  const EPS_M = 0.1;
-  const positions: number[] = [];
-  const uvs: number[] = [];
-  const normals: number[] = [];
-  let laenge = 0;
-
+  const kanten: Hallenkante[] = [];
   for (let i = 0; i < footprint.length; i += 1) {
     const [ax, ay] = footprint[i];
     const [bx, by] = footprint[(i + 1) % footprint.length];
@@ -469,9 +486,30 @@ function hallenwaendeGeometrie(footprint: Placement2D[], baseY: number, hoehe: n
       nx = -nx;
       ny = -ny;
     }
+    kanten.push({
+      ax, ay, bx, by, len, nx, ny,
+      dirX: dx / len, dirY: dy / len,
+      // Dieselbe Zuordnung wie `laengsteKante()` in Ausstattung.tsx: eine
+      // Box, deren lokale X-Achse nach `rotateY(drehung)` entlang der
+      // Kante zeigt.
+      drehung: Math.atan2(-dy, dx),
+    });
+  }
+  return kanten;
+}
 
-    const a: [number, number] = [ax + nx * EPS_M, ay + ny * EPS_M];
-    const b: [number, number] = [bx + nx * EPS_M, by + ny * EPS_M];
+function hallenwaendeGeometrie(footprint: Placement2D[], baseY: number, hoehe: number) {
+  const kanten = hallenkanten(footprint);
+  if (!kanten.length) return null;
+
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const normals: number[] = [];
+  let laenge = 0;
+
+  for (const { ax, ay, bx, by, len, nx, ny } of kanten) {
+    const a: [number, number] = [ax + nx * WAND_EPS_M, ay + ny * WAND_EPS_M];
+    const b: [number, number] = [bx + nx * WAND_EPS_M, by + ny * WAND_EPS_M];
     const u0 = laenge;
     const u1 = laenge + len;
     laenge += len;
@@ -556,6 +594,120 @@ export function Hallenwaende({
         />
       )}
     </mesh>
+  );
+}
+
+/** Wie tief eine Kabel-/Rohrbox vor die Wand tritt -- schmal, kaum mehr als Relief. */
+const WANDTECHNIK_KABEL_TIEFE_M = 0.025;
+
+/**
+ * Panels, Kabel und Technikboxen für alle Kanten eines Hallenumrisses, zu
+ * einer einzigen Geometrie zusammengeführt.
+ *
+ * Jede Kante bekommt einen eigenen, aus dem Basis-Seed abgeleiteten Seed --
+ * dieselbe Wand wiederholt sich sonst an jeder geraden Hallenseite
+ * identisch, und genau das soll "unregelmässig regelmässig" verhindern.
+ */
+function hallenwandtechnikGeometrie(
+  footprint: Placement2D[],
+  baseY: number,
+  hoehe: number,
+  spec: Partial<WandtechnikSpec>,
+): THREE.BufferGeometry | null {
+  const kanten = hallenkanten(footprint);
+  if (!kanten.length) return null;
+  const basisSeed = spec.seed ?? WANDTECHNIK_DEFAULT.seed;
+  const teile: THREE.BufferGeometry[] = [];
+
+  const box = (
+    kante: Hallenkante, uMitte: number, vMitte: number,
+    breiteU: number, breiteV: number, tiefe: number,
+  ) => {
+    const geometrie = new THREE.BoxGeometry(breiteU, breiteV, Math.max(tiefe, 0.005));
+    geometrie.rotateY(kante.drehung);
+    geometrie.translate(
+      kante.ax + kante.dirX * uMitte + kante.nx * (WAND_EPS_M + tiefe / 2),
+      baseY + vMitte,
+      kante.ay + kante.dirY * uMitte + kante.ny * (WAND_EPS_M + tiefe / 2),
+    );
+    teile.push(geometrie);
+  };
+
+  kanten.forEach((kante, edgeIndex) => {
+    const seed = (basisSeed * 97 + edgeIndex * 131) >>> 0;
+    const { panels, kabel, boxen } = wandtechnik(kante.len, hoehe, { ...spec, seed });
+
+    for (const p of panels) box(kante, p.u, p.v, p.breiteU, p.breiteV, p.tiefe);
+    for (const b of boxen) box(kante, b.u, b.v, b.breite, b.hoehe, b.tiefe);
+    for (const k of kabel) {
+      for (let i = 0; i < k.punkte.length - 1; i += 1) {
+        const [u0, v0] = k.punkte[i];
+        const [u1, v1] = k.punkte[i + 1];
+        box(
+          kante, (u0 + u1) / 2, (v0 + v1) / 2,
+          Math.max(Math.abs(u1 - u0), k.dicke), Math.max(Math.abs(v1 - v0), k.dicke),
+          WANDTECHNIK_KABEL_TIEFE_M,
+        );
+      }
+    }
+  });
+
+  if (!teile.length) return null;
+  const geometry = mergeGeometries(teile, false);
+  teile.forEach((teil) => teil.dispose());
+  return geometry;
+}
+
+/**
+ * Die technische Detailschicht vor der Hallenwand: Panelfelder, Kabel,
+ * Technikboxen -- siehe `wandtechnik.ts` für die Planung dahinter.
+ *
+ * Bewusst kein `ROHBAU_PHASE`-Unterschied wie bei `Hallenwaende`: die
+ * Stilbibel will die Wandtextur selbst langweilig halten und die Atmosphäre
+ * aus Panel-Geometrie, Kontur, Kabeln und gebackenem Licht ziehen -- ein
+ * `flachMaterial()` ist hier keine Verkürzung für die spätere Fassung,
+ * sondern bereits die Zielausführung.
+ */
+export function Hallenwandtechnik({
+  data,
+  centre,
+  hallKey,
+  visible,
+  spec,
+}: {
+  data: Dataset;
+  centre: [number, number];
+  hallKey: string | null;
+  visible: boolean;
+  spec?: Partial<WandtechnikSpec>;
+}) {
+  const geometry = useMemo(() => {
+    const hall = hallKey ? data.hallsByKey.get(hallKey) : null;
+    if (!hall || hall.outdoor) return null;
+    const hoehe = hall.height?.clearHeightM ?? 8;
+    const local = hallenwandtechnikGeometrie(hall.footprint, hall.baseY, hoehe, spec ?? {});
+    if (!local) return null;
+    const position = local.getAttribute('position');
+    for (let i = 0; i < position.count; i += 1) {
+      position.setX(i, position.getX(i) - centre[0]);
+      position.setZ(i, position.getZ(i) - centre[1]);
+    }
+    return local;
+  }, [data, centre, hallKey, spec]);
+
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+
+  const material = useMemo(() => flachMaterial(FAMILIEN.M02.grundton), []);
+
+  if (!visible || !geometry) return null;
+
+  return (
+    <group>
+      <mesh geometry={geometry} castShadow receiveShadow>
+        <primitive object={material} attach="material" />
+      </mesh>
+      <Kontur geometry={geometry} staerke={konturStaerke(FAMILIEN.M02.kontur)} />
+    </group>
   );
 }
 
