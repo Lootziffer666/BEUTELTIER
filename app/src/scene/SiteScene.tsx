@@ -46,6 +46,8 @@ import {
 } from './interior';
 import { Boulevard } from './boulevard';
 import { KleineStaende } from './KleineStaende';
+import { CustomStandModels } from './CustomStandModels';
+import { CUSTOM_MODEL_STAND_IDS } from './customStands';
 import { Markenstaende } from './Markenstaende';
 import { MARKEN_STAND_IDS } from './marken';
 import { Vertikalverbindungen } from './vertical';
@@ -1070,6 +1072,9 @@ function Stands({
       // Markenstände tragen eine eigene Fassade und dürfen nicht zusätzlich
       // im Sammelkörper stecken -- zwei deckungsgleiche Wände flackern.
       if (MARKEN_STAND_IDS.has(stand.id)) return false;
+      // Ebenso Stände mit einem gelieferten GLB-Modell (CustomStandModels) --
+      // sonst steht ein Platzhalterquader mitten im echten Modell.
+      if (CUSTOM_MODEL_STAND_IDS.has(stand.id)) return false;
       if (!interior) return true;
       const hall = data.hallsByKey.get(stand.hallKey);
       return !hall || hall.placement.source !== 'geschaetzt';
@@ -2309,6 +2314,11 @@ export function SiteScene(props: SceneProps) {
       )}
       {props.showStands && !LEER_ERLAUBT && (
         <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
+      )}
+      {props.showStands && !LEER_ERLAUBT && (
+        <Suspense fallback={null}>
+          <CustomStandModels data={data} centre={centre} />
+        </Suspense>
       )}
       {/* Waende fuer die gewoehnlichen Staende -- vorerst abgeschaltet.
           Erst muss die LEERE Halle (Stuetzen, Deckeninstallation, Boden)
