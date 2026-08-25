@@ -228,6 +228,84 @@ export interface Karten {
  * Das ist ein Verlust und eine Stilentscheidung zugleich: gestufter Glanz auf
  * einer gestuften Fläche wäre Rauschen.
  */
+/**
+ * Der eigentliche Grund, warum reines `MeshToonMaterial` in einer Halle mit
+ * mehreren Leuchten nie nach Comic aussieht: three.js bandet JEDES Licht
+ * einzeln durch die Gradient-Map und summiert danach
+ * (`lights_toon_fragment`/`RE_Direct_Toon`). Bei einem Licht ist das eine
+ * harte Stufe -- bei sechs bis zwoelf Punktlichtern je Halle (Deckenleuchten,
+ * Standpools) summieren sich sechs bis zwoelf gestufte Beitraege wieder zu
+ * einem praktisch weichen Verlauf. Die Flaeche selbst trug also nie sichtbare
+ * Stufen, komplett unabhaengig von der Kontur.
+ *
+ * Der Fix patcht `outgoingLight` -- die bereits von three.js aus allen
+ * Lichtern, Schatten und Texturen zusammengerechnete Endfarbe -- direkt vor
+ * der Ausgabe noch einmal in `familie.stufen` Baender. Alle echten Lichter,
+ * Schatten und Texturen bleiben unveraendert bestehen (die "helle
+ * Lichtinseln"-Optik unter den Leuchten lebt weiter); nur das Endergebnis
+ * wird flach. Referenz: mayacoda/toon-shader nach Alisavakis' Cel-Shading-
+ * Artikel -- dort steckt dieselbe Bänderung + ein Rim-Light, das reinem
+ * MeshToonMaterial ganz fehlt und das die Silhouette erst spielhaft lesbar
+ * macht.
+ */
+function beuteltierZellenLicht(material: THREE.MeshToonMaterial, stufen: Stufen): void {
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uZellenStufen = { value: stufen };
+    shader.uniforms.uRandFarbe = { value: new THREE.Color('#fff6e0') };
+    // Auf einer Kugel wandert die Normale stetig, der Rand wirkt wie eine
+    // duenne Linie entlang der Silhouette. Auf einer Box ist die Normale
+    // pro Flaeche KONSTANT -- derselbe Rand-Wert gilt fuer die ganze
+    // Flaeche, nicht nur ihren Silhouetten-Saum. Bei BEUTELTIERs fast
+    // durchweg kantiger Geometrie (Waende, Stuetzen, Hallenkoerper) haette
+    // die urspruengliche Staerke ganze Flaechen aufblitzen lassen statt
+    // einer Kante. Deutlich schwaecher und mit weicherem Uebergang, bis es
+    // eher ein Streiflicht-Schimmer als ein Rand ist -- ehrlicher fuer eine
+    // Welt, die fast nur aus flachen Flaechen besteht.
+    shader.uniforms.uRandStaerke = { value: 0.12 };
+    shader.uniforms.uRandSchwelle = { value: 0.72 };
+    const uniformStelle = 'uniform vec3 diffuse;';
+    const lichtStelle =
+      'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;';
+    const nachUniform = shader.fragmentShader.replace(
+      uniformStelle,
+      `${uniformStelle}
+       uniform float uZellenStufen;
+       uniform vec3 uRandFarbe;
+       uniform float uRandStaerke;
+       uniform float uRandSchwelle;`,
+    );
+    const gepatcht = nachUniform.replace(
+      lichtStelle,
+      `${lichtStelle}
+       outgoingLight = round(clamp(outgoingLight, 0.0, 1.0) * uZellenStufen) / uZellenStufen;
+       // Die dunkelste Stufe darf nie reines Schwarz sein -- ohne genug
+       // Umgebungslicht (Ego ist bewusst dunkel) faellt eine Flaeche sonst
+       // auf (0,0,0), und ein komplett schwarzes Bauteil liest sich als
+       // kaputt, nicht als Schatten. Ein Boden von 32% der Grundfarbe haelt
+       // die Materialidentitaet auch im tiefsten Schatten sichtbar.
+       outgoingLight = max(outgoingLight, diffuse * 0.32);
+       float bRandDot = 1.0 - max(dot(normalize(vViewPosition), normal), 0.0);
+       float bRandStufe = smoothstep(uRandSchwelle - 0.2, uRandSchwelle + 0.2, bRandDot);
+       outgoingLight += bRandStufe * uRandStaerke * uRandFarbe;`,
+    );
+    // Beide `.replace()`-Treffer sind exakte three.js-Quelltextzeilen (Version
+    // in package.json gepinnt). Ohne diese Pruefung wuerde ein kuenftiges
+    // three.js-Update, das eine der Zeilen nur umformuliert, den Patch
+    // still verfehlen -- die zweite Ersetzung wuerde trotzdem greifen (sie
+    // haengt nicht von der ersten ab) und Code einfuegen, der auf
+    // `uZellenStufen`/`uRandFarbe`/etc. verweist, ohne dass deren
+    // `uniform`-Deklarationen je eingefuegt wurden. Ergebnis waere kein
+    // Absturz, sondern ein GLSL-Kompilierfehler, der jedes Toon-Material der
+    // Halle schwarz zeichnet -- lieber laut im Log als still im Rendering.
+    if (nachUniform === shader.fragmentShader || gepatcht === nachUniform) {
+      console.error(
+        'beuteltierZellenLicht: three.js-Shader-Chunk hat sich geaendert -- Patch griff nicht.',
+      );
+    }
+    shader.fragmentShader = gepatcht;
+  };
+}
+
 export function toonMaterial(
   familie: Familie,
   karten: Karten = {},
@@ -249,6 +327,7 @@ export function toonMaterial(
     if (karten.emissiveMap) material.emissiveMap = karten.emissiveMap;
   }
   material.name = `${familie.id}|${familie.name}`;
+  beuteltierZellenLicht(material, familie.stufen);
   return material;
 }
 

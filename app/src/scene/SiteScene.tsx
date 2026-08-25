@@ -44,6 +44,7 @@ import {
   Lichtspiegel,
 } from './interior';
 import { Boulevard } from './boulevard';
+import { KleineStaende } from './KleineStaende';
 import { Markenstaende } from './Markenstaende';
 import { MARKEN_STAND_IDS } from './marken';
 import { Vertikalverbindungen } from './vertical';
@@ -915,9 +916,21 @@ function OfficialWorld({
   const interior = preset === 'ego';
   const surfaces = weltFlaechen(interior);
 
-  const packages = data.world?.manifest.packages.filter(
+  const alleWeltpakete = data.world?.manifest.packages.filter(
     (entry) => entry.available && entry.role === 'render',
   ) ?? [];
+  // In Ego steht man innerhalb einer Halle: deren eigene Waende verdecken
+  // die vier Umgebungspakete (surroundings/ost|nord|sued|west, zusammen
+  // ~15.500 Primitive) ohnehin vollstaendig -- kein Pixel davon ist je
+  // sichtbar. Trotzdem mitgeladen wurden sie mit voller Deckkraft (bei
+  // registrierten Daten immer 1) UND mit eigenen Cel-Konturhuellen an
+  // jeder Aussenwand, weil `cel` unabhaengig vom Hallenkern fuer jedes
+  // Paket lief. Das Ergebnis war ein Renderbudget von 16.037 Manifest-
+  // Primitiven plus verdoppelten Aussenkonturen im Ego-Modus fuer eine
+  // Ansicht, die strukturell nie mehr als eine Halle zeigt.
+  const packages = interior
+    ? alleWeltpakete.filter((entry) => entry.id.startsWith('core/'))
+    : alleWeltpakete;
   const highlightFeatureIds = useMemo(() => {
     if (!highlightHallKey) return [];
     return data.world?.hallRegistrations?.registrations.find(
@@ -1773,13 +1786,106 @@ function WalkControls({
           triangles: gl.info.render.triangles,
           geometries: gl.info.memory.geometries,
           textures: gl.info.memory.textures,
+          programs: gl.info.programs?.length ?? null,
         },
+        lights: (() => {
+          const out: {
+            type: string;
+            distance?: number;
+            castShadow?: boolean;
+            shadowMapSize?: number;
+            pos: number[];
+            parentName: string | null;
+          }[] = [];
+          scene.traverse((obj) => {
+            if (obj instanceof THREE.PointLight || obj instanceof THREE.DirectionalLight || obj instanceof THREE.SpotLight) {
+              const world = new THREE.Vector3();
+              obj.getWorldPosition(world);
+              out.push({
+                type: obj.type,
+                distance: 'distance' in obj ? (obj as THREE.PointLight).distance : undefined,
+                castShadow: obj.castShadow,
+                shadowMapSize: obj.castShadow ? obj.shadow.mapSize.width : undefined,
+                pos: [Math.round(world.x), Math.round(world.y), Math.round(world.z)],
+                parentName: obj.parent?.name ?? null,
+              });
+            }
+          });
+          return out;
+        })(),
       };
     };
     return () => {
       delete global.__DIAGNOSE;
     };
   }, [active, camera, gl, scene]);
+
+  /**
+   * Rohbau-Ansicht fuer den Bildpruefer: alles weg, was nicht zur
+   * Orientierung im Raum gehoert -- Texturen, Lampen, Deckengitter --
+   * damit sich Geometrie (Stuetzenraster, Hallenmasse, Proportionen)
+   * beurteilen laesst, ohne dass Material- oder Lichtfragen mit hineinreden.
+   * `__ROHBAU(true)` schaltet um, `__ROHBAU(false)` stellt die Originale
+   * wieder her. Nur hinter `?setzen`, wie `__SETZEN`/`__DIAGNOSE`.
+   */
+  useEffect(() => {
+    if (!active || !SETZEN_ERLAUBT) return;
+    const global = globalThis as { __ROHBAU?: unknown };
+    const gesicherteMaterialien = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
+    const gesicherteLichter = new Map<THREE.Light, boolean>();
+    const rohbauMaterial = new THREE.MeshBasicMaterial({ color: '#9aa0a8' });
+    let zusatzlicht: THREE.AmbientLight | null = null;
+
+    const KEIN_ROHBAU = new Set(['hallendecke']);
+
+    const wiederherstellen = () => {
+      gesicherteMaterialien.forEach((material, mesh) => {
+        mesh.material = material;
+        if (KEIN_ROHBAU.has(mesh.name)) mesh.visible = true;
+      });
+      gesicherteMaterialien.clear();
+      gesicherteLichter.forEach((sichtbar, licht) => { licht.visible = sichtbar; });
+      gesicherteLichter.clear();
+      if (zusatzlicht) {
+        scene.remove(zusatzlicht);
+        zusatzlicht = null;
+      }
+    };
+
+    global.__ROHBAU = (an: boolean) => {
+      if (an) {
+        if (zusatzlicht) return 'bereits an';
+        scene.traverse((obj) => {
+          if (obj instanceof THREE.Mesh && !obj.userData?.kontur) {
+            gesicherteMaterialien.set(obj, obj.material);
+            if (KEIN_ROHBAU.has(obj.name)) {
+              obj.visible = false;
+            } else {
+              obj.material = rohbauMaterial;
+            }
+          }
+          if (obj instanceof THREE.Light) {
+            gesicherteLichter.set(obj, obj.visible);
+            obj.visible = false;
+          }
+        });
+        zusatzlicht = new THREE.AmbientLight('#ffffff', 3);
+        scene.add(zusatzlicht);
+        return 'rohbau an';
+      }
+      wiederherstellen();
+      return 'rohbau aus';
+    };
+    return () => {
+      // Sonst blieb die Szene grau/lichtlos zurueck, wenn der Effekt mit
+      // eingeschaltetem Rohbau neu lief (z.B. `active` wechselt) -- die
+      // einzige Rueckholfunktion war schon geloescht, bevor sie je aufraeumen
+      // konnte.
+      wiederherstellen();
+      rohbauMaterial.dispose();
+      delete global.__ROHBAU;
+    };
+  }, [active, scene]);
 
   useFrame((state, delta) => {
     if (!active) return;
@@ -2068,7 +2174,11 @@ export function SiteScene(props: SceneProps) {
   return (
     <Canvas
       camera={{ fov: preset === 'ego' ? 70 : 42, near: 0.15, far: extent * 6, position: [extent * 0.5, extent * 0.6, extent * 0.85] }}
-      dpr={[1, 1.8]}
+      // Ego traegt die volle Kosten von 12(6) Punktlichtern, gestufter
+      // Beleuchtung und der Ersatz-Sonne pro Fragment -- bei 1.8x DPR
+      // rendert das bis zu 3.24x so viele Pixel wie bei 1x. Fuer die
+      // anderen Presets (PBR, wenige Lichter) bleibt der hoehere Wert.
+      dpr={preset === 'ego' ? [1, 1.25] : [1, 1.8]}
       shadows="soft"
       gl={{ antialias: true, alpha: false }}
       style={{ touchAction: 'none' }}
@@ -2106,8 +2216,21 @@ export function SiteScene(props: SceneProps) {
         </Html>
       )}
 
-      {/* Das amtliche DGM1-Terrain -- das Fundament, auf dem alles steht. */}
-      {registered && (
+      {/* Das amtliche DGM1-Terrain -- das Fundament, auf dem alles steht.
+          Nicht in Ego: der komplette 7x3-km-DGM-Ausschnitt (701x301 Punkte,
+          ~420k Dreiecke in zwei Meshes: `bare` + Orthophoto-`drape`) laedt
+          synchron beim Mount (GLB laden, repairTerrainGrid, beide
+          Geometrien bauen, GPU-Upload) und ist als Riesenmesh praktisch
+          nicht frustum-kullbar -- die Bounding Sphere schneidet die Kamera
+          immer, egal wohin man in der Halle schaut. Von drinnen sieht man
+          das Gelaende ohnehin nie, der Hallenboden verdeckt es vollstaendig
+          -- exakt derselbe Grund, aus dem OfficialWorld die vier
+          Umgebungspakete in Ego schon nicht mehr mountet. Die
+          Hoehenabfrage fuers Laufen (`useTerrainHeightmap`/`terrainHeight`)
+          haengt nicht an diesem Mesh, sondern an einer eigenen,
+          unabhaengig geladenen Binaer-Heightmap -- faellt hier also nicht
+          mit weg. */}
+      {registered && preset !== 'ego' && (
         <Suspense fallback={null}>
           <Terrain centre={centre} ortho={data.ortho} map={orthoMap} />
         </Suspense>
@@ -2184,6 +2307,14 @@ export function SiteScene(props: SceneProps) {
       )}
       {props.showStands && !LEER_ERLAUBT && (
         <Markenstaende data={data} centre={centre} onSelectStand={props.onSelectStand} />
+      )}
+      {/* Waende fuer die gewoehnlichen Staende -- vorerst abgeschaltet.
+          Erst muss die LEERE Halle (Stuetzen, Deckeninstallation, Boden)
+          optisch stimmen; die Staende kommen danach dazu, und der erste
+          reale Stand wird aus einer gelieferten GLB gebaut, nicht laenger
+          prozedural. Datei bleibt bestehen, nur das Rendern ist aus. */}
+      {false && props.showStands && !LEER_ERLAUBT && (preset === 'halle' || preset === 'ego') && focusHallKey && (
+        <KleineStaende data={data} centre={centre} hallKey={focusHallKey} />
       )}
       <Hallenhuelle
         data={data}

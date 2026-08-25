@@ -159,7 +159,14 @@ export function Ausstattung({
       const werk = deckenwerk(lage.laenge, lage.breite, hoehe);
       const versetzen = (geometrie: THREE.BufferGeometry | null) => {
         if (!geometrie) return null;
-        geometrie.rotateY(-lage.winkel);
+        // War rotateY(-lage.winkel): das spiegelt die Deckenkonstruktion an
+        // ihrer eigenen Laengsachse statt sie zu drehen, sobald eine Halle
+        // nicht exakt achsparallel liegt. Jede andere Stelle, die dieselbe
+        // Hallenlage verwendet (Stuetzen ueber tx/ty, Deckenleuchten,
+        // Markenstaende/KleineStaende ueber denselben Winkel), dreht mit
+        // +lage.winkel -- das Deckenraster und die Leuchtbaender liefen
+        // deshalb quer statt laengs zu den Pfeilerreihen.
+        geometrie.rotateY(lage.winkel);
         geometrie.translate(lage.mx - centre[0], halle.baseY, lage.my - centre[1]);
         return geometrie;
       };
@@ -169,8 +176,15 @@ export function Ausstattung({
       if (band) lichter.push(band);
 
       // Echte Lichtquellen unter jedem dritten Band, laengs verteilt.
-      const cos = Math.cos(-lage.winkel);
-      const sin = Math.sin(-lage.winkel);
+      // Derselbe Vorzeichenfehler wie eben bei `versetzen()`, nur hier nie
+      // mitgezogen: `rotateY(lage.winkel)` oben dreht Punkte um
+      // (x*cos+z*sin, -x*sin+z*cos), aber diese Handrechnung fuer die
+      // Lichtpositionen tat bislang das Gegenteil (`-lage.winkel`) -- die
+      // Leuchtbaender lagen also am richtigen Fleck, ihre eigentlichen
+      // Lichtquellen darunter aber gespiegelt, sobald eine Halle nicht
+      // achsparallel liegt.
+      const cos = Math.cos(lage.winkel);
+      const sin = Math.sin(lage.winkel);
       werk.lichtbaender.forEach((tafel, i) => {
         if (i % 3 !== 0) return;
         const schritte = Math.max(1, Math.round(lage.laenge / 30));
@@ -288,7 +302,7 @@ export function Ausstattung({
   return (
     <group>
       {drinnen && bauteile.decke && (
-        <mesh geometry={bauteile.decke} material={materialien.decke} castShadow receiveShadow />
+        <mesh name="hallendecke" geometry={bauteile.decke} material={materialien.decke} castShadow receiveShadow />
       )}
       {drinnen && bauteile.licht && (
         <mesh geometry={bauteile.licht} material={materialien.licht} />
@@ -304,7 +318,11 @@ export function Ausstattung({
           key={`pool-${i}`}
           position={punkt}
           color="#ffe9c4"
-          intensity={26}
+          // Wie bei Hallenlicht: seit dem physically-correct-lighting-
+          // Umstieg (three.js r155) ist intensity Candela, kein freier
+          // Multiplikator mehr. Der alte Wert (26) stammt von davor und war
+          // um denselben Faktor zu dunkel wie die dortige Deckenleuchte.
+          intensity={820}
           distance={26}
           decay={1.7}
         />
