@@ -31,7 +31,7 @@ import {
   WELT_KACHEL_M,
 } from './materials';
 import { planErlaubt } from './fernsteuerung';
-import konstruktion from '../../public/data/hallen-konstruktion.json';
+import konstruktion from '../data/hallen-konstruktion.json';
 
 const PLAN_ANSICHT =
   typeof window !== 'undefined' && planErlaubt(window.location.search);
