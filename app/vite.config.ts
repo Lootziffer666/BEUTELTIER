@@ -9,6 +9,10 @@ const ultraDuploSource = readFileSync(
   'utf8',
 );
 
+const hallConstructionSource = fileURLToPath(
+  new URL('./src/data/hallen-konstruktion.json', import.meta.url),
+);
+
 // World Builder ist absichtlich noch eine einzelne HTML-Werkbank. Ultra Duplo
 // wird beim Vite-Bau in denselben Modul-Scope injiziert, damit der Modus die
 // vorhandenen Bauplan-, Auswahl-, Transform- und GLB-Funktionen wiederverwendet.
@@ -34,6 +38,19 @@ const ultraDuploPlugin = {
 // Die v2-Namen isolieren die korrigierte Welt von den alten CacheFirst-Dateien.
 export default defineConfig({
   base: './',
+  resolve: {
+    // Vite 8 verbietet JS-Imports aus public/. Die Hallenkonstruktion liegt
+    // deshalb auch unter src/data. Solange interior.tsx noch den historischen
+    // public-Pfad nennt, fangen wir ihn pfadunabhaengig per RegExp ab: die
+    // Loesung haengt damit nicht von der relativen Verzeichnistiefe ab.
+    // Ziel bleibt, den Import in interior.tsx direkt auf ../data umzuziehen.
+    alias: [
+      {
+        find: /.*public\/data\/hallen-konstruktion\.json$/,
+        replacement: hallConstructionSource,
+      },
+    ],
+  },
   build: {
     rolldownOptions: {
       input: {
