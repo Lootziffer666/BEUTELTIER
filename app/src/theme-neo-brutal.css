@@ -17,7 +17,9 @@
   --panel-2: #fff9ee;
   --line: #1a1a1a;
   --text: #1a1a1a;
-  --muted: #8a7f6d;
+  /* War #8a7f6d: 3.75:1 gegen --panel, unter WCAG-AA (4.5:1) fuer die
+     10-11px fette Grossbuchstaben-Labels, die diese Farbe traegt. */
+  --muted: #7c715f;
   --accent: #ffc93c;
   --ok: #3f8a52;
   --warn: #b8860b;
