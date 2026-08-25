@@ -54,8 +54,15 @@
         "tool": "NASA-AMMOS/3DTilesRendererJS (3d-tiles-renderer, incl. 3d-tiles-renderer/r3f)",
         "result": "Confirmed via the project README: no native I3S/Esri/SceneServer/Integrated-Mesh loader or plugin exists. It renders OGC 3D Tiles only, so it is entirely dependent on a working I3S-to-3D-Tiles conversion step, which is the broken step above.",
         "conclusion": "Not applicable until an I3S source exists as valid 3D Tiles -- which tile-converter could not produce for this service."
+      },
+      {
+        "tool": "CesiumJS 1.144.0 I3SDataProvider.fromUrl()",
+        "command": "Standalone local proof (not part of the app): a static page loads Cesium.js, calls Cesium.I3SDataProvider.fromUrl('.../SceneServer') against the real NRW SceneServer (via a same-origin relay - this sandbox's headless Chromium cannot reach the public internet directly at all, confirmed with example.com too, unrelated to NRW; the relay just forwards the real bytes with plain Node fetch, which can reach it), then flies the camera to Koelnmesse.",
+        "result": "FAILS immediately and deterministically with 'RuntimeError: Unsupported spatial reference: 25832'. Confirmed by reading Cesium 1.144.0's own shipped source: I3SLayer.load() contains an unconditional `if (this._data.spatialReference.wkid !== 4326) throw ...` for I3S IntegratedMesh (3D mesh) layers - there is no reprojection path, no proj4/projection-engine hook, no option to override. The real NRW SceneServer publishes its mesh natively in EPSG:25832 (ETRS89/UTM32), which is common for national mapping agencies and is the same CRS BEUTELTIER's own pipeline already uses. Screenshot evidence: an unstyled Cesium globe with the exact error text overlaid, no NRW geometry loaded.",
+        "corroboration": "Independently corroborated by CesiumGS/cesium community reports (e.g. 'Cesium only supports EPSG:3857 and EPSG:4326' threads, UTM-georeferenced-model import issues) describing the same general projected-CRS limitation outside the I3S code path.",
+        "conclusion": "Not usable as-is for this task: this is a hard, unconditional code restriction in Cesium's I3S support, not a bug to retry around and not something to patch/fork per the explicit instruction not to modify third-party libraries during this task."
       }
     ],
-    "chosenApproach": "tools/nrw-mesh/traverse.mjs + build.mjs: parse the I3S REST responses directly (node pages, uncompressed geometry buffer, JPEG textures) and assemble one glTF with @gltf-transform/core. Verified working end-to-end against the same service these two tools failed on: 375/375 nodes fetched, real texture and geometry confirmed by rendering the output GLB with three.js under Playwright."
+    "chosenApproach": "tools/nrw-mesh/traverse.mjs + build.mjs: parse the I3S REST responses directly (node pages, uncompressed geometry buffer, JPEG textures) and assemble one glTF with @gltf-transform/core. Verified working end-to-end against the same service these two tools failed on: 375/375 nodes fetched, real texture and geometry confirmed by rendering the output GLB with three.js under Playwright. CesiumJS I3SDataProvider was also evaluated directly against the real SceneServer per explicit request and rejected for the same reason: it only accepts I3S mesh layers published in EPSG:4326, and this service is EPSG:25832."
   }
 }
