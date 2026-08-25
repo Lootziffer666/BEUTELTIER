@@ -104,54 +104,96 @@ const HALL_FRAGMENT = /* glsl */ `
  * damit reagiert glatter Beton anders als Glas, ohne dass dafür ein Bild
  * ausgeliefert werden muss.
  */
+/**
+ * Erzeugt eine Umgebungskarte aus einem Farbverlauf.
+ *
+ * `PMREMGenerator.fromScene` filtert die Kugel für alle Rauheitsstufen vor --
+ * damit reagiert glatter Beton anders als Glas, ohne dass dafür ein Bild
+ * ausgeliefert werden muss.
+ *
+ * `fromScene` rendert 6 Cube-Faces durch die Sky-Shader (mit
+ * `pow(towardsSun, 700.0)` und `pow(towardsSun, 14.0)` als schwere
+ * ALU-Schleifen fuer die Sonnenscheibe) und anschliessend die
+ * Prefilter-Mipmaps. Auf einem 6"-Telefon-Display dauert das 4-8
+ * Sekunden -- exakt das, was der Anwender beim Wechsel zwischen
+ * Uebersicht und Ego als "6 Sekunden zum Umschalten" sieht. Wir cachen
+ * die Env-Map modul-global, weil sie sich nur durch `hall` (innen vs.
+ * aussen) und `intensity` unterscheidet, und beides ist waehrend einer
+ * Session im Wesentlichen konstant. Ohne den Cache wurde der Backvorgang
+ * bei jeder Beleuchtungs-Remount erneut ausgeloest, was jeder
+ * Preset-Wechsel zwischen Uebersicht, Halle und Begehen ausloeste.
+ */
+const envMapCache = new Map<string, { gl: WebGLRenderingContext | WebGL2RenderingContext; texture: THREE.Texture }>();
+
+function getOrBakeEnvMap(
+  gl: THREE.WebGLRenderer,
+  key: string,
+  hall: boolean,
+  intensity: number,
+): THREE.Texture {
+  const cached = envMapCache.get(key);
+  if (cached && cached.gl === (gl.getContext() as WebGLRenderingContext | WebGL2RenderingContext)) {
+    return cached.texture;
+  }
+  const material = hall
+    ? new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        vertexShader: SKY_VERTEX,
+        fragmentShader: HALL_FRAGMENT,
+        uniforms: {
+          lamp: { value: new THREE.Color('#fff4de').multiplyScalar(3.4 * intensity) },
+          deck: { value: new THREE.Color('#2b2e34').multiplyScalar(intensity) },
+          wall: { value: new THREE.Color('#8d8b84').multiplyScalar(intensity) },
+          floorTone: { value: new THREE.Color('#5c5e63').multiplyScalar(intensity) },
+        },
+      })
+    : new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        vertexShader: SKY_VERTEX,
+        fragmentShader: SKY_FRAGMENT,
+        uniforms: {
+          zenith: { value: new THREE.Color('#3f6fa8').multiplyScalar(intensity) },
+          horizon: { value: new THREE.Color('#c3d3e2').multiplyScalar(intensity) },
+          ground: { value: new THREE.Color('#39373a').multiplyScalar(intensity) },
+          sun: { value: SUN },
+        },
+      });
+
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 24), material);
+  const source = new THREE.Scene();
+  source.add(sky);
+
+  const generator = new THREE.PMREMGenerator(gl);
+  generator.compileEquirectangularShader();
+  const target = generator.fromScene(source, 0.02);
+  generator.dispose();
+  sky.geometry.dispose();
+  material.dispose();
+  const texture = target.texture;
+  envMapCache.set(key, { gl: gl.getContext() as WebGLRenderingContext | WebGL2RenderingContext, texture });
+  return texture;
+}
+
 export function useProceduralSky(intensity = 1, hall = false): void {
   const { gl, scene } = useThree();
 
-  const environment = useMemo(() => {
-    const material = hall
-      ? new THREE.ShaderMaterial({
-          side: THREE.BackSide,
-          depthWrite: false,
-          vertexShader: SKY_VERTEX,
-          fragmentShader: HALL_FRAGMENT,
-          uniforms: {
-            lamp: { value: new THREE.Color('#fff4de').multiplyScalar(3.4 * intensity) },
-            deck: { value: new THREE.Color('#2b2e34').multiplyScalar(intensity) },
-            wall: { value: new THREE.Color('#8d8b84').multiplyScalar(intensity) },
-            floorTone: { value: new THREE.Color('#5c5e63').multiplyScalar(intensity) },
-          },
-        })
-      : new THREE.ShaderMaterial({
-          side: THREE.BackSide,
-          depthWrite: false,
-          vertexShader: SKY_VERTEX,
-          fragmentShader: SKY_FRAGMENT,
-          uniforms: {
-            zenith: { value: new THREE.Color('#3f6fa8').multiplyScalar(intensity) },
-            horizon: { value: new THREE.Color('#c3d3e2').multiplyScalar(intensity) },
-            ground: { value: new THREE.Color('#39373a').multiplyScalar(intensity) },
-            sun: { value: SUN },
-          },
-        });
-
-    const sky = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 24), material);
-    const source = new THREE.Scene();
-    source.add(sky);
-
-    const generator = new THREE.PMREMGenerator(gl);
-    generator.compileEquirectangularShader();
-    const target = generator.fromScene(source, 0.02);
-    generator.dispose();
-    sky.geometry.dispose();
-    material.dispose();
-    return target.texture;
-  }, [gl, intensity, hall]);
+  // Der Cache-Key ist `hall|intensity` -- der Wechsel Uebersicht <-> Ego
+  // loest genau einen Backvorgang pro Lebenszeit der WebGL-Instanz aus,
+  // und das auch nur, wenn die Env-Map fuer `hall=true` (Innenraum) noch
+  // nicht gebackt wurde. `useMemo` schuetzt zusaetzlich davor, dass
+  // Re-Renders der Beleuchtung den Backvorgang wiederholen.
+  const cacheKey = `${hall ? 'hall' : 'sky'}|${intensity}`;
+  const environment = useMemo(
+    () => getOrBakeEnvMap(gl, cacheKey, hall, intensity),
+    [gl, cacheKey, hall, intensity],
+  );
 
   useEffect(() => {
     scene.environment = environment;
     return () => {
       scene.environment = null;
-      environment.dispose();
     };
   }, [scene, environment]);
 }

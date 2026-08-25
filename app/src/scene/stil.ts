@@ -91,7 +91,7 @@ export const FAMILIEN: Record<string, Familie> = {
   M01: {
     id: 'M01',
     name: 'WALL_LIGHT',
-    grundton: '#d8c8a8',
+    grundton: '#c9c5bd',
     stufen: 3,
     kontur: 'mittel',
     glanz: 0.0,
@@ -100,7 +100,7 @@ export const FAMILIEN: Record<string, Familie> = {
   M02: {
     id: 'M02',
     name: 'STRUCTURE_DARK',
-    grundton: '#3a3f4a',
+    grundton: '#3a3d44',
     stufen: 2,
     kontur: 'stark',
     glanz: 0.0,
@@ -109,7 +109,7 @@ export const FAMILIEN: Record<string, Familie> = {
   M03: {
     id: 'M03',
     name: 'FLOOR_DARK',
-    grundton: '#46505d',
+    grundton: '#525a66',
     stufen: 3,
     kontur: 'schwach',
     glanz: 0.15,
@@ -118,7 +118,7 @@ export const FAMILIEN: Record<string, Familie> = {
   M04: {
     id: 'M04',
     name: 'FLOOR_LIGHT',
-    grundton: '#c8b48a',
+    grundton: '#a89c80',
     stufen: 3,
     kontur: 'schwach',
     glanz: 0.05,
@@ -127,7 +127,7 @@ export const FAMILIEN: Record<string, Familie> = {
   M05: {
     id: 'M05',
     name: 'OUTDOOR_CONCRETE',
-    grundton: '#b0a78f',
+    grundton: '#9a948a',
     stufen: 2,
     kontur: 'schwach',
     glanz: 0.0,
