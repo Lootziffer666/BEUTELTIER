@@ -14,7 +14,14 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { Dataset } from '../data/load';
 import type { Placement2D } from '../data/types';
 import { drehungNachX } from './geometry';
-import { FAMILIEN, familienMaterial, konturStaerke, toonMaterial } from './stil';
+import {
+  FAMILIEN,
+  familienMaterial,
+  flachMaterial,
+  konturStaerke,
+  ROHBAU_PHASE,
+  toonMaterial,
+} from './stil';
 import { Kontur } from './Kontur';
 import {
   disposeSurface,
@@ -346,17 +353,28 @@ export function Hallenhuelle({
   );
 
   const boden = useMemo(
-    () => familienMaterial(FAMILIEN.M03, undefined, { side: THREE.DoubleSide }),
+    () => (ROHBAU_PHASE
+      ? flachMaterial(FAMILIEN.M03.grundton)
+      : familienMaterial(FAMILIEN.M03, undefined, { side: THREE.DoubleSide })),
     [],
   );
   useEffect(
     () => () => {
-      boden.map?.dispose();
-      boden.normalMap?.dispose();
-      boden.dispose();
+      // flachMaterial() ist geteilt (Cache in stil.ts), gehoert nicht dieser
+      // Instanz -- nur die eigens gebaute familienMaterial()-Fassung wird
+      // hier wieder freigegeben.
+      if (boden instanceof THREE.MeshToonMaterial) {
+        boden.map?.dispose();
+        boden.normalMap?.dispose();
+        boden.dispose();
+      }
     },
     [boden],
   );
+  // Rohbau-Phase: eine einzelne Deckenfarbe statt der texturierten Fassung.
+  // War hellbeige (#c9c4b8) -- auf den Referenzfotos ist die Decke selbst
+  // fast schwarz, das Gitter kaum dunkler als die Flaeche dahinter.
+  const decke = useMemo(() => flachMaterial('#111214'), []);
 
   if (!visible || !flaechen.length) return null;
 
@@ -364,14 +382,17 @@ export function Hallenhuelle({
     <group>
       {flaechen.map((flaeche) => {
         const surface = surfaces[flaeche.art];
-        return (
-          <mesh
-            key={flaeche.key}
-            geometry={flaeche.geometry}
-            receiveShadow={flaeche.art === 'boden'}
-          >
-            {flaeche.art === 'boden' ? (
+        if (flaeche.art === 'boden') {
+          return (
+            <mesh key={flaeche.key} geometry={flaeche.geometry} receiveShadow>
               <primitive object={boden} attach="material" />
+            </mesh>
+          );
+        }
+        return (
+          <mesh key={flaeche.key} geometry={flaeche.geometry}>
+            {ROHBAU_PHASE ? (
+              <primitive object={decke} attach="material" />
             ) : (
               <meshStandardMaterial
                 map={kachel(surface.map)}
@@ -514,22 +535,26 @@ export function Hallenwaende({
 
   return (
     <mesh geometry={geometry} receiveShadow>
-      <meshStandardMaterial
-        map={surface.map}
-        normalMap={surface.normalMap}
-        roughnessMap={surface.roughnessMap}
-        color="#eceae3"
-        metalness={0.12}
-        roughness={0.85}
-        // DoubleSide und nicht FrontSide: die Aussennormale einer Kante
-        // eines nicht-konvexen Hallenumrisses laesst sich aus dem
-        // Flaechenschwerpunkt allein nicht immer zuverlaessig bestimmen --
-        // bei einer verwinkelten Kontur kann die Naeherung genau
-        // umgekehrt liegen. Als reine Sicherheitswand zaehlt, dass sie
-        // *ueberhaupt* blockiert, unabhaengig davon, von welcher Seite der
-        // Blick kommt.
-        side={THREE.DoubleSide}
-      />
+      {ROHBAU_PHASE ? (
+        <primitive object={flachMaterial('#eceae3')} attach="material" />
+      ) : (
+        <meshStandardMaterial
+          map={surface.map}
+          normalMap={surface.normalMap}
+          roughnessMap={surface.roughnessMap}
+          color="#eceae3"
+          metalness={0.12}
+          roughness={0.85}
+          // DoubleSide und nicht FrontSide: die Aussennormale einer Kante
+          // eines nicht-konvexen Hallenumrisses laesst sich aus dem
+          // Flaechenschwerpunkt allein nicht immer zuverlaessig bestimmen --
+          // bei einer verwinkelten Kontur kann die Naeherung genau
+          // umgekehrt liegen. Als reine Sicherheitswand zaehlt, dass sie
+          // *ueberhaupt* blockiert, unabhaengig davon, von welcher Seite der
+          // Blick kommt.
+          side={THREE.DoubleSide}
+        />
+      )}
     </mesh>
   );
 }
@@ -705,7 +730,11 @@ export function Hallenstuetzen({
   }, [data, centre, hallKey, aussparungen]);
 
   const material = useMemo(
-    () => toonMaterial({ ...FAMILIEN.M02, grundton: '#3c4048', stufen: 3 }),
+    () => (ROHBAU_PHASE
+      // Halle 10 zeigt auf den Referenzfotos helle, nicht dunkle Stuetzen --
+      // M01 (WALL_LIGHT) statt der dunklen M02-Grundfarbe.
+      ? flachMaterial(FAMILIEN.M01.grundton)
+      : toonMaterial({ ...FAMILIEN.M02, grundton: '#3c4048', stufen: 3 })),
     [],
   );
 

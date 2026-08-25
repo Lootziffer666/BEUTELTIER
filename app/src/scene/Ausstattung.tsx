@@ -28,7 +28,7 @@ import {
   type Tafel,
 } from './ausstattung';
 import { hallenlage } from './interior';
-import { FAMILIEN, familienMaterial, konturHuelle, konturStaerke } from './stil';
+import { FAMILIEN, familienMaterial, flachMaterial, konturHuelle, konturStaerke, ROHBAU_PHASE } from './stil';
 import { KACHEL_M } from './textur';
 import { projiziereUV } from './geometry';
 
@@ -147,6 +147,7 @@ export function Ausstattung({
     const lichtpunkte: [number, number, number][] = [];
     const stuetzen: THREE.BufferGeometry[] = [];
     const baender: THREE.BufferGeometry[] = [];
+    const diffusorTeile: THREE.BufferGeometry[] = [];
 
     for (const halle of data.site.halls) {
       if (drinnen && halle.key !== hallKey) continue;
@@ -199,6 +200,23 @@ export function Ausstattung({
         }
       });
 
+      // Luftauslässe -- flache Scheiben, an derselben Handrechnung wie die
+      // Lichtpunkte gespiegelt (siehe Kommentar dort): `deckenwerk()`
+      // liefert sie im lokalen Hallen-Koordinatensystem, hier gehen sie mit
+      // +lage.winkel in die Weltkoordinaten.
+      for (const diffusor of werk.diffusoren) {
+        const x = diffusor.position[0];
+        const z = diffusor.position[2];
+        const scheibe = new THREE.CircleGeometry(diffusor.radius, 24);
+        scheibe.rotateX(Math.PI / 2);
+        scheibe.translate(
+          lage.mx - centre[0] + cos * x + sin * z,
+          halle.baseY + diffusor.position[1],
+          lage.my - centre[1] - sin * x + cos * z,
+        );
+        diffusorTeile.push(scheibe);
+      }
+
       // -- Fassade -----------------------------------------------------
       // Nur die Hauptfassade, nicht alle vier Seiten: die Rückseiten der
       // Hallen sind in der Stilbibel ausdrücklich Detailstufe C, und vier
@@ -247,6 +265,7 @@ export function Ausstattung({
     return {
       decke: zusammen(decken),
       licht: zusammen(lichter),
+      diffusoren: zusammen(diffusorTeile),
       stuetzen: zusammen(stuetzen),
       fensterband: zusammen(baender),
       zaun: zusammen(zaunGeometrien),
@@ -258,8 +277,9 @@ export function Ausstattung({
   }, [data, centre, drinnen, hallKey]);
 
   const materialien = useMemo(() => ({
-    decke: familienMaterial(FAMILIEN.M02),
+    decke: ROHBAU_PHASE ? flachMaterial(FAMILIEN.M02.grundton) : familienMaterial(FAMILIEN.M02),
     licht: lichtMaterial(),
+    diffusor: flachMaterial('#f2ede0'),
     stuetzen: familienMaterial(FAMILIEN.M01),
     fensterband: familienMaterial(FAMILIEN.M07, undefined, { side: THREE.DoubleSide }),
     zaun: familienMaterial(FAMILIEN.M08),
@@ -278,7 +298,13 @@ export function Ausstattung({
   );
 
   useEffect(() => () => {
-    Object.values(materialien).forEach((material) => material.dispose());
+    // flachMaterial() ist ein geteiltes, gecachtes Material (siehe stil.ts,
+    // Name beginnt mit "flach|") -- disposen wuerde es fuer jede andere
+    // Stelle mitreissen, die es gerade benutzt. Nur eigens gebaute
+    // Materialien gehoeren dieser Instanz.
+    Object.values(materialien).forEach((material) => {
+      if (!material.name.startsWith('flach|')) material.dispose();
+    });
     schildMaterialien.forEach((material) => {
       material.map?.dispose();
       material.dispose();
@@ -301,11 +327,16 @@ export function Ausstattung({
 
   return (
     <group>
+      {/* Rohbau-Phase: nur das Deckenraster (Gitter) und die Luftauslässe --
+          keine Lichtbänder, keine echten Lichtpunkte darunter. */}
       {drinnen && bauteile.decke && (
         <mesh name="hallendecke" geometry={bauteile.decke} material={materialien.decke} castShadow receiveShadow />
       )}
-      {drinnen && bauteile.licht && (
+      {drinnen && !ROHBAU_PHASE && bauteile.licht && (
         <mesh geometry={bauteile.licht} material={materialien.licht} />
+      )}
+      {drinnen && bauteile.diffusoren && (
+        <mesh geometry={bauteile.diffusoren} material={materialien.diffusor} />
       )}
       {/* Ein emissives Band leuchtet **für die Kamera**, beleuchtet aber
           nichts. Ohne echte Lichtquellen darunter bleibt der Boden schwarz,

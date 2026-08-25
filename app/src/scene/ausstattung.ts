@@ -124,11 +124,14 @@ export function deckenwerk(
     });
   }
 
-  // Luftauslässe, versetzt zu den Lichtbändern -- sie sitzen im Feld, nicht
-  // im Band. Sparsam: sie sind Detail, nicht Muster.
-  for (let i = 1; i < querAnzahl; i += 2) {
+  // Luftauslässe: ein gleichmässiges Netz, jedes zehnte Feld in beiden
+  // Richtungen -- nachgezählt an mehreren Referenzfotos, nicht geschätzt.
+  // Die Zeilen starten bei Feld 1 (nicht 0), damit sie nicht auf dieselbe
+  // Achse wie die Lichtbänder (gerade Feldindizes) fallen -- ein Auslass
+  // sitzt im Feld, nicht im Band.
+  for (let i = 1; i < querAnzahl; i += 10) {
     const z = -breite / 2 + ((i + 0.5) * breite) / querAnzahl;
-    for (let k = 1; k < laengsAnzahl; k += 3) {
+    for (let k = 0; k < laengsAnzahl; k += 10) {
       const x = -laenge / 2 + ((k + 0.5) * laenge) / laengsAnzahl;
       diffusoren.push({ position: [x, hoehe - DECKE_TRAEGER_M - 0.05, z], radius: 0.55 });
     }

@@ -277,13 +277,24 @@ function beuteltierZellenLicht(material: THREE.MeshToonMaterial, stufen: Stufen)
     const gepatcht = nachUniform.replace(
       lichtStelle,
       `${lichtStelle}
-       outgoingLight = round(clamp(outgoingLight, 0.0, 1.0) * uZellenStufen) / uZellenStufen;
-       // Die dunkelste Stufe darf nie reines Schwarz sein -- ohne genug
-       // Umgebungslicht (Ego ist bewusst dunkel) faellt eine Flaeche sonst
-       // auf (0,0,0), und ein komplett schwarzes Bauteil liest sich als
-       // kaputt, nicht als Schatten. Ein Boden von 32% der Grundfarbe haelt
-       // die Materialidentitaet auch im tiefsten Schatten sichtbar.
-       outgoingLight = max(outgoingLight, diffuse * 0.32);
+       // Bänderung nach LEUCHTDICHTE, nicht pro RGB-Kanal: round(x*N)/N auf
+       // R, G und B einzeln lässt jeden Kanal unabhängig zur naechsten Stufe
+       // runden -- an einer Bandgrenze kann R aufrunden, waehrend G abrundet,
+       // und die Mischfarbe kippt in einen Farbstich, der im Ausgangsbild gar
+       // nicht da war (genau das machte den Boden khakifarben statt dunkel
+       // blaugrau). Hier wird stattdessen nur die Helligkeit gebändert und
+       // die ORIGINALE Farbrichtung (Hue + Saettigung) beibehalten.
+       float bLeuchtdichte = dot(outgoingLight, vec3(0.2126, 0.7152, 0.0722));
+       float bStufe = round(clamp(bLeuchtdichte, 0.0, 1.0) * uZellenStufen) / uZellenStufen;
+       // Untergrenze auf der gebänderten Helligkeit selbst, nicht auf der
+       // (oft schon dunklen) Grundfarbe: sonst blieb z.B. ein dunkelgraues
+       // Bauteil im Schatten bei 32% von "schon dunkel" praktisch schwarz.
+       // Ein Bauteil im tiefsten Schatten zeigt jetzt immer mindestens 28%
+       // seiner eigenen Helligkeit -- fuer JEDES Material gleich hell, nicht
+       // proportional zu dessen Grundton.
+       bStufe = max(bStufe, 0.28);
+       vec3 bFarbrichtung = bLeuchtdichte > 0.0005 ? outgoingLight / bLeuchtdichte : diffuse;
+       outgoingLight = bFarbrichtung * bStufe;
        float bRandDot = 1.0 - max(dot(normalize(vViewPosition), normal), 0.0);
        float bRandStufe = smoothstep(uRandSchwelle - 0.2, uRandSchwelle + 0.2, bRandDot);
        outgoingLight += bRandStufe * uRandStaerke * uRandFarbe;`,
@@ -459,4 +470,36 @@ export function stilAufraeumen(): void {
   stufenCache.clear();
   konturCache.forEach((material) => material.dispose());
   konturCache.clear();
+  flachCache.forEach((material) => material.dispose());
+  flachCache.clear();
+}
+
+/**
+ * Rohbau-Phase: erst die Grundformen (Boden, Decke, Wände, Stützen) als
+ * einfarbige Flächen pruefen -- keine Deckeninstallation, keine Leuchten,
+ * keine Texturen --, bevor Details (Deckentaster, Lüfter) draufkommen.
+ * `hallendecke` (die Trägerinstallation), `Deckenleuchten` und die
+ * Lichtpunkte aus `Ausstattung` sind in dieser Phase ausgeschaltet; Boden,
+ * Decke, Wände und Stützen tragen `flachMaterial()` statt Textur/Bänderung.
+ * Ein einzelner Schalter zum Zurückdrehen, sobald die Grundformen sitzen.
+ */
+export const ROHBAU_PHASE = true;
+
+const flachCache = new Map<string, THREE.MeshBasicMaterial>();
+
+/** Eine einzelne flache Farbe, unbeleuchtet -- fuer die Rohbau-Phase. */
+export function flachMaterial(farbe: string): THREE.MeshBasicMaterial {
+  const fertig = flachCache.get(farbe);
+  if (fertig) return fertig;
+  // DoubleSide: in der Rohbau-Phase geht es um die Grundform, nicht um
+  // korrekte Aussennormalen -- eine Flaeche, die von der falschen Seite
+  // unsichtbar wird, waere in dieser Phase schwerer zu verifizieren als
+  // die etwas hoehere Fuellrate wert ist.
+  const material = new THREE.MeshBasicMaterial({
+    color: new THREE.Color(farbe),
+    side: THREE.DoubleSide,
+  });
+  material.name = `flach|${farbe}`;
+  flachCache.set(farbe, material);
+  return material;
 }
