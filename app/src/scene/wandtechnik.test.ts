@@ -21,14 +21,22 @@ describe('wandtechnik', () => {
   });
 
   it('haelt jedes Panel innerhalb der Wandflaeche', () => {
-    const { panels } = wandtechnik(12, 4, { seed: 3, panelDensity: 0.6 });
-    expect(panels.length).toBeGreaterThan(0);
-    for (const p of panels) {
-      expect(p.u - p.breiteU / 2).toBeGreaterThanOrEqual(-1e-9);
-      expect(p.u + p.breiteU / 2).toBeLessThanOrEqual(12 + 1e-9);
-      expect(p.v - p.breiteV / 2).toBeGreaterThanOrEqual(-1e-9);
-      expect(p.v + p.breiteV / 2).toBeLessThanOrEqual(4 + 1e-9);
+    // Ueber viele Seeds pruefen, nicht nur einen -- der Kantenversatz trifft
+    // Spalte 0 und die letzte Spalte nur bei bestimmten Zufallswerten hart
+    // an den Rand; ein einzelner Seed kann das Ueberschreiten verdecken,
+    // ohne dass die Klammer im Code tatsaechlich greift.
+    let geprueft = 0;
+    for (let seed = 0; seed < 40; seed += 1) {
+      const { panels } = wandtechnik(12, 4, { seed, panelDensity: 0.6 });
+      for (const p of panels) {
+        geprueft += 1;
+        expect(p.u - p.breiteU / 2).toBeGreaterThanOrEqual(-1e-9);
+        expect(p.u + p.breiteU / 2).toBeLessThanOrEqual(12 + 1e-9);
+        expect(p.v - p.breiteV / 2).toBeGreaterThanOrEqual(-1e-9);
+        expect(p.v + p.breiteV / 2).toBeLessThanOrEqual(4 + 1e-9);
+      }
     }
+    expect(geprueft).toBeGreaterThan(0);
   });
 
   it('mehr Dichte ergibt mehr Panelflaeche', () => {

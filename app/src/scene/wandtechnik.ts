@@ -85,6 +85,13 @@ export interface Wandtechnik {
 const KANTENVERSATZ = 0.5;
 /** Rand, den keine Zelle an oberer/unterer Wandkante überschreitet. */
 const RAND_V_M = 0.3;
+/**
+ * Dichteeinheit fuer Kabel-/Boxanzahl: von Hand so gewaehlt, dass
+ * `cableDensity`/`techDensity` = 1.0 auf einer Standardwand eine plausible,
+ * nicht ueberladene Anzahl ergibt -- kein aus dem Zellraster hergeleiteter
+ * Wert, nur benannt statt als nackte Zahl im Ausdruck zu stehen.
+ */
+const ZELLEN_PRO_FLAECHENEINHEIT = 6;
 
 /**
  * Baut Panels, Kabel und Technikboxen für eine Wandfläche `breiteU` × `hoeheV`
@@ -103,11 +110,14 @@ export function wandtechnik(
   const panels: Panel[] = [];
   const kabel: Kabel[] = [];
   const boxen: Technikbox[] = [];
-  if (breiteU <= 0 || hoeheV <= 0) return { panels, kabel, boxen };
+  // hoeheV <= 2*RAND_V_M wuerde zellV <= 0 ergeben und Panels seitlich
+  // entgleisen lassen -- vor der Rasterberechnung abfangen, nicht danach:
+  // Math.max(1, ...) unten kann rows nie unter 1 fallen lassen, ein
+  // "if (rows < 1)" waere also totes Wachpersonal.
+  if (breiteU <= 0 || hoeheV <= 2 * RAND_V_M) return { panels, kabel, boxen };
 
   const cols = Math.max(1, Math.round(breiteU / s.panelGridX));
   const rows = Math.max(1, Math.round((hoeheV - 2 * RAND_V_M) / s.panelGridY));
-  if (rows < 1) return { panels, kabel, boxen };
   const zellU = breiteU / cols;
   const zellV = (hoeheV - 2 * RAND_V_M) / rows;
 
@@ -138,12 +148,26 @@ export function wandtechnik(
       const kanteV = (zufall() - 0.5) * 2 * Math.min(KANTENVERSATZ, zellV * 0.15);
       const randU = zellBreiteU * (0.08 + zufall() * 0.06);
       const randV = zellV * (0.08 + zufall() * 0.06);
+      const panelBreiteU = Math.max(0.1, zellBreiteU - 2 * randU);
+      const panelBreiteV = Math.max(0.1, zellV - 2 * randV);
+
+      // Der Kantenversatz darf ein Panel bis auf 15% der Zellbreite aus der
+      // Zellmitte schieben -- bei Zelle 0 (oder der letzten Spalte) reicht
+      // das, um die halbe Panelbreite ueber breiteU=0 (bzw. das Wandende)
+      // hinauszuschieben. Die Zellgrenze schuetzt hier nicht, nur eine
+      // Klammer auf die tatsaechliche Wandflaeche.
+      const uRoh = col * zellU + zellBreiteU / 2 + kanteU;
+      const u = Math.min(breiteU - panelBreiteU / 2,
+        Math.max(panelBreiteU / 2, uRoh));
+      const vRoh = RAND_V_M + row * zellV + zellV / 2 + kanteV;
+      const v = Math.min(hoeheV - panelBreiteV / 2,
+        Math.max(panelBreiteV / 2, vRoh));
 
       panels.push({
-        u: col * zellU + zellBreiteU / 2 + kanteU,
-        v: RAND_V_M + row * zellV + zellV / 2 + kanteV,
-        breiteU: Math.max(0.1, zellBreiteU - 2 * randU),
-        breiteV: Math.max(0.1, zellV - 2 * randV),
+        u,
+        v,
+        breiteU: panelBreiteU,
+        breiteV: panelBreiteV,
         tiefe: s.panelDepth * (0.4 + zufall() * 0.6),
       });
     }
@@ -151,7 +175,7 @@ export function wandtechnik(
 
   // -- Kabel: wenige lange Linien, horizontal oder vertikal, mit hoechstens
   //    einem 90-Grad-Knick. Kein Kabelbaum -- ein Streifen mit Relief reicht.
-  const flaeche = (cols * rows) / 6; // grobe Dichteeinheit, kalibriert auf ein 1.2x0.8-Raster
+  const flaeche = (cols * rows) / ZELLEN_PRO_FLAECHENEINHEIT;
   const kabelAnzahl = Math.min(6, Math.round(s.cableDensity * flaeche));
   for (let i = 0; i < kabelAnzahl; i += 1) {
     const dicke = 0.02 + zufall() * 0.02;

@@ -60,8 +60,19 @@ export function Funkwache({ data, onGoToStand }: Props) {
   );
 
   useEffect(() => {
-    store.setting(FARBKLECKS_SETTING, Date.now() + FARBKLECKS_INTERVALL_MS)
-      .then(setNaechsteFaellig);
+    (async () => {
+      // setting() ist die reine Leseform mit Fallback -- der Fallback wird
+      // NICHT gespeichert. Erst nachsehen, nur bei echtem Fehlen schreiben,
+      // sonst faengt der Countdown bei jedem Reload wieder bei 5 Minuten an.
+      const gespeichert = await store.setting<number | null>(FARBKLECKS_SETTING, null);
+      if (gespeichert == null) {
+        const naechste = Date.now() + FARBKLECKS_INTERVALL_MS;
+        await store.setSetting(FARBKLECKS_SETTING, naechste);
+        setNaechsteFaellig(naechste);
+      } else {
+        setNaechsteFaellig(gespeichert);
+      }
+    })();
   }, []);
 
   // Zehn Sekunden Aufloesung reicht fuer eine Fuenf-Minuten-Erinnerung --

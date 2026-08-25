@@ -578,10 +578,17 @@ export function Hallenwaende({
         // Halle nicht zeigt. `flachMaterial()` ist MeshBasicMaterial, unbeleuchtet:
         // die Waende koennen den "schmutzig grau"-Eindruck aus den Referenzfotos
         // in dieser Phase nicht aus Lichtverhalten gewinnen, nur aus dem Farbwert
-        // selbst. FAMILIEN.M01 ist genau dieser Ton -- derselbe, den die Stuetzen
-        // schon tragen, statt einer zweiten, unabhaengig gewaehlten Wandfarbe.
+        // selbst. FAMILIEN.M01.grundton ('#c9c5bd') ist derselbe Ton, den die
+        // Stuetzen schon tragen -- statt einer zweiten, unabhaengig gewaehlten
+        // Wandfarbe. NICHT derselbe Hex wie '#eceae3' unten: das ist der
+        // unbeleuchtete Verifikations-Ton dieser Phase, kein Alias dafuer.
         <primitive object={flachMaterial(FAMILIEN.M01.grundton)} attach="material" />
       ) : (
+        // Getrennter Ton mit Absicht: dieser Zweig ist beleuchtetes
+        // MeshStandardMaterial mit echten Texturkarten -- '#eceae3' ist der
+        // Tint UNTER Beleuchtung, nicht der flache Verifikationswert oben.
+        // Gleicher Hex wie FAMILIEN.M01.grundton waere hier zu dunkel, weil
+        // das Licht selbst schon abdunkelt.
         <meshStandardMaterial
           map={surface.map}
           normalMap={surface.normalMap}
