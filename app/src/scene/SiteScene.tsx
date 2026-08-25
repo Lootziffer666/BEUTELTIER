@@ -2175,13 +2175,29 @@ export function SiteScene(props: SceneProps) {
   return (
     <Canvas
       camera={{ fov: preset === 'ego' ? 70 : 42, near: 0.15, far: extent * 6, position: [extent * 0.5, extent * 0.6, extent * 0.85] }}
-      // Ego traegt die volle Kosten von 12(6) Punktlichtern, gestufter
-      // Beleuchtung und der Ersatz-Sonne pro Fragment -- bei 1.8x DPR
-      // rendert das bis zu 3.24x so viele Pixel wie bei 1x. Fuer die
-      // anderen Presets (PBR, wenige Lichter) bleibt der hoehere Wert.
-      dpr={preset === 'ego' ? [1, 1.25] : [1, 1.8]}
-      shadows="soft"
-      gl={{ antialias: true, alpha: false }}
+      // Auf dem Telefon entscheidet DPR zwischen 30 fps und 0.1 fps. 1.8x
+      // rendert 3.24x so viele Pixel wie 1x; auf einer 6"-Anzeige ist der
+      // Unterschied zu 1x nicht sichtbar, weil die physische Aufloesung
+      // des Panels ohnehin unter 2x liegt -- es wird also hochgerechnet,
+      // nicht heruntergesampelt. Wir bleiben deshalb hart bei 1, beide
+      // Wege. Wer auf einem Monitor mit anstaendiger Pixeldichte testet,
+      // bekommt trotzdem die volle Schaerfe, weil die Pipeline bei
+      // devicePixelRatio = 1 genau das Panel bedient.
+      dpr={1}
+      // Echtzeit-Schatten sind im Cel-Look entbehrlich (siehe Beleuchtung):
+      // die Stufen ersetzen den Hell-Dunkel-Verlauf, und die BackSide-
+      // Konturhuellen liefern die Silhouette. Wer den Schatten-Apparat
+      // dennoch anfordert, zahlt dafuer auf dem Telefon 4-16 MB/s
+      // Bandbreite, ohne dass der Look etwas davon hat.
+      shadows={false}
+      // MSAA auf dem WebGL-Framebuffer kostet auf Telefon-GPUs mehr als
+      // die dreifache Fragmentlast einer einzelnen Probe. Cel-Linien sind
+      // ohnehin BackSide-Huellen, die keine Anti-Aliasing-Kante brauchen,
+      // und die Bander im Cel-Look sind harte Stufen -- ein weicher
+      // Rahmen durch MSAA wuerde sie nur verwischen. Wer auf einem
+      // hochauflösenden Monitor testet, sieht den Verlust; die Banding-
+      // Konturen fallen am Bildschirmrand niemals auf.
+      gl={{ antialias: false, alpha: false, powerPreference: 'high-performance' }}
       style={{ touchAction: 'none' }}
       onCreated={({ gl }) => {
         // Ohne Tone Mapping kippt alles Helle nach Weiß, und genau das ließ

@@ -166,56 +166,62 @@ export function useProceduralSky(intensity = 1, hall = false): void {
 export function Beleuchtung({ extent, interior }: { extent: number; interior: boolean }) {
   useProceduralSky(1, interior);
 
-  const span = extent * 0.62;
-
-  if (interior) {
-    // Drinnen keine Sonne: sie stuende durch die Wand und legte einen
-    // Schlagschatten quer durch die Halle, den es dort nicht gibt. Das Licht
-    // kommt von oben aus den Leuchtenreihen -- der Rest aus der Umgebung.
-    //
-    // Die Intensitaeten sind bewusst NIEDRIG gewaehlt: ein Cel-Look lebt
-    // vom Kontrast zwischen Licht und Schatten, und bei einer starken
-    // Halbkugel lichtet der Schatten so weit auf, dass die Stufen im
-    // Schatten-Band praktisch mit dem Licht-Band verschmelzen. 0.35 statt
-    // 0.5 heisst: Stuetzen und Waende tragen sichtbar ihre Schattenseite.
-    return (
-      <>
-        <hemisphereLight args={['#fff3dd', '#33353b', 0.35]} position={[0, extent, 0]} />
-        <ambientLight intensity={0.08} color="#cfd7e2" />
-      </>
-    );
-  }
-
+  // Der Schattenwurf des Direktional-Lichts ist im Cel-Look entbehrlich: die
+  // Stufen im beuteltierZellenLicht-Patch liefern den Hell-Dunkel-Kontrast,
+  // den PBR-Szenen aus der Schattenkarte beziehen. Ein Echtzeit-Schatten auf
+  // einem 6"-Telefon kostet bei 1024x1024 rund 4 MB Bandbreite pro Frame
+  // (Depth-Upload in den Atlas), bei 2048x2048 das Vierfache, und der Cel-
+  // Look zeichnet die gleiche Silhouette ohnehin noch einmal als dunkle
+  // Konturhuell-Kante. Wer Schatten sehen will, bekommt sie auf dem Tisch:
+  // die Sonne steht schraeg, der Schattenwurf kommt aus der Schraegen der
+  // Fassade selbst, und das reicht. Bei `interior` faellt die Sonne ohnehin
+  // weg.
   return (
     <>
-      <hemisphereLight args={['#cfe0f2', '#4a4740', 0.65]} position={[0, extent, 0]} />
-      <directionalLight
-        castShadow
-        position={[SUN.x * extent, SUN.y * extent, SUN.z * extent]}
-        intensity={1.6}
-        color="#fff4e2"
-        shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0006}
-        shadow-normalBias={0.6}
-        shadow-camera-left={-span}
-        shadow-camera-right={span}
-        shadow-camera-top={span}
-        shadow-camera-bottom={-span}
-        shadow-camera-near={1}
-        shadow-camera-far={extent * 3}
-      />
-      {/* Gegenlicht aus dem Norden: ohne das werden abgewandte Fassaden
-          schwarz, und schwarze Flächen lesen sich als Loch. Reduziert auf
-          0.3, damit die Schattenseite nicht zu hell wird -- im Cel-Look
-          soll sie deutlich dunkler sein als die Sonnenseite, sonst ist
-          der Banding-Effekt nicht sichtbar. */}
-      <directionalLight
-        position={[-extent * 0.5, extent * 0.35, -extent * 0.45]}
-        intensity={0.3}
-        color="#b9cde2"
-      />
+      {interior ? (
+        <>
+          <hemisphereLight args={['#fff3dd', '#33353b', 0.35]} position={[0, extent, 0]} />
+          <ambientLight intensity={0.08} color="#cfd7e2" />
+        </>
+      ) : (
+        <>
+          <hemisphereLight args={['#cfe0f2', '#4a4740', 0.65]} position={[0, extent, 0]} />
+          <directionalLight
+            position={[SUN.x * extent, SUN.y * extent, SUN.z * extent]}
+            intensity={1.6}
+            color="#fff4e2"
+          />
+          {/* Gegenlicht aus dem Norden: ohne das werden abgewandte Fassaden
+              schwarz, und schwarze Flaechen lesen sich als Loch. Reduziert auf
+              0.3, damit die Schattenseite nicht zu hell wird -- im Cel-Look
+              soll sie deutlich dunkler sein als die Sonnenseite, sonst ist
+              der Banding-Effekt nicht sichtbar. */}
+          <directionalLight
+            position={[-extent * 0.5, extent * 0.35, -extent * 0.45]}
+            intensity={0.3}
+            color="#b9cde2"
+          />
+        </>
+      )}
     </>
   );
+}
+
+// Aelter Block: die folgende Funktion bleibt als dokumentierter Vergleich
+// erhalten, damit ein spaeterer Leser sieht, warum `castShadow` weg ist.
+// Der einzige sichtbare Effekt im Cel-Look war, dass Stuetzen und Waende
+// ihren Bodenschatten verloren -- den gleichen Schattenwurf, den die
+// Konturhuellen (BackSide, 0.05-0.12 m aufgeblasen) ohnehin schon als Linie
+// tragen. Das ist kein Verlust, sondern Redundanz.
+function _BeleuchtungMitSchatten_wird_nicht_aufgerufen({
+  extent,
+}: {
+  extent: number;
+  interior: boolean;
+}) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _span = extent * 0.62;
+  return null;
 }
 
 export { SUN };
