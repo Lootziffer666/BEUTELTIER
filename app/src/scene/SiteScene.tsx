@@ -419,21 +419,46 @@ function Terrain({
 
   return (
     <group position={[-centre[0], 0, -centre[1]]}>
-      {prepared.bare && (
+      {/*
+       * Ohne Drape bleibt das Grundnetz sichtbar -- ein dunkelgruener Boden
+       * (color #4f5a55) ueberall, wo kein Luftbild deckt. Mit Drape wird der
+       * Grundkoerper ausgeblendet: das Orthobild liegt direkt auf der Hoehen-
+       * karte auf, der zusaetzliche Boden bringt nichts und produziert genau
+       * das Z-Fight-Muster, das man auf Phone-Screenshots sieht -- feine
+       * hellblaue Streifen entlang von Gebaeudekanten, weil Grundnetz und
+       * Drape an diesen Stellen um den gleichen Z-Wert streiten. Wer die
+       * `bare`-Geometrie wieder sehen will, bekommt sie ueber die Render-
+       * Reihenfolge statt einer doppelten Lage zurueck.
+       */}
+      {prepared.bare && !prepared.drape && (
         <mesh geometry={prepared.bare} receiveShadow>
           <meshStandardMaterial color="#4f5a55" roughness={1} />
         </mesh>
       )}
       {prepared.drape && map && (
-        <mesh geometry={prepared.drape} receiveShadow renderOrder={1}>
+        /*
+         * position.y = -0.05: das Drape liegt einen halben Zentimeter unter
+         * dem null-Niveau. Bei einer orthogonalen Kamera aus der Vogelsicht
+         * reicht das, um Z-Fights an Gebaeudekanten sicher zu unterdruecken
+         * -- die Hallenwaende ragen ueber das Drape hinaus, das Orthobild
+         * kann nicht mehr durch die Daecher durchscheinen. Wer das Niveau
+         * spaeter anpasst: das Original-DGM1-Baremesh sitzt auf y=0, der
+         * Wert hier muss negativ sein, sonst hilft er nichts.
+         */
+        <mesh
+          geometry={prepared.drape}
+          receiveShadow
+          renderOrder={1}
+          position={[0, -0.05, 0]}
+        >
           <meshStandardMaterial
             map={map}
             color="#ffffff"
             roughness={0.9}
             envMapIntensity={0.5}
             polygonOffset
-            polygonOffsetFactor={-1}
-            polygonOffsetUnits={-1}
+            polygonOffsetFactor={-4}
+            polygonOffsetUnits={-8}
           />
         </mesh>
       )}
