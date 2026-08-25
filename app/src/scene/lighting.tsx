@@ -207,21 +207,4 @@ export function Beleuchtung({ extent, interior }: { extent: number; interior: bo
   );
 }
 
-// Aelter Block: die folgende Funktion bleibt als dokumentierter Vergleich
-// erhalten, damit ein spaeterer Leser sieht, warum `castShadow` weg ist.
-// Der einzige sichtbare Effekt im Cel-Look war, dass Stuetzen und Waende
-// ihren Bodenschatten verloren -- den gleichen Schattenwurf, den die
-// Konturhuellen (BackSide, 0.05-0.12 m aufgeblasen) ohnehin schon als Linie
-// tragen. Das ist kein Verlust, sondern Redundanz.
-function _BeleuchtungMitSchatten_wird_nicht_aufgerufen({
-  extent,
-}: {
-  extent: number;
-  interior: boolean;
-}) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _span = extent * 0.62;
-  return null;
-}
-
 export { SUN };
