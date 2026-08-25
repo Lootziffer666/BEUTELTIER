@@ -40,5 +40,22 @@
       "reproduceWith": "node tools/nrw-mesh/traverse.mjs /tmp/leaves.json && node tools/nrw-mesh/build.mjs /tmp/leaves.json /tmp/koelnmesse-nrw-mesh.glb"
     }
   },
-  "knownLimitation": "The ROI-overlap test on the I3S node tree is deliberately conservative (bounding-sphere, not exact OBB) to avoid false negatives after an axis-aligned test silently dropped whole branches with rotated OBBs. That conservatism, combined with the mesh-pyramid tree not always subdividing a parent footprint contiguously among its children, means the extracted set is not one seamless surface -- it is real photogrammetric geometry+texture from the official service, but with gaps between the picked nodes rather than full contiguous coverage. Tightening the ROI test to exact OBB-vs-AABB intersection would close most of those gaps; not done in this pass."
+  "knownLimitation": "The ROI-overlap test on the I3S node tree is deliberately conservative (bounding-sphere, not exact OBB) to avoid false negatives after an axis-aligned test silently dropped whole branches with rotated OBBs. That conservatism, combined with the mesh-pyramid tree not always subdividing a parent footprint contiguously among its children, means the extracted set is not one seamless surface -- it is real photogrammetric geometry+texture from the official service, but with gaps between the picked nodes rather than full contiguous coverage. Tightening the ROI test to exact OBB-vs-AABB intersection would close most of those gaps; not done in this pass.",
+  "toolingEvaluation": {
+    "evaluatedPerUserRequest": [
+      {
+        "tool": "@loaders.gl/tile-converter 4.4.5",
+        "command": "tile-converter --input-type I3S --tileset https://www.gis.nrw.de/geobasis/3D_mesh/SceneServer/layers/0 --egm ./deps/egm2008-5.pgm --max-depth 3",
+        "result": "FAILS. Connects to the real SceneServer, converts the root node (index 0) successfully, then crashes converting the next node with \"TypeError: Cannot read properties of undefined (reading (quote)0(quote))\" inside buildGLTF/_normalizePositions. Deterministic: reproduced identically with and without --no-draco. No CLI flag exists to scope the conversion to a bounding box/ROI, so even a working run would require converting arbitrary amounts of unrelated state before reaching Koeln.",
+        "corroboration": "Same undefined-property crash signature already reported against this tool for other I3S sources (visgl/loaders.gl issue #1734 and others) -- an existing, known-fragile code path, not specific to this dataset.",
+        "conclusion": "Not usable as-is for this task."
+      },
+      {
+        "tool": "NASA-AMMOS/3DTilesRendererJS (3d-tiles-renderer, incl. 3d-tiles-renderer/r3f)",
+        "result": "Confirmed via the project README: no native I3S/Esri/SceneServer/Integrated-Mesh loader or plugin exists. It renders OGC 3D Tiles only, so it is entirely dependent on a working I3S-to-3D-Tiles conversion step, which is the broken step above.",
+        "conclusion": "Not applicable until an I3S source exists as valid 3D Tiles -- which tile-converter could not produce for this service."
+      }
+    ],
+    "chosenApproach": "tools/nrw-mesh/traverse.mjs + build.mjs: parse the I3S REST responses directly (node pages, uncompressed geometry buffer, JPEG textures) and assemble one glTF with @gltf-transform/core. Verified working end-to-end against the same service these two tools failed on: 375/375 nodes fetched, real texture and geometry confirmed by rendering the output GLB with three.js under Playwright."
+  }
 }
