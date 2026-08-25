@@ -733,8 +733,15 @@ export function Hallenstuetzen({
 }
 
 const LICHT_HOEHE_M = 8.6;
-const LICHT_LAENGS = 4;
-const LICHT_QUER = 3;
+// War 4x3 = 12 Punktlichter je Halle, jedes mit unbegrenzter Reichweite
+// (distance=0). Three.js filtert Lichter nicht nach Distanz aus dem
+// Fragment-Shader jedes Objekts -- alle aktiven Lichter der Szene stecken in
+// jedem beleuchteten Pixel, egal wie weit weg. 12 davon gleichzeitig war im
+// Ego-Modus einer der Haupttreiber der Framezeit. 3x2 = 6 halbiert die
+// Schleife, ohne die "klare helle Inseln statt Flaechenlicht"-Optik zu
+// verlieren -- eher im Gegenteil, die Inseln liegen jetzt weiter auseinander.
+const LICHT_LAENGS = 3;
+const LICHT_QUER = 2;
 
 export function Hallenlicht({
   data,
@@ -831,7 +838,12 @@ export function Hallenlicht({
             target={ziel}
             intensity={0.55}
             color="#fff4e2"
-            shadow-mapSize={[2048, 2048]}
+            // 2048/Radius 5 war fuer eine einzelne Ersatz-Sonne in einer
+            // Halle unnoetig teuer -- ein Shadow-Map-Depth-Pass in Software
+            // (SwiftShader) mit weichem PCF-Kernel skaliert brutal mit
+            // Aufloesung x Radius. 1024/2 bleibt fuer eine Halle scharf
+            // genug und kostet einen Bruchteil.
+            shadow-mapSize={[1024, 1024]}
             shadow-camera-left={-schatten.spanne}
             shadow-camera-right={schatten.spanne}
             shadow-camera-top={schatten.spanne}
@@ -840,7 +852,7 @@ export function Hallenlicht({
             shadow-camera-far={240}
             shadow-bias={-0.0004}
             shadow-normalBias={0.45}
-            shadow-radius={5}
+            shadow-radius={2}
           />
         </>
       )}

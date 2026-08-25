@@ -1788,6 +1788,24 @@ function WalkControls({
           textures: gl.info.memory.textures,
           programs: gl.info.programs?.length ?? null,
         },
+        lights: (() => {
+          const out: { type: string; distance?: number; castShadow?: boolean; shadowMapSize?: number }[] = [];
+          scene.traverse((obj) => {
+            if (obj instanceof THREE.PointLight || obj instanceof THREE.DirectionalLight || obj instanceof THREE.SpotLight) {
+              const world = new THREE.Vector3();
+              obj.getWorldPosition(world);
+              out.push({
+                type: obj.type,
+                distance: 'distance' in obj ? (obj as THREE.PointLight).distance : undefined,
+                castShadow: obj.castShadow,
+                shadowMapSize: obj.castShadow ? obj.shadow.mapSize.width : undefined,
+                pos: [Math.round(world.x), Math.round(world.y), Math.round(world.z)],
+                parentName: obj.parent?.name ?? null,
+              });
+            }
+          });
+          return out;
+        })(),
       };
     };
     return () => {
@@ -2082,7 +2100,11 @@ export function SiteScene(props: SceneProps) {
   return (
     <Canvas
       camera={{ fov: preset === 'ego' ? 70 : 42, near: 0.15, far: extent * 6, position: [extent * 0.5, extent * 0.6, extent * 0.85] }}
-      dpr={[1, 1.8]}
+      // Ego traegt die volle Kosten von 12(6) Punktlichtern, gestufter
+      // Beleuchtung und der Ersatz-Sonne pro Fragment -- bei 1.8x DPR
+      // rendert das bis zu 3.24x so viele Pixel wie bei 1x. Fuer die
+      // anderen Presets (PBR, wenige Lichter) bleibt der hoehere Wert.
+      dpr={preset === 'ego' ? [1, 1.25] : [1, 1.8]}
       shadows="soft"
       gl={{ antialias: true, alpha: false }}
       style={{ touchAction: 'none' }}
@@ -2120,8 +2142,21 @@ export function SiteScene(props: SceneProps) {
         </Html>
       )}
 
-      {/* Das amtliche DGM1-Terrain -- das Fundament, auf dem alles steht. */}
-      {registered && (
+      {/* Das amtliche DGM1-Terrain -- das Fundament, auf dem alles steht.
+          Nicht in Ego: der komplette 7x3-km-DGM-Ausschnitt (701x301 Punkte,
+          ~420k Dreiecke in zwei Meshes: `bare` + Orthophoto-`drape`) laedt
+          synchron beim Mount (GLB laden, repairTerrainGrid, beide
+          Geometrien bauen, GPU-Upload) und ist als Riesenmesh praktisch
+          nicht frustum-kullbar -- die Bounding Sphere schneidet die Kamera
+          immer, egal wohin man in der Halle schaut. Von drinnen sieht man
+          das Gelaende ohnehin nie, der Hallenboden verdeckt es vollstaendig
+          -- exakt derselbe Grund, aus dem OfficialWorld die vier
+          Umgebungspakete in Ego schon nicht mehr mountet. Die
+          Hoehenabfrage fuers Laufen (`useTerrainHeightmap`/`terrainHeight`)
+          haengt nicht an diesem Mesh, sondern an einer eigenen,
+          unabhaengig geladenen Binaer-Heightmap -- faellt hier also nicht
+          mit weg. */}
+      {registered && preset !== 'ego' && (
         <Suspense fallback={null}>
           <Terrain centre={centre} ortho={data.ortho} map={orthoMap} />
         </Suspense>
