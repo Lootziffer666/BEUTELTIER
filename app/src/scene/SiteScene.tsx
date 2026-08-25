@@ -829,15 +829,6 @@ function OfficialPackage({
           material = toonMaterial(familie, {
             map: quelle.map, normalMap: quelle.normalMap,
           }, { side: THREE.DoubleSide });
-        } else if (!interior) {
-          // Aussenwand ohne eigene Karte und ohne Quell-Map: die echte Halle
-          // steht in der Welt, die Geometrie reicht. Eine gezeichnete
-          // Plattenstruktur (familienMaterial) waere eine erfundene Zeichnung
-          // auf einem realen Gebaeude -- von oben sieht sie aus wie ein
-          // gleichmaessiges Flimmern, von der Seite liest sie sich als
-          // falsche Fassade. Drinnen bekommt dieselbe Wand die Tapete, weil
-          // die Hallenhuelle dort die reale Aussenhaut ersetzt.
-          material = toonMaterial(familie, {}, { side: THREE.DoubleSide });
         } else {
           projiziereUV(editierbareGeometrie(), KACHEL_M[familie.id] ?? 6);
           material = familienMaterial(familie, undefined, { side: THREE.DoubleSide });
