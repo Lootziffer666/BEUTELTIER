@@ -916,9 +916,21 @@ function OfficialWorld({
   const interior = preset === 'ego';
   const surfaces = weltFlaechen(interior);
 
-  const packages = data.world?.manifest.packages.filter(
+  const alleWeltpakete = data.world?.manifest.packages.filter(
     (entry) => entry.available && entry.role === 'render',
   ) ?? [];
+  // In Ego steht man innerhalb einer Halle: deren eigene Waende verdecken
+  // die vier Umgebungspakete (surroundings/ost|nord|sued|west, zusammen
+  // ~15.500 Primitive) ohnehin vollstaendig -- kein Pixel davon ist je
+  // sichtbar. Trotzdem mitgeladen wurden sie mit voller Deckkraft (bei
+  // registrierten Daten immer 1) UND mit eigenen Cel-Konturhuellen an
+  // jeder Aussenwand, weil `cel` unabhaengig vom Hallenkern fuer jedes
+  // Paket lief. Das Ergebnis war ein Renderbudget von 16.037 Manifest-
+  // Primitiven plus verdoppelten Aussenkonturen im Ego-Modus fuer eine
+  // Ansicht, die strukturell nie mehr als eine Halle zeigt.
+  const packages = interior
+    ? alleWeltpakete.filter((entry) => entry.id.startsWith('core/'))
+    : alleWeltpakete;
   const highlightFeatureIds = useMemo(() => {
     if (!highlightHallKey) return [];
     return data.world?.hallRegistrations?.registrations.find(
@@ -1774,6 +1786,7 @@ function WalkControls({
           triangles: gl.info.render.triangles,
           geometries: gl.info.memory.geometries,
           textures: gl.info.memory.textures,
+          programs: gl.info.programs?.length ?? null,
         },
       };
     };
