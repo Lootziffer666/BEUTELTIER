@@ -295,7 +295,7 @@ export function Ausstattung({
   return (
     <group>
       {drinnen && bauteile.decke && (
-        <mesh geometry={bauteile.decke} material={materialien.decke} castShadow receiveShadow />
+        <mesh name="hallendecke" geometry={bauteile.decke} material={materialien.decke} castShadow receiveShadow />
       )}
       {drinnen && bauteile.licht && (
         <mesh geometry={bauteile.licht} material={materialien.licht} />

@@ -1813,6 +1813,63 @@ function WalkControls({
     };
   }, [active, camera, gl, scene]);
 
+  /**
+   * Rohbau-Ansicht fuer den Bildpruefer: alles weg, was nicht zur
+   * Orientierung im Raum gehoert -- Texturen, Lampen, Deckengitter --
+   * damit sich Geometrie (Stuetzenraster, Hallenmasse, Proportionen)
+   * beurteilen laesst, ohne dass Material- oder Lichtfragen mit hineinreden.
+   * `__ROHBAU(true)` schaltet um, `__ROHBAU(false)` stellt die Originale
+   * wieder her. Nur hinter `?setzen`, wie `__SETZEN`/`__DIAGNOSE`.
+   */
+  useEffect(() => {
+    if (!active || !SETZEN_ERLAUBT) return;
+    const global = globalThis as { __ROHBAU?: unknown };
+    const gesicherteMaterialien = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
+    const gesicherteLichter = new Map<THREE.Light, boolean>();
+    const rohbauMaterial = new THREE.MeshBasicMaterial({ color: '#9aa0a8' });
+    let zusatzlicht: THREE.AmbientLight | null = null;
+
+    const KEIN_ROHBAU = new Set(['hallendecke']);
+
+    global.__ROHBAU = (an: boolean) => {
+      if (an) {
+        if (zusatzlicht) return 'bereits an';
+        scene.traverse((obj) => {
+          if (obj instanceof THREE.Mesh && !obj.userData?.kontur) {
+            gesicherteMaterialien.set(obj, obj.material);
+            if (KEIN_ROHBAU.has(obj.name)) {
+              obj.visible = false;
+            } else {
+              obj.material = rohbauMaterial;
+            }
+          }
+          if (obj instanceof THREE.Light) {
+            gesicherteLichter.set(obj, obj.visible);
+            obj.visible = false;
+          }
+        });
+        zusatzlicht = new THREE.AmbientLight('#ffffff', 3);
+        scene.add(zusatzlicht);
+        return 'rohbau an';
+      }
+      gesicherteMaterialien.forEach((material, mesh) => {
+        mesh.material = material;
+        if (KEIN_ROHBAU.has(mesh.name)) mesh.visible = true;
+      });
+      gesicherteMaterialien.clear();
+      gesicherteLichter.forEach((sichtbar, licht) => { licht.visible = sichtbar; });
+      gesicherteLichter.clear();
+      if (zusatzlicht) {
+        scene.remove(zusatzlicht);
+        zusatzlicht = null;
+      }
+      return 'rohbau aus';
+    };
+    return () => {
+      delete global.__ROHBAU;
+    };
+  }, [active, scene]);
+
   useFrame((state, delta) => {
     if (!active) return;
 
