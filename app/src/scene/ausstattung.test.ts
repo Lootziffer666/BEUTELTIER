@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DECKE_ACHSE_M,
+  DECKE_FUNKTIONSFELD_M,
   DECKE_TRAEGER_M,
   FASSADE_ACHSE_M,
   GELAENDER_HOEHE_M,
@@ -57,21 +58,25 @@ describe('Deckenwerk', () => {
     }
   });
 
-  it('legt die Lichtbänder zwischen die Träger, nicht auf sie', () => {
+  it('legt die Lichtbänder zwischen die Funktionsfeldgrenzen, nicht auf sie', () => {
+    // Die Lichtbänder hängen am groben Funktionsraster (DECKE_FUNKTIONSFELD_M),
+    // nicht mehr am feinen sichtbaren Gitter (DECKE_ACHSE_M) -- ein Band alle
+    // zwei Felder eines 0.6-m-Gitters wäre alle 1.2 m, kein Referenzfoto zeigt
+    // das.
     const werk = deckenwerk(60, 40, 9);
-    const traegerZ = werk.traeger
-      .filter((t) => t.groesse[0] > t.groesse[2])
-      .map((t) => t.position[2]);
+    const anzahl = Math.max(2, Math.round(40 / DECKE_FUNKTIONSFELD_M));
+    const grenzen: number[] = [];
+    for (let i = 0; i <= anzahl; i += 1) grenzen.push(-20 + (i * 40) / anzahl);
     for (const band of werk.lichtbaender) {
-      const naechster = Math.min(...traegerZ.map((z) => Math.abs(z - band.position[2])));
-      expect(naechster).toBeGreaterThan(DECKE_ACHSE_M / 4);
+      const naechste = Math.min(...grenzen.map((z) => Math.abs(z - band.position[2])));
+      expect(naechste).toBeGreaterThan(DECKE_FUNKTIONSFELD_M / 4);
     }
   });
 
-  it('lässt nicht jedes Feld leuchten', () => {
-    // Jedes Feld wäre zu hell und löschte die Trägerzeichnung aus.
+  it('lässt nicht jedes Funktionsfeld leuchten', () => {
+    // Jedes Feld wäre zu hell und löschte die Gitterzeichnung aus.
     const werk = deckenwerk(60, 40, 9);
-    const felder = Math.round(40 / DECKE_ACHSE_M);
+    const felder = Math.round(40 / DECKE_FUNKTIONSFELD_M);
     expect(werk.lichtbaender.length).toBeLessThanOrEqual(Math.ceil(felder / 2));
     expect(werk.lichtbaender.length).toBeGreaterThan(0);
   });
@@ -81,9 +86,15 @@ describe('Deckenwerk', () => {
     for (const diffusor of werk.diffusoren) {
       for (const band of werk.lichtbaender) {
         expect(Math.abs(diffusor.position[2] - band.position[2]))
-          .toBeGreaterThan(DECKE_ACHSE_M / 4);
+          .toBeGreaterThan(DECKE_FUNKTIONSFELD_M / 4);
       }
     }
+  });
+
+  it('hält das feine Gitter deutlich enger als das Funktionsfeld', () => {
+    // Genau das war der gemeldete Fehler: Gitter und Funktionsraster teilten
+    // sich dieselbe, zu grobe Zahl.
+    expect(DECKE_ACHSE_M).toBeLessThan(DECKE_FUNKTIONSFELD_M / 4);
   });
 
   /**
@@ -95,8 +106,8 @@ describe('Deckenwerk', () => {
   it('setzt die Auslässe als gleichmässiges Zehner-Netz', () => {
     // Grosse Halle, damit mehrere Auslässe in beide Richtungen entstehen.
     const werk = deckenwerk(600, 400, 9);
-    const querAnzahl = Math.round(400 / DECKE_ACHSE_M);
-    const laengsAnzahl = Math.round(600 / DECKE_ACHSE_M);
+    const querAnzahl = Math.round(400 / DECKE_FUNKTIONSFELD_M);
+    const laengsAnzahl = Math.round(600 / DECKE_FUNKTIONSFELD_M);
 
     const zWerte = [...new Set(werk.diffusoren.map((d) => d.position[2]))].sort((a, b) => a - b);
     const xWerte = [...new Set(werk.diffusoren.map((d) => d.position[0]))].sort((a, b) => a - b);
