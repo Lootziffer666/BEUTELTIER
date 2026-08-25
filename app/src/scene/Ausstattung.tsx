@@ -159,7 +159,14 @@ export function Ausstattung({
       const werk = deckenwerk(lage.laenge, lage.breite, hoehe);
       const versetzen = (geometrie: THREE.BufferGeometry | null) => {
         if (!geometrie) return null;
-        geometrie.rotateY(-lage.winkel);
+        // War rotateY(-lage.winkel): das spiegelt die Deckenkonstruktion an
+        // ihrer eigenen Laengsachse statt sie zu drehen, sobald eine Halle
+        // nicht exakt achsparallel liegt. Jede andere Stelle, die dieselbe
+        // Hallenlage verwendet (Stuetzen ueber tx/ty, Deckenleuchten,
+        // Markenstaende/KleineStaende ueber denselben Winkel), dreht mit
+        // +lage.winkel -- das Deckenraster und die Leuchtbaender liefen
+        // deshalb quer statt laengs zu den Pfeilerreihen.
+        geometrie.rotateY(lage.winkel);
         geometrie.translate(lage.mx - centre[0], halle.baseY, lage.my - centre[1]);
         return geometrie;
       };
