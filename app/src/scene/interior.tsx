@@ -574,7 +574,13 @@ export function Hallenwaende({
   return (
     <mesh geometry={geometry} receiveShadow>
       {ROHBAU_PHASE ? (
-        <primitive object={flachMaterial('#eceae3')} attach="material" />
+        // War '#eceae3' -- ein sauberes Creme, das eine reale, lichtschluckende
+        // Halle nicht zeigt. `flachMaterial()` ist MeshBasicMaterial, unbeleuchtet:
+        // die Waende koennen den "schmutzig grau"-Eindruck aus den Referenzfotos
+        // in dieser Phase nicht aus Lichtverhalten gewinnen, nur aus dem Farbwert
+        // selbst. FAMILIEN.M01 ist genau dieser Ton -- derselbe, den die Stuetzen
+        // schon tragen, statt einer zweiten, unabhaengig gewaehlten Wandfarbe.
+        <primitive object={flachMaterial(FAMILIEN.M01.grundton)} attach="material" />
       ) : (
         <meshStandardMaterial
           map={surface.map}
