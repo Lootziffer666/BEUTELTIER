@@ -86,6 +86,32 @@ describe('Deckenwerk', () => {
     }
   });
 
+  /**
+   * An mehreren Referenzfotos nachgezählt: die Luftauslässe stehen als
+   * gleichmässiges Netz, ein Auslass auf jedem zehnten Feld in beiden
+   * Richtungen -- nicht das unregelmässige Muster, das vorher unbenutzt in
+   * `deckenwerk()` lag (nie in `Ausstattung.tsx` gerendert).
+   */
+  it('setzt die Auslässe als gleichmässiges Zehner-Netz', () => {
+    // Grosse Halle, damit mehrere Auslässe in beide Richtungen entstehen.
+    const werk = deckenwerk(600, 400, 9);
+    const querAnzahl = Math.round(400 / DECKE_ACHSE_M);
+    const laengsAnzahl = Math.round(600 / DECKE_ACHSE_M);
+
+    const zWerte = [...new Set(werk.diffusoren.map((d) => d.position[2]))].sort((a, b) => a - b);
+    const xWerte = [...new Set(werk.diffusoren.map((d) => d.position[0]))].sort((a, b) => a - b);
+    expect(zWerte.length).toBeGreaterThan(1);
+    expect(xWerte.length).toBeGreaterThan(1);
+    for (let i = 1; i < zWerte.length; i += 1) {
+      expect(zWerte[i] - zWerte[i - 1]).toBeCloseTo((10 * 400) / querAnzahl, 1);
+    }
+    for (let i = 1; i < xWerte.length; i += 1) {
+      expect(xWerte[i] - xWerte[i - 1]).toBeCloseTo((10 * 600) / laengsAnzahl, 1);
+    }
+    // Ein echtes Netz: jede Zeile trifft jede Spalte.
+    expect(werk.diffusoren.length).toBe(zWerte.length * xWerte.length);
+  });
+
   it('bleibt bei einer entarteten Halle leer, statt zu rechnen', () => {
     expect(deckenwerk(0, 40, 9).traeger).toEqual([]);
     expect(deckenwerk(60, -1, 9).traeger).toEqual([]);
