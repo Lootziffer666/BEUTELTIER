@@ -176,8 +176,15 @@ export function Ausstattung({
       if (band) lichter.push(band);
 
       // Echte Lichtquellen unter jedem dritten Band, laengs verteilt.
-      const cos = Math.cos(-lage.winkel);
-      const sin = Math.sin(-lage.winkel);
+      // Derselbe Vorzeichenfehler wie eben bei `versetzen()`, nur hier nie
+      // mitgezogen: `rotateY(lage.winkel)` oben dreht Punkte um
+      // (x*cos+z*sin, -x*sin+z*cos), aber diese Handrechnung fuer die
+      // Lichtpositionen tat bislang das Gegenteil (`-lage.winkel`) -- die
+      // Leuchtbaender lagen also am richtigen Fleck, ihre eigentlichen
+      // Lichtquellen darunter aber gespiegelt, sobald eine Halle nicht
+      // achsparallel liegt.
+      const cos = Math.cos(lage.winkel);
+      const sin = Math.sin(lage.winkel);
       werk.lichtbaender.forEach((tafel, i) => {
         if (i % 3 !== 0) return;
         const schritte = Math.max(1, Math.round(lage.laenge / 30));
