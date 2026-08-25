@@ -263,29 +263,46 @@ function beuteltierZellenLicht(material: THREE.MeshToonMaterial, stufen: Stufen)
     // Welt, die fast nur aus flachen Flaechen besteht.
     shader.uniforms.uRandStaerke = { value: 0.12 };
     shader.uniforms.uRandSchwelle = { value: 0.72 };
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        'uniform vec3 diffuse;',
-        `uniform vec3 diffuse;
-         uniform float uZellenStufen;
-         uniform vec3 uRandFarbe;
-         uniform float uRandStaerke;
-         uniform float uRandSchwelle;`,
-      )
-      .replace(
-        'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;',
-        `vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
-         outgoingLight = round(clamp(outgoingLight, 0.0, 1.0) * uZellenStufen) / uZellenStufen;
-         // Die dunkelste Stufe darf nie reines Schwarz sein -- ohne genug
-         // Umgebungslicht (Ego ist bewusst dunkel) faellt eine Flaeche sonst
-         // auf (0,0,0), und ein komplett schwarzes Bauteil liest sich als
-         // kaputt, nicht als Schatten. Ein Boden von 12% der Grundfarbe haelt
-         // die Materialidentitaet auch im tiefsten Schatten sichtbar.
-         outgoingLight = max(outgoingLight, diffuse * 0.32);
-         float bRandDot = 1.0 - max(dot(normalize(vViewPosition), normal), 0.0);
-         float bRandStufe = smoothstep(uRandSchwelle - 0.2, uRandSchwelle + 0.2, bRandDot);
-         outgoingLight += bRandStufe * uRandStaerke * uRandFarbe;`,
+    const uniformStelle = 'uniform vec3 diffuse;';
+    const lichtStelle =
+      'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;';
+    const nachUniform = shader.fragmentShader.replace(
+      uniformStelle,
+      `${uniformStelle}
+       uniform float uZellenStufen;
+       uniform vec3 uRandFarbe;
+       uniform float uRandStaerke;
+       uniform float uRandSchwelle;`,
+    );
+    const gepatcht = nachUniform.replace(
+      lichtStelle,
+      `${lichtStelle}
+       outgoingLight = round(clamp(outgoingLight, 0.0, 1.0) * uZellenStufen) / uZellenStufen;
+       // Die dunkelste Stufe darf nie reines Schwarz sein -- ohne genug
+       // Umgebungslicht (Ego ist bewusst dunkel) faellt eine Flaeche sonst
+       // auf (0,0,0), und ein komplett schwarzes Bauteil liest sich als
+       // kaputt, nicht als Schatten. Ein Boden von 32% der Grundfarbe haelt
+       // die Materialidentitaet auch im tiefsten Schatten sichtbar.
+       outgoingLight = max(outgoingLight, diffuse * 0.32);
+       float bRandDot = 1.0 - max(dot(normalize(vViewPosition), normal), 0.0);
+       float bRandStufe = smoothstep(uRandSchwelle - 0.2, uRandSchwelle + 0.2, bRandDot);
+       outgoingLight += bRandStufe * uRandStaerke * uRandFarbe;`,
+    );
+    // Beide `.replace()`-Treffer sind exakte three.js-Quelltextzeilen (Version
+    // in package.json gepinnt). Ohne diese Pruefung wuerde ein kuenftiges
+    // three.js-Update, das eine der Zeilen nur umformuliert, den Patch
+    // still verfehlen -- die zweite Ersetzung wuerde trotzdem greifen (sie
+    // haengt nicht von der ersten ab) und Code einfuegen, der auf
+    // `uZellenStufen`/`uRandFarbe`/etc. verweist, ohne dass deren
+    // `uniform`-Deklarationen je eingefuegt wurden. Ergebnis waere kein
+    // Absturz, sondern ein GLSL-Kompilierfehler, der jedes Toon-Material der
+    // Halle schwarz zeichnet -- lieber laut im Log als still im Rendering.
+    if (nachUniform === shader.fragmentShader || gepatcht === nachUniform) {
+      console.error(
+        'beuteltierZellenLicht: three.js-Shader-Chunk hat sich geaendert -- Patch griff nicht.',
       );
+    }
+    shader.fragmentShader = gepatcht;
   };
 }
 
