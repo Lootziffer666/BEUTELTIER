@@ -41,21 +41,44 @@ export interface Tafel {
 // ---------------------------------------------------------------------------
 
 /**
- * Achsmaß des Deckenrasters in Metern.
+ * Achsmaß des sichtbaren Deckengitters in Metern.
  *
- * Fünf Meter, quer wie längs. Das ist kein vermessener Wert, sondern der
- * Rhythmus, den die Referenzaufnahmen zeigen -- die Kassettendecke der
- * Messehallen liest sich als grosszügiges Quadratraster, nicht als feines
- * Bürorasterr von 1,25 m. Zu fein gezeichnet flimmert es beim Laufen und
- * kostet Dreiecke, ohne dass man es als Raster erkennt.
+ * War 5 m -- eine Schätzung ("grosszügiges Quadratraster, kein Bürorraster"),
+ * nie nachgemessen. Nutzer-Korrektur gegen die echten Referenzfotos von
+ * Halle 10.1: das sichtbare Gitter ist das engmaschige Trägerrost/Gitterrost
+ * der Dachkonstruktion, keine grobe Kassettendecke -- rund 60 cm, nicht die
+ * 5 (und schon gar nicht die daraus in der Perspektive wirkenden ~15) Meter,
+ * die vorher standen. Bei dieser Feinheit ist das Gitter selbst die einzige
+ * Zeichnung; es braucht kein zusätzliches Kassettenraster mehr obendrauf.
  */
-export const DECKE_ACHSE_M = 5;
+export const DECKE_ACHSE_M = 0.6;
 
-/** Wie tief die Träger unter die Deckenfläche reichen. */
+/**
+ * Achsmaß des Funktionsfelds in Metern -- ordnet Lichtbänder und
+ * Lüftungsauslässe, unabhängig vom feinen sichtbaren Gitter oben.
+ *
+ * Vor der Korrektur teilten sich Gitter und Funktionslayout dieselbe Zahl
+ * (`DECKE_ACHSE_M`): unproblematisch bei 5 m Gitterachse, aber ein Band oder
+ * ein Auslass alle 1,2 m (das wäre `2 * 0.6`) hat mit keinem Referenzfoto
+ * mehr etwas zu tun. Fünf Meter bleibt der real bebilderte Rhythmus für
+ * Lichtbänder und Auslässe -- unverändert seit dem Auszählen der Fotos,
+ * jetzt nur vom Gitter entkoppelt statt zufällig an ihm dranzuhängen.
+ */
+export const DECKE_FUNKTIONSFELD_M = 5;
+
+/** Wie tief die Gitterstäbe unter die Deckenfläche reichen. */
 export const DECKE_TRAEGER_M = 0.45;
 
-/** Breite eines Trägers. */
-export const DECKE_STEG_M = 0.22;
+/**
+ * Breite eines Gitterstabs.
+ *
+ * War 0.22 m, bemessen für eine 5-m-Achse -- an einer 0.6-m-Achse würde das
+ * über ein Drittel der Fläche verdecken und aus einem offenen Gitterrost eine
+ * fast geschlossene Platte machen. Schlank genug, dass die Referenzfotos'
+ * "fast schwarzes Metallgitter vor fast schwarzer Decke" als Linien statt als
+ * Fläche lesbar bleibt.
+ */
+export const DECKE_STEG_M = 0.05;
 
 /** Breite eines Lichtbands. */
 export const LICHTBAND_M = 0.5;
@@ -70,9 +93,17 @@ export interface Deckenwerk {
  * Das Deckenraster einer Halle: Träger, Lichtbänder, Auslässe.
  *
  * Auf dem Referenzbild der leeren Halle ist die Decke die obere Bildhälfte --
- * dunkles Kassettenraster, dazwischen lange helle Lichtbänder, dazu runde
- * Luftauslässe. Als flache Ebene mit aufgemaltem Raster fehlt genau das, was
- * sie ausmacht: die Tiefe zwischen Steg und Feld.
+ * ein feines dunkles Gitterrost, dazwischen lange helle Lichtbänder, dazu
+ * runde Luftauslässe. Als flache Ebene mit aufgemaltem Raster fehlt genau
+ * das, was sie ausmacht: die Tiefe zwischen Steg und Feld.
+ *
+ * Zwei Raster, zwei Zwecke, absichtlich unterschiedlich fein: `achse` (siehe
+ * `DECKE_ACHSE_M`) ist das feine sichtbare Gitter selbst -- was man von unten
+ * als Zeichnung sieht. `funktionsfeld` (siehe `DECKE_FUNKTIONSFELD_M`) ist der
+ * viel gröbere Rhythmus, in dem Lichtbänder und Lüftung stehen. Beide an
+ * derselben Zahl aufzuhängen war der Fehler, den die Nutzer-Korrektur an der
+ * Gitterachse aufgedeckt hat: ein Band alle zwei Gitterfelder ergibt bei
+ * einem feinen Gitter ein Band alle 1,2 m -- kein Referenzfoto zeigt das.
  *
  * Die Lichtbänder laufen **längs** und nicht in beide Richtungen. So ist es
  * gebaut, und es hat einen Zweck über die Treue hinaus: ein durchgehendes
@@ -83,6 +114,7 @@ export function deckenwerk(
   breite: number,
   hoehe: number,
   achse = DECKE_ACHSE_M,
+  funktionsfeld = DECKE_FUNKTIONSFELD_M,
 ): Deckenwerk {
   const traeger: Balken[] = [];
   const lichtbaender: Tafel[] = [];
@@ -91,7 +123,8 @@ export function deckenwerk(
 
   const unterkante = hoehe - DECKE_TRAEGER_M / 2;
 
-  // Längsträger -- über die ganze Länge, im Achsmaß über die Breite verteilt.
+  // Feines Gitter, Richtung 1 -- über die ganze Länge, im Achsmaß über die
+  // Breite verteilt.
   const querAnzahl = Math.max(2, Math.round(breite / achse));
   for (let i = 0; i <= querAnzahl; i += 1) {
     const z = -breite / 2 + (i * breite) / querAnzahl;
@@ -102,7 +135,7 @@ export function deckenwerk(
     });
   }
 
-  // Querträger -- dieselbe Ordnung, um neunzig Grad gedreht.
+  // Feines Gitter, Richtung 2 -- dieselbe Ordnung, um neunzig Grad gedreht.
   const laengsAnzahl = Math.max(2, Math.round(laenge / achse));
   for (let i = 0; i <= laengsAnzahl; i += 1) {
     const x = -laenge / 2 + (i * laenge) / laengsAnzahl;
@@ -113,10 +146,16 @@ export function deckenwerk(
     });
   }
 
-  // Lichtbänder: in jedem zweiten Feld, mittig zwischen zwei Längsträgern.
-  // Jedes Feld wäre zu hell und würde die Trägerzeichnung auslöschen.
-  for (let i = 0; i < querAnzahl; i += 2) {
-    const z = -breite / 2 + ((i + 0.5) * breite) / querAnzahl;
+  // Ab hier das grobe Funktionsfeld -- eigene Feldzahl, nichts mehr von
+  // querAnzahl/laengsAnzahl oben wiederverwendet.
+  const funktionsQuerAnzahl = Math.max(2, Math.round(breite / funktionsfeld));
+  const funktionsLaengsAnzahl = Math.max(2, Math.round(laenge / funktionsfeld));
+
+  // Lichtbänder: in jedem zweiten Funktionsfeld, mittig zwischen zwei
+  // Feldgrenzen. Jedes Feld wäre zu hell und würde die Gitterzeichnung
+  // auslöschen.
+  for (let i = 0; i < funktionsQuerAnzahl; i += 2) {
+    const z = -breite / 2 + ((i + 0.5) * breite) / funktionsQuerAnzahl;
     lichtbaender.push({
       position: [0, hoehe - DECKE_TRAEGER_M - 0.02, z],
       groesse: [laenge * 0.94, LICHTBAND_M],
@@ -124,15 +163,15 @@ export function deckenwerk(
     });
   }
 
-  // Luftauslässe: ein gleichmässiges Netz, jedes zehnte Feld in beiden
-  // Richtungen -- nachgezählt an mehreren Referenzfotos, nicht geschätzt.
-  // Die Zeilen starten bei Feld 1 (nicht 0), damit sie nicht auf dieselbe
-  // Achse wie die Lichtbänder (gerade Feldindizes) fallen -- ein Auslass
-  // sitzt im Feld, nicht im Band.
-  for (let i = 1; i < querAnzahl; i += 10) {
-    const z = -breite / 2 + ((i + 0.5) * breite) / querAnzahl;
-    for (let k = 0; k < laengsAnzahl; k += 10) {
-      const x = -laenge / 2 + ((k + 0.5) * laenge) / laengsAnzahl;
+  // Luftauslässe: ein gleichmässiges Netz, jedes zehnte Funktionsfeld in
+  // beiden Richtungen -- nachgezählt an mehreren Referenzfotos, nicht
+  // geschätzt. Die Zeilen starten bei Feld 1 (nicht 0), damit sie nicht auf
+  // dieselbe Achse wie die Lichtbänder (gerade Feldindizes) fallen -- ein
+  // Auslass sitzt im Feld, nicht im Band.
+  for (let i = 1; i < funktionsQuerAnzahl; i += 10) {
+    const z = -breite / 2 + ((i + 0.5) * breite) / funktionsQuerAnzahl;
+    for (let k = 0; k < funktionsLaengsAnzahl; k += 10) {
+      const x = -laenge / 2 + ((k + 0.5) * laenge) / funktionsLaengsAnzahl;
       diffusoren.push({ position: [x, hoehe - DECKE_TRAEGER_M - 0.05, z], radius: 0.55 });
     }
   }
