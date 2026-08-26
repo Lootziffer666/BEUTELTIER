@@ -36,6 +36,7 @@ import {
 } from './materials';
 import { ArchitectureGenerator } from '../procedural/generators/ArchitectureGenerator';
 import { drehungNachZ } from './geometry';
+import { useLightBudget } from './lightBudget';
 
 /**
  * Fussbodenhoehe.
@@ -931,6 +932,12 @@ export function Boulevard({
     return out;
   }, [achse, centre, plan]);
 
+  // Auf der ganzen 479-m-Route stehen bis zu einem Dutzend dieser Lampen,
+  // alle mit unbegrenzter Reichweite (distance=0) und ohne Ruecksicht darauf,
+  // wo die Kamera gerade steht -- selbst tief in einer Halle blieben sie
+  // aktiv (siehe `lightBudget.ts`). Budget auf die kameranächsten begrenzen.
+  const lampenAktiv = useLightBudget(lampen, 6);
+
   /** Pendelleuchten in zwei Reihen, wie auf dem Foto. */
   const pendel = useMemo(() => {
     if (!achse || !plan) return [];
@@ -1347,7 +1354,7 @@ export function Boulevard({
           ))}
         </group>
       )}
-      {visible && lampen.map((position, index) => (
+      {visible && lampen.map((position, index) => lampenAktiv[index] && (
         <pointLight
           key={index}
           position={position}

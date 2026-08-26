@@ -28,9 +28,20 @@ import {
   type Tafel,
 } from './ausstattung';
 import { hallenlage } from './interior';
+import { useLightBudget } from './lightBudget';
 import { FAMILIEN, familienMaterial, flachMaterial, konturHuelle, konturStaerke, ROHBAU_PHASE } from './stil';
 import { KACHEL_M } from './textur';
 import { projiziereUV } from './geometry';
+
+/**
+ * Wie viele der Lichtpunkte gleichzeitig echte Punktlichter sind (siehe
+ * `useLightBudget` in `lightBudget.ts`). "Jedes dritte Band" reduzierte nur
+ * die Dichte, nicht die absolute Anzahl -- eine grosse Halle wie 10.1 blieb
+ * bei einem Dutzend gleichzeitiger Lichter, unabhaengig davon, wo die Kamera
+ * gerade steht. 8 liegt in derselben Groessenordnung wie `Hallenlicht`s
+ * bereits erprobtes Budget von 6.
+ */
+const LICHT_BUDGET = 8;
 
 /** Aus Balken wird ein Netz. `null`, wenn nichts zu bauen ist. */
 function balkenNetz(balken: Balken[]): THREE.BufferGeometry | null {
@@ -276,6 +287,8 @@ export function Ausstattung({
     };
   }, [data, centre, drinnen, hallKey]);
 
+  const lichtAktiv = useLightBudget(bauteile.lichtpunkte, LICHT_BUDGET);
+
   const materialien = useMemo(() => ({
     decke: ROHBAU_PHASE ? flachMaterial(FAMILIEN.M02.grundton) : familienMaterial(FAMILIEN.M02),
     licht: lichtMaterial(),
@@ -344,7 +357,7 @@ export function Ausstattung({
           stimmte. Nur jedes dritte Band bekommt eine: dreissig Lichter je
           Halle wären hundert Zeichenaufrufe je Bild ohne sichtbaren Gewinn,
           und die Verteilung ist ohnehin gleichmässig genug. */}
-      {drinnen && bauteile.lichtpunkte.map((punkt, i) => (
+      {drinnen && bauteile.lichtpunkte.map((punkt, i) => lichtAktiv[i] && (
         <pointLight
           key={`pool-${i}`}
           position={punkt}
